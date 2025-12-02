@@ -1,38 +1,65 @@
 // components/TrashOnboardingWizard.tsx
 "use client";
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 
-type PlanId = "basic" | "standard" | "premium";
+type PlanId = "one-time" | "twice-month" | "bi-monthly" | "quarterly";
 
 type Plan = {
   id: PlanId;
   name: string;
-  pricePerClean: number;
-  frequencyLabel: string; // e.g. "Monthly", "Bi-Weekly"
+  price: number;
+  priceSuffix: "/clean" | "/month";
+  frequencyLabel: string;
   description: string;
+  includesBags?: boolean;
+  bagsPerCycle?: number;
+  note?: string;
 };
 
 const PLANS: Plan[] = [
   {
-    id: "basic",
-    name: "Basic Clean",
-    pricePerClean: 25,
-    frequencyLabel: "Monthly",
-    description: "1 bin cleaned once per month.",
+    id: "one-time",
+    name: "One-Time Blast",
+    price: 35,
+    priceSuffix: "/clean",
+    description: "Perfect for move-outs, deep resets, and first-time cleans.",
+    frequencyLabel: "Single visit · No contract",
+    note: "+$10 per extra bin",
   },
   {
-    id: "standard",
-    name: "Standard Shine",
-    pricePerClean: 40,
-    frequencyLabel: "Bi-Weekly",
-    description: "Up to 2 bins cleaned every other week.",
+    id: "twice-month",
+    name: "Twice-a-Month Clean",
+    price: 65,
+    priceSuffix: "/month",
+    description:
+      "Keep your bins consistently fresh with two cleanings every month.",
+    frequencyLabel: "2 cleans per month",
+    note: "Base price includes 1 bin · +$10 per extra bin",
   },
   {
-    id: "premium",
-    name: "Premium Blast",
-    pricePerClean: 60,
-    frequencyLabel: "Weekly",
-    description: "Up to 3 bins cleaned every week.",
+    id: "bi-monthly",
+    name: "Bi-Monthly Fresh Plan",
+    price: 60,
+    priceSuffix: "/month",
+    description:
+      "Lower-frequency service plus a bag bundle to keep odors in check.",
+    frequencyLabel: "1 clean every 2 months",
+    includesBags: true,
+    bagsPerCycle: 10,
+    note: "Includes 10 heavy-duty odor-control bags every cycle",
+  },
+  {
+    id: "quarterly",
+    name: "Quarterly Refresh Plan",
+    price: 75,
+    priceSuffix: "/month",
+    description:
+      "Seasonal deep refresh plus fresh bags so bins never get out of control.",
+    frequencyLabel: "1 clean every 3 months",
+    includesBags: true,
+    bagsPerCycle: 10,
+    note: "Includes 10 heavy-duty odor-control bags every cycle",
   },
 ];
 
@@ -83,8 +110,18 @@ const EMPTY_FORM: FormState = {
 };
 
 export const TrashOnboardingWizard: React.FC = () => {
+  const searchParams = useSearchParams();
+
+  const planParam = searchParams.get("plan");
+  const initialPlanFromUrl = planParam && PLANS.some((p) => p.id === planParam)
+    ? (planParam as PlanId)
+    : null;
+
   const [step, setStep] = useState<Step>(1);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [form, setForm] = useState<FormState>({
+    ...EMPTY_FORM,
+    planId: initialPlanFromUrl,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestedTrashDay, setSuggestedTrashDay] = useState<string | null>(null);
@@ -243,37 +280,58 @@ export const TrashOnboardingWizard: React.FC = () => {
   const renderPlanStep = () => (
     <div>
       <h2 className="text-xl font-semibold mb-4">
-        Choose your bin cleaning package
+        Choose your Bin Blast Co. plan
       </h2>
       <p className="text-sm text-gray-600 mb-4">
-        Pick the plan that matches how often your trash gets picked up.
+        Pick the plan that fits your trash volume and how often your bins need to
+        stay fresh. You can always upgrade later.
       </p>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {PLANS.map((plan) => (
-          <button
-            key={plan.id}
-            type="button"
-            onClick={() => handlePlanSelect(plan.id)}
-            className={`border rounded-xl p-4 text-left transition shadow-sm hover:shadow-md ${
-              form.planId === plan.id
-                ? "border-blue-600 ring-2 ring-blue-100"
-                : "border-gray-200"
-            }`}
-          >
-            <div className="font-semibold text-lg mb-1">{plan.name}</div>
-            <div className="text-2xl font-bold mb-1">
-              ${plan.pricePerClean}
-              <span className="text-sm font-normal text-gray-500">
-                /clean
-              </span>
-            </div>
-            <div className="text-xs font-medium text-blue-600 mb-2">
-              {plan.frequencyLabel}
-            </div>
-            <p className="text-sm text-gray-600">{plan.description}</p>
-          </button>
-        ))}
+      <div className="grid gap-4 md:grid-cols-2">
+        {PLANS.map((plan) => {
+          const isSelected = form.planId === plan.id;
+          return (
+            <button
+              key={plan.id}
+              type="button"
+              onClick={() => handlePlanSelect(plan.id)}
+              className={`border rounded-xl p-4 text-left transition shadow-sm hover:shadow-md ${
+                isSelected
+                  ? "border-blue-600 ring-2 ring-blue-100 bg-blue-50/40"
+                  : "border-gray-200 bg-white"
+              }`}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <div className="font-semibold text-lg mb-1">
+                    {plan.name}
+                  </div>
+                  <div className="text-2xl font-bold mb-1">
+                    ${plan.price}
+                    <span className="text-sm font-normal text-gray-500 ml-1">
+                      {plan.priceSuffix}
+                    </span>
+                  </div>
+                  <div className="text-xs font-medium text-blue-600 mb-1">
+                    {plan.frequencyLabel}
+                  </div>
+                </div>
+
+                {plan.includesBags && (
+                  <span className="inline-flex px-3 py-1 rounded-full bg-emerald-50 text-[11px] font-semibold text-emerald-700">
+                    +{plan.bagsPerCycle} Fresh Bags / cycle
+                  </span>
+                )}
+              </div>
+
+              <p className="text-sm text-gray-600 mb-2">{plan.description}</p>
+
+              {plan.note && (
+                <p className="text-xs text-gray-500">{plan.note}</p>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -448,7 +506,7 @@ export const TrashOnboardingWizard: React.FC = () => {
           <div className="border rounded-lg p-4">
             <h3 className="font-semibold mb-2">Plan</h3>
             <p className="text-sm">
-              {selectedPlan.name} – ${selectedPlan.pricePerClean} / clean (
+              {selectedPlan.name} – ${selectedPlan.price}{selectedPlan.priceSuffix} (
               {selectedPlan.frequencyLabel})
             </p>
           </div>
