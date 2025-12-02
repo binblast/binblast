@@ -1,5 +1,5 @@
 // components/TrashOnboardingWizard.tsx
-
+"use client";
 import React, { useState } from "react";
 
 type PlanId = "basic" | "standard" | "premium";
