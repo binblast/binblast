@@ -68,3 +68,24 @@ window.addEventListener('scroll', () => {
     lastScroll = currentScroll;
 });
 
+// Pricing Card Click Handler
+document.querySelectorAll('.pricing-card.card-link').forEach(card => {
+    card.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Get the plan name from the card
+        const planName = this.querySelector('.plan-name')?.textContent || 'this plan';
+        
+        // Add visual feedback
+        this.style.transform = 'scale(0.98)';
+        this.style.transition = 'transform 0.2s';
+        setTimeout(() => {
+            this.style.transform = '';
+        }, 200);
+        
+        // Show a helpful message
+        const message = `Thanks for your interest in ${planName}!\n\n📝 To complete your booking:\n1. Install Node.js from nodejs.org\n2. Run: npm install && npm run dev\n3. Visit: http://localhost:3000\n\nThen you'll be able to use the full booking system!`;
+        alert(message);
+    });
+});
+

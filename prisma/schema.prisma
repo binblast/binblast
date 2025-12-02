@@ -1,0 +1,70 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  firstName    String
+  lastName     String
+  phone        String?
+  passwordHash String?         // if using password-based login
+  subscriptions Subscription[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model Subscription {
+  id                 String        @id @default(cuid())
+  user               User          @relation(fields: [userId], references: [id])
+  userId             String
+  planId             String
+  pricePerClean      Int
+  frequency          Frequency
+  serviceAddress     ServiceAddress @relation(fields: [serviceAddressId], references: [id])
+  serviceAddressId   String
+  trashDayOfWeek     String        // or enum
+  preferredTimeWindow String
+  startDate          DateTime
+  nextCleaningDate   DateTime?
+  lastCleaningDate   DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+}
+
+model ServiceAddress {
+  id         String   @id @default(cuid())
+  line1      String
+  line2      String?
+  city       String
+  state      String
+  postalCode String
+  subscriptions Subscription[]
+}
+
+enum Frequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+model TrashScheduleLookup {
+  id           String   @id @default(cuid())
+  city         String
+  state        String
+  postalCode   String
+  defaultTrashDayOfWeek String  // e.g. "Tuesday"
+  notes        String?          // e.g. "Recycling on Friday"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([postalCode])
+}
+
