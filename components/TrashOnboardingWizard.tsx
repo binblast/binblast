@@ -39,7 +39,7 @@ const PLANS: Plan[] = [
   },
   {
     id: "bi-monthly",
-    name: "Bi-Monthly Fresh Plan",
+    name: "Bi-Monthly Clean (Every 2 Months)",
     price: 60,
     priceSuffix: "/month",
     description:
@@ -47,11 +47,11 @@ const PLANS: Plan[] = [
     frequencyLabel: "1 clean every 2 months",
     includesBags: true,
     bagsPerCycle: 10,
-    note: "Includes 10 heavy-duty odor-control bags every cycle",
+    note: "1 bin included · +10 FREE Fresh Bags every cycle · +$10 per additional bin",
   },
   {
     id: "quarterly",
-    name: "Quarterly Refresh Plan",
+    name: "Quarterly Clean (Every 3 Months)",
     price: 75,
     priceSuffix: "/month",
     description:
@@ -59,7 +59,7 @@ const PLANS: Plan[] = [
     frequencyLabel: "1 clean every 3 months",
     includesBags: true,
     bagsPerCycle: 10,
-    note: "Includes 10 heavy-duty odor-control bags every cycle",
+    note: "1 bin included · +10 FREE Fresh Bags every cycle · +$10 per additional bin",
   },
 ];
 

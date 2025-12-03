@@ -20,6 +20,8 @@ type PricingPlan = {
 
   priceSuffix: "/clean" | "/month";
 
+  priceRange?: string; // e.g. "$60–$65"
+
   highlight?: boolean;
 
   description: string;
@@ -82,11 +84,13 @@ const PLANS: PricingPlan[] = [
 
     id: "bi-monthly",
 
-    name: "Bi-Monthly Fresh Plan",
+    name: "Bi-Monthly Clean (Every 2 Months)",
 
     price: 60,
 
     priceSuffix: "/month",
+
+    priceRange: "$60–$65",
 
     description:
 
@@ -98,7 +102,7 @@ const PLANS: PricingPlan[] = [
 
     bagsPerCycle: 10,
 
-    note: "Includes 10 heavy-duty odor-control bags every cycle",
+    note: "1 bin included · +10 FREE Fresh Bags every cycle · +$10 per additional bin",
 
   },
 
@@ -106,7 +110,7 @@ const PLANS: PricingPlan[] = [
 
     id: "quarterly",
 
-    name: "Quarterly Refresh Plan",
+    name: "Quarterly Clean (Every 3 Months)",
 
     price: 75,
 
@@ -122,7 +126,7 @@ const PLANS: PricingPlan[] = [
 
     bagsPerCycle: 10,
 
-    note: "Includes 10 heavy-duty odor-control bags every cycle",
+    note: "1 bin included · +10 FREE Fresh Bags every cycle · +$10 per additional bin",
 
   },
 
@@ -210,7 +214,7 @@ export function PricingSection() {
 
                 <span className="text-3xl font-bold">
 
-                  ${plan.price}
+                  {plan.priceRange ? plan.priceRange : `$${plan.price}`}
 
                 </span>
 
