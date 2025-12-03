@@ -2,11 +2,11 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialEmail = searchParams.get("email") || "";
@@ -168,6 +168,20 @@ export default function RegisterPage() {
         </form>
       </div>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-lg p-6 w-full max-w-md">
+          <div className="text-center">Loading...</div>
+        </div>
+      </main>
+    }>
+      <RegisterForm />
+    </Suspense>
   );
 }
 

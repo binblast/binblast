@@ -3,10 +3,10 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -86,6 +86,20 @@ export default function LoginPage() {
         </form>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-lg p-6 w-full max-w-md">
+          <div className="text-center">Loading...</div>
+        </div>
+      </main>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
 

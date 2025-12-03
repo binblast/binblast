@@ -3,7 +3,6 @@
 
 import React, { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 
 type PlanId = "one-time" | "twice-month" | "bi-monthly" | "quarterly";
 
@@ -43,6 +42,13 @@ export function SignupFormModal({ isOpen, onClose, selectedPlan }: SignupFormMod
     setLoading(true);
 
     try {
+      // Dynamically import Firebase auth to avoid build-time initialization
+      const { auth } = await import("@/lib/firebase");
+      
+      if (!auth) {
+        throw new Error("Firebase authentication is not configured. Please set up Firebase environment variables.");
+      }
+      
       // Create Firebase user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
