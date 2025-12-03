@@ -134,7 +134,7 @@ body {
 
 /* Hero Section */
 .hero {
-    background: url("bin blast cover picture.png") center/cover no-repeat;
+    background: url("/cover-picture.png") center/cover no-repeat;
     color: white;
     min-height: 100vh;
     display: flex;
