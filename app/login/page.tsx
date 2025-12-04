@@ -22,7 +22,8 @@ function LoginForm() {
 
     try {
       // Dynamically import Firebase auth to avoid build-time initialization
-      const { auth } = await import("@/lib/firebase");
+      const { getAuthInstance } = await import("@/lib/firebase");
+      const auth = await getAuthInstance();
       
       if (!auth) {
         throw new Error("Firebase authentication is not configured. Please set up Firebase environment variables.");

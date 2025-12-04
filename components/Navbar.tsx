@@ -15,7 +15,8 @@ export function Navbar() {
     // Check Firebase auth state
     async function checkAuth() {
       try {
-        const { auth } = await import("@/lib/firebase");
+        const { getAuthInstance } = await import("@/lib/firebase");
+        const auth = await getAuthInstance();
         const { onAuthStateChanged } = await import("firebase/auth");
         
         if (auth) {
@@ -66,7 +67,8 @@ export function Navbar() {
 
   const handleLogout = async () => {
     try {
-      const { auth } = await import("@/lib/firebase");
+      const { getAuthInstance } = await import("@/lib/firebase");
+      const auth = await getAuthInstance();
       const { signOut } = await import("firebase/auth");
       
       if (auth) {
