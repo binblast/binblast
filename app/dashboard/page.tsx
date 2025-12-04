@@ -5,21 +5,9 @@ import { useEffect, useState, Component, ErrorInfo, ReactNode, Suspense } from "
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
-import dynamic from "next/dynamic";
+import { SubscriptionManagerWrapper } from "@/components/SubscriptionManagerWrapper";
 import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
-
-// Dynamically import SubscriptionManager to prevent it from loading during initial page load
-// This prevents Firebase initialization errors during bundling/module evaluation
-// Load SubscriptionManager without importing Firebase in the loader to avoid chunk conflicts
-const SubscriptionManager = dynamic(
-  () => import("@/components/SubscriptionManager").then((mod) => ({ default: mod.SubscriptionManager })),
-  { 
-    ssr: false, // Don't render on server side
-    loading: () => null, // Don't show loading state
-    // Only load when component is actually rendered
-  }
-);
 
 // Error boundary to catch component rendering errors
 class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }> {
@@ -435,19 +423,17 @@ export default function DashboardPage() {
                             </button>
                           </div>
                         }>
-                          <Suspense fallback={<div style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-light)" }}>Loading subscription options...</div>}>
-                            <SubscriptionManager
-                              userId={userId}
-                              currentPlanId={user.selectedPlan as PlanId}
-                              stripeSubscriptionId={user.stripeSubscriptionId || null}
-                              stripeCustomerId={user.stripeCustomerId || null}
-                              billingPeriodEnd={billingPeriodEnd}
-                              onPlanChanged={() => {
-                                // Reload user data after plan change
-                                window.location.reload();
-                              }}
-                            />
-                          </Suspense>
+                          <SubscriptionManagerWrapper
+                            userId={userId}
+                            currentPlanId={user.selectedPlan as PlanId}
+                            stripeSubscriptionId={user.stripeSubscriptionId || null}
+                            stripeCustomerId={user.stripeCustomerId || null}
+                            billingPeriodEnd={billingPeriodEnd}
+                            onPlanChanged={() => {
+                              // Reload user data after plan change
+                              window.location.reload();
+                            }}
+                          />
                         </ErrorBoundary>
                       ) : null;
                     })()}
