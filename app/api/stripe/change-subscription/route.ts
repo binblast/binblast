@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get current subscription from Stripe
-    const currentSubscription = await stripe.subscriptions.retrieve(actualSubscriptionId, {
+    const currentSubscription: Stripe.Subscription = await stripe.subscriptions.retrieve(actualSubscriptionId, {
       expand: ['items.data.price.product'],
     });
 
