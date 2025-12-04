@@ -118,24 +118,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Get current subscription from Stripe
-    const currentSubscription: Stripe.Subscription = await stripe.subscriptions.retrieve(actualSubscriptionId, {
+    const subscriptionResponse = await stripe.subscriptions.retrieve(actualSubscriptionId, {
       expand: ['items.data.price.product'],
     });
 
-    if (!currentSubscription) {
+    if (!subscriptionResponse) {
       return NextResponse.json(
         { error: "Current subscription not found" },
         { status: 404 }
       );
     }
 
+    const currentSubscription = subscriptionResponse as Stripe.Subscription;
+
     // Get current plan ID from subscription metadata or use stored value
     const subscriptionPlanId = currentSubscription.metadata?.planId as PlanId | undefined;
     const finalCurrentPlanId = subscriptionPlanId || (userData?.selectedPlan as PlanId) || "one-time";
 
     // Calculate billing period
-    const billingPeriodStart = new Date(currentSubscription.current_period_start * 1000);
-    const billingPeriodEnd = new Date(currentSubscription.current_period_end * 1000);
+    const billingPeriodStart = new Date((currentSubscription as any).current_period_start * 1000);
+    const billingPeriodEnd = new Date((currentSubscription as any).current_period_end * 1000);
     const now = new Date();
 
     // Get current subscription item
