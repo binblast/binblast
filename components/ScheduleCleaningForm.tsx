@@ -26,8 +26,6 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
   const [trashDay, setTrashDay] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [suggestedTrashDay, setSuggestedTrashDay] = useState<string | null>(null);
-  const [lookupLoading, setLookupLoading] = useState(false);
   
   // Form fields
   const [addressLine1, setAddressLine1] = useState("");
@@ -81,42 +79,6 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
     return `${year}-${month}-${day}`;
   };
 
-  const lookupTrashDay = async () => {
-    if (!zipCode && !city) {
-      setError("Please enter a zip code or city");
-      return;
-    }
-
-    setLookupLoading(true);
-    setError(null);
-    setSuggestedTrashDay(null);
-
-    try {
-      const params = new URLSearchParams();
-      if (zipCode) params.append("postalCode", zipCode);
-      if (city) params.append("city", city);
-      if (state) params.append("state", state);
-
-      const res = await fetch(`/api/trash-schedule/lookup?${params.toString()}`);
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Could not find trash schedule for this area");
-      }
-
-      const data = await res.json();
-      if (data.defaultTrashDayOfWeek) {
-        setSuggestedTrashDay(data.defaultTrashDayOfWeek);
-        setTrashDay(data.defaultTrashDayOfWeek);
-      } else {
-        setError("No trash schedule found for this area. Please enter manually.");
-      }
-    } catch (err: any) {
-      setError(err.message || "Could not fetch trash schedule. Please enter manually.");
-    } finally {
-      setLookupLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,80 +173,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
           </h2>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            {/* Zip Code Lookup */}
+            {/* Trash Day Selection */}
             <div>
               <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                Find Your Trash Day
-              </label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "0.75rem", alignItems: "end" }}>
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Zip Code"
-                    value={zipCode}
-                    onChange={(e) => setZipCode(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem 1rem",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "8px",
-                      fontSize: "0.95rem"
-                    }}
-                  />
-                </div>
-                <div>
-                  <input
-                    type="text"
-                    placeholder="City"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem 1rem",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "8px",
-                      fontSize: "0.95rem"
-                    }}
-                  />
-                </div>
-                <div>
-                  <input
-                    type="text"
-                    placeholder="State"
-                    value={state}
-                    onChange={(e) => setState(e.target.value.toUpperCase())}
-                    maxLength={2}
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem 1rem",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "8px",
-                      fontSize: "0.95rem",
-                      textTransform: "uppercase"
-                    }}
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={lookupTrashDay}
-                  disabled={lookupLoading}
-                  className="btn btn-secondary"
-                  style={{ whiteSpace: "nowrap" }}
-                >
-                  {lookupLoading ? "Searching..." : "Lookup"}
-                </button>
-              </div>
-              {suggestedTrashDay && (
-                <p style={{ marginTop: "0.5rem", fontSize: "0.875rem", color: "#16a34a", fontWeight: "600" }}>
-                  ✓ Trash day found: {suggestedTrashDay}
-                </p>
-              )}
-            </div>
-
-            {/* Manual Trash Day Entry */}
-            <div>
-              <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                Trash Day <span style={{ color: "var(--text-light)", fontWeight: "400" }}>(if lookup didn't work)</span>
+                Trash Day
               </label>
               <select
                 value={trashDay}
