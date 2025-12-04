@@ -32,7 +32,7 @@ const PLAN_CONFIGS: Record<string, { id: string; name: string; price: number; pr
   },
 };
 
-type PlanId = "one-time" | "twice-month" | "bi-monthly" | "quarterly";
+type PlanId = "one-time" | "twice-month" | "bi-monthly" | "quarterly" | "commercial";
 
 interface SubscriptionManagerStandaloneProps {
   userId: string;
@@ -63,8 +63,7 @@ function getMonthlyPriceForPlan(planId: PlanId): number {
 }
 
 function canChangePlan(planId: PlanId): boolean {
-  // All plans in PlanId type can be changed (commercial is not included)
-  return true;
+  return planId !== "commercial";
 }
 
 export function SubscriptionManagerStandalone({
