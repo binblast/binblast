@@ -29,10 +29,32 @@ if (typeof window !== "undefined") {
 
   if (hasRequiredConfig) {
     try {
-      app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+      // Only initialize if we don't already have an app
+      const existingApps = getApps();
+      if (existingApps.length > 0) {
+        app = existingApps[0];
+      } else {
+        // Validate config before initializing
+        if (!firebaseConfig.apiKey || firebaseConfig.apiKey.trim() === "") {
+          throw new Error("Firebase API key is empty");
+        }
+        if (!firebaseConfig.projectId || firebaseConfig.projectId.trim() === "") {
+          throw new Error("Firebase project ID is empty");
+        }
+        app = initializeApp(firebaseConfig);
+      }
+      
+      // Only get auth/db if app was successfully created
       if (app) {
-        auth = getAuth(app);
-        db = getFirestore(app);
+        try {
+          auth = getAuth(app);
+          db = getFirestore(app);
+        } catch (authError) {
+          console.error("Firebase auth/db initialization error:", authError);
+          // If auth/db fail, don't break the app
+          auth = undefined;
+          db = undefined;
+        }
       }
     } catch (error) {
       console.error("Firebase initialization error:", error);

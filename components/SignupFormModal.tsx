@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+// Firebase auth imports moved to dynamic imports to prevent module-level initialization
 
 type PlanId = "one-time" | "twice-month" | "bi-monthly" | "quarterly" | "commercial";
 
