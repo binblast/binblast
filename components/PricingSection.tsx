@@ -24,17 +24,17 @@ type PricingPlan = {
 const PLANS: PricingPlan[] = [
   {
     id: "one-time",
-    name: "One-Time Blast",
+    name: "Monthly Clean",
     price: 35,
-    priceSuffix: "/clean",
+    priceSuffix: "/month",
     binInfo: "FOR UP TO 1 BIN",
     additionalInfo: "Additional bins: +$10 each",
     features: [
+      "Automatic cleaning every month",
       "Deep clean, sanitize, and deodorize",
-      "Ideal for first-time or seasonal cleanings",
-      "Great before move-ins or events"
+      "Perfect for maintaining fresh bins year-round"
     ],
-    buttonText: "Book One-Time Clean"
+    buttonText: "Start Monthly Plan"
   },
   {
     id: "twice-month",

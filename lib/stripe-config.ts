@@ -23,10 +23,10 @@ export interface PlanConfig {
 export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
   "one-time": {
     id: "one-time",
-    name: "One-Time Blast",
+    name: "Monthly Clean",
     price: 35,
-    priceSuffix: "/clean",
-    isRecurring: false,
+    priceSuffix: "/month",
+    isRecurring: true,
   },
   "twice-month": {
     id: "twice-month",

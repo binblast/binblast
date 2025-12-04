@@ -8,7 +8,7 @@ import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 
 const PLAN_NAMES: Record<string, string> = {
-  "one-time": "One-Time Blast",
+  "one-time": "Monthly Clean",
   "twice-month": "Bi-Weekly Clean (2x/Month)",
   "bi-monthly": "Bi-Monthly Plan – Yearly Package",
   "quarterly": "Quarterly Plan – Yearly Package",
