@@ -52,15 +52,15 @@ export function calculateProration(
 }
 
 /**
- * Convert one-time plan price to monthly equivalent
- * For "One-Time Blast" ($35), convert to $35/month subscription
+ * Get monthly price for a plan
+ * For "Monthly Clean" ($35/month), returns $35
  */
 export function getMonthlyPriceForPlan(planId: PlanId): number {
   const plan = PLAN_CONFIGS[planId];
   
   if (!plan) return 0;
   
-  // Handle one-time plan - convert to monthly
+  // Handle monthly plan
   if (planId === "one-time") {
     return plan.price; // $35/month
   }
