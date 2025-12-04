@@ -98,18 +98,30 @@ async function ensureInitialized(): Promise<void> {
         try {
           // Triple-check: app exists, has options, and has non-empty apiKey
           if (app && app.options && app.options.apiKey && app.options.apiKey.trim().length > 0) {
+            // Verify the apiKey matches what we expect
+            if (app.options.apiKey !== apiKey) {
+              throw new Error(`ApiKey mismatch: expected ${apiKey.substring(0, 10)}..., got ${app.options.apiKey ? app.options.apiKey.substring(0, 10) + '...' : 'undefined'}`);
+            }
+            
+            // Call getAuth with explicit app to prevent default app lookup
             auth = getAuth(app);
             console.log("[Firebase] Auth initialized successfully");
           } else {
             throw new Error("App missing valid apiKey configuration");
           }
         } catch (authError: any) {
+          // Check if this is the specific "Neither apiKey nor config.authenticator provided" error
+          if (authError.message && authError.message.includes("apiKey") && authError.message.includes("authenticator")) {
+            console.error("[Firebase] Firebase tried to initialize without apiKey - this should not happen with our validation");
+            console.error("[Firebase] This suggests Firebase is being initialized elsewhere or app config is invalid");
+          }
           console.error("[Firebase] Error initializing auth:", authError);
           console.error("[Firebase] App state:", { 
             hasApp: !!app, 
             hasOptions: !!(app && app.options), 
             hasApiKey: !!(app && app.options && app.options.apiKey),
-            apiKeyValue: app && app.options ? app.options.apiKey : 'N/A'
+            apiKeyValue: app && app.options ? (app.options.apiKey ? app.options.apiKey.substring(0, 20) + '...' : 'undefined') : 'N/A',
+            expectedApiKey: apiKey.substring(0, 20) + '...'
           });
           auth = null;
         }
