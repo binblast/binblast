@@ -421,8 +421,21 @@ export default function DashboardPage() {
                       });
                       
                       return shouldShow ? (
-                        <ErrorBoundary fallback={<div style={{ marginTop: "1rem", padding: "0.5rem", background: "#fef2f2", borderRadius: "8px", color: "#dc2626", fontSize: "0.875rem" }}>Unable to load subscription manager. Please refresh the page.</div>}>
-                          <Suspense fallback={<div style={{ marginTop: "1rem" }}>Loading subscription options...</div>}>
+                        <ErrorBoundary fallback={
+                          <div style={{ marginTop: "1rem", padding: "1rem", background: "#fef2f2", borderRadius: "8px", border: "1px solid #fecaca" }}>
+                            <p style={{ margin: 0, color: "#dc2626", fontSize: "0.875rem", marginBottom: "0.5rem" }}>
+                              Unable to load subscription manager.
+                            </p>
+                            <button
+                              onClick={() => window.location.reload()}
+                              className="btn btn-primary"
+                              style={{ fontSize: "0.875rem", padding: "0.5rem 1rem" }}
+                            >
+                              Refresh Page
+                            </button>
+                          </div>
+                        }>
+                          <Suspense fallback={<div style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-light)" }}>Loading subscription options...</div>}>
                             <SubscriptionManager
                               userId={userId}
                               currentPlanId={user.selectedPlan as PlanId}
