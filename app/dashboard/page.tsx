@@ -77,6 +77,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let mounted = true;
+    let unsubscribe: (() => void) | null = null;
     
     async function loadUserData() {
       try {
@@ -100,12 +101,14 @@ export default function DashboardPage() {
         }
 
         // Wait for auth state
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           console.log("[Dashboard] Auth state changed:", { user: !!firebaseUser, uid: firebaseUser?.uid });
           
           if (!firebaseUser) {
             console.log("[Dashboard] No user, redirecting to login");
-            router.push("/login");
+            if (mounted) {
+              router.push("/login");
+            }
             return;
           }
 
@@ -172,11 +175,6 @@ export default function DashboardPage() {
             }
           }
         });
-
-        // Return cleanup function
-        return () => {
-          unsubscribe();
-        };
       } catch (err: any) {
         console.error("[Dashboard] Error initializing Firebase:", err);
         if (mounted) {
@@ -190,6 +188,9 @@ export default function DashboardPage() {
 
     return () => {
       mounted = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
   }, [router]);
 
