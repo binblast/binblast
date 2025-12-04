@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
 import { getMonthlyPriceForPlan } from "@/lib/subscription-utils";
-import { db } from "@/lib/firebase";
+import { getDbInstance } from "@/lib/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
 import Stripe from "stripe";
 
@@ -30,8 +30,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user data from Firestore
-    const userDocRef = doc(collection(db!, "users"), userId);
-    const { getDoc } = await import("firebase/firestore");
+    const db = await getDbInstance();
+    if (!db) {
+      return NextResponse.json(
+        { error: "Firebase is not configured" },
+        { status: 500 }
+      );
+    }
+    const userDocRef = doc(collection(db, "users"), userId);
     const userDoc = await getDoc(userDocRef);
     
     if (!userDoc.exists()) {

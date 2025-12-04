@@ -16,11 +16,6 @@ async function ensureInitialized(): Promise<void> {
     return initPromise;
   }
 
-  // Only initialize on client side
-  if (typeof window === "undefined") {
-    return;
-  }
-
   initPromise = (async () => {
     try {
       const { initializeApp, getApps } = await import("firebase/app");
@@ -56,7 +51,13 @@ async function ensureInitialized(): Promise<void> {
 
       // Only get auth/db if app was successfully created
       if (app) {
-        auth = getAuth(app);
+        // Auth should only be initialized on client side
+        if (typeof window !== "undefined") {
+          auth = getAuth(app);
+        } else {
+          auth = null; // Auth not available on server side
+        }
+        // Firestore can be used on both client and server
         db = getFirestore(app);
         console.log("[Firebase] Successfully initialized");
       }

@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe-config";
-import { db } from "@/lib/firebase";
+import { getDbInstance } from "@/lib/firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import Stripe from "stripe";
 
@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
           : session.subscription?.id;
 
         // If we have a customer email, try to find the user in Firestore
+        const db = await getDbInstance();
         if (customerEmail && db) {
           // Note: We'll need to query by email since we don't have the user ID yet
           // This is a limitation - ideally we'd store a mapping of Stripe customer ID to Firebase UID
@@ -79,6 +80,7 @@ export async function POST(req: NextRequest) {
           ? subscription.customer
           : subscription.customer?.id;
 
+        const db = await getDbInstance();
         if (customerId && db) {
           // Find user by stripeCustomerId and update subscription status
           // Note: This requires querying Firestore, which may not be efficient
@@ -98,6 +100,7 @@ export async function POST(req: NextRequest) {
           ? subscription.customer
           : subscription.customer?.id;
 
+        const db = await getDbInstance();
         if (customerId && db) {
           // Find user by stripeCustomerId and update subscription status to cancelled
           console.log("Subscription deleted:", {
@@ -114,6 +117,7 @@ export async function POST(req: NextRequest) {
           ? invoice.customer
           : invoice.customer?.id;
 
+        const db = await getDbInstance();
         if (customerId && db) {
           console.log("Invoice payment succeeded:", {
             invoiceId: invoice.id,
@@ -130,6 +134,7 @@ export async function POST(req: NextRequest) {
           ? invoice.customer
           : invoice.customer?.id;
 
+        const db = await getDbInstance();
         if (customerId && db) {
           console.log("Invoice payment failed:", {
             invoiceId: invoice.id,
