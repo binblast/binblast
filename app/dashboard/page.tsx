@@ -11,30 +11,9 @@ import Link from "next/link";
 
 // Dynamically import SubscriptionManager to prevent it from loading during initial page load
 // This prevents Firebase initialization errors during bundling/module evaluation
-// Use a factory function that ensures Firebase is ready before loading SubscriptionManager
+// Load SubscriptionManager without importing Firebase in the loader to avoid chunk conflicts
 const SubscriptionManager = dynamic(
-  async () => {
-    try {
-      // Ensure Firebase is already initialized by importing it first
-      // This ensures environment variables are available when SubscriptionManager chunk loads
-      const firebaseModule = await import("@/lib/firebase");
-      await firebaseModule.getAuthInstance(); // Ensure Firebase is initialized
-      
-      // Now load SubscriptionManager - Firebase should already be initialized
-      const subscriptionModule = await import("@/components/SubscriptionManager");
-      return { default: subscriptionModule.SubscriptionManager };
-    } catch (error: any) {
-      console.error("[Dashboard] Error loading SubscriptionManager:", error);
-      // Return a fallback component that shows an error message
-      return {
-        default: () => (
-          <div style={{ marginTop: "1rem", padding: "0.75rem", background: "#fef2f2", borderRadius: "8px", border: "1px solid #fecaca", color: "#dc2626", fontSize: "0.875rem" }}>
-            Unable to load subscription manager. Please refresh the page.
-          </div>
-        )
-      };
-    }
-  },
+  () => import("@/components/SubscriptionManager").then((mod) => ({ default: mod.SubscriptionManager })),
   { 
     ssr: false, // Don't render on server side
     loading: () => null, // Don't show loading state
@@ -112,6 +91,33 @@ export default function DashboardPage() {
   const [scheduledCleanings, setScheduledCleanings] = useState<ScheduledCleaning[]>([]);
   const [cleaningsLoading, setCleaningsLoading] = useState(true);
   const [billingPeriodEnd, setBillingPeriodEnd] = useState<Date | undefined>();
+  const [firebaseReady, setFirebaseReady] = useState(false);
+
+  // Initialize Firebase EARLY in a separate effect to ensure it's ready before any chunks load
+  useEffect(() => {
+    async function initFirebase() {
+      try {
+        // Import and initialize Firebase immediately
+        const firebaseModule = await import("@/lib/firebase");
+        const auth = await firebaseModule.getAuthInstance();
+        const db = await firebaseModule.getDbInstance();
+        
+        // Ensure Firebase is fully initialized
+        if (auth && db) {
+          console.log("[Dashboard] Firebase pre-initialized successfully");
+          setFirebaseReady(true);
+        } else {
+          console.warn("[Dashboard] Firebase initialized but auth/db are null");
+          setFirebaseReady(true); // Allow page to load anyway
+        }
+      } catch (error: any) {
+        console.error("[Dashboard] Firebase pre-initialization error:", error);
+        setFirebaseReady(true); // Set to true anyway to allow page to load
+      }
+    }
+    // Initialize immediately, don't wait
+    initFirebase();
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -402,13 +408,15 @@ export default function DashboardPage() {
                       const shouldShow = user.selectedPlan && 
                         (user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && 
                         ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan) && 
-                        userId;
+                        userId &&
+                        firebaseReady; // Only show if Firebase is ready
                       
                       console.log("[Dashboard] SubscriptionManager conditions:", {
                         hasPlan: !!user.selectedPlan,
                         hasSubscription: !!(user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)),
                         planAllowed: user.selectedPlan ? ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan) : false,
                         hasUserId: !!userId,
+                        firebaseReady,
                         shouldShow
                       });
                       
