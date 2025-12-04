@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { SignupFormModal } from "./SignupFormModal";
+import { useRouter } from "next/navigation";
 
 
 
@@ -98,8 +98,7 @@ const ADDITIONAL_PLANS: PricingPlan[] = [
 ];
 
 export function PricingSection() {
-  const [selectedPlan, setSelectedPlan] = useState<PlanId | undefined>();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
   const [showMoreServices, setShowMoreServices] = useState(false);
 
   const handlePlanClick = (planId: PlanId) => {
@@ -115,8 +114,8 @@ export function PricingSection() {
       }
       return;
     }
-    setSelectedPlan(planId as "one-time" | "twice-month" | "bi-monthly" | "quarterly");
-    setIsModalOpen(true);
+    // Redirect to register page with plan query parameter
+    router.push(`/register?plan=${planId}`);
   };
 
   return (
@@ -281,12 +280,6 @@ export function PricingSection() {
       </div>
 
     </section>
-
-      <SignupFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        selectedPlan={selectedPlan as "one-time" | "twice-month" | "bi-monthly" | "quarterly" | undefined}
-      />
     </>
 
   );
