@@ -43,7 +43,8 @@ export function SignupFormModal({ isOpen, onClose, selectedPlan }: SignupFormMod
 
     try {
       // Dynamically import Firebase auth to avoid build-time initialization
-      const { auth } = await import("@/lib/firebase");
+      const { getAuthInstance } = await import("@/lib/firebase");
+      const auth = await getAuthInstance();
       const { createUserWithEmailAndPassword, updateProfile } = await import("firebase/auth");
       
       if (!auth) {
