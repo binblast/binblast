@@ -14,9 +14,32 @@ interface SubscriptionManagerWrapperProps {
   onPlanChanged?: () => void;
 }
 
-// Dynamically import SubscriptionManager with error handling
+// Dynamically import SubscriptionManager with comprehensive error handling
 const SubscriptionManager = dynamic(
-  () => import("@/components/SubscriptionManager").then((mod) => ({ default: mod.SubscriptionManager })),
+  () => {
+    return import("@/components/SubscriptionManager")
+      .then((mod) => ({ default: mod.SubscriptionManager }))
+      .catch((error) => {
+        console.error("[SubscriptionManagerWrapper] Error loading SubscriptionManager:", error);
+        // Return a fallback component instead of throwing
+        return {
+          default: () => (
+            <div style={{ marginTop: "1rem", padding: "1rem", background: "#fef2f2", borderRadius: "8px", border: "1px solid #fecaca" }}>
+              <p style={{ margin: 0, color: "#dc2626", fontSize: "0.875rem", marginBottom: "0.5rem" }}>
+                Unable to load subscription manager. Please refresh the page.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="btn btn-primary"
+                style={{ fontSize: "0.875rem", padding: "0.5rem 1rem" }}
+              >
+                Refresh Page
+              </button>
+            </div>
+          )
+        };
+      });
+  },
   { 
     ssr: false,
     loading: () => null,
