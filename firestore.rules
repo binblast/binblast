@@ -71,6 +71,27 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
     
+    // Scheduled cleanings collection - users can manage their own scheduled cleanings
+    match /scheduledCleanings/{cleaningId} {
+      // Users can read their own scheduled cleanings
+      allow read: if isAuthenticated() 
+        && resource.data.userId == request.auth.uid;
+      
+      // Users can create scheduled cleanings for themselves
+      allow create: if isAuthenticated() 
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasAll(['userId', 'userEmail', 'addressLine1', 'city', 'state', 'zipCode', 'trashDay', 'scheduledDate', 'scheduledTime', 'status']);
+      
+      // Users can update their own scheduled cleanings (e.g., cancel, reschedule)
+      allow update: if isAuthenticated() 
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId; // Can't change userId
+      
+      // Users can delete their own scheduled cleanings
+      allow delete: if isAuthenticated() 
+        && resource.data.userId == request.auth.uid;
+    }
+    
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

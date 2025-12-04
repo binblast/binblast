@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
+import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
 import Link from "next/link";
 
 interface UserData {
@@ -23,11 +24,28 @@ const PLAN_NAMES: Record<string, string> = {
   "commercial": "Commercial & HOA Plans",
 };
 
+interface ScheduledCleaning {
+  id: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  trashDay: string;
+  status: "upcoming" | "completed" | "cancelled";
+  createdAt: any;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
+  const [userId, setUserId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [scheduledCleanings, setScheduledCleanings] = useState<ScheduledCleaning[]>([]);
+  const [cleaningsLoading, setCleaningsLoading] = useState(true);
 
   useEffect(() => {
     async function loadUserData() {
@@ -49,6 +67,8 @@ export default function DashboardPage() {
             return;
           }
 
+          setUserId(firebaseUser.uid);
+
           try {
             // Get user data from Firestore
             const userDocRef = doc(db, "users", firebaseUser.uid);
@@ -65,9 +85,28 @@ export default function DashboardPage() {
                 email: firebaseUser.email || "",
               });
             }
+
+            // Load scheduled cleanings
+            const { collection, query, where, getDocs, orderBy } = await import("firebase/firestore");
+            const cleaningsQuery = query(
+              collection(db, "scheduledCleanings"),
+              where("userId", "==", firebaseUser.uid),
+              orderBy("scheduledDate", "desc")
+            );
+            const cleaningsSnapshot = await getDocs(cleaningsQuery);
+            const cleanings: ScheduledCleaning[] = [];
+            cleaningsSnapshot.forEach((doc) => {
+              cleanings.push({
+                id: doc.id,
+                ...doc.data(),
+              } as ScheduledCleaning);
+            });
+            setScheduledCleanings(cleanings);
+            setCleaningsLoading(false);
           } catch (err: any) {
             console.error("Error loading user data:", err);
             setError("Failed to load user data");
+            setCleaningsLoading(false);
           } finally {
             setLoading(false);
           }
@@ -215,6 +254,118 @@ export default function DashboardPage() {
               </div>
             )}
 
+            {/* Schedule Cleaning Form */}
+            <div style={{
+              background: "#ffffff",
+              borderRadius: "20px",
+              padding: "2rem",
+              boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
+              border: "1px solid #e5e7eb",
+              marginBottom: "1.5rem"
+            }}>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
+                Schedule a Cleaning
+              </h2>
+              <ScheduleCleaningForm
+                userId={userId}
+                userEmail={user.email}
+                onScheduleCreated={() => {
+                  // Reload cleanings
+                  window.location.reload();
+                }}
+              />
+            </div>
+
+            {/* Scheduled Cleanings */}
+            <div style={{
+              background: "#ffffff",
+              borderRadius: "20px",
+              padding: "2rem",
+              boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
+              border: "1px solid #e5e7eb",
+              marginBottom: "1.5rem"
+            }}>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
+                Your Scheduled Cleanings
+              </h2>
+              
+              {cleaningsLoading ? (
+                <p style={{ color: "var(--text-light)" }}>Loading scheduled cleanings...</p>
+              ) : scheduledCleanings.length === 0 ? (
+                <p style={{ color: "var(--text-light)" }}>No scheduled cleanings yet. Schedule your first cleaning above!</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  {scheduledCleanings.map((cleaning) => {
+                    const cleaningDate = new Date(cleaning.scheduledDate);
+                    const isPast = cleaningDate < new Date();
+                    const statusColor = cleaning.status === "completed" 
+                      ? "#16a34a" 
+                      : cleaning.status === "cancelled"
+                      ? "#dc2626"
+                      : isPast
+                      ? "#f59e0b"
+                      : "#3b82f6";
+
+                    return (
+                      <div
+                        key={cleaning.id}
+                        style={{
+                          padding: "1.25rem",
+                          background: "#f9fafb",
+                          borderRadius: "12px",
+                          border: `1px solid ${statusColor}20`,
+                          borderLeft: `4px solid ${statusColor}`
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "0.75rem" }}>
+                          <div>
+                            <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
+                              {cleaningDate.toLocaleDateString("en-US", { 
+                                weekday: "long", 
+                                month: "long", 
+                                day: "numeric",
+                                year: "numeric"
+                              })}
+                            </div>
+                            <div style={{ fontSize: "0.875rem", color: "var(--text-light)" }}>
+                              {cleaning.scheduledTime}
+                            </div>
+                          </div>
+                          <span style={{
+                            padding: "0.25rem 0.75rem",
+                            borderRadius: "999px",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            background: `${statusColor}20`,
+                            color: statusColor,
+                            textTransform: "capitalize"
+                          }}>
+                            {cleaning.status}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.5rem" }}>
+                          <strong>Address:</strong> {cleaning.addressLine1}
+                          {cleaning.addressLine2 && `, ${cleaning.addressLine2}`}
+                          <br />
+                          {cleaning.city}, {cleaning.state} {cleaning.zipCode}
+                        </div>
+                        {cleaning.trashDay && (
+                          <div style={{ fontSize: "0.875rem", color: "var(--text-light)" }}>
+                            <strong>Trash Day:</strong> {cleaning.trashDay}
+                          </div>
+                        )}
+                        {cleaning.notes && (
+                          <div style={{ fontSize: "0.875rem", color: "var(--text-light)", marginTop: "0.5rem", fontStyle: "italic" }}>
+                            <strong>Notes:</strong> {cleaning.notes}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* Info Block */}
             <div style={{
               background: "#f0f9ff",
@@ -223,7 +374,7 @@ export default function DashboardPage() {
               border: "1px solid #bae6fd"
             }}>
               <p style={{ fontSize: "0.875rem", color: "#0c4a6e", margin: 0 }}>
-                <strong>How it works:</strong> Once you complete your subscription setup, you&apos;ll be able to see your cleaning schedule, manage your service address, and track your cleaning history here.
+                <strong>How it works:</strong> Schedule your cleaning based on your trash pickup day. We&apos;ll clean your bins on the same day as trash pickup, or within 24-48 hours after. All scheduled cleanings are saved here for your reference.
               </p>
             </div>
           </div>
