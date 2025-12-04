@@ -12,7 +12,7 @@ type PricingPlan = {
   id: PlanId;
   name: string;
   price: number | string; // Can be number or "Custom Quote"
-  priceSuffix?: "/clean" | "/month";
+  priceSuffix?: "/clean" | "/month" | "/year";
   priceRange?: string; // e.g. "$60–$65"
   highlight?: boolean;
   binInfo: string; // e.g. "FOR UP TO 2 BINS"
@@ -69,32 +69,31 @@ const PLANS: PricingPlan[] = [
 const ADDITIONAL_PLANS: PricingPlan[] = [
   {
     id: "bi-monthly",
-    name: "Bi-Monthly Clean (Every 2 Months)",
-    price: 60,
-    priceSuffix: "/month",
-    priceRange: "$60–$65",
-    binInfo: "1 BIN INCLUDED",
-    additionalInfo: "+10 FREE Fresh Bags every cycle · +$10 per additional bin",
+    name: "Bi-Monthly Plan – Yearly Package",
+    price: 210,
+    priceSuffix: "/year",
+    binInfo: "6 CLEANS PER YEAR (EVERY 2 MONTHS)",
+    additionalInfo: "1 bin included · +10 FREE heavy-duty odor-control bags every clean · +$10 per extra bin per cleaning",
     features: [
-      "Lower-frequency service plus a bag bundle",
-      "Keeps odors in check between cleanings",
-      "Perfect for low-traffic households"
+      "$210/year (that's $35 × 6, or ~$17.50/month equivalent)",
+      "6 professional cleanings throughout the year",
+      "Heavy-duty odor-control bags included with each clean"
     ],
-    buttonText: "Get Bi-Monthly Plan"
+    buttonText: "Get Yearly Package"
   },
   {
     id: "quarterly",
-    name: "Quarterly Clean (Every 3 Months)",
-    price: 75,
-    priceSuffix: "/month",
-    binInfo: "1 BIN INCLUDED",
-    additionalInfo: "+10 FREE Fresh Bags every cycle · +$10 per additional bin",
+    name: "Quarterly Plan – Yearly Package",
+    price: 160,
+    priceSuffix: "/year",
+    binInfo: "4 CLEANS PER YEAR (EVERY 3 MONTHS)",
+    additionalInfo: "1 bin included · +10 FREE heavy-duty odor-control bags every clean · +$10 per extra bin per cleaning",
     features: [
-      "Seasonal deep refresh service",
-      "Fresh bags so bins never get out of control",
-      "Ideal for minimal waste households"
+      "$160/year (that's $40/clean, or ~$13.33/month equivalent)",
+      "4 professional cleanings throughout the year",
+      "Heavy-duty odor-control bags included with each clean"
     ],
-    buttonText: "Get Quarterly Plan"
+    buttonText: "Get Yearly Package"
   }
 ];
 
