@@ -249,15 +249,22 @@ export async function POST(req: NextRequest) {
       const prorationLine = invoiceDetails.lines.data.find(line => 
         line.description?.toLowerCase().includes('proration') ||
         line.description?.toLowerCase().includes('unused') ||
-        line.proration === true
+        line.description?.toLowerCase().includes('credit')
       );
       
       if (prorationLine) {
-        // Proration amount is usually negative (credit) or positive (charge)
+        // Proration amount - for upgrades, this will be positive (charge)
+        // For downgrades, this might be negative (credit)
         actualProratedAmount = Math.abs(prorationLine.amount || 0);
       } else {
-        // If no proration line found, use the total amount due (minus any previous balance)
-        actualProratedAmount = Math.max(0, invoiceDetails.amount_due - (invoiceDetails.amount_paid || 0));
+        // If no proration line found, check if there's an amount due
+        // For upgrades, amount_due should reflect the prorated charge
+        if (invoiceDetails.amount_due > 0) {
+          actualProratedAmount = invoiceDetails.amount_due;
+        } else {
+          // Fall back to subtotal if amount_due is 0 (might be paid already)
+          actualProratedAmount = Math.abs(invoiceDetails.subtotal || 0);
+        }
       }
     }
 
