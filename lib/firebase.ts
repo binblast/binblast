@@ -18,18 +18,37 @@ if (typeof window !== "undefined") {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
   };
 
-  // Only initialize if we have the required config
-  if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.authDomain) {
+  // Only initialize if we have ALL required config values (not empty strings)
+  const hasRequiredConfig = 
+    firebaseConfig.apiKey && 
+    firebaseConfig.apiKey !== "" &&
+    firebaseConfig.projectId && 
+    firebaseConfig.projectId !== "" &&
+    firebaseConfig.authDomain && 
+    firebaseConfig.authDomain !== "";
+
+  if (hasRequiredConfig) {
     try {
       app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-      auth = getAuth(app);
-      db = getFirestore(app);
+      if (app) {
+        auth = getAuth(app);
+        db = getFirestore(app);
+      }
     } catch (error) {
       console.error("Firebase initialization error:", error);
       // Don't throw - let components handle undefined auth/db gracefully
+      app = undefined;
+      auth = undefined;
+      db = undefined;
     }
   } else {
-    console.warn("Firebase environment variables are not configured. Firebase features will not work.");
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Firebase environment variables are not configured. Firebase features will not work.");
+    }
+    // Explicitly set to undefined to prevent any accidental access
+    app = undefined;
+    auth = undefined;
+    db = undefined;
   }
 }
 
