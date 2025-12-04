@@ -1,8 +1,8 @@
 // app/subscription/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { SubscriptionManager } from "@/components/SubscriptionManager";
 import { PlanId } from "@/lib/stripe-config";
@@ -17,9 +17,8 @@ interface UserData {
   paymentStatus?: string;
 }
 
-export default function SubscriptionPage() {
+function SubscriptionPageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [user, setUser] = useState<UserData | null>(null);
   const [userId, setUserId] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -225,6 +224,25 @@ export default function SubscriptionPage() {
         </div>
       </main>
     </>
+  );
+}
+
+export default function SubscriptionPage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Navbar />
+        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+          <div className="container">
+            <div style={{ textAlign: "center", padding: "3rem 0" }}>
+              <p style={{ color: "var(--text-light)" }}>Loading subscription management...</p>
+            </div>
+          </div>
+        </main>
+      </>
+    }>
+      <SubscriptionPageContent />
+    </Suspense>
   );
 }
 
