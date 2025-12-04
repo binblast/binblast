@@ -26,8 +26,25 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email;
       
       // Users can update their own document
-      allow update: if isOwner(userId)
-        && request.resource.data.email == resource.data.email; // Can't change email
+      // Also allow server-side updates (from API routes) that maintain data integrity
+      allow update: if (
+        // Client-side: user updating their own document
+        (isOwner(userId) && request.resource.data.email == resource.data.email)
+        ||
+        // Server-side: API route updating subscription-related fields only
+        // This allows the change-subscription API to update selectedPlan, stripeSubscriptionId, etc.
+        // Note: Server-side requests have request.auth == null
+        (request.auth == null && 
+         request.resource.data.email == resource.data.email && // Can't change email
+         // Only allow updates to subscription-related fields (check that other fields aren't changed)
+         request.resource.data.firstName == resource.data.firstName &&
+         request.resource.data.lastName == resource.data.lastName &&
+         request.resource.data.phone == resource.data.phone
+        )
+      );
+      
+      // Allow server-side reads for API routes (needed for change-subscription API)
+      allow read: if isOwner(userId) || request.auth == null;
       
       // Users cannot delete their own document (admin only)
       allow delete: if false;

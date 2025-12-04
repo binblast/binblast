@@ -125,11 +125,19 @@ export function SubscriptionManagerStandalone({
         throw new Error(data.error || "Failed to change subscription");
       }
 
+      // If payment is required, redirect to Stripe Checkout
+      if (data.requiresPayment && data.checkoutUrl) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.checkoutUrl;
+        return; // Don't close modal yet - will close after payment
+      }
+
+      // If no payment required (downgrade), show success
       alert(
         `Subscription changed successfully! ${
           data.proration.isUpgrade
-            ? `You owe $${(data.proration.proratedAmountOwed / 100).toFixed(2)} for the upgrade.`
-            : `You received a credit of $${(data.proration.proratedCredit / 100).toFixed(2)} for the remaining days.`
+            ? `You owe $${data.proration.proratedAmountOwed.toFixed(2)} for the upgrade.`
+            : `You received a credit of $${data.proration.proratedCredit.toFixed(2)} for the remaining days.`
         }`
       );
 
@@ -141,7 +149,6 @@ export function SubscriptionManagerStandalone({
       }
     } catch (err: any) {
       setError(err.message || "Failed to change subscription");
-    } finally {
       setLoading(false);
     }
   };

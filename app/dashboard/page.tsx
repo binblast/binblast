@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, Component, ErrorInfo, ReactNode, Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
 import { SubscriptionManagerWrapper } from "@/components/SubscriptionManagerWrapper";
@@ -101,8 +101,9 @@ interface ScheduledCleaning {
   createdAt: any;
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<UserData | null>(null);
   const [userId, setUserId] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -111,6 +112,61 @@ export default function DashboardPage() {
   const [cleaningsLoading, setCleaningsLoading] = useState(true);
   const [billingPeriodEnd, setBillingPeriodEnd] = useState<Date | undefined>();
   const [firebaseReady, setFirebaseReady] = useState(false);
+
+  // Handle Stripe Checkout callback
+  useEffect(() => {
+    const subscriptionChange = searchParams.get("subscription_change");
+    const checkoutSessionId = searchParams.get("payment_intent");
+    
+    if (subscriptionChange === "success" && checkoutSessionId && userId) {
+      // Complete the subscription change after payment
+      (async () => {
+        try {
+          // Get the new plan ID from session storage or URL params
+          const storedNewPlanId = sessionStorage.getItem("pendingPlanChange");
+          const storedSubscriptionId = sessionStorage.getItem("pendingSubscriptionId");
+          
+          if (storedNewPlanId && storedSubscriptionId) {
+            const response = await fetch("/api/stripe/complete-subscription-change", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                checkoutSessionId,
+                userId,
+                newPlanId: storedNewPlanId,
+                subscriptionId: storedSubscriptionId,
+              }),
+            });
+
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+              // Clear stored values
+              sessionStorage.removeItem("pendingPlanChange");
+              sessionStorage.removeItem("pendingSubscriptionId");
+              
+              // Reload page to show updated subscription
+              window.location.href = "/dashboard";
+            } else {
+              console.error("Failed to complete subscription change:", data.error);
+              alert("Payment succeeded but failed to update subscription. Please contact support.");
+            }
+          }
+        } catch (err) {
+          console.error("Error completing subscription change:", err);
+          alert("Payment succeeded but failed to update subscription. Please contact support.");
+        }
+      })();
+    } else if (subscriptionChange === "cancelled") {
+      // Clear stored values if cancelled
+      sessionStorage.removeItem("pendingPlanChange");
+      sessionStorage.removeItem("pendingSubscriptionId");
+      // Remove query params
+      router.replace("/dashboard");
+    }
+  }, [searchParams, userId, router]);
 
   // Initialize Firebase EARLY in a separate effect to ensure it's ready before any chunks load
   useEffect(() => {
@@ -610,6 +666,25 @@ export default function DashboardPage() {
         </div>
       </main>
     </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Navbar />
+        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+          <div className="container">
+            <div style={{ textAlign: "center", padding: "3rem 0" }}>
+              <p style={{ color: "var(--text-light)" }}>Loading your dashboard...</p>
+            </div>
+          </div>
+        </main>
+      </>
+    }>
+      <DashboardPageContent />
+    </Suspense>
   );
 }
 
