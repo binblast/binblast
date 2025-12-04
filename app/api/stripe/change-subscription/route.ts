@@ -155,105 +155,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Calculate proration preview (for display purposes)
-    const currentMonthlyPrice = getMonthlyPriceForPlan(finalCurrentPlanId);
-    const newMonthlyPrice = getMonthlyPriceForPlan(newPlanId as PlanId);
-    const isUpgrade = newMonthlyPrice > currentMonthlyPrice;
-    
-    const daysRemaining = Math.max(
-      0,
-      Math.ceil((billingPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    );
-    const totalDays = Math.ceil(
-      (billingPeriodEnd.getTime() - billingPeriodStart.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    const dailyRateCurrent = currentMonthlyPrice / totalDays;
-    const proratedCredit = dailyRateCurrent * daysRemaining;
-    
-    const dailyRateNew = newMonthlyPrice / totalDays;
-    const proratedAmountNew = dailyRateNew * daysRemaining;
-    
-    // Calculate prorated amount (in cents) - ensure it's at least 50 cents to avoid rounding issues
-    const proratedAmountOwedPreview = isUpgrade ? Math.max(50, Math.round((proratedAmountNew - proratedCredit) * 100)) : 0;
-
-    console.log("[Change Subscription] Proration calculation:", {
-      currentMonthlyPrice,
-      newMonthlyPrice,
-      isUpgrade,
-      daysRemaining,
-      totalDays,
-      proratedCredit,
-      proratedAmountNew,
-      proratedAmountOwedPreview,
-      stripeCustomerId: !!stripeCustomerId,
-      calculation: `(${proratedAmountNew} - ${proratedCredit}) * 100 = ${(proratedAmountNew - proratedCredit) * 100}`,
-    });
-
-    // If this is an upgrade with a prorated amount, require payment first
-    if (isUpgrade && proratedAmountOwedPreview > 0) {
-      if (!stripeCustomerId) {
-        return NextResponse.json(
-          { error: "Stripe customer ID not found. Cannot process payment." },
-          { status: 400 }
-        );
-      }
-
-      const origin = req.headers.get("origin") || "http://localhost:3000";
-      const successUrl = `${origin}/dashboard?subscription_change=success&payment_intent={CHECKOUT_SESSION_ID}`;
-      const cancelUrl = `${origin}/dashboard?subscription_change=cancelled`;
-
-      console.log("[Change Subscription] Creating checkout session for prorated amount:", proratedAmountOwedPreview / 100);
-
-      // Create Checkout Session for the prorated amount
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        mode: "payment",
-        customer: stripeCustomerId,
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              product_data: {
-                name: `Upgrade to ${newPlan.name}`,
-                description: `Prorated charge for upgrading from ${PLAN_CONFIGS[finalCurrentPlanId]?.name || finalCurrentPlanId} to ${newPlan.name}`,
-              },
-              unit_amount: proratedAmountOwedPreview,
-            },
-            quantity: 1,
-          },
-        ],
-        metadata: {
-          userId,
-          currentPlanId: finalCurrentPlanId,
-          newPlanId,
-          subscriptionId: actualSubscriptionId,
-          type: 'subscription_upgrade_proration',
-        },
-      });
-
-      console.log("[Change Subscription] Checkout session created:", session.id, session.url);
-
-      return NextResponse.json({
-        requiresPayment: true,
-        checkoutSessionId: session.id,
-        checkoutUrl: session.url,
-        proration: {
-          daysRemaining,
-          totalDays,
-          proratedCredit: 0,
-          proratedAmountOwed: proratedAmountOwedPreview / 100, // Convert back to dollars
-          isUpgrade: true,
-        },
-      });
-    }
-
-    console.log("[Change Subscription] No payment required - proceeding with subscription update directly");
-
-    // If no payment required (downgrade or no proration), proceed with subscription update
-    // Create new price for the new plan
+    // Create new price for the new plan first (needed for invoice preview)
     let newPriceId: string;
     
     if (newPlan.stripePriceId) {
@@ -279,6 +181,124 @@ export async function POST(req: NextRequest) {
       const newPrice = await stripe.prices.create(priceParams);
       newPriceId = newPrice.id;
     }
+
+    // Use Stripe's invoice preview to get the actual prorated amount
+    const currentMonthlyPrice = getMonthlyPriceForPlan(finalCurrentPlanId);
+    const newMonthlyPrice = getMonthlyPriceForPlan(newPlanId as PlanId);
+    const isUpgrade = newMonthlyPrice > currentMonthlyPrice;
+    
+    let actualProratedAmount = 0;
+    
+    if (isUpgrade) {
+      // Preview the invoice to get Stripe's calculated proration
+      const invoicePreview = await stripe.invoices.retrieveUpcoming({
+        customer: stripeCustomerId,
+        subscription: actualSubscriptionId,
+        subscription_items: [
+          {
+            id: subscriptionItem.id,
+            price: newPriceId,
+          },
+        ],
+      });
+
+      // Find proration line items
+      const prorationLine = invoicePreview.lines.data.find(line => 
+        line.description?.toLowerCase().includes('proration') ||
+        line.description?.toLowerCase().includes('unused') ||
+        (line.amount && line.amount > 0 && line.type === 'invoiceitem')
+      );
+      
+      if (prorationLine && prorationLine.amount) {
+        actualProratedAmount = Math.abs(prorationLine.amount);
+      } else if (invoicePreview.amount_due > 0) {
+        actualProratedAmount = invoicePreview.amount_due;
+      }
+    }
+
+    const daysRemaining = Math.max(
+      0,
+      Math.ceil((billingPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    );
+    const totalDays = Math.ceil(
+      (billingPeriodEnd.getTime() - billingPeriodStart.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    const dailyRateCurrent = currentMonthlyPrice / totalDays;
+    const proratedCredit = dailyRateCurrent * daysRemaining;
+
+    console.log("[Change Subscription] Proration calculation:", {
+      currentMonthlyPrice,
+      newMonthlyPrice,
+      isUpgrade,
+      daysRemaining,
+      totalDays,
+      proratedCredit,
+      actualProratedAmountFromStripe: actualProratedAmount,
+      stripeCustomerId: !!stripeCustomerId,
+    });
+
+    // If this is an upgrade with a prorated amount, require payment first
+    if (isUpgrade && actualProratedAmount > 0) {
+      if (!stripeCustomerId) {
+        return NextResponse.json(
+          { error: "Stripe customer ID not found. Cannot process payment." },
+          { status: 400 }
+        );
+      }
+
+      const origin = req.headers.get("origin") || "http://localhost:3000";
+      const successUrl = `${origin}/dashboard?subscription_change=success&payment_intent={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${origin}/dashboard?subscription_change=cancelled`;
+
+      console.log("[Change Subscription] Creating checkout session for prorated amount:", actualProratedAmount / 100);
+
+      // Create Checkout Session for the prorated amount
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        mode: "payment",
+        customer: stripeCustomerId,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: `Upgrade to ${newPlan.name}`,
+                description: `Prorated charge for upgrading from ${PLAN_CONFIGS[finalCurrentPlanId]?.name || finalCurrentPlanId} to ${newPlan.name}`,
+              },
+              unit_amount: actualProratedAmount,
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          userId,
+          currentPlanId: finalCurrentPlanId,
+          newPlanId,
+          subscriptionId: actualSubscriptionId,
+          type: 'subscription_upgrade_proration',
+        },
+      });
+
+      console.log("[Change Subscription] Checkout session created:", session.id, session.url);
+
+      return NextResponse.json({
+        requiresPayment: true,
+        checkoutSessionId: session.id,
+        checkoutUrl: session.url,
+        proration: {
+          daysRemaining,
+          totalDays,
+          proratedCredit: 0,
+          proratedAmountOwed: actualProratedAmount / 100, // Convert back to dollars
+          isUpgrade: true,
+        },
+      });
+    }
+
+    console.log("[Change Subscription] No payment required - proceeding with subscription update directly");
 
     // Update subscription with proration
     const updatedSubscription = await stripe.subscriptions.update(
