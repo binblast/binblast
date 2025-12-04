@@ -34,11 +34,13 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
   const [selectedTime, setSelectedTime] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Calculate available dates (same day or within 24-48 hours of trash day)
+  // Calculate available dates (same day as trash day, or within 24-48 hours after)
   const getAvailableDates = () => {
     if (!trashDay) return [];
     
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset to start of day
+    
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const trashDayIndex = dayNames.indexOf(trashDay);
     
@@ -47,27 +49,37 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
     const dates: string[] = [];
     const currentDayIndex = today.getDay();
     
-    // Find next occurrence of trash day
+    // Find next occurrence of trash day (on or after today)
     let daysUntilTrashDay = trashDayIndex - currentDayIndex;
-    if (daysUntilTrashDay < 0) daysUntilTrashDay += 7;
-    if (daysUntilTrashDay === 0) daysUntilTrashDay = 7; // If today is trash day, offer next week
+    if (daysUntilTrashDay < 0) {
+      daysUntilTrashDay += 7; // Move to next week
+    }
+    // If today IS the trash day, we can schedule for today
+    // If it's a future day, we schedule for that day
     
     const trashDayDate = new Date(today);
     trashDayDate.setDate(today.getDate() + daysUntilTrashDay);
     
-    // Add same day (if trash day is today or tomorrow)
+    // Only add dates that are today or in the future
+    // Same day as trash day
     const sameDay = new Date(trashDayDate);
-    dates.push(formatDateForInput(sameDay));
+    if (sameDay >= today) {
+      dates.push(formatDateForInput(sameDay));
+    }
     
-    // Add +1 day (24 hours after trash day)
+    // +1 day (24 hours after trash day)
     const nextDay = new Date(trashDayDate);
     nextDay.setDate(trashDayDate.getDate() + 1);
-    dates.push(formatDateForInput(nextDay));
+    if (nextDay >= today) {
+      dates.push(formatDateForInput(nextDay));
+    }
     
-    // Add +2 days (48 hours after trash day)
+    // +2 days (48 hours after trash day)
     const dayAfter = new Date(trashDayDate);
     dayAfter.setDate(trashDayDate.getDate() + 2);
-    dates.push(formatDateForInput(dayAfter));
+    if (dayAfter >= today) {
+      dates.push(formatDateForInput(dayAfter));
+    }
     
     return dates;
   };
@@ -231,9 +243,56 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
                   padding: "0.75rem 1rem",
                   border: "1px solid #e5e7eb",
                   borderRadius: "8px",
-                  fontSize: "0.95rem"
+                  fontSize: "0.95rem",
+                  marginBottom: "0.75rem"
                 }}
               />
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "0.75rem" }}>
+                <input
+                  type="text"
+                  placeholder="City"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    fontSize: "0.95rem"
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="State"
+                  value={state}
+                  onChange={(e) => setState(e.target.value.toUpperCase())}
+                  maxLength={2}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    fontSize: "0.95rem",
+                    textTransform: "uppercase"
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="Zip Code"
+                  value={zipCode}
+                  onChange={(e) => setZipCode(e.target.value)}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    fontSize: "0.95rem"
+                  }}
+                />
+              </div>
             </div>
 
             {/* Date Selection */}
