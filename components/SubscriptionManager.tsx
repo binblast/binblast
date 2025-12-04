@@ -10,6 +10,7 @@ interface SubscriptionManagerProps {
   userId: string;
   currentPlanId: PlanId;
   stripeSubscriptionId: string | null;
+  stripeCustomerId?: string | null;
   billingPeriodEnd?: Date;
   onPlanChanged?: () => void;
 }
