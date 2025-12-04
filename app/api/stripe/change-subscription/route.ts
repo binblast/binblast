@@ -191,7 +191,8 @@ export async function POST(req: NextRequest) {
     
     if (isUpgrade) {
       // Preview the invoice to get Stripe's calculated proration
-      const invoicePreview = await stripe.invoices.retrieveUpcoming({
+      // Use the correct Stripe API method
+      const invoicePreview = await stripe.invoices.upcoming({
         customer: stripeCustomerId,
         subscription: actualSubscriptionId,
         subscription_items: [
