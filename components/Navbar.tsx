@@ -3,9 +3,37 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check Firebase auth state
+    async function checkAuth() {
+      try {
+        const { auth } = await import("@/lib/firebase");
+        const { onAuthStateChanged } = await import("firebase/auth");
+        
+        if (auth) {
+          onAuthStateChanged(auth, (user) => {
+            setIsLoggedIn(!!user);
+            setLoading(false);
+          });
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Error checking auth:", err);
+        setLoading(false);
+      }
+    }
+
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     // Smooth scrolling for anchor links
@@ -36,6 +64,21 @@ export function Navbar() {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  const handleLogout = async () => {
+    try {
+      const { auth } = await import("@/lib/firebase");
+      const { signOut } = await import("firebase/auth");
+      
+      if (auth) {
+        await signOut(auth);
+        router.push("/");
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Error signing out:", err);
+    }
+  };
+
   return (
     <nav className="navbar">
       <div className="nav-container">
@@ -45,8 +88,44 @@ export function Navbar() {
         <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
           <li><Link href="#home">Home</Link></li>
           <li><Link href="#services">Services</Link></li>
-          <li><Link href="#account">Account</Link></li>
-          <li><Link href="/login">Login</Link></li>
+          <li>
+            {isLoggedIn ? (
+              <Link href="/dashboard">Account</Link>
+            ) : (
+              <Link href="#account">Account</Link>
+            )}
+          </li>
+          {!loading && (
+            <li>
+              {isLoggedIn ? (
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--text-dark)",
+                    fontWeight: "500",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontSize: "inherit",
+                    fontFamily: "inherit",
+                    transition: "color 0.3s"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = "var(--primary-color)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "var(--text-dark)";
+                  }}
+                >
+                  Logout
+                </button>
+              ) : (
+                <Link href="/login">Login</Link>
+              )}
+            </li>
+          )}
           <li>
             <Link href="#pricing" className="nav-login">Get Started</Link>
           </li>
