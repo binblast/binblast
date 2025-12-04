@@ -177,11 +177,32 @@ export async function POST(req: NextRequest) {
     // Calculate prorated amount (in cents)
     const proratedAmountOwedPreview = isUpgrade ? Math.round((proratedAmountNew - proratedCredit) * 100) : 0;
 
+    console.log("[Change Subscription] Proration calculation:", {
+      currentMonthlyPrice,
+      newMonthlyPrice,
+      isUpgrade,
+      daysRemaining,
+      totalDays,
+      proratedCredit,
+      proratedAmountNew,
+      proratedAmountOwedPreview,
+      stripeCustomerId: !!stripeCustomerId,
+    });
+
     // If this is an upgrade with a prorated amount, require payment first
     if (isUpgrade && proratedAmountOwedPreview > 0) {
+      if (!stripeCustomerId) {
+        return NextResponse.json(
+          { error: "Stripe customer ID not found. Cannot process payment." },
+          { status: 400 }
+        );
+      }
+
       const origin = req.headers.get("origin") || "http://localhost:3000";
       const successUrl = `${origin}/dashboard?subscription_change=success&payment_intent={CHECKOUT_SESSION_ID}`;
       const cancelUrl = `${origin}/dashboard?subscription_change=cancelled`;
+
+      console.log("[Change Subscription] Creating checkout session for prorated amount:", proratedAmountOwedPreview / 100);
 
       // Create Checkout Session for the prorated amount
       const session = await stripe.checkout.sessions.create({
@@ -212,6 +233,8 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      console.log("[Change Subscription] Checkout session created:", session.id, session.url);
+
       return NextResponse.json({
         requiresPayment: true,
         checkoutSessionId: session.id,
@@ -225,6 +248,8 @@ export async function POST(req: NextRequest) {
         },
       });
     }
+
+    console.log("[Change Subscription] No payment required - proceeding with subscription update directly");
 
     // If no payment required (downgrade or no proration), proceed with subscription update
     // Create new price for the new plan
