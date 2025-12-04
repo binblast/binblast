@@ -76,27 +76,40 @@ export default function DashboardPage() {
   const [billingPeriodEnd, setBillingPeriodEnd] = useState<Date | undefined>();
 
   useEffect(() => {
+    let mounted = true;
+    
     async function loadUserData() {
       try {
+        console.log("[Dashboard] Starting to load user data...");
+        
         // Dynamically import Firebase to avoid SSR issues
         const { auth } = await import("@/lib/firebase");
         const { onAuthStateChanged } = await import("firebase/auth");
         const { db } = await import("@/lib/firebase");
         const { doc, getDoc } = await import("firebase/firestore");
 
+        console.log("[Dashboard] Firebase imported:", { auth: !!auth, db: !!db });
+
         if (!auth || !db) {
-          console.error("Firebase is not configured - auth or db is undefined");
-          setError("Firebase is not configured. Please check your environment variables.");
-          setLoading(false);
+          console.error("[Dashboard] Firebase is not configured - auth or db is undefined");
+          if (mounted) {
+            setError("Firebase is not configured. Please check your environment variables. Auth: " + (auth ? "OK" : "MISSING") + ", DB: " + (db ? "OK" : "MISSING"));
+            setLoading(false);
+          }
           return;
         }
 
         // Wait for auth state
-        onAuthStateChanged(auth, async (firebaseUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          console.log("[Dashboard] Auth state changed:", { user: !!firebaseUser, uid: firebaseUser?.uid });
+          
           if (!firebaseUser) {
+            console.log("[Dashboard] No user, redirecting to login");
             router.push("/login");
             return;
           }
+
+          if (!mounted) return;
 
           setUserId(firebaseUser.uid);
 
@@ -105,11 +118,15 @@ export default function DashboardPage() {
             const userDocRef = doc(db, "users", firebaseUser.uid);
             const userDoc = await getDoc(userDocRef);
 
+            if (!mounted) return;
+
             if (userDoc.exists()) {
               const userData = userDoc.data() as UserData;
+              console.log("[Dashboard] User data loaded:", { email: userData.email, plan: userData.selectedPlan });
               setUser(userData);
             } else {
               // User document doesn't exist yet
+              console.log("[Dashboard] User document doesn't exist, creating default");
               setUser({
                 firstName: firebaseUser.displayName?.split(" ")[0] || "User",
                 lastName: firebaseUser.displayName?.split(" ")[1] || "",
@@ -118,38 +135,62 @@ export default function DashboardPage() {
             }
 
             // Load scheduled cleanings
-            const { collection, query, where, getDocs, orderBy } = await import("firebase/firestore");
-            const cleaningsQuery = query(
-              collection(db, "scheduledCleanings"),
-              where("userId", "==", firebaseUser.uid),
-              orderBy("scheduledDate", "desc")
-            );
-            const cleaningsSnapshot = await getDocs(cleaningsQuery);
-            const cleanings: ScheduledCleaning[] = [];
-            cleaningsSnapshot.forEach((doc) => {
-              cleanings.push({
-                id: doc.id,
-                ...doc.data(),
-              } as ScheduledCleaning);
-            });
-            setScheduledCleanings(cleanings);
-            setCleaningsLoading(false);
+            try {
+              const { collection, query, where, getDocs, orderBy } = await import("firebase/firestore");
+              const cleaningsQuery = query(
+                collection(db, "scheduledCleanings"),
+                where("userId", "==", firebaseUser.uid),
+                orderBy("scheduledDate", "desc")
+              );
+              const cleaningsSnapshot = await getDocs(cleaningsQuery);
+              const cleanings: ScheduledCleaning[] = [];
+              cleaningsSnapshot.forEach((doc) => {
+                cleanings.push({
+                  id: doc.id,
+                  ...doc.data(),
+                } as ScheduledCleaning);
+              });
+              if (mounted) {
+                setScheduledCleanings(cleanings);
+                setCleaningsLoading(false);
+              }
+            } catch (cleaningsErr: any) {
+              console.error("[Dashboard] Error loading cleanings:", cleaningsErr);
+              if (mounted) {
+                setCleaningsLoading(false);
+              }
+            }
           } catch (err: any) {
-            console.error("Error loading user data:", err);
-            setError("Failed to load user data");
-            setCleaningsLoading(false);
+            console.error("[Dashboard] Error loading user data:", err);
+            if (mounted) {
+              setError("Failed to load user data: " + (err.message || "Unknown error"));
+              setCleaningsLoading(false);
+            }
           } finally {
-            setLoading(false);
+            if (mounted) {
+              setLoading(false);
+            }
           }
         });
+
+        // Return cleanup function
+        return () => {
+          unsubscribe();
+        };
       } catch (err: any) {
-        console.error("Error initializing Firebase:", err);
-        setError(err.message || "Failed to initialize");
-        setLoading(false);
+        console.error("[Dashboard] Error initializing Firebase:", err);
+        if (mounted) {
+          setError(err.message || "Failed to initialize: " + String(err));
+          setLoading(false);
+        }
       }
     }
 
     loadUserData();
+
+    return () => {
+      mounted = false;
+    };
   }, [router]);
 
   if (loading) {
