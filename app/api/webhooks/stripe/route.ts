@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe-config";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
+import Stripe from "stripe";
 
 export const dynamic = 'force-dynamic';
 
