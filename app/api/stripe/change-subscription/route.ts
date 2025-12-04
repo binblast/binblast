@@ -174,8 +174,8 @@ export async function POST(req: NextRequest) {
     const dailyRateNew = newMonthlyPrice / totalDays;
     const proratedAmountNew = dailyRateNew * daysRemaining;
     
-    // Calculate prorated amount (in cents)
-    const proratedAmountOwedPreview = isUpgrade ? Math.round((proratedAmountNew - proratedCredit) * 100) : 0;
+    // Calculate prorated amount (in cents) - ensure it's at least 50 cents to avoid rounding issues
+    const proratedAmountOwedPreview = isUpgrade ? Math.max(50, Math.round((proratedAmountNew - proratedCredit) * 100)) : 0;
 
     console.log("[Change Subscription] Proration calculation:", {
       currentMonthlyPrice,
@@ -187,6 +187,7 @@ export async function POST(req: NextRequest) {
       proratedAmountNew,
       proratedAmountOwedPreview,
       stripeCustomerId: !!stripeCustomerId,
+      calculation: `(${proratedAmountNew} - ${proratedCredit}) * 100 = ${(proratedAmountNew - proratedCredit) * 100}`,
     });
 
     // If this is an upgrade with a prorated amount, require payment first

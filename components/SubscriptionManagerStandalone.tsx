@@ -142,11 +142,16 @@ export function SubscriptionManagerStandalone({
       console.log("[SubscriptionManager] No payment required, completing change directly");
 
       // If no payment required (downgrade), show success
+      const proratedAmount = data.proration?.proratedAmountOwed || 0;
+      const proratedCredit = data.proration?.proratedCredit || 0;
+      
       alert(
         `Subscription changed successfully! ${
-          data.proration.isUpgrade
-            ? `You owe $${data.proration.proratedAmountOwed.toFixed(2)} for the upgrade.`
-            : `You received a credit of $${data.proration.proratedCredit.toFixed(2)} for the remaining days.`
+          data.proration?.isUpgrade && proratedAmount > 0
+            ? `You owe $${proratedAmount.toFixed(2)} for the upgrade.`
+            : proratedCredit > 0
+            ? `You received a credit of $${proratedCredit.toFixed(2)} for the remaining days.`
+            : `Your subscription has been updated.`
         }`
       );
 
