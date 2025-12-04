@@ -1,12 +1,10 @@
 // app/dashboard/page.tsx
 "use client";
 
-import { useEffect, useState, Component, ErrorInfo, ReactNode, Suspense } from "react";
+import { useEffect, useState, Component, ErrorInfo, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
-import { SubscriptionManagerWrapper } from "@/components/SubscriptionManagerWrapper";
-import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
 
 // Error boundary to catch component rendering errors
@@ -423,51 +421,17 @@ export default function DashboardPage() {
                     <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-light)" }}>
                       Your subscription is active. You can schedule cleanings below.
                     </p>
-                    {(() => {
-                      const shouldShow = user.selectedPlan && 
-                        (user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && 
-                        ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan) && 
-                        userId &&
-                        firebaseReady; // Only show if Firebase is ready
-                      
-                      console.log("[Dashboard] SubscriptionManager conditions:", {
-                        hasPlan: !!user.selectedPlan,
-                        hasSubscription: !!(user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)),
-                        planAllowed: user.selectedPlan ? ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan) : false,
-                        hasUserId: !!userId,
-                        firebaseReady,
-                        shouldShow
-                      });
-                      
-                      return shouldShow ? (
-                        <ErrorBoundary fallback={
-                          <div style={{ marginTop: "1rem", padding: "1rem", background: "#fef2f2", borderRadius: "8px", border: "1px solid #fecaca" }}>
-                            <p style={{ margin: 0, color: "#dc2626", fontSize: "0.875rem", marginBottom: "0.5rem" }}>
-                              Unable to load subscription manager.
-                            </p>
-                            <button
-                              onClick={() => window.location.reload()}
-                              className="btn btn-primary"
-                              style={{ fontSize: "0.875rem", padding: "0.5rem 1rem" }}
-                            >
-                              Refresh Page
-                            </button>
-                          </div>
-                        }>
-                          <SubscriptionManagerWrapper
-                            userId={userId}
-                            currentPlanId={user.selectedPlan as PlanId}
-                            stripeSubscriptionId={user.stripeSubscriptionId || null}
-                            stripeCustomerId={user.stripeCustomerId || null}
-                            billingPeriodEnd={billingPeriodEnd}
-                            onPlanChanged={() => {
-                              // Reload user data after plan change
-                              window.location.reload();
-                            }}
-                          />
-                        </ErrorBoundary>
-                      ) : null;
-                    })()}
+                    {user.selectedPlan && 
+                     (user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && 
+                     ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan) && userId && (
+                      <Link 
+                        href="/subscription"
+                        className="btn btn-primary"
+                        style={{ marginTop: "1rem", display: "block", width: "100%", maxWidth: "300px", textAlign: "center" }}
+                      >
+                        Manage Subscription
+                      </Link>
+                    )}
                   </>
                 )}
               </div>
