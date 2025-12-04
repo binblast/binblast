@@ -291,10 +291,10 @@ export default function DashboardPage() {
                     <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-light)" }}>
                       Your subscription is active. You can schedule cleanings below.
                     </p>
-                    {(user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && (
+                    {(user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && user.selectedPlan && (
                       <SubscriptionManager
                         userId={userId}
-                        currentPlanId={user.selectedPlan as any}
+                        currentPlanId={user.selectedPlan as PlanId}
                         stripeSubscriptionId={user.stripeSubscriptionId || null}
                         stripeCustomerId={user.stripeCustomerId || null}
                         billingPeriodEnd={billingPeriodEnd}

@@ -28,6 +28,11 @@ export function SubscriptionManager({
   const [selectedNewPlan, setSelectedNewPlan] = useState<PlanId | null>(null);
   const [showChangeModal, setShowChangeModal] = useState(false);
 
+  // Safety check - don't render if plan ID is invalid
+  if (!currentPlanId || !PLAN_CONFIGS[currentPlanId]) {
+    return null;
+  }
+
   const currentPlan = PLAN_CONFIGS[currentPlanId];
   const currentMonthlyPrice = getMonthlyPriceForPlan(currentPlanId);
 
