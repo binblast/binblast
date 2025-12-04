@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -84,8 +85,15 @@ export function Navbar() {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link href="/" className="nav-logo">
-          Bin Blast Co.
+        <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+          <Image 
+            src="/logo.jpg" 
+            alt="Bin Blast Co. Logo" 
+            width={120} 
+            height={40}
+            style={{ objectFit: "contain" }}
+            priority
+          />
         </Link>
         <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
           <li>
