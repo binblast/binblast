@@ -65,7 +65,10 @@ export default function DashboardPage() {
         const { doc, getDoc } = await import("firebase/firestore");
 
         if (!auth || !db) {
-          throw new Error("Firebase is not configured");
+          console.error("Firebase is not configured - auth or db is undefined");
+          setError("Firebase is not configured. Please check your environment variables.");
+          setLoading(false);
+          return;
         }
 
         // Wait for auth state
