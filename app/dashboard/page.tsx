@@ -13,6 +13,10 @@ interface UserData {
   email: string;
   phone?: string;
   selectedPlan?: string;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  subscriptionStatus?: string;
+  paymentStatus?: string;
   createdAt?: any;
 }
 
@@ -205,7 +209,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Selected Plan Card */}
+            {/* Subscription & Plan Card */}
             {user.selectedPlan && (
               <div style={{
                 background: "#ffffff",
@@ -216,21 +220,75 @@ export default function DashboardPage() {
                 marginBottom: "1.5rem"
               }}>
                 <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
-                  Selected Plan
+                  Subscription & Plan
                 </h2>
                 <div style={{
                   padding: "1rem 1.5rem",
-                  background: "#ecfdf5",
+                  background: user.paymentStatus === "paid" ? "#ecfdf5" : "#fef3c7",
                   borderRadius: "12px",
-                  border: "1px solid #16a34a"
+                  border: `1px solid ${user.paymentStatus === "paid" ? "#16a34a" : "#f59e0b"}`,
+                  marginBottom: "1rem"
                 }}>
-                  <p style={{ margin: 0, fontSize: "1rem", color: "#047857", fontWeight: "600" }}>
+                  <p style={{ margin: 0, fontSize: "1rem", color: user.paymentStatus === "paid" ? "#047857" : "#92400e", fontWeight: "600" }}>
                     {PLAN_NAMES[user.selectedPlan] || user.selectedPlan}
                   </p>
                 </div>
-                <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-light)" }}>
-                  Your subscription details will be set up during the onboarding process.
-                </p>
+                
+                {/* Payment Status */}
+                {user.paymentStatus && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.25rem" }}>Payment Status</div>
+                    <div style={{ 
+                      fontSize: "0.95rem", 
+                      fontWeight: "500", 
+                      color: user.paymentStatus === "paid" ? "#047857" : "#dc2626",
+                      display: "inline-block",
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: "6px",
+                      background: user.paymentStatus === "paid" ? "#d1fae5" : "#fee2e2"
+                    }}>
+                      {user.paymentStatus === "paid" ? "✓ Paid" : "Pending"}
+                    </div>
+                  </div>
+                )}
+
+                {/* Subscription Status */}
+                {user.subscriptionStatus && user.subscriptionStatus !== "none" && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.25rem" }}>Subscription Status</div>
+                    <div style={{ 
+                      fontSize: "0.95rem", 
+                      fontWeight: "500", 
+                      color: user.subscriptionStatus === "active" ? "#047857" : "#dc2626",
+                      display: "inline-block",
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: "6px",
+                      background: user.subscriptionStatus === "active" ? "#d1fae5" : "#fee2e2",
+                      textTransform: "capitalize"
+                    }}>
+                      {user.subscriptionStatus === "active" ? "✓ Active" : user.subscriptionStatus}
+                    </div>
+                  </div>
+                )}
+
+                {/* Stripe Customer ID (for support/debugging) */}
+                {user.stripeCustomerId && (
+                  <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #e5e7eb" }}>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-light)" }}>
+                      Stripe Customer ID: <code style={{ fontSize: "0.7rem", color: "#6b7280" }}>{user.stripeCustomerId}</code>
+                    </div>
+                  </div>
+                )}
+
+                {!user.paymentStatus || user.paymentStatus === "pending" ? (
+                  <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-light)" }}>
+                    Complete your payment to activate your subscription.
+                  </p>
+                ) : (
+                  <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-light)" }}>
+                    Your subscription is active. You can schedule cleanings below.
+                  </p>
+                )}
               </div>
             )}
 

@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
@@ -18,6 +18,7 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedPlanId = searchParams.get("plan") || "";
+  const sessionId = searchParams.get("session_id") || "";
   const initialEmail = searchParams.get("email") || "";
   
   const [firstName, setFirstName] = useState("");
@@ -29,6 +30,48 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [verifyingSession, setVerifyingSession] = useState(!!sessionId);
+  const [stripeData, setStripeData] = useState<{
+    customerId: string | null;
+    subscriptionId: string | null;
+  } | null>(null);
+
+  // Verify Stripe session on mount if session_id is present
+  useEffect(() => {
+    async function verifyStripeSession() {
+      if (!sessionId) {
+        setVerifyingSession(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/stripe/verify-session?session_id=${sessionId}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to verify payment");
+        }
+
+        // Store Stripe data for later use
+        setStripeData({
+          customerId: data.customerId,
+          subscriptionId: data.subscriptionId,
+        });
+
+        // Pre-fill email from Stripe session if available
+        if (data.customerEmail && !email) {
+          setEmail(data.customerEmail);
+        }
+
+        setVerifyingSession(false);
+      } catch (err: any) {
+        setError(err.message || "Failed to verify payment. Please try again.");
+        setVerifyingSession(false);
+      }
+    }
+
+    verifyStripeSession();
+  }, [sessionId, email]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,12 +113,25 @@ function RegisterForm() {
       
       if (db && userCredential.user) {
         const userDocRef = doc(collection(db, "users"), userCredential.user.uid);
+        
+        // Determine subscription status based on Stripe data
+        let subscriptionStatus = "none";
+        if (stripeData?.subscriptionId) {
+          subscriptionStatus = "active";
+        } else if (stripeData?.customerId && !stripeData?.subscriptionId) {
+          subscriptionStatus = "one_time_paid";
+        }
+
         await setDoc(userDocRef, {
           firstName,
           lastName,
           email,
           phone: phone || null,
           selectedPlan: selectedPlanId || null,
+          stripeCustomerId: stripeData?.customerId || null,
+          stripeSubscriptionId: stripeData?.subscriptionId || null,
+          subscriptionStatus,
+          paymentStatus: stripeData ? "paid" : "pending",
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
@@ -103,16 +159,31 @@ function RegisterForm() {
               Create Your Account
             </h1>
 
-            {selectedPlanId && PLAN_NAMES[selectedPlanId] && (
+            {verifyingSession && (
               <div style={{
                 padding: "1rem 1.5rem",
-                background: "#ecfdf5",
+                background: "#eff6ff",
                 borderRadius: "12px",
                 marginBottom: "2rem",
-                border: "1px solid #16a34a"
+                border: "1px solid #3b82f6"
               }}>
-                <p style={{ margin: 0, fontSize: "0.95rem", color: "#047857", fontWeight: "600" }}>
+                <p style={{ margin: 0, fontSize: "0.95rem", color: "#1e40af", fontWeight: "600" }}>
+                  Verifying your payment...
+                </p>
+              </div>
+            )}
+
+            {selectedPlanId && PLAN_NAMES[selectedPlanId] && !verifyingSession && (
+              <div style={{
+                padding: "1rem 1.5rem",
+                background: stripeData ? "#ecfdf5" : "#fef3c7",
+                borderRadius: "12px",
+                marginBottom: "2rem",
+                border: `1px solid ${stripeData ? "#16a34a" : "#f59e0b"}`
+              }}>
+                <p style={{ margin: 0, fontSize: "0.95rem", color: stripeData ? "#047857" : "#92400e", fontWeight: "600" }}>
                   <strong>Selected Plan:</strong> {PLAN_NAMES[selectedPlanId]}
+                  {stripeData && " ✓ Payment Verified"}
                 </p>
               </div>
             )}

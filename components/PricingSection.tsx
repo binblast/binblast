@@ -100,8 +100,9 @@ const ADDITIONAL_PLANS: PricingPlan[] = [
 export function PricingSection() {
   const router = useRouter();
   const [showMoreServices, setShowMoreServices] = useState(false);
+  const [loadingPlanId, setLoadingPlanId] = useState<PlanId | null>(null);
 
-  const handlePlanClick = (planId: PlanId) => {
+  const handlePlanClick = async (planId: PlanId) => {
     if (planId === "commercial") {
       // For commercial plans, scroll to contact or handle differently
       const contactSection = document.getElementById("contact") || document.getElementById("faq");
@@ -114,8 +115,36 @@ export function PricingSection() {
       }
       return;
     }
-    // Redirect to register page with plan query parameter
-    router.push(`/register?plan=${planId}`);
+
+    setLoadingPlanId(planId);
+
+    try {
+      // Create Stripe checkout session
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ planId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create checkout session");
+      }
+
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (error: any) {
+      console.error("Error creating checkout session:", error);
+      alert(error.message || "Failed to start checkout. Please try again.");
+      setLoadingPlanId(null);
+    }
   };
 
   return (
@@ -148,7 +177,11 @@ export function PricingSection() {
 
               onClick={() => handlePlanClick(plan.id)}
 
+              disabled={loadingPlanId === plan.id}
+
               className={`pricing-card card-link ${plan.highlight ? 'popular' : ''}`}
+
+              style={{ opacity: loadingPlanId === plan.id ? 0.6 : 1, cursor: loadingPlanId === plan.id ? 'wait' : 'pointer' }}
 
             >
 
@@ -196,7 +229,9 @@ export function PricingSection() {
 
 
 
-              <div className={`card-cta ${plan.highlight ? 'primary' : ''}`}>{plan.buttonText}</div>
+              <div className={`card-cta ${plan.highlight ? 'primary' : ''}`}>
+                {loadingPlanId === plan.id ? "Processing..." : plan.buttonText}
+              </div>
 
             </button>
 
@@ -239,7 +274,9 @@ export function PricingSection() {
               <button
                 key={plan.id}
                 onClick={() => handlePlanClick(plan.id)}
+                disabled={loadingPlanId === plan.id}
                 className="pricing-card card-link"
+                style={{ opacity: loadingPlanId === plan.id ? 0.6 : 1, cursor: loadingPlanId === plan.id ? 'wait' : 'pointer' }}
               >
                 <h3 className="plan-name">{plan.name}</h3>
                 <p className={`price-big ${typeof plan.price === 'string' ? 'custom' : ''}`}>
@@ -257,7 +294,9 @@ export function PricingSection() {
                     <li key={index}>{feature}</li>
                   ))}
                 </ul>
-                <div className="card-cta">{plan.buttonText}</div>
+                <div className="card-cta">
+                  {loadingPlanId === plan.id ? "Processing..." : plan.buttonText}
+                </div>
               </button>
             ))}
           </div>
