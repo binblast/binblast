@@ -1,7 +1,6 @@
 // app/page.tsx
 
 import { Navbar } from "@/components/Navbar";
-import { BusinessOverviewSection } from "@/components/BusinessOverviewSection";
 import { PricingSection } from "@/components/PricingSection";
 import { FAQSection } from "@/components/FAQSection";
 import Link from "next/link";
@@ -75,7 +74,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        <BusinessOverviewSection />
         <PricingSection />
 
         {/* Account Section */}
