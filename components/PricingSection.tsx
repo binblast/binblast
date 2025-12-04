@@ -27,7 +27,7 @@ const PLANS: PricingPlan[] = [
     name: "One-Time Blast",
     price: 35,
     priceSuffix: "/clean",
-    binInfo: "FOR UP TO 2 BINS",
+    binInfo: "FOR UP TO 1 BIN",
     additionalInfo: "Additional bins: +$10 each",
     features: [
       "Deep clean, sanitize, and deodorize",
@@ -42,7 +42,7 @@ const PLANS: PricingPlan[] = [
     price: 65,
     priceSuffix: "/month",
     highlight: true,
-    binInfo: "FOR UP TO 2 BINS",
+    binInfo: "FOR UP TO 1 BIN",
     additionalInfo: "Additional bins: +$10 each",
     features: [
       "Automatic cleaning every 2 weeks",
