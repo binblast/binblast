@@ -155,9 +155,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Calculate proration
+    // Calculate proration preview (for display purposes)
     const currentMonthlyPrice = getMonthlyPriceForPlan(finalCurrentPlanId);
     const newMonthlyPrice = getMonthlyPriceForPlan(newPlanId as PlanId);
+    const isUpgrade = newMonthlyPrice > currentMonthlyPrice;
     
     const daysRemaining = Math.max(
       0,
@@ -173,10 +174,8 @@ export async function POST(req: NextRequest) {
     const dailyRateNew = newMonthlyPrice / totalDays;
     const proratedAmountNew = dailyRateNew * daysRemaining;
     
-    const isUpgrade = newMonthlyPrice > currentMonthlyPrice;
-    const proratedAmountOwed = isUpgrade ? proratedAmountNew - proratedCredit : 0;
-
-    ;
+    // Preview calculation (will be replaced with actual Stripe invoice amount)
+    const proratedAmountOwedPreview = isUpgrade ? proratedAmountNew - proratedCredit : 0;
 
     // Create new price for the new plan
     let newPriceId: string;
@@ -231,15 +230,41 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Get the latest invoice to show the prorated amount
+    // Get the latest invoice to show the actual prorated amount from Stripe
     const latestInvoice = updatedSubscription.latest_invoice;
     let invoiceDetails = null;
+    let actualProratedAmount = 0;
     
     if (typeof latestInvoice === "string") {
-      invoiceDetails = await stripe.invoices.retrieve(latestInvoice);
+      invoiceDetails = await stripe.invoices.retrieve(latestInvoice, {
+        expand: ['lines.data.price']
+      });
     } else if (latestInvoice) {
       invoiceDetails = latestInvoice;
     }
+
+    // Calculate actual prorated amount from invoice
+    if (invoiceDetails) {
+      // Find the proration line item (usually has description containing "proration" or "Unused time")
+      const prorationLine = invoiceDetails.lines.data.find(line => 
+        line.description?.toLowerCase().includes('proration') ||
+        line.description?.toLowerCase().includes('unused') ||
+        line.proration === true
+      );
+      
+      if (prorationLine) {
+        // Proration amount is usually negative (credit) or positive (charge)
+        actualProratedAmount = Math.abs(prorationLine.amount || 0);
+      } else {
+        // If no proration line found, use the total amount due (minus any previous balance)
+        actualProratedAmount = Math.max(0, invoiceDetails.amount_due - (invoiceDetails.amount_paid || 0));
+      }
+    }
+
+    // Use actual Stripe proration amount if available, otherwise use preview
+    const proratedAmountOwed = invoiceDetails && actualProratedAmount > 0 
+      ? actualProratedAmount 
+      : proratedAmountOwedPreview;
 
     return NextResponse.json({
       success: true,
@@ -248,7 +273,7 @@ export async function POST(req: NextRequest) {
         daysRemaining,
         totalDays,
         proratedCredit: isUpgrade ? 0 : proratedCredit,
-        proratedAmountOwed,
+        proratedAmountOwed: proratedAmountOwed, // Use actual Stripe amount
         isUpgrade,
       },
       invoice: invoiceDetails ? {
@@ -256,6 +281,8 @@ export async function POST(req: NextRequest) {
         amount_due: invoiceDetails.amount_due,
         amount_paid: invoiceDetails.amount_paid,
         status: invoiceDetails.status,
+        subtotal: invoiceDetails.subtotal,
+        total: invoiceDetails.total,
       } : null,
     });
   } catch (err: any) {
