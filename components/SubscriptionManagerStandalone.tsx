@@ -63,7 +63,8 @@ function getMonthlyPriceForPlan(planId: PlanId): number {
 }
 
 function canChangePlan(planId: PlanId): boolean {
-  return planId !== "commercial";
+  // All plans in PlanId type can be changed (commercial is not included)
+  return true;
 }
 
 export function SubscriptionManagerStandalone({
