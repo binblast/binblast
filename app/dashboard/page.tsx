@@ -292,7 +292,9 @@ export default function DashboardPage() {
                     <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-light)" }}>
                       Your subscription is active. You can schedule cleanings below.
                     </p>
-                    {(user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && user.selectedPlan && (
+                    {user.selectedPlan && 
+                     (user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && 
+                     ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan) && (
                       <SubscriptionManager
                         userId={userId}
                         currentPlanId={user.selectedPlan as PlanId}

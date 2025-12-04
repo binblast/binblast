@@ -34,10 +34,17 @@ export function SubscriptionManager({
   }
 
   const currentPlan = PLAN_CONFIGS[currentPlanId];
+  if (!currentPlan) {
+    return null;
+  }
+
   const currentMonthlyPrice = getMonthlyPriceForPlan(currentPlanId);
+  if (isNaN(currentMonthlyPrice) || currentMonthlyPrice <= 0) {
+    return null;
+  }
 
   const availablePlans = Object.values(PLAN_CONFIGS).filter(
-    (plan) => canChangePlan(plan.id) && plan.id !== currentPlanId
+    (plan) => plan && canChangePlan(plan.id) && plan.id !== currentPlanId
   );
 
   const handlePlanChange = async (newPlanId: PlanId) => {
