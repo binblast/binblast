@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
 import { SubscriptionManager } from "@/components/SubscriptionManager";
+import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
 
 interface UserData {
