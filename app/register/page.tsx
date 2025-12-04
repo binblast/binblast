@@ -64,8 +64,22 @@ function RegisterForm() {
         displayName: `${firstName} ${lastName}`,
       });
 
-      // TODO: Save additional user data (phone, plan) to your database
-      // You can call your API here to save to Prisma/your database
+      // Save user data to Firestore
+      const { db } = await import("@/lib/firebase");
+      const { collection, doc, setDoc, serverTimestamp } = await import("firebase/firestore");
+      
+      if (db && userCredential.user) {
+        const userDocRef = doc(collection(db, "users"), userCredential.user.uid);
+        await setDoc(userDocRef, {
+          firstName,
+          lastName,
+          email,
+          phone: phone || null,
+          selectedPlan: selectedPlanId || null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
       
       setSuccess(true);
       
