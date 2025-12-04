@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 
-type PlanId = "one-time" | "twice-month" | "bi-monthly" | "quarterly";
+type PlanId = "one-time" | "twice-month" | "bi-monthly" | "quarterly" | "commercial";
 
 interface SignupFormModalProps {
   isOpen: boolean;

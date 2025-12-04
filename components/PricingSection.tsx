@@ -6,13 +6,14 @@ import { SignupFormModal } from "./SignupFormModal";
 
 
 
-type PlanId = "one-time" | "twice-month" | "commercial";
+type PlanId = "one-time" | "twice-month" | "commercial" | "bi-monthly" | "quarterly";
 
 type PricingPlan = {
   id: PlanId;
   name: string;
   price: number | string; // Can be number or "Custom Quote"
   priceSuffix?: "/clean" | "/month";
+  priceRange?: string; // e.g. "$60–$65"
   highlight?: boolean;
   binInfo: string; // e.g. "FOR UP TO 2 BINS"
   additionalInfo?: string; // e.g. "Additional bins: +$10 each"
@@ -65,11 +66,42 @@ const PLANS: PricingPlan[] = [
   }
 ];
 
-
+const ADDITIONAL_PLANS: PricingPlan[] = [
+  {
+    id: "bi-monthly",
+    name: "Bi-Monthly Clean (Every 2 Months)",
+    price: 60,
+    priceSuffix: "/month",
+    priceRange: "$60–$65",
+    binInfo: "1 BIN INCLUDED",
+    additionalInfo: "+10 FREE Fresh Bags every cycle · +$10 per additional bin",
+    features: [
+      "Lower-frequency service plus a bag bundle",
+      "Keeps odors in check between cleanings",
+      "Perfect for low-traffic households"
+    ],
+    buttonText: "Get Bi-Monthly Plan"
+  },
+  {
+    id: "quarterly",
+    name: "Quarterly Clean (Every 3 Months)",
+    price: 75,
+    priceSuffix: "/month",
+    binInfo: "1 BIN INCLUDED",
+    additionalInfo: "+10 FREE Fresh Bags every cycle · +$10 per additional bin",
+    features: [
+      "Seasonal deep refresh service",
+      "Fresh bags so bins never get out of control",
+      "Ideal for minimal waste households"
+    ],
+    buttonText: "Get Quarterly Plan"
+  }
+];
 
 export function PricingSection() {
   const [selectedPlan, setSelectedPlan] = useState<PlanId | undefined>();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showMoreServices, setShowMoreServices] = useState(false);
 
   const handlePlanClick = (planId: PlanId) => {
     if (planId === "commercial") {
@@ -84,7 +116,7 @@ export function PricingSection() {
       }
       return;
     }
-    setSelectedPlan(planId as "one-time" | "twice-month");
+    setSelectedPlan(planId as "one-time" | "twice-month" | "bi-monthly" | "quarterly");
     setIsModalOpen(true);
   };
 
@@ -174,6 +206,65 @@ export function PricingSection() {
 
         </div>
 
+        {/* More Services Button */}
+        <div style={{ textAlign: "center", marginTop: "3rem" }}>
+          <button
+            onClick={() => setShowMoreServices(!showMoreServices)}
+            style={{
+              padding: "0.85rem 2rem",
+              fontSize: "0.98rem",
+              fontWeight: "600",
+              color: "#16a34a",
+              background: "transparent",
+              border: "2px solid #16a34a",
+              borderRadius: "999px",
+              cursor: "pointer",
+              transition: "all 0.2s ease"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#16a34a";
+              e.currentTarget.style.color = "#ffffff";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "#16a34a";
+            }}
+          >
+            {showMoreServices ? "Hide More Services" : "More Services"}
+          </button>
+        </div>
+
+        {/* Additional Plans (Collapsible) */}
+        {showMoreServices && (
+          <div className="pricing-grid" style={{ marginTop: "2.5rem" }}>
+            {ADDITIONAL_PLANS.map((plan) => (
+              <button
+                key={plan.id}
+                onClick={() => handlePlanClick(plan.id)}
+                className="pricing-card card-link"
+              >
+                <h3 className="plan-name">{plan.name}</h3>
+                <p className={`price-big ${typeof plan.price === 'string' ? 'custom' : ''}`}>
+                  {typeof plan.price === 'number' ? `$${plan.price}` : plan.price}
+                  {plan.priceSuffix && typeof plan.price === 'number' && <span className="price-small">{plan.priceSuffix}</span>}
+                </p>
+                <p className="price-sub" style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.8rem", fontWeight: "600", color: "#6b7280", marginTop: "0.4rem", marginBottom: "0.1rem" }}>
+                  {plan.binInfo}
+                </p>
+                {plan.additionalInfo && (
+                  <p className="price-extra">{plan.additionalInfo}</p>
+                )}
+                <ul className="pricing-list">
+                  {plan.features.map((feature, index) => (
+                    <li key={index}>{feature}</li>
+                  ))}
+                </ul>
+                <div className="card-cta">{plan.buttonText}</div>
+              </button>
+            ))}
+          </div>
+        )}
+
 
 
         <p style={{ fontSize: "0.75rem", color: "#6b7280", textAlign: "center", marginTop: "2rem", maxWidth: "900px", marginLeft: "auto", marginRight: "auto" }}>
@@ -195,7 +286,7 @@ export function PricingSection() {
       <SignupFormModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        selectedPlan={selectedPlan as "one-time" | "twice-month" | undefined}
+        selectedPlan={selectedPlan as "one-time" | "twice-month" | "bi-monthly" | "quarterly" | undefined}
       />
     </>
 
