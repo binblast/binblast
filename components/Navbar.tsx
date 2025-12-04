@@ -85,13 +85,13 @@ export function Navbar() {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+        <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", height: "40px" }}>
           <Image 
-            src="/logo.jpg" 
+            src="/logo.png" 
             alt="Bin Blast Co. Logo" 
-            width={120} 
+            width={100} 
             height={40}
-            style={{ objectFit: "contain" }}
+            style={{ objectFit: "contain", height: "auto" }}
             priority
           />
         </Link>

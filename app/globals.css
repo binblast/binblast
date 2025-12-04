@@ -5,3 +5,12 @@
 /* Import old static site styles */
 @import '../styles.css';
 
+/* Professional logo styling */
+.nav-logo img {
+  transition: opacity 0.2s ease;
+}
+
+.nav-logo:hover img {
+  opacity: 0.85;
+}
+

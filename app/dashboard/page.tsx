@@ -357,14 +357,14 @@ function DashboardPageContent() {
       <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
         <div className="container">
           <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-                    <h1 className="section-title" style={{ textAlign: "left", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+                    <h1 className="section-title" style={{ textAlign: "left", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
                       Welcome back, {user.firstName}!
                       <Image 
-                        src="/logo.jpg" 
+                        src="/logo.png" 
                         alt="Bin Blast Co. Logo" 
-                        width={60} 
-                        height={24}
-                        style={{ objectFit: "contain" }}
+                        width={36} 
+                        height={36}
+                        style={{ objectFit: "contain", opacity: 0.8 }}
                       />
                     </h1>
             <p style={{ color: "var(--text-light)", marginBottom: "2rem" }}>

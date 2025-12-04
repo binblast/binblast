@@ -14,16 +14,6 @@ export default function HomePage() {
         {/* Hero Section with Background Image */}
         <section id="home" className="hero">
           <div className="container">
-            <div className="hero-logo" style={{ display: "flex", justifyContent: "center", marginBottom: "2rem" }}>
-              <Image 
-                src="/logo.jpg" 
-                alt="Bin Blast Co. Logo" 
-                width={200} 
-                height={80}
-                style={{ objectFit: "contain", filter: "drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))" }}
-                priority
-              />
-            </div>
             <h1 className="hero-headline">Sparkling Clean Bins, Every Time</h1>
             <p className="hero-subheadline">
               Professional trash bin cleaning service that keeps your bins fresh, sanitized, and odor-free. Book your cleaning today!
