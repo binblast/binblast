@@ -10,11 +10,13 @@ import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
 
 // Dynamically import SubscriptionManager to prevent it from loading during initial page load
+// This prevents Firebase initialization errors during bundling/module evaluation
 const SubscriptionManager = dynamic(
   () => import("@/components/SubscriptionManager").then((mod) => ({ default: mod.SubscriptionManager })),
   { 
-    ssr: false,
-    loading: () => null
+    ssr: false, // Don't render on server side
+    loading: () => null, // Don't show loading state
+    // Only load when component is actually rendered
   }
 );
 

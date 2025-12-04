@@ -1,4 +1,6 @@
 // components/SubscriptionManager.tsx
+// IMPORTANT: This component is dynamically imported in the dashboard to prevent
+// Firebase initialization errors during page bundling. It should never be statically imported.
 
 "use client";
 
@@ -28,8 +30,8 @@ export function SubscriptionManager({
   const [selectedNewPlan, setSelectedNewPlan] = useState<PlanId | null>(null);
   const [showChangeModal, setShowChangeModal] = useState(false);
 
-  // Safety check - don't render if plan ID is invalid
-  if (!currentPlanId || !PLAN_CONFIGS[currentPlanId]) {
+  // Safety checks - don't render if required props are missing or invalid
+  if (!userId || !currentPlanId || !PLAN_CONFIGS[currentPlanId]) {
     return null;
   }
 
