@@ -2,9 +2,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export function Navbar() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   useEffect(() => {
     // Smooth scrolling for anchor links
     const handleAnchorClick = (e: MouseEvent) => {
@@ -20,6 +22,8 @@ export function Navbar() {
             top: offsetTop,
             behavior: 'smooth'
           });
+          // Close mobile menu after clicking
+          setIsMenuOpen(false);
         }
       }
     };
@@ -28,13 +32,17 @@ export function Navbar() {
     return () => document.removeEventListener('click', handleAnchorClick);
   }, []);
 
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
   return (
     <nav className="navbar">
       <div className="nav-container">
         <Link href="/" className="nav-logo">
           Bin Blast Co.
         </Link>
-        <ul className="nav-links">
+        <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
           <li><Link href="#home">Home</Link></li>
           <li><Link href="#services">Services</Link></li>
           <li><Link href="#account">Account</Link></li>
@@ -42,9 +50,9 @@ export function Navbar() {
             <Link href="#pricing" className="nav-login">Get Started</Link>
           </li>
         </ul>
-        <div className="nav-toggle">
+        <button className="nav-toggle" onClick={toggleMenu} aria-label="Toggle menu">
           <span></span><span></span><span></span>
-        </div>
+        </button>
       </div>
     </nav>
   );
