@@ -2,10 +2,28 @@
 // IMPORTANT: This module uses lazy initialization to prevent Firebase from initializing
 // at module load time, which can cause errors if environment variables aren't set.
 
+// Store Firebase initialization state globally to prevent re-initialization
+declare global {
+  var __firebaseInitialized: boolean | undefined;
+}
+
 let app: any = undefined;
 let auth: any = undefined;
 let db: any = undefined;
 let initPromise: Promise<void> | null = null;
+
+// Initialize Firebase early if in browser and not already initialized
+if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
+  // Pre-initialize Firebase to prevent errors in dynamic chunks
+  const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
+  const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
+  const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
+  
+  if (apiKey && projectId && authDomain) {
+    // Mark as initialized to prevent duplicate initialization
+    global.__firebaseInitialized = true;
+  }
+}
 
 async function ensureInitialized(): Promise<void> {
   // If already initialized or initialization in progress, return
