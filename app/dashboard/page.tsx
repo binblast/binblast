@@ -84,9 +84,12 @@ export default function DashboardPage() {
         console.log("[Dashboard] Starting to load user data...");
         
         // Dynamically import Firebase to avoid SSR issues
-        const { auth } = await import("@/lib/firebase");
+        // Initialize Firebase first
+        await import("@/lib/firebase");
+        const { getAuthInstance, getDbInstance } = await import("@/lib/firebase");
+        const auth = await getAuthInstance();
+        const db = await getDbInstance();
         const { onAuthStateChanged } = await import("firebase/auth");
-        const { db } = await import("@/lib/firebase");
         const { doc, getDoc } = await import("firebase/firestore");
 
         console.log("[Dashboard] Firebase imported:", { auth: !!auth, db: !!db });

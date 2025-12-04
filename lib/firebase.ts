@@ -1,97 +1,87 @@
 // lib/firebase.ts
-import { initializeApp, getApps, FirebaseApp } from "firebase/app";
-import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
+// IMPORTANT: This module uses lazy initialization to prevent Firebase from initializing
+// at module load time, which can cause errors if environment variables aren't set.
 
-let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
-let db: Firestore | undefined;
-let initializationAttempted = false;
+let app: any = undefined;
+let auth: any = undefined;
+let db: any = undefined;
+let initPromise: Promise<void> | null = null;
 
-// Only initialize Firebase on the client side and if config exists
-if (typeof window !== "undefined" && !initializationAttempted) {
-  initializationAttempted = true;
-  
-  try {
-    const firebaseConfig = {
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
-    };
-
-    // Strict validation - check for non-empty strings
-    const apiKey = (firebaseConfig.apiKey || "").trim();
-    const projectId = (firebaseConfig.projectId || "").trim();
-    const authDomain = (firebaseConfig.authDomain || "").trim();
-
-    const hasRequiredConfig = 
-      apiKey.length > 0 &&
-      projectId.length > 0 &&
-      authDomain.length > 0;
-
-    if (!hasRequiredConfig) {
-      console.warn("[Firebase] Missing required environment variables. Firebase features will not work.");
-      console.warn("[Firebase] Required: NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN");
-      console.warn("[Firebase] Current values:", {
-        apiKey: apiKey ? "***" : "MISSING",
-        projectId: projectId || "MISSING",
-        authDomain: authDomain || "MISSING",
-      });
-      // Explicitly set to undefined
-      app = undefined;
-      auth = undefined;
-      db = undefined;
-    } else {
-      // Only initialize if we have valid config
-      try {
-        // Check if app already exists
-        const existingApps = getApps();
-        if (existingApps.length > 0) {
-          app = existingApps[0];
-        } else {
-          // Create new app with validated config
-          app = initializeApp({
-            apiKey,
-            authDomain,
-            projectId,
-            storageBucket: firebaseConfig.storageBucket || undefined,
-            messagingSenderId: firebaseConfig.messagingSenderId || undefined,
-            appId: firebaseConfig.appId || undefined,
-          });
-        }
-        
-        // Only get auth/db if app was successfully created
-        if (app) {
-          try {
-            auth = getAuth(app);
-            db = getFirestore(app);
-            console.log("[Firebase] Successfully initialized");
-          } catch (authError: any) {
-            console.error("[Firebase] Error initializing auth/db:", authError);
-            // If auth/db fail, don't break the app
-            app = undefined;
-            auth = undefined;
-            db = undefined;
-          }
-        }
-      } catch (initError: any) {
-        console.error("[Firebase] Initialization error:", initError);
-        // Don't throw - let components handle undefined auth/db gracefully
-        app = undefined;
-        auth = undefined;
-        db = undefined;
-      }
-    }
-  } catch (error: any) {
-    console.error("[Firebase] Fatal initialization error:", error);
-    app = undefined;
-    auth = undefined;
-    db = undefined;
+async function ensureInitialized(): Promise<void> {
+  // If already initialized or initialization in progress, return
+  if (auth !== undefined && db !== undefined) {
+    return;
   }
+  if (initPromise) {
+    return initPromise;
+  }
+
+  // Only initialize on client side
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  initPromise = (async () => {
+    try {
+      const { initializeApp, getApps } = await import("firebase/app");
+      const { getAuth } = await import("firebase/auth");
+      const { getFirestore } = await import("firebase/firestore");
+
+      const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
+      const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
+      const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
+
+      // Only initialize if we have valid config
+      if (!apiKey || !projectId || !authDomain) {
+        console.warn("[Firebase] Missing required environment variables. Firebase features will not work.");
+        auth = null;
+        db = null;
+        return;
+      }
+
+      // Check if app already exists
+      const existingApps = getApps();
+      if (existingApps.length > 0) {
+        app = existingApps[0];
+      } else {
+        app = initializeApp({
+          apiKey,
+          authDomain,
+          projectId,
+          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || undefined,
+          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || undefined,
+          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || undefined,
+        });
+      }
+
+      // Only get auth/db if app was successfully created
+      if (app) {
+        auth = getAuth(app);
+        db = getFirestore(app);
+        console.log("[Firebase] Successfully initialized");
+      }
+    } catch (error: any) {
+      console.error("[Firebase] Initialization error:", error);
+      auth = null;
+      db = null;
+    }
+  })();
+
+  return initPromise;
 }
 
+// Export getters that ensure initialization
+export const getAuthInstance = async () => {
+  await ensureInitialized();
+  return auth;
+};
+
+export const getDbInstance = async () => {
+  await ensureInitialized();
+  return db;
+};
+
+// For backward compatibility - but these will be null/undefined until initialized
+// Components should use getAuthInstance/getDbInstance instead
 export { auth, db };
 
