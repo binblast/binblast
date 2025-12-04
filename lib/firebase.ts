@@ -18,10 +18,7 @@ async function ensureInitialized(): Promise<void> {
 
   initPromise = (async () => {
     try {
-      const { initializeApp, getApps } = await import("firebase/app");
-      const { getAuth } = await import("firebase/auth");
-      const { getFirestore } = await import("firebase/firestore");
-
+      // Check environment variables FIRST before importing Firebase
       const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
       const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
       const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
@@ -34,37 +31,69 @@ async function ensureInitialized(): Promise<void> {
         return;
       }
 
+      // Only import Firebase after confirming we have config
+      const { initializeApp, getApps } = await import("firebase/app");
+      const { getAuth } = await import("firebase/auth");
+      const { getFirestore } = await import("firebase/firestore");
+
       // Check if app already exists
       const existingApps = getApps();
       if (existingApps.length > 0) {
         app = existingApps[0];
       } else {
-        app = initializeApp({
+        // Ensure all required config values are present before initializing
+        const config = {
           apiKey,
           authDomain,
           projectId,
-          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || undefined,
-          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || undefined,
-          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || undefined,
-        });
+        };
+        
+        // Only add optional fields if they exist
+        if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
+          (config as any).storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+        }
+        if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
+          (config as any).messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+        }
+        if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
+          (config as any).appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+        }
+        
+        app = initializeApp(config);
       }
 
-      // Only get auth/db if app was successfully created
-      if (app) {
+      // Only get auth/db if app was successfully created and has valid config
+      if (app && app.options && app.options.apiKey) {
         // Auth should only be initialized on client side
         if (typeof window !== "undefined") {
-          auth = getAuth(app);
+          try {
+            auth = getAuth(app);
+          } catch (authError: any) {
+            console.error("[Firebase] Error initializing auth:", authError);
+            auth = null;
+          }
         } else {
           auth = null; // Auth not available on server side
         }
         // Firestore can be used on both client and server
-        db = getFirestore(app);
-        console.log("[Firebase] Successfully initialized");
+        try {
+          db = getFirestore(app);
+          console.log("[Firebase] Successfully initialized");
+        } catch (dbError: any) {
+          console.error("[Firebase] Error initializing Firestore:", dbError);
+          db = null;
+        }
+      } else {
+        console.error("[Firebase] App created but missing required config (apiKey)");
+        auth = null;
+        db = null;
       }
     } catch (error: any) {
       console.error("[Firebase] Initialization error:", error);
       auth = null;
       db = null;
+      // Reset initPromise so we can retry
+      initPromise = null;
     }
   })();
 
@@ -82,7 +111,6 @@ export const getDbInstance = async () => {
   return db;
 };
 
-// For backward compatibility - but these will be null/undefined until initialized
-// Components should use getAuthInstance/getDbInstance instead
-export { auth, db };
+// Note: We don't export auth and db directly to prevent premature access
+// Always use getAuthInstance() and getDbInstance() instead
 
