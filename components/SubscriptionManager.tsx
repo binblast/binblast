@@ -147,7 +147,12 @@ export function SubscriptionManager({
           setShowChangeModal(true);
         }}
         className="btn btn-primary"
-        style={{ marginTop: "1rem" }}
+        style={{ 
+          marginTop: "1rem",
+          display: "block",
+          width: "100%",
+          maxWidth: "300px"
+        }}
       >
         Change Plan
       </button>
