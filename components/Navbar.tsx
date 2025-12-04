@@ -86,8 +86,20 @@ export function Navbar() {
           Bin Blast Co.
         </Link>
         <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
-          <li><Link href="#home">Home</Link></li>
-          <li><Link href="#services">Services</Link></li>
+          <li>
+            {isLoggedIn ? (
+              <Link href="/">Home</Link>
+            ) : (
+              <Link href="#home">Home</Link>
+            )}
+          </li>
+          <li>
+            {isLoggedIn ? (
+              <Link href="/#services">Services</Link>
+            ) : (
+              <Link href="#services">Services</Link>
+            )}
+          </li>
           <li>
             {isLoggedIn ? (
               <Link href="/dashboard">Account</Link>
