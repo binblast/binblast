@@ -298,17 +298,19 @@ export default function DashboardPage() {
                     {user.selectedPlan && 
                      (user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && 
                      ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan) && (
-                      <SubscriptionManager
-                        userId={userId}
-                        currentPlanId={user.selectedPlan as PlanId}
-                        stripeSubscriptionId={user.stripeSubscriptionId || null}
-                        stripeCustomerId={user.stripeCustomerId || null}
-                        billingPeriodEnd={billingPeriodEnd}
-                        onPlanChanged={() => {
-                          // Reload user data after plan change
-                          window.location.reload();
-                        }}
-                      />
+                      <ErrorBoundary fallback={null}>
+                        <SubscriptionManager
+                          userId={userId}
+                          currentPlanId={user.selectedPlan as PlanId}
+                          stripeSubscriptionId={user.stripeSubscriptionId || null}
+                          stripeCustomerId={user.stripeCustomerId || null}
+                          billingPeriodEnd={billingPeriodEnd}
+                          onPlanChanged={() => {
+                            // Reload user data after plan change
+                            window.location.reload();
+                          }}
+                        />
+                      </ErrorBoundary>
                     )}
                   </>
                 )}
