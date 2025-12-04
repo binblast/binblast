@@ -1,28 +1,42 @@
 // app/dashboard/page.tsx
 "use client";
 
-import { useEffect, useState, Component, ErrorInfo, ReactNode } from "react";
+import { useEffect, useState, Component, ErrorInfo, ReactNode, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
-import { SubscriptionManager } from "@/components/SubscriptionManager";
+import dynamic from "next/dynamic";
 import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
 
+// Dynamically import SubscriptionManager to prevent it from loading during initial page load
+const SubscriptionManager = dynamic(
+  () => import("@/components/SubscriptionManager").then((mod) => ({ default: mod.SubscriptionManager })),
+  { 
+    ssr: false,
+    loading: () => null
+  }
+);
+
 // Error boundary to catch component rendering errors
 class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }> {
-  state = { hasError: false };
+  state = { hasError: false, error: null as Error | null };
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Component error:", error, errorInfo);
+    // Don't let errors crash the entire page
   }
 
   render() {
     if (this.state.hasError) {
+      // Log the error but don't crash the page
+      if (this.state.error) {
+        console.error("[ErrorBoundary] Caught error:", this.state.error.message);
+      }
       return this.props.fallback || null;
     }
     return this.props.children;
@@ -362,19 +376,21 @@ export default function DashboardPage() {
                     </p>
                     {user.selectedPlan && 
                      (user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && 
-                     ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan) && (
+                     ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan) && userId && (
                       <ErrorBoundary fallback={null}>
-                        <SubscriptionManager
-                          userId={userId}
-                          currentPlanId={user.selectedPlan as PlanId}
-                          stripeSubscriptionId={user.stripeSubscriptionId || null}
-                          stripeCustomerId={user.stripeCustomerId || null}
-                          billingPeriodEnd={billingPeriodEnd}
-                          onPlanChanged={() => {
-                            // Reload user data after plan change
-                            window.location.reload();
-                          }}
-                        />
+                        <Suspense fallback={null}>
+                          <SubscriptionManager
+                            userId={userId}
+                            currentPlanId={user.selectedPlan as PlanId}
+                            stripeSubscriptionId={user.stripeSubscriptionId || null}
+                            stripeCustomerId={user.stripeCustomerId || null}
+                            billingPeriodEnd={billingPeriodEnd}
+                            onPlanChanged={() => {
+                              // Reload user data after plan change
+                              window.location.reload();
+                            }}
+                          />
+                        </Suspense>
                       </ErrorBoundary>
                     )}
                   </>
