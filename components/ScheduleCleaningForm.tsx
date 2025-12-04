@@ -59,29 +59,33 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
     
     const trashDayDate = new Date(today);
     trashDayDate.setDate(today.getDate() + daysUntilTrashDay);
+    trashDayDate.setHours(0, 0, 0, 0);
     
-    // Only add dates that are today or in the future
+    // Only add dates that are on or after the trash day (never before)
     // Same day as trash day
     const sameDay = new Date(trashDayDate);
-    if (sameDay >= today) {
-      dates.push(formatDateForInput(sameDay));
-    }
+    dates.push(formatDateForInput(sameDay));
     
     // +1 day (24 hours after trash day)
     const nextDay = new Date(trashDayDate);
     nextDay.setDate(trashDayDate.getDate() + 1);
-    if (nextDay >= today) {
-      dates.push(formatDateForInput(nextDay));
-    }
+    nextDay.setHours(0, 0, 0, 0);
+    dates.push(formatDateForInput(nextDay));
     
     // +2 days (48 hours after trash day)
     const dayAfter = new Date(trashDayDate);
     dayAfter.setDate(trashDayDate.getDate() + 2);
-    if (dayAfter >= today) {
-      dates.push(formatDateForInput(dayAfter));
-    }
+    dayAfter.setHours(0, 0, 0, 0);
+    dates.push(formatDateForInput(dayAfter));
     
-    return dates;
+    // Filter out any dates that are in the past (shouldn't happen, but safety check)
+    const filteredDates = dates.filter(dateStr => {
+      const dateObj = new Date(dateStr);
+      dateObj.setHours(0, 0, 0, 0);
+      return dateObj >= today;
+    });
+    
+    return filteredDates;
   };
 
   const formatDateForInput = (date: Date): string => {
