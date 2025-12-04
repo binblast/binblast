@@ -1,120 +1,235 @@
 // app/dashboard/page.tsx
+"use client";
 
-import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Navbar } from "@/components/Navbar";
+import Link from "next/link";
 
-function formatDate(date: Date | null | undefined) {
-  if (!date) return "Not scheduled yet";
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
+interface UserData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  selectedPlan?: string;
+  createdAt?: any;
 }
 
-export default async function DashboardPage() {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
+const PLAN_NAMES: Record<string, string> = {
+  "one-time": "One-Time Blast",
+  "twice-month": "Bi-Weekly Clean (2x/Month)",
+  "bi-monthly": "Bi-Monthly Plan – Yearly Package",
+  "quarterly": "Quarterly Plan – Yearly Package",
+  "commercial": "Commercial & HOA Plans",
+};
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadUserData() {
+      try {
+        // Dynamically import Firebase to avoid SSR issues
+        const { auth } = await import("@/lib/firebase");
+        const { onAuthStateChanged } = await import("firebase/auth");
+        const { db } = await import("@/lib/firebase");
+        const { doc, getDoc } = await import("firebase/firestore");
+
+        if (!auth || !db) {
+          throw new Error("Firebase is not configured");
+        }
+
+        // Wait for auth state
+        onAuthStateChanged(auth, async (firebaseUser) => {
+          if (!firebaseUser) {
+            router.push("/login");
+            return;
+          }
+
+          try {
+            // Get user data from Firestore
+            const userDocRef = doc(db, "users", firebaseUser.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists()) {
+              const userData = userDoc.data() as UserData;
+              setUser(userData);
+            } else {
+              // User document doesn't exist yet
+              setUser({
+                firstName: firebaseUser.displayName?.split(" ")[0] || "User",
+                lastName: firebaseUser.displayName?.split(" ")[1] || "",
+                email: firebaseUser.email || "",
+              });
+            }
+          } catch (err: any) {
+            console.error("Error loading user data:", err);
+            setError("Failed to load user data");
+          } finally {
+            setLoading(false);
+          }
+        });
+      } catch (err: any) {
+        console.error("Error initializing Firebase:", err);
+        setError(err.message || "Failed to initialize");
+        setLoading(false);
+      }
+    }
+
+    loadUserData();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+          <div className="container">
+            <div style={{ textAlign: "center", padding: "3rem 0" }}>
+              <p style={{ color: "var(--text-light)" }}>Loading your dashboard...</p>
+            </div>
+          </div>
+        </main>
+      </>
+    );
   }
 
-  const subscription = await prisma.subscription.findFirst({
-    where: { userId: user.id },
-    include: { serviceAddress: true },
-  });
-
-  if (!subscription) {
-    // No active subscription → push to signup
-    redirect("/signup");
+  if (error || !user) {
+    return (
+      <>
+        <Navbar />
+        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+          <div className="container">
+            <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center", padding: "3rem 0" }}>
+              <h1 className="section-title" style={{ marginBottom: "1rem" }}>Error</h1>
+              <p style={{ color: "var(--text-light)", marginBottom: "2rem" }}>
+                {error || "Failed to load your account information"}
+              </p>
+              <Link href="/login" className="btn btn-primary">Go to Login</Link>
+            </div>
+          </div>
+        </main>
+      </>
+    );
   }
-
-  const {
-    planId,
-    pricePerClean,
-    frequency,
-    nextCleaningDate,
-    lastCleaningDate,
-    trashDayOfWeek,
-    preferredTimeWindow,
-    serviceAddress,
-  } = subscription;
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-semibold mb-2">
-          Hey {user.firstName ?? "there"}, your bins are in good hands 👋
-        </h1>
-        <p className="text-sm text-gray-600 mb-6">
-          Here&apos;s your current plan and cleaning schedule.
-        </p>
+    <>
+      <Navbar />
+      <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+        <div className="container">
+          <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+            <h1 className="section-title" style={{ textAlign: "left", marginBottom: "0.5rem" }}>
+              Welcome back, {user.firstName}! 👋
+            </h1>
+            <p style={{ color: "var(--text-light)", marginBottom: "2rem" }}>
+              Here&apos;s your account information and selected plan.
+            </p>
 
-        {/* Summary cards */}
-        <section className="grid gap-4 md:grid-cols-3 mb-6">
-          <div className="bg-white rounded-2xl shadow border border-gray-100 p-4">
-            <div className="text-xs uppercase text-gray-500 mb-1">Plan</div>
-            <div className="text-lg font-semibold mb-1">
-              {planId ?? "Custom Plan"}
+            {/* Account Info Card */}
+            <div style={{
+              background: "#ffffff",
+              borderRadius: "20px",
+              padding: "2rem",
+              boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
+              border: "1px solid #e5e7eb",
+              marginBottom: "1.5rem"
+            }}>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
+                Account Information
+              </h2>
+              <div style={{ display: "grid", gap: "1rem" }}>
+                <div>
+                  <div style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.25rem" }}>Name</div>
+                  <div style={{ fontSize: "1rem", fontWeight: "500", color: "var(--text-dark)" }}>
+                    {user.firstName} {user.lastName}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.25rem" }}>Email</div>
+                  <div style={{ fontSize: "1rem", fontWeight: "500", color: "var(--text-dark)" }}>
+                    {user.email}
+                  </div>
+                </div>
+                {user.phone && (
+                  <div>
+                    <div style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.25rem" }}>Phone</div>
+                    <div style={{ fontSize: "1rem", fontWeight: "500", color: "var(--text-dark)" }}>
+                      {user.phone}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="text-sm text-gray-600">
-              ${pricePerClean} / clean · {frequency}
+
+            {/* Selected Plan Card */}
+            {user.selectedPlan && (
+              <div style={{
+                background: "#ffffff",
+                borderRadius: "20px",
+                padding: "2rem",
+                boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
+                border: "1px solid #e5e7eb",
+                marginBottom: "1.5rem"
+              }}>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
+                  Selected Plan
+                </h2>
+                <div style={{
+                  padding: "1rem 1.5rem",
+                  background: "#ecfdf5",
+                  borderRadius: "12px",
+                  border: "1px solid #16a34a"
+                }}>
+                  <p style={{ margin: 0, fontSize: "1rem", color: "#047857", fontWeight: "600" }}>
+                    {PLAN_NAMES[user.selectedPlan] || user.selectedPlan}
+                  </p>
+                </div>
+                <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-light)" }}>
+                  Your subscription details will be set up during the onboarding process.
+                </p>
+              </div>
+            )}
+
+            {/* Next Steps */}
+            {!user.selectedPlan && (
+              <div style={{
+                background: "#eff6ff",
+                borderRadius: "20px",
+                padding: "2rem",
+                border: "1px solid #bfdbfe",
+                marginBottom: "1.5rem"
+              }}>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem", color: "#1e40af" }}>
+                  Next Steps
+                </h2>
+                <p style={{ color: "#1e3a8a", marginBottom: "1.5rem" }}>
+                  Your account has been created successfully! To complete your subscription setup, please select a plan.
+                </p>
+                <Link href="/#pricing" className="btn btn-primary">
+                  Choose a Plan
+                </Link>
+              </div>
+            )}
+
+            {/* Info Block */}
+            <div style={{
+              background: "#f0f9ff",
+              borderRadius: "20px",
+              padding: "1.5rem",
+              border: "1px solid #bae6fd"
+            }}>
+              <p style={{ fontSize: "0.875rem", color: "#0c4a6e", margin: 0 }}>
+                <strong>How it works:</strong> Once you complete your subscription setup, you&apos;ll be able to see your cleaning schedule, manage your service address, and track your cleaning history here.
+              </p>
             </div>
           </div>
-
-          <div className="bg-white rounded-2xl shadow border border-gray-100 p-4">
-            <div className="text-xs uppercase text-gray-500 mb-1">
-              Next cleaning
-            </div>
-            <div className="text-lg font-semibold mb-1">
-              {formatDate(nextCleaningDate)}
-            </div>
-            <div className="text-sm text-gray-600">
-              Trash day: {trashDayOfWeek || "—"}
-            </div>
-            <div className="text-xs text-gray-500">
-              Window: {preferredTimeWindow || "—"}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow border border-gray-100 p-4">
-            <div className="text-xs uppercase text-gray-500 mb-1">
-              Last cleaning
-            </div>
-            <div className="text-lg font-semibold mb-1">
-              {lastCleaningDate ? formatDate(lastCleaningDate) : "Not yet"}
-            </div>
-            <div className="text-xs text-gray-500">
-              Updates when your route is completed.
-            </div>
-          </div>
-        </section>
-
-        {/* Address + notes */}
-        <section className="bg-white rounded-2xl shadow border border-gray-100 p-5 mb-6">
-          <h2 className="text-lg font-semibold mb-2">Service address</h2>
-          <p className="text-sm">
-            {serviceAddress?.line1}
-            {serviceAddress?.line2 && `, ${serviceAddress.line2}`}
-            <br />
-            {serviceAddress?.city}, {serviceAddress?.state}{" "}
-            {serviceAddress?.postalCode}
-          </p>
-        </section>
-
-        {/* Simple info block */}
-        <section className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-900">
-          <p className="font-semibold mb-1">How it works</p>
-          <p>
-            We schedule your clean based on your trash day (
-            {trashDayOfWeek || "your area"}) and preferred time window. Once
-            your bins are cleaned, this dashboard will update with your{" "}
-            <strong>last cleaning</strong> date and your{" "}
-            <strong>next upcoming clean</strong>.
-          </p>
-        </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }
 
