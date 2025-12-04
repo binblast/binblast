@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     const planId = session.metadata?.planId || null;
     
     // Extract customer email from checkout session
-    const customerEmail = session.customer_details?.email || session.customer_details?.email || null;
+    const customerEmail = session.customer_details?.email || null;
 
     return NextResponse.json({
       success: true,
