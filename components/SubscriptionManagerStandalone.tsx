@@ -125,12 +125,21 @@ export function SubscriptionManagerStandalone({
         throw new Error(data.error || "Failed to change subscription");
       }
 
+      console.log("[SubscriptionManager] Response:", data);
+
       // If payment is required, redirect to Stripe Checkout
       if (data.requiresPayment && data.checkoutUrl) {
+        console.log("[SubscriptionManager] Redirecting to Stripe Checkout:", data.checkoutUrl);
+        // Store plan change info for callback
+        sessionStorage.setItem("pendingPlanChange", newPlanId);
+        sessionStorage.setItem("pendingSubscriptionId", stripeSubscriptionId || "");
+        
         // Redirect to Stripe Checkout
         window.location.href = data.checkoutUrl;
         return; // Don't close modal yet - will close after payment
       }
+
+      console.log("[SubscriptionManager] No payment required, completing change directly");
 
       // If no payment required (downgrade), show success
       alert(
