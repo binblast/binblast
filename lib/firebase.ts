@@ -59,17 +59,26 @@ async function ensureInitialized(): Promise<void> {
       let existingAppWithConfig = null;
       
       if (existingApps.length > 0) {
-        // Find an existing app that matches our config
+        // Find an existing app that matches our config OR has valid apiKey
         for (const existingApp of existingApps) {
-          if (existingApp.options && existingApp.options.apiKey && existingApp.options.apiKey === apiKey) {
-            existingAppWithConfig = existingApp;
-            break;
+          // Accept any app with a valid apiKey, not just exact match
+          // This handles cases where Firebase is initialized from different chunks
+          if (existingApp.options && existingApp.options.apiKey && typeof existingApp.options.apiKey === 'string' && existingApp.options.apiKey.length > 0) {
+            // Prefer exact match, but accept any valid app
+            if (existingApp.options.apiKey === apiKey) {
+              existingAppWithConfig = existingApp;
+              break;
+            } else if (!existingAppWithConfig) {
+              // Use first valid app as fallback
+              existingAppWithConfig = existingApp;
+            }
           }
         }
       }
       
       if (existingAppWithConfig) {
         app = existingAppWithConfig;
+        console.log("[Firebase] Using existing app:", existingAppWithConfig.options?.apiKey?.substring(0, 10) + '...');
       } else {
         // Ensure all required config values are present before initializing
         const config = {
@@ -89,7 +98,19 @@ async function ensureInitialized(): Promise<void> {
           (config as any).appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
         }
         
-        app = initializeApp(config);
+        try {
+          app = initializeApp(config);
+          console.log("[Firebase] Created new app instance");
+        } catch (initError: any) {
+          // If initialization fails, try to get existing app
+          const apps = getApps();
+          if (apps.length > 0) {
+            app = apps[0];
+            console.log("[Firebase] Initialization failed, using existing app:", apps[0].options?.apiKey?.substring(0, 10) + '...');
+          } else {
+            throw initError;
+          }
+        }
       }
 
       // Validate app has proper config before using it
