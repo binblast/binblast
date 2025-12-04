@@ -40,11 +40,15 @@ export async function GET(req: NextRequest) {
       : session.subscription?.id || null;
 
     const planId = session.metadata?.planId || null;
+    
+    // Extract customer email from checkout session
+    const customerEmail = session.customer_details?.email || session.customer_details?.email || null;
 
     return NextResponse.json({
       success: true,
       sessionId: session.id,
       customerId,
+      customerEmail,
       subscriptionId,
       planId,
       paymentStatus: session.payment_status,

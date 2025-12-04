@@ -34,6 +34,7 @@ function RegisterForm() {
   const [stripeData, setStripeData] = useState<{
     customerId: string | null;
     subscriptionId: string | null;
+    customerEmail: string | null;
   } | null>(null);
 
   // Verify Stripe session on mount if session_id is present
@@ -56,10 +57,11 @@ function RegisterForm() {
         setStripeData({
           customerId: data.customerId,
           subscriptionId: data.subscriptionId,
+          customerEmail: data.customerEmail,
         });
 
-        // Pre-fill email from Stripe session if available
-        if (data.customerEmail && !email) {
+        // Pre-fill email from Stripe session if available (always use Stripe email if present)
+        if (data.customerEmail) {
           setEmail(data.customerEmail);
         }
 
@@ -71,7 +73,7 @@ function RegisterForm() {
     }
 
     verifyStripeSession();
-  }, [sessionId, email]);
+  }, [sessionId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
