@@ -34,6 +34,7 @@ interface ScheduledCleaning {
   state: string;
   zipCode: string;
   trashDay: string;
+  notes?: string;
   status: "upcoming" | "completed" | "cancelled";
   createdAt: any;
 }
