@@ -1,10 +1,12 @@
 // app/dashboard/page.tsx
 "use client";
 
-import { useEffect, useState, Component, ErrorInfo, ReactNode } from "react";
+import { useEffect, useState, Component, ErrorInfo, ReactNode, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
+import { SubscriptionManagerWrapper } from "@/components/SubscriptionManagerWrapper";
+import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
 
 // Error boundary to catch component rendering errors
@@ -424,13 +426,36 @@ export default function DashboardPage() {
                     {user.selectedPlan && 
                      (user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && 
                      ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan) && userId && (
-                      <Link 
-                        href="/subscription"
-                        className="btn btn-primary"
-                        style={{ marginTop: "1rem", display: "block", width: "100%", maxWidth: "300px", textAlign: "center" }}
+                      <ErrorBoundary 
+                        fallback={
+                          <div style={{ marginTop: "1rem", padding: "1rem", background: "#fef2f2", borderRadius: "8px", border: "1px solid #fecaca" }}>
+                            <p style={{ margin: 0, color: "#dc2626", fontSize: "0.875rem", marginBottom: "0.5rem" }}>
+                              Unable to load subscription manager. The page will continue to work normally.
+                            </p>
+                            <button
+                              onClick={() => window.location.reload()}
+                              className="btn btn-primary"
+                              style={{ fontSize: "0.875rem", padding: "0.5rem 1rem" }}
+                            >
+                              Refresh Page
+                            </button>
+                          </div>
+                        }
                       >
-                        Manage Subscription
-                      </Link>
+                        <Suspense fallback={null}>
+                          <SubscriptionManagerWrapper
+                            userId={userId}
+                            currentPlanId={user.selectedPlan as PlanId}
+                            stripeSubscriptionId={user.stripeSubscriptionId || null}
+                            stripeCustomerId={user.stripeCustomerId || null}
+                            billingPeriodEnd={undefined}
+                            onPlanChanged={() => {
+                              // Reload user data after plan change
+                              window.location.reload();
+                            }}
+                          />
+                        </Suspense>
+                      </ErrorBoundary>
                     )}
                   </>
                 )}
