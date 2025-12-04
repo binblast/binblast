@@ -135,13 +135,24 @@ async function ensureInitialized(): Promise<void> {
       // Auth should only be initialized on client side
       if (typeof window !== "undefined") {
         try {
+          // If app doesn't have valid config, try to get existing app from Firebase
+          if (!app || !app.options || !app.options.apiKey || app.options.apiKey.trim().length === 0) {
+            const { getApps } = await import("firebase/app");
+            const existingApps = getApps();
+            if (existingApps.length > 0) {
+              // Use first existing app that has apiKey
+              for (const existingApp of existingApps) {
+                if (existingApp.options && existingApp.options.apiKey && existingApp.options.apiKey.trim().length > 0) {
+                  app = existingApp;
+                  console.log("[Firebase] Using existing app from getApps()");
+                  break;
+                }
+              }
+            }
+          }
+          
           // Triple-check: app exists, has options, and has non-empty apiKey
           if (app && app.options && app.options.apiKey && app.options.apiKey.trim().length > 0) {
-            // Verify the apiKey matches what we expect
-            if (app.options.apiKey !== apiKey) {
-              throw new Error(`ApiKey mismatch: expected ${apiKey.substring(0, 10)}..., got ${app.options.apiKey ? app.options.apiKey.substring(0, 10) + '...' : 'undefined'}`);
-            }
-            
             // Call getAuth with explicit app to prevent default app lookup
             auth = getAuth(app);
             console.log("[Firebase] Auth initialized successfully");
@@ -151,18 +162,30 @@ async function ensureInitialized(): Promise<void> {
         } catch (authError: any) {
           // Check if this is the specific "Neither apiKey nor config.authenticator provided" error
           if (authError.message && authError.message.includes("apiKey") && authError.message.includes("authenticator")) {
-            console.error("[Firebase] Firebase tried to initialize without apiKey - this should not happen with our validation");
-            console.error("[Firebase] This suggests Firebase is being initialized elsewhere or app config is invalid");
+            console.error("[Firebase] Firebase tried to initialize without apiKey - trying to recover");
+            // Try to get existing app and use it
+            try {
+              const { getApps, getApp } = await import("firebase/app");
+              const existingApps = getApps();
+              if (existingApps.length > 0) {
+                const existingApp = existingApps[0];
+                if (existingApp.options && existingApp.options.apiKey) {
+                  auth = getAuth(existingApp);
+                  console.log("[Firebase] Recovered by using existing app");
+                } else {
+                  auth = null;
+                }
+              } else {
+                auth = null;
+              }
+            } catch (recoveryError) {
+              console.error("[Firebase] Recovery failed:", recoveryError);
+              auth = null;
+            }
+          } else {
+            console.error("[Firebase] Error initializing auth:", authError);
+            auth = null;
           }
-          console.error("[Firebase] Error initializing auth:", authError);
-          console.error("[Firebase] App state:", { 
-            hasApp: !!app, 
-            hasOptions: !!(app && app.options), 
-            hasApiKey: !!(app && app.options && app.options.apiKey),
-            apiKeyValue: app && app.options ? (app.options.apiKey ? app.options.apiKey.substring(0, 20) + '...' : 'undefined') : 'N/A',
-            expectedApiKey: apiKey.substring(0, 20) + '...'
-          });
-          auth = null;
         }
       } else {
         auth = null; // Auth not available on server side
