@@ -32,16 +32,19 @@ export function SubscriptionManager({
 
   // Safety checks - don't render if required props are missing or invalid
   if (!userId || !currentPlanId || !PLAN_CONFIGS[currentPlanId]) {
+    console.warn("[SubscriptionManager] Missing required props:", { userId: !!userId, currentPlanId });
     return null;
   }
 
   const currentPlan = PLAN_CONFIGS[currentPlanId];
   if (!currentPlan) {
+    console.warn("[SubscriptionManager] Plan not found:", currentPlanId);
     return null;
   }
 
   const currentMonthlyPrice = getMonthlyPriceForPlan(currentPlanId);
   if (isNaN(currentMonthlyPrice) || currentMonthlyPrice <= 0) {
+    console.warn("[SubscriptionManager] Invalid monthly price:", currentMonthlyPrice);
     return null;
   }
 
@@ -130,13 +133,19 @@ export function SubscriptionManager({
   };
 
   if (!canChangePlan(currentPlanId)) {
+    console.log("[SubscriptionManager] Plan cannot be changed:", currentPlanId);
     return null; // Don't show for commercial plans
   }
+
+  console.log("[SubscriptionManager] Rendering component for plan:", currentPlanId);
 
   return (
     <>
       <button
-        onClick={() => setShowChangeModal(true)}
+        onClick={() => {
+          console.log("[SubscriptionManager] Change Plan button clicked");
+          setShowChangeModal(true);
+        }}
         className="btn btn-primary"
         style={{ marginTop: "1rem" }}
       >
