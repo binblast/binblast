@@ -60,7 +60,6 @@ export async function POST(req: NextRequest) {
           currency: "usd",
           product_data: {
             name: newPlan.name,
-            description: `Bin Blast Co. ${newPlan.name}`,
           },
           unit_amount: newPlan.price * 100,
         };
@@ -182,7 +181,6 @@ export async function POST(req: NextRequest) {
         currency: "usd",
         product_data: {
           name: newPlan.name,
-          description: `Bin Blast Co. ${newPlan.name}`,
         },
         unit_amount: newPlan.price * 100, // Convert to cents
       };
