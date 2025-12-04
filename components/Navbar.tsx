@@ -95,9 +95,9 @@ export function Navbar() {
           </li>
           <li>
             {isLoggedIn ? (
-              <Link href="/#services">Services</Link>
+              <Link href="/#pricing">Services</Link>
             ) : (
-              <Link href="#services">Services</Link>
+              <Link href="#pricing">Services</Link>
             )}
           </li>
           <li>
