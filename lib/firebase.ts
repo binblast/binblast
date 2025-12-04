@@ -127,40 +127,41 @@ async function ensureInitialized(): Promise<void> {
           global.__firebaseApp = app;
           console.log("[Firebase] Using existing app:", existingAppWithConfig.options?.apiKey?.substring(0, 10) + '...');
         } else {
-        // Ensure all required config values are present before initializing
-        const config = {
-          apiKey,
-          authDomain,
-          projectId,
-        };
-        
-        // Only add optional fields if they exist
-        if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
-          (config as any).storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+          // Ensure all required config values are present before initializing
+          const config = {
+            apiKey,
+            authDomain,
+            projectId,
+          };
+          
+          // Only add optional fields if they exist
+          if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
+            (config as any).storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+          }
+          if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
+            (config as any).messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+          }
+          if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
+            (config as any).appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+          }
+          
+          try {
+            app = initializeApp(config);
+            global.__firebaseApp = app;
+            console.log("[Firebase] Created new app instance");
+          } catch (initError: any) {
+            // If initialization fails, try to get existing app
+            const apps = getApps();
+            if (apps.length > 0) {
+              app = apps[0];
+              global.__firebaseApp = app;
+              console.log("[Firebase] Initialization failed, using existing app:", apps[0].options?.apiKey?.substring(0, 10) + '...');
+            } else {
+              throw initError;
+            }
+          }
         }
-        if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
-          (config as any).messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
-        }
-        if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
-          (config as any).appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
-        }
-        
-                try {
-                  app = initializeApp(config);
-                  global.__firebaseApp = app;
-                  console.log("[Firebase] Created new app instance");
-                } catch (initError: any) {
-                  // If initialization fails, try to get existing app
-                  const apps = getApps();
-                  if (apps.length > 0) {
-                    app = apps[0];
-                    global.__firebaseApp = app;
-                    console.log("[Firebase] Initialization failed, using existing app:", apps[0].options?.apiKey?.substring(0, 10) + '...');
-                  } else {
-                    throw initError;
-                  }
-                }
-              }
+      }
 
       // Validate app has proper config before using it
       if (!app || !app.options || !app.options.apiKey || app.options.apiKey !== apiKey) {
