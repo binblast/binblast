@@ -85,15 +85,17 @@ export function Navbar() {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", height: "40px", overflow: "hidden" }}>
-          <Image 
-            src="/logo.png" 
-            alt="Bin Blast Co. Logo" 
-            width={100} 
-            height={40}
-            style={{ objectFit: "cover", objectPosition: "center", width: "100%", height: "100%" }}
-            priority
-          />
+        <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", height: "40px", overflow: "hidden", position: "relative" }}>
+          <div style={{ width: "100px", height: "40px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Image 
+              src="/logo.png" 
+              alt="Bin Blast Co. Logo" 
+              width={100} 
+              height={40}
+              style={{ objectFit: "contain", objectPosition: "center", maxWidth: "100%", maxHeight: "100%" }}
+              priority
+            />
+          </div>
         </Link>
         <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
           <li>
