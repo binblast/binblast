@@ -10,8 +10,8 @@ import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
 
 // Error boundary to catch component rendering errors
-class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }> {
-  state = { hasError: false, error: null as Error | null };
+class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode; onRetry?: () => void }> {
+  state = { hasError: false, error: null as Error | null, retryCount: 0 };
 
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
@@ -22,11 +22,42 @@ class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNod
     // Don't let errors crash the entire page
   }
 
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null, retryCount: this.state.retryCount + 1 });
+    if (this.props.onRetry) {
+      this.props.onRetry();
+    }
+  };
+
   render() {
     if (this.state.hasError) {
       // Log the error but don't crash the page
       if (this.state.error) {
         console.error("[ErrorBoundary] Caught error:", this.state.error.message);
+      }
+      // If it's a Firebase error, try to show fallback with retry
+      if (this.state.error?.message?.includes("apiKey") || this.state.error?.message?.includes("authenticator")) {
+        return this.props.fallback || (
+          <div style={{ marginTop: "1rem", padding: "1rem", background: "#fef2f2", borderRadius: "8px", border: "1px solid #fecaca" }}>
+            <p style={{ margin: 0, color: "#dc2626", fontSize: "0.875rem", marginBottom: "0.5rem" }}>
+              Unable to load subscription manager.
+            </p>
+            <button
+              onClick={this.handleRetry}
+              className="btn btn-primary"
+              style={{ fontSize: "0.875rem", padding: "0.5rem 1rem", marginRight: "0.5rem" }}
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="btn"
+              style={{ fontSize: "0.875rem", padding: "0.5rem 1rem" }}
+            >
+              Refresh Page
+            </button>
+          </div>
+        );
       }
       return this.props.fallback || null;
     }
