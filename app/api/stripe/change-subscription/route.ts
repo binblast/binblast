@@ -190,31 +190,44 @@ export async function POST(req: NextRequest) {
     let actualProratedAmount = 0;
     
     if (isUpgrade) {
-      // Preview the invoice to get Stripe's calculated proration
-      // Use the correct Stripe API method
-      const invoicePreview = await stripe.invoices.upcoming({
-        customer: stripeCustomerId,
-        subscription: actualSubscriptionId,
-        subscription_items: [
-          {
-            id: subscriptionItem.id,
-            price: newPriceId,
-          },
-        ],
-      });
-
-      // Find proration line items
-      const prorationLine = invoicePreview.lines.data.find(line => 
-        line.description?.toLowerCase().includes('proration') ||
-        line.description?.toLowerCase().includes('unused') ||
-        (line.amount && line.amount > 0 && line.type === 'invoiceitem')
+      // Calculate proration using actual Stripe subscription prices
+      // Get current price from subscription item
+      const currentPriceId = subscriptionItem.price.id;
+      const currentPrice = await stripe.prices.retrieve(currentPriceId);
+      const newPrice = await stripe.prices.retrieve(newPriceId);
+      
+      // Calculate proration based on actual Stripe prices
+      const currentUnitAmount = currentPrice.unit_amount || 0;
+      const newUnitAmount = newPrice.unit_amount || 0;
+      
+      // Calculate days remaining in billing period
+      const daysRemaining = Math.max(
+        0,
+        Math.ceil((billingPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      );
+      const totalDays = Math.ceil(
+        (billingPeriodEnd.getTime() - billingPeriodStart.getTime()) / (1000 * 60 * 60 * 24)
       );
       
-      if (prorationLine && prorationLine.amount) {
-        actualProratedAmount = Math.abs(prorationLine.amount);
-      } else if (invoicePreview.amount_due > 0) {
-        actualProratedAmount = invoicePreview.amount_due;
-      }
+      // Calculate proration: (new price - current price) * (days remaining / total days)
+      // For monthly subscriptions, divide by days in month
+      const daysInPeriod = currentPrice.recurring?.interval === 'year' ? 365 : 
+                          currentPrice.recurring?.interval === 'month' ? 30 : totalDays;
+      
+      const proratedAmount = Math.round(
+        ((newUnitAmount - currentUnitAmount) * daysRemaining) / daysInPeriod
+      );
+      
+      actualProratedAmount = Math.max(0, proratedAmount);
+      
+      console.log("[Change Subscription] Stripe price-based proration:", {
+        currentUnitAmount,
+        newUnitAmount,
+        daysRemaining,
+        daysInPeriod,
+        proratedAmount,
+        actualProratedAmount,
+      });
     }
 
     const daysRemaining = Math.max(
