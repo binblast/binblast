@@ -1,13 +1,33 @@
 // app/dashboard/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Component, ErrorInfo, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
 import { SubscriptionManager } from "@/components/SubscriptionManager";
 import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
+
+// Error boundary to catch component rendering errors
+class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Component error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || null;
+    }
+    return this.props.children;
+  }
+}
 
 interface UserData {
   firstName: string;
