@@ -145,59 +145,41 @@ export function PricingSection() {
 
   return (
     <>
-      <section id="pricing" className="py-16 bg-slate-50">
+      <section id="pricing" className="pricing-section">
 
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="container">
 
-        <div className="text-center mb-10">
+        <h2 className="section-title">Plans & Pricing</h2>
 
-          <h2 className="text-3xl md:text-4xl font-bold mb-3">
+        <p className="section-subtitle">
 
-            Simple, Profitable Pricing That Scales
+          Bin Blast Co. keeps bins fresh and routes profitable with clear,
 
-          </h2>
+          subscription-based pricing designed to grow from Peachtree City to a
 
-          <p className="text-sm md:text-base text-slate-600 max-w-2xl mx-auto">
+          statewide franchise.
 
-            Bin Blast Co. keeps bins fresh and routes profitable with clear,
-
-            subscription-based pricing designed to grow from Peachtree City to a
-
-            statewide franchise.
-
-          </p>
-
-        </div>
+        </p>
 
 
 
-        <div className="grid gap-6 md:grid-cols-4">
+        <div className="pricing-grid">
 
           {PLANS.map((plan) => (
 
-            <div
+            <button
 
               key={plan.id}
 
-              className={`flex flex-col rounded-2xl border bg-white shadow-sm p-5 ${
+              onClick={() => handlePlanClick(plan.id)}
 
-                plan.highlight
-
-                  ? "border-blue-600 shadow-md ring-2 ring-blue-100"
-
-                  : "border-slate-200"
-
-              }`}
+              className={`pricing-card card-link ${plan.highlight ? 'popular' : ''}`}
 
             >
 
               {plan.highlight && (
 
-                <div className="inline-flex self-start px-3 py-1 mb-3 rounded-full bg-blue-50 text-xs font-semibold text-blue-700">
-
-                  Most Popular
-
-                </div>
+                <div className="popular-badge">Most Popular</div>
 
               )}
 
@@ -205,9 +187,29 @@ export function PricingSection() {
 
               {plan.includesBags && (
 
-                <div className="inline-flex self-start px-3 py-1 mb-3 rounded-full bg-emerald-50 text-xs font-semibold text-emerald-700">
+                <div style={{ 
 
-                  Includes {plan.bagsPerCycle} Fresh Bags
+                  display: "inline-flex", 
+
+                  alignSelf: "flex-start", 
+
+                  padding: "0.3rem 0.7rem", 
+
+                  marginBottom: "0.75rem", 
+
+                  borderRadius: "999px", 
+
+                  background: "#ecfdf5", 
+
+                  fontSize: "0.75rem", 
+
+                  fontWeight: "700", 
+
+                  color: "#047857"
+
+                }}>
+
+                  +{plan.bagsPerCycle} Fresh Bags / cycle
 
                 </div>
 
@@ -215,33 +217,27 @@ export function PricingSection() {
 
 
 
-              <h3 className="text-lg font-semibold mb-1">{plan.name}</h3>
+              <h3 className="plan-name">{plan.name}</h3>
 
-              <div className="flex items-baseline gap-1 mb-1">
+              <p className={`price-big ${plan.id === "quarterly" || plan.id === "bi-monthly" ? "custom" : ""}`}>
 
-                <span className="text-3xl font-bold">
+                {plan.priceRange ? plan.priceRange : `$${plan.price}`}
 
-                  {plan.priceRange ? plan.priceRange : `$${plan.price}`}
+                {plan.priceSuffix === "/month" && !plan.priceRange && <span className="price-small">/month</span>}
 
-                </span>
+              </p>
 
-                <span className="text-sm text-slate-500">
+              <p className="price-sub plan-subtext">{plan.frequencyLabel}</p>
 
-                  {plan.priceSuffix}
+              {plan.note && (
 
-                </span>
+                <p className="price-extra">{plan.note}</p>
 
-              </div>
-
-              <div className="text-xs font-medium text-blue-600 mb-3">
-
-                {plan.frequencyLabel}
-
-              </div>
+              )}
 
 
 
-              <p className="text-sm text-slate-600 mb-3 flex-1">
+              <p style={{ fontSize: "0.95rem", color: "var(--text-light)", marginBottom: "1.5rem", textAlign: "left", lineHeight: "1.6" }}>
 
                 {plan.description}
 
@@ -249,39 +245,9 @@ export function PricingSection() {
 
 
 
-              {plan.note && (
+              <div className={`card-cta ${plan.highlight ? 'primary' : ''}`}>Get Started</div>
 
-                <p className="text-xs text-slate-500 mb-4">
-
-                  {plan.note}
-
-                </p>
-
-              )}
-
-
-
-              <button
-
-                onClick={() => handlePlanClick(plan.id)}
-
-                className={`mt-auto inline-flex items-center justify-center w-full text-sm font-medium px-4 py-2.5 rounded-lg transition ${
-
-                  plan.highlight
-
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-
-                    : "bg-slate-900 text-white hover:bg-slate-800"
-
-                }`}
-
-              >
-
-                Get Started
-
-              </button>
-
-            </div>
+            </button>
 
           ))}
 
@@ -289,7 +255,7 @@ export function PricingSection() {
 
 
 
-        <p className="text-xs text-slate-500 text-center mt-6 max-w-3xl mx-auto">
+        <p style={{ fontSize: "0.75rem", color: "#6b7280", textAlign: "center", marginTop: "2rem", maxWidth: "900px", marginLeft: "auto", marginRight: "auto" }}>
 
           All plans include eco-friendly, high-pressure cleaning, disinfecting,
 
