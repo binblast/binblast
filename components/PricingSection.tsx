@@ -6,130 +6,63 @@ import { SignupFormModal } from "./SignupFormModal";
 
 
 
-type PlanId = "one-time" | "twice-month" | "bi-monthly" | "quarterly";
-
-
+type PlanId = "one-time" | "twice-month" | "commercial";
 
 type PricingPlan = {
-
   id: PlanId;
-
   name: string;
-
-  price: number;
-
-  priceSuffix: "/clean" | "/month";
-
-  priceRange?: string; // e.g. "$60–$65"
-
+  price: number | string; // Can be number or "Custom Quote"
+  priceSuffix?: "/clean" | "/month";
   highlight?: boolean;
-
-  description: string;
-
-  frequencyLabel: string;
-
-  includesBags?: boolean;
-
-  bagsPerCycle?: number;
-
-  note?: string;
-
+  binInfo: string; // e.g. "FOR UP TO 2 BINS"
+  additionalInfo?: string; // e.g. "Additional bins: +$10 each"
+  features: string[]; // Array of feature strings
+  buttonText: string;
 };
 
-
-
 const PLANS: PricingPlan[] = [
-
   {
-
     id: "one-time",
-
     name: "One-Time Blast",
-
     price: 35,
-
     priceSuffix: "/clean",
-
-    description: "Perfect for move-outs, deep resets, and first-time cleans.",
-
-    frequencyLabel: "Single visit · No contract",
-
-    note: "+$10 per extra bin",
-
+    binInfo: "FOR UP TO 2 BINS",
+    additionalInfo: "Additional bins: +$10 each",
+    features: [
+      "Deep clean, sanitize, and deodorize",
+      "Ideal for first-time or seasonal cleanings",
+      "Great before move-ins or events"
+    ],
+    buttonText: "Book One-Time Clean"
   },
-
   {
-
     id: "twice-month",
-
-    name: "Twice-a-Month Clean",
-
+    name: "Bi-Weekly Clean (2x/Month)",
     price: 65,
-
     priceSuffix: "/month",
-
     highlight: true,
-
-    description:
-
-      "Keep your bins consistently fresh with two cleanings every month.",
-
-    frequencyLabel: "2 cleans per month",
-
-    note: "Base price includes 1 bin · +$10 per extra bin",
-
+    binInfo: "FOR UP TO 2 BINS",
+    additionalInfo: "Additional bins: +$10 each",
+    features: [
+      "Automatic cleaning every 2 weeks",
+      "Eliminates odor, bacteria, and build-up",
+      "Perfect for busy households and families"
+    ],
+    buttonText: "Start Bi-Weekly Plan"
   },
-
   {
-
-    id: "bi-monthly",
-
-    name: "Bi-Monthly Clean (Every 2 Months)",
-
-    price: 60,
-
-    priceSuffix: "/month",
-
-    priceRange: "$60–$65",
-
-    description:
-
-      "Lower-frequency service plus a bag bundle to keep odors in check.",
-
-    frequencyLabel: "1 clean every 2 months",
-
-    includesBags: true,
-
-    bagsPerCycle: 10,
-
-    note: "1 bin included · +10 FREE Fresh Bags every cycle · +$10 per additional bin",
-
-  },
-
-  {
-
-    id: "quarterly",
-
-    name: "Quarterly Clean (Every 3 Months)",
-
-    price: 75,
-
-    priceSuffix: "/month",
-
-    description:
-
-      "Seasonal deep refresh plus fresh bags so bins never get out of control.",
-
-    frequencyLabel: "1 clean every 3 months",
-
-    includesBags: true,
-
-    bagsPerCycle: 10,
-
-    note: "1 bin included · +10 FREE Fresh Bags every cycle · +$10 per additional bin",
-
-  },
-
+    id: "commercial",
+    name: "Commercial & HOA Plans",
+    price: "Custom Quote",
+    binInfo: "BUILT FOR MULTI-BIN PROPERTIES",
+    features: [
+      "Apartments & community bins",
+      "HOAs & neighborhood partnerships",
+      "Restaurants & commercial properties",
+      "Bulk pricing & flexible schedules"
+    ],
+    buttonText: "Schedule Consultation"
+  }
 ];
 
 
@@ -139,7 +72,19 @@ export function PricingSection() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handlePlanClick = (planId: PlanId) => {
-    setSelectedPlan(planId);
+    if (planId === "commercial") {
+      // For commercial plans, scroll to contact or handle differently
+      const contactSection = document.getElementById("contact") || document.getElementById("faq");
+      if (contactSection) {
+        const offsetTop = contactSection.offsetTop - 80;
+        window.scrollTo({
+          top: offsetTop,
+          behavior: 'smooth'
+        });
+      }
+      return;
+    }
+    setSelectedPlan(planId as "one-time" | "twice-month");
     setIsModalOpen(true);
   };
 
@@ -185,67 +130,43 @@ export function PricingSection() {
 
 
 
-              {plan.includesBags && (
-
-                <div style={{ 
-
-                  display: "inline-flex", 
-
-                  alignSelf: "flex-start", 
-
-                  padding: "0.3rem 0.7rem", 
-
-                  marginBottom: "0.75rem", 
-
-                  borderRadius: "999px", 
-
-                  background: "#ecfdf5", 
-
-                  fontSize: "0.75rem", 
-
-                  fontWeight: "700", 
-
-                  color: "#047857"
-
-                }}>
-
-                  +{plan.bagsPerCycle} Fresh Bags / cycle
-
-                </div>
-
-              )}
-
-
-
               <h3 className="plan-name">{plan.name}</h3>
 
-              <p className={`price-big ${plan.id === "quarterly" || plan.id === "bi-monthly" ? "custom" : ""}`}>
+              <p className={`price-big ${typeof plan.price === 'string' ? 'custom' : ''}`}>
 
-                {plan.priceRange ? plan.priceRange : `$${plan.price}`}
+                {typeof plan.price === 'number' ? `$${plan.price}` : plan.price}
 
-                {plan.priceSuffix === "/month" && !plan.priceRange && <span className="price-small">/month</span>}
+                {plan.priceSuffix && typeof plan.price === 'number' && <span className="price-small">{plan.priceSuffix}</span>}
 
               </p>
 
-              <p className="price-sub plan-subtext">{plan.frequencyLabel}</p>
+              <p className="price-sub" style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.8rem", fontWeight: "600", color: "#6b7280", marginTop: "0.4rem", marginBottom: "0.1rem" }}>
 
-              {plan.note && (
+                {plan.binInfo}
 
-                <p className="price-extra">{plan.note}</p>
+              </p>
+
+              {plan.additionalInfo && (
+
+                <p className="price-extra">{plan.additionalInfo}</p>
 
               )}
 
 
 
-              <p style={{ fontSize: "0.95rem", color: "var(--text-light)", marginBottom: "1.5rem", textAlign: "left", lineHeight: "1.6" }}>
+              <ul className="pricing-list">
 
-                {plan.description}
+                {plan.features.map((feature, index) => (
 
-              </p>
+                  <li key={index}>{feature}</li>
+
+                ))}
+
+              </ul>
 
 
 
-              <div className={`card-cta ${plan.highlight ? 'primary' : ''}`}>Get Started</div>
+              <div className={`card-cta ${plan.highlight ? 'primary' : ''}`}>{plan.buttonText}</div>
 
             </button>
 
@@ -274,7 +195,7 @@ export function PricingSection() {
       <SignupFormModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        selectedPlan={selectedPlan}
+        selectedPlan={selectedPlan as "one-time" | "twice-month" | undefined}
       />
     </>
 
