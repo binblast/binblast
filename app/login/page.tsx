@@ -2,7 +2,6 @@
 
 "use client";
 
-import { signIn } from "next-auth/react";
 import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
@@ -21,23 +20,39 @@ function LoginForm() {
     setLoading(true);
     setError(null);
 
-    const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
-
-    const res = await signIn("credentials", {
-      redirect: false,
-      email,
-      password,
-      callbackUrl,
-    });
-
-    setLoading(false);
-
-    if (res?.error) {
-      setError("Invalid email or password.");
-      return;
+    try {
+      // Dynamically import Firebase auth to avoid build-time initialization
+      const { auth } = await import("@/lib/firebase");
+      
+      if (!auth) {
+        throw new Error("Firebase authentication is not configured. Please set up Firebase environment variables.");
+      }
+      
+      const { signInWithEmailAndPassword } = await import("firebase/auth");
+      
+      // Sign in with Firebase
+      await signInWithEmailAndPassword(auth, email, password);
+      
+      // Success - redirect to dashboard
+      const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+      router.push(callbackUrl);
+    } catch (err: any) {
+      console.error("Login error:", err);
+      
+      // Handle specific Firebase errors
+      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+        setError("Invalid email or password.");
+      } else if (err.code === "auth/invalid-email") {
+        setError("Invalid email address.");
+      } else if (err.code === "auth/user-disabled") {
+        setError("This account has been disabled.");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("Too many failed login attempts. Please try again later.");
+      } else {
+        setError(err.message || "Failed to sign in. Please try again.");
+      }
+      setLoading(false);
     }
-
-    router.push(callbackUrl);
   }
 
   return (
