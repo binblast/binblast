@@ -31,11 +31,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify metadata matches
-    if (session.metadata.userId !== userId ||
+    if (!session.metadata ||
+        session.metadata.userId !== userId ||
         session.metadata.newPlanId !== newPlanId ||
         session.metadata.subscriptionId !== subscriptionId) {
       return NextResponse.json(
-        { error: "Checkout session metadata mismatch" },
+        { error: "Checkout session metadata mismatch or missing" },
         { status: 400 }
       );
     }
