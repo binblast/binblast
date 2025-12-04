@@ -46,6 +46,7 @@ export function Navbar() {
           <li><Link href="#home">Home</Link></li>
           <li><Link href="#services">Services</Link></li>
           <li><Link href="#account">Account</Link></li>
+          <li><Link href="/login">Login</Link></li>
           <li>
             <Link href="#pricing" className="nav-login">Get Started</Link>
           </li>
