@@ -108,7 +108,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
     setLoading(true);
 
     try {
-      const { db } = await import("@/lib/firebase");
+      const { getDbInstance } = await import("@/lib/firebase");
+      const db = await getDbInstance();
       const { collection, addDoc, serverTimestamp } = await import("firebase/firestore");
 
       if (!db) {
