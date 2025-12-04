@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
+import { SubscriptionManager } from "@/components/SubscriptionManager";
 import Link from "next/link";
 
 interface UserData {
@@ -51,6 +52,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [scheduledCleanings, setScheduledCleanings] = useState<ScheduledCleaning[]>([]);
   const [cleaningsLoading, setCleaningsLoading] = useState(true);
+  const [billingPeriodEnd, setBillingPeriodEnd] = useState<Date | undefined>();
 
   useEffect(() => {
     async function loadUserData() {
@@ -285,9 +287,24 @@ export default function DashboardPage() {
                     Complete your payment to activate your subscription.
                   </p>
                 ) : (
-                  <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-light)" }}>
-                    Your subscription is active. You can schedule cleanings below.
-                  </p>
+                  <>
+                    <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-light)" }}>
+                      Your subscription is active. You can schedule cleanings below.
+                    </p>
+                    {(user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && (
+                      <SubscriptionManager
+                        userId={userId}
+                        currentPlanId={user.selectedPlan as any}
+                        stripeSubscriptionId={user.stripeSubscriptionId || null}
+                        stripeCustomerId={user.stripeCustomerId || null}
+                        billingPeriodEnd={billingPeriodEnd}
+                        onPlanChanged={() => {
+                          // Reload user data after plan change
+                          window.location.reload();
+                        }}
+                      />
+                    )}
+                  </>
                 )}
               </div>
             )}
