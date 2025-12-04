@@ -11,8 +11,30 @@ import Link from "next/link";
 
 // Dynamically import SubscriptionManager to prevent it from loading during initial page load
 // This prevents Firebase initialization errors during bundling/module evaluation
+// Use a factory function that ensures Firebase is ready before loading SubscriptionManager
 const SubscriptionManager = dynamic(
-  () => import("@/components/SubscriptionManager").then((mod) => ({ default: mod.SubscriptionManager })),
+  async () => {
+    try {
+      // Ensure Firebase is already initialized by importing it first
+      // This ensures environment variables are available when SubscriptionManager chunk loads
+      const firebaseModule = await import("@/lib/firebase");
+      await firebaseModule.getAuthInstance(); // Ensure Firebase is initialized
+      
+      // Now load SubscriptionManager - Firebase should already be initialized
+      const subscriptionModule = await import("@/components/SubscriptionManager");
+      return { default: subscriptionModule.SubscriptionManager };
+    } catch (error: any) {
+      console.error("[Dashboard] Error loading SubscriptionManager:", error);
+      // Return a fallback component that shows an error message
+      return {
+        default: () => (
+          <div style={{ marginTop: "1rem", padding: "0.75rem", background: "#fef2f2", borderRadius: "8px", border: "1px solid #fecaca", color: "#dc2626", fontSize: "0.875rem" }}>
+            Unable to load subscription manager. Please refresh the page.
+          </div>
+        )
+      };
+    }
+  },
   { 
     ssr: false, // Don't render on server side
     loading: () => null, // Don't show loading state
