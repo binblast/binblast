@@ -366,7 +366,7 @@ function DashboardPageContent() {
                         height={32}
                         style={{ objectFit: "contain", opacity: 0.8, height: "1em", width: "auto", verticalAlign: "middle", flexShrink: 0 }}
                       />
-                    </h1>
+            </h1>
             <p style={{ color: "var(--text-light)", marginBottom: "2rem" }}>
               Here&apos;s your account information and selected plan.
             </p>

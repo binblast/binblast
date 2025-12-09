@@ -1152,10 +1152,16 @@ section {
         font-size: 1.25rem;
     }
     
-    .nav-logo img,
     .nav-logo > div {
         width: 80px !important;
         height: 32px !important;
+    }
+    
+    .nav-logo img {
+        object-fit: contain !important;
+        object-position: left center !important;
+        height: 100% !important;
+        width: auto !important;
     }
 
     .hero {
@@ -1247,6 +1253,18 @@ section {
 }
 
 @media (max-width: 480px) {
+    .nav-logo > div {
+        width: 70px !important;
+        height: 28px !important;
+    }
+    
+    .nav-logo img {
+        object-fit: contain !important;
+        object-position: left center !important;
+        height: 100% !important;
+        width: auto !important;
+    }
+    
     .container {
         padding: 0 16px;
     }
