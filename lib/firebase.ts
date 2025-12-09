@@ -129,9 +129,9 @@ async function ensureInitialized(): Promise<void> {
         } else {
           // Ensure all required config values are present before initializing
           const config = {
-            apiKey,
-            authDomain,
-            projectId,
+          apiKey,
+          authDomain,
+          projectId,
           };
           
           // Only add optional fields if they exist
@@ -204,7 +204,7 @@ async function ensureInitialized(): Promise<void> {
           // Triple-check: app exists, has options, and has non-empty apiKey
           if (app && app.options && app.options.apiKey && app.options.apiKey.trim().length > 0) {
             // Call getAuth with explicit app to prevent default app lookup
-            auth = getAuth(app);
+        auth = getAuth(app);
             console.log("[Firebase] Auth initialized successfully");
           } else {
             throw new Error("App missing valid apiKey configuration");
@@ -244,8 +244,8 @@ async function ensureInitialized(): Promise<void> {
       // Firestore can be used on both client and server
       try {
         if (app && app.options && app.options.apiKey && app.options.apiKey.trim().length > 0) {
-          db = getFirestore(app);
-          console.log("[Firebase] Successfully initialized");
+        db = getFirestore(app);
+        console.log("[Firebase] Successfully initialized");
         } else {
           throw new Error("App missing valid apiKey configuration");
         }

@@ -1151,6 +1151,12 @@ section {
     .nav-logo {
         font-size: 1.25rem;
     }
+    
+    .nav-logo img,
+    .nav-logo > div {
+        width: 80px !important;
+        height: 32px !important;
+    }
 
     .hero {
         min-height: 90vh;

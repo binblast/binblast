@@ -85,14 +85,14 @@ export function Navbar() {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", height: "40px", overflow: "hidden", position: "relative" }}>
-          <div style={{ width: "100px", height: "40px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", height: "40px", overflow: "hidden" }}>
+          <div style={{ width: "100px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
             <Image 
               src="/logo.png" 
               alt="Bin Blast Co. Logo" 
               width={100} 
               height={40}
-              style={{ objectFit: "contain", objectPosition: "center", maxWidth: "100%", maxHeight: "100%" }}
+              style={{ objectFit: "cover", objectPosition: "center", width: "120%", height: "120%", margin: "-10%" }}
               priority
             />
           </div>
