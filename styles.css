@@ -1169,6 +1169,14 @@ section {
         padding: 2rem 0;
     }
 
+    /* Hero logo responsive sizing for tablet */
+    .hero .container > div img,
+    .hero img {
+        width: 200px !important;
+        height: auto !important;
+        max-width: 100%;
+    }
+
     .hero-headline {
         font-size: 2.5rem;
     }
@@ -1272,6 +1280,14 @@ section {
     .hero {
         min-height: 85vh;
         padding: 1.5rem 0;
+    }
+
+    /* Hero logo responsive sizing for mobile */
+    .hero .container > div img,
+    .hero img {
+        width: 150px !important;
+        height: auto !important;
+        max-width: 100%;
     }
 
     .hero-headline {
