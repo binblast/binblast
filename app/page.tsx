@@ -22,11 +22,98 @@ export default function HomePage() {
           <div className="container">
             <h1 className="hero-headline">Sparkling Clean Bins, Every Time</h1>
             <p className="hero-subheadline">
-              Professional trash bin cleaning service that keeps your bins fresh, sanitized, and odor-free. Book your cleaning today!
+              Professional curbside trash bin cleaning that eliminates odors, kills bacteria, and keeps your home fresh. Plus, manage everything through your own online dashboard.
             </p>
             <div className="hero-buttons">
               <Link href="#pricing" className="btn btn-primary btn-large">Book Now</Link>
-              <Link href="#how-it-works" className="btn btn-secondary btn-large">Learn More</Link>
+              <Link href="#why-different" className="btn btn-secondary btn-large">Explore Features</Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Why Bin Blast Co. Is Different Section */}
+        <section id="why-different" className="benefits" style={{ padding: "5rem 0", background: "#f9fafb" }}>
+          <div className="container">
+            <h2 className="section-title">Why Bin Blast Co. Is Different</h2>
+            <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem", color: "var(--text-light)", fontSize: "1.125rem" }}>
+              More than a cleaning service. Your bins stay fresh, and you get a modern customer experience to match.
+            </p>
+            <div className="benefits-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem" }}>
+              <div className="benefit-card" style={{ 
+                background: "#ffffff", 
+                borderRadius: "16px", 
+                padding: "2rem", 
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}>
+                <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  Personalized Customer Dashboard
+                </h3>
+                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
+                  Manage your plan, view your payment status, and update your details from a clean, easy-to-use dashboard.
+                </p>
+              </div>
+              <div className="benefit-card" style={{ 
+                background: "#ffffff", 
+                borderRadius: "16px", 
+                padding: "2rem", 
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}>
+                <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  Smart Scheduling
+                </h3>
+                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
+                  Pick your trash day, add special instructions, and let our system handle the rest so you never forget a cleaning.
+                </p>
+              </div>
+              <div className="benefit-card" style={{ 
+                background: "#ffffff", 
+                borderRadius: "16px", 
+                padding: "2rem", 
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}>
+                <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  Loyalty Rewards
+                </h3>
+                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
+                  Earn loyalty levels as you complete cleanings. Unlock perks and track your progress over time.
+                </p>
+              </div>
+              <div className="benefit-card" style={{ 
+                background: "#ffffff", 
+                borderRadius: "16px", 
+                padding: "2rem", 
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}>
+                <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  Referral Program
+                </h3>
+                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
+                  Share your unique link. When friends sign up, both of you receive discounts on your next cleaning.
+                </p>
+              </div>
+              <div className="benefit-card" style={{ 
+                background: "#ffffff", 
+                borderRadius: "16px", 
+                padding: "2rem", 
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}>
+                <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  Built-In AI Assistant
+                </h3>
+                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
+                  Get instant answers about pricing, scheduling, and our process through a chat assistant available right on the site.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -39,69 +126,185 @@ export default function HomePage() {
               <div className="step-card">
                 <div className="step-number">1</div>
                 <h3 className="step-title">Book Your Service</h3>
-                <p className="step-description">Schedule your bin cleaning appointment online or by phone. Choose a time that works best for you.</p>
+                <p className="step-description">Schedule your bin cleaning appointment online. Choose a plan and trash day that works for you.</p>
               </div>
               <div className="step-card">
                 <div className="step-number">2</div>
                 <h3 className="step-title">We Clean Your Bins</h3>
-                <p className="step-description">Our professional team arrives with specialized equipment to thoroughly clean and sanitize your bins.</p>
+                <p className="step-description">Our professional team arrives with specialized equipment to thoroughly clean, sanitize, and deodorize your bins.</p>
               </div>
               <div className="step-card">
                 <div className="step-number">3</div>
                 <h3 className="step-title">Enjoy Clean Bins</h3>
-                <p className="step-description">Your bins are left sparkling clean, sanitized, and ready to use. No more odors or bacteria!</p>
+                <p className="step-description">Your bins are left fresh, odor-free, and ready to use. For subscribers, we return automatically on your schedule.</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Why Clean Your Bins Section */}
-        <section className="benefits">
+        {/* Plans & Pricing Section */}
+        <section id="pricing" style={{ padding: "5rem 0", background: "#ffffff" }}>
           <div className="container">
-            <h2 className="section-title">Why Clean Your Bins</h2>
-            <div className="benefits-grid">
-              <div className="benefit-card">
-                <h3 className="benefit-title">Eliminate Odors</h3>
-                <p className="benefit-description">Remove unpleasant smells that can linger around your home and attract pests.</p>
-              </div>
-              <div className="benefit-card">
-                <h3 className="benefit-title">Kill Bacteria</h3>
-                <p className="benefit-description">Our sanitization process eliminates harmful bacteria and germs for a healthier environment.</p>
-              </div>
-              <div className="benefit-card">
-                <h3 className="benefit-title">Extend Bin Life</h3>
-                <p className="benefit-description">Regular cleaning helps maintain your bins and prevents premature wear and damage.</p>
-              </div>
-              <div className="benefit-card">
-                <h3 className="benefit-title">Save Time</h3>
-                <p className="benefit-description">Let the professionals handle it while you focus on what matters most to you.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <PricingSection />
-
-        {/* Account Section */}
-        <section id="account" className="account-section">
-          <div className="container">
-            <h2 className="section-title">Manage Your Bin Blast Service</h2>
-            <p className="section-subtitle">
-              Sign up for your account to book new cleanings, see upcoming appointments, 
-              update your information, and manage your plans—all in one place.
+            <h2 className="section-title">Plans & Pricing</h2>
+            <p style={{ 
+              textAlign: "center", 
+              marginBottom: "3rem", 
+              color: "var(--text-light)", 
+              fontSize: "1.125rem",
+              maxWidth: "800px",
+              marginLeft: "auto",
+              marginRight: "auto"
+            }}>
+              Every plan includes full access to your Bin Blast Co. dashboard, smart scheduling tools, loyalty rewards, and referral credits.
             </p>
-            <div className="account-grid">
-              <Link href="#pricing" className="account-card card-link">
-                <h3>New to Bin Blast Co.?</h3>
-                <p>
-                  Get started instantly through our online portal. Choose your plan, tell us your trash day, 
-                  and we&apos;ll handle the rest.
-                </p>
-                <ul className="account-list">
-                  <li>24/7 online booking</li>
-                  <li>Choose one-time or recurring plans</li>
-                </ul>
-              </Link>
+            <PricingSection />
+          </div>
+        </section>
+
+        {/* Your Bin Blast Dashboard Section */}
+        <section id="dashboard" className="account-section" style={{ padding: "5rem 0", background: "#f9fafb" }}>
+          <div className="container">
+            <h2 className="section-title">Your Bin Blast Dashboard</h2>
+            <p className="section-subtitle">
+              When you sign up, you get access to a modern online dashboard that makes managing your service simple.
+            </p>
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", 
+              gap: "3rem",
+              alignItems: "center",
+              marginTop: "3rem"
+            }}>
+              {/* Left side - Dashboard mockup */}
+              <div style={{
+                background: "#ffffff",
+                borderRadius: "20px",
+                padding: "2rem",
+                boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
+                border: "1px solid #e5e7eb",
+                minHeight: "400px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "1rem"
+              }}>
+                {/* Mock dashboard cards */}
+                <div style={{
+                  background: "#f9fafb",
+                  borderRadius: "12px",
+                  padding: "1.5rem",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <div style={{ height: "12px", background: "#d1d5db", borderRadius: "6px", width: "60%", marginBottom: "0.75rem" }}></div>
+                  <div style={{ height: "8px", background: "#e5e7eb", borderRadius: "4px", width: "80%" }}></div>
+                </div>
+                <div style={{
+                  background: "#f9fafb",
+                  borderRadius: "12px",
+                  padding: "1.5rem",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <div style={{ height: "12px", background: "#d1d5db", borderRadius: "6px", width: "70%", marginBottom: "0.75rem" }}></div>
+                  <div style={{ height: "8px", background: "#e5e7eb", borderRadius: "4px", width: "90%", marginBottom: "0.5rem" }}></div>
+                  <div style={{ height: "8px", background: "#e5e7eb", borderRadius: "4px", width: "75%" }}></div>
+                </div>
+                <div style={{
+                  background: "#f9fafb",
+                  borderRadius: "12px",
+                  padding: "1.5rem",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <div style={{ height: "12px", background: "#d1d5db", borderRadius: "6px", width: "65%", marginBottom: "0.75rem" }}></div>
+                  <div style={{ height: "8px", background: "#e5e7eb", borderRadius: "4px", width: "85%" }}></div>
+                </div>
+              </div>
+
+              {/* Right side - Feature list */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                <div style={{
+                  background: "#ffffff",
+                  borderRadius: "12px",
+                  padding: "1.5rem",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                    Plan Overview
+                  </h3>
+                  <p style={{ color: "var(--text-light)", fontSize: "0.95rem", margin: 0 }}>
+                    See your current plan, billing status, and upcoming cleanings at a glance.
+                  </p>
+                </div>
+                <div style={{
+                  background: "#ffffff",
+                  borderRadius: "12px",
+                  padding: "1.5rem",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                    Schedule Cleanings Anytime
+                  </h3>
+                  <p style={{ color: "var(--text-light)", fontSize: "0.95rem", margin: 0 }}>
+                    Choose your trash day, confirm your address, and add special instructions for our team.
+                  </p>
+                </div>
+                <div style={{
+                  background: "#ffffff",
+                  borderRadius: "12px",
+                  padding: "1.5rem",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                    Loyalty Levels
+                  </h3>
+                  <p style={{ color: "var(--text-light)", fontSize: "0.95rem", margin: 0 }}>
+                    Track your progress from Level 1 up as you complete more cleanings.
+                  </p>
+                </div>
+                <div style={{
+                  background: "#ffffff",
+                  borderRadius: "12px",
+                  padding: "1.5rem",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                    Referral Rewards
+                  </h3>
+                  <p style={{ color: "var(--text-light)", fontSize: "0.95rem", margin: 0 }}>
+                    Access your referral link, track how many referrals you have, and see upcoming credits.
+                  </p>
+                </div>
+                <div style={{
+                  background: "#ffffff",
+                  borderRadius: "12px",
+                  padding: "1.5rem",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                    Cleaning History
+                  </h3>
+                  <p style={{ color: "var(--text-light)", fontSize: "0.95rem", margin: 0 }}>
+                    Review past and upcoming appointments so you always know when we were there.
+                  </p>
+                </div>
+                <div style={{
+                  background: "#ffffff",
+                  borderRadius: "12px",
+                  padding: "1.5rem",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                    24/7 AI Chat Support
+                  </h3>
+                  <p style={{ color: "var(--text-light)", fontSize: "0.95rem", margin: 0 }}>
+                    Ask questions, get help with booking, and learn more about our services directly from the assistant.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -111,8 +314,7 @@ export default function HomePage() {
           <div className="container">
             <h2 className="section-title">What We Clean</h2>
             <p className="section-subtitle">
-              Bin Blast Co. provides professional curbside cleaning for residential, commercial, and multi-unit properties.
-              Whether it&apos;s a trash bin, recycling bin, or specialty container — if it rolls to the curb, we clean it.
+              Bin Blast Co. provides professional curbside cleaning for residential, commercial, and multi-unit properties. If it rolls to the curb, we can clean it.
             </p>
             <div className="service-grid">
               <div className="service-card">
@@ -145,17 +347,23 @@ export default function HomePage() {
             <p className="section-subtitle">What our customers are saying about Bin Blast Co.</p>
             <div className="testimonials-grid">
               <div className="testimonial-card">
-                <div className="stars">⭐⭐⭐⭐⭐</div>
+                <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "#f59e0b", marginBottom: "1rem", letterSpacing: "0.05em" }}>
+                  5 STARS
+                </div>
                 <p className="testimonial-text">&quot;My bins have NEVER smelled this good.&quot;</p>
                 <p className="testimonial-name">— Jordan P.</p>
               </div>
               <div className="testimonial-card">
-                <div className="stars">⭐⭐⭐⭐⭐</div>
+                <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "#f59e0b", marginBottom: "1rem", letterSpacing: "0.05em" }}>
+                  5 STARS
+                </div>
                 <p className="testimonial-text">&quot;Best $65/mo I&apos;ve spent. Zero smells now.&quot;</p>
                 <p className="testimonial-name">— Ashley M.</p>
               </div>
               <div className="testimonial-card">
-                <div className="stars">⭐⭐⭐⭐⭐</div>
+                <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "#f59e0b", marginBottom: "1rem", letterSpacing: "0.05em" }}>
+                  5 STARS
+                </div>
                 <p className="testimonial-text">&quot;Didn&apos;t know I needed this until I got it.&quot;</p>
                 <p className="testimonial-name">— Marcus D.</p>
               </div>
@@ -171,14 +379,13 @@ export default function HomePage() {
           <div className="cta-content">
             <h2 className="cta-title">Ready for Fresh, Odor-Free Bins Every Month?</h2>
             <p className="cta-sub">
-              Join our Bi-Weekly Clean Plan and keep your bins spotless with zero hassle —
-              professional cleaning, sanitizing, and deodorizing every visit.
+              Join one of our recurring plans and let us handle the dirty work. You get professionally cleaned bins on a regular schedule plus full access to your Bin Blast Co. customer dashboard.
             </p>
             <p className="cta-detail">Only $65 / month — up to 2 bins</p>
             <p className="cta-detail">Additional bins: +$10 each</p>
             <p className="cta-detail">Cancel anytime, no long-term contracts</p>
             <Link href="#pricing" className="cta-btn">
-              Get My Monthly Plan
+              Get My Plan
             </Link>
           </div>
         </section>
@@ -217,5 +424,3 @@ export default function HomePage() {
     </>
   );
 }
-
-
