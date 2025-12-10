@@ -3,21 +3,25 @@
 
 import { useState, useRef, useEffect } from "react";
 
-// Safely import PLAN_CONFIGS with fallback
-let PLAN_CONFIGS: Record<string, { id: string; name: string; price: number; priceSuffix: string }> = {};
+// Fallback pricing data
+const FALLBACK_PLANS = {
+  "one-time": { id: "one-time", name: "Monthly Clean", price: 35, priceSuffix: "/month" },
+  "twice-month": { id: "twice-month", name: "Bi-Weekly Clean (2x/Month)", price: 65, priceSuffix: "/month" },
+  "bi-monthly": { id: "bi-monthly", name: "Bi-Monthly Plan – Yearly Package", price: 210, priceSuffix: "/year" },
+  "quarterly": { id: "quarterly", name: "Quarterly Plan – Yearly Package", price: 160, priceSuffix: "/year" },
+  "commercial": { id: "commercial", name: "Commercial & HOA Plans", price: 0, priceSuffix: "/month" },
+};
 
-try {
-  const stripeConfig = require("@/lib/stripe-config");
-  PLAN_CONFIGS = stripeConfig.PLAN_CONFIGS || {};
-} catch (error) {
-  console.warn("Could not load PLAN_CONFIGS, using fallback pricing");
-  PLAN_CONFIGS = {
-    "one-time": { id: "one-time", name: "Monthly Clean", price: 35, priceSuffix: "/month" },
-    "twice-month": { id: "twice-month", name: "Bi-Weekly Clean (2x/Month)", price: 65, priceSuffix: "/month" },
-    "bi-monthly": { id: "bi-monthly", name: "Bi-Monthly Plan – Yearly Package", price: 210, priceSuffix: "/year" },
-    "quarterly": { id: "quarterly", name: "Quarterly Plan – Yearly Package", price: 160, priceSuffix: "/year" },
-    "commercial": { id: "commercial", name: "Commercial & HOA Plans", price: 0, priceSuffix: "/month" },
-  };
+// Function to get pricing plans safely
+function getPricingPlans() {
+  try {
+    // Dynamic import to avoid SSR issues
+    const stripeConfig = require("@/lib/stripe-config");
+    return stripeConfig.PLAN_CONFIGS || FALLBACK_PLANS;
+  } catch (error) {
+    console.warn("Could not load PLAN_CONFIGS, using fallback pricing");
+    return FALLBACK_PLANS;
+  }
 }
 
 interface Message {
@@ -128,24 +132,17 @@ export function ChatWidget() {
         lowerInput.includes("pricing") ||
         lowerInput.includes("plan")
       ) {
-        const plans = Object.values(PLAN_CONFIGS || {});
+        const PLAN_CONFIGS = getPricingPlans();
+        const plans = Object.values(PLAN_CONFIGS);
         let response = "Here are our current pricing plans:\n\n";
         
-        if (plans.length > 0) {
-          plans.forEach((plan) => {
-            if (plan.id === "commercial") {
-              response += `• ${plan.name}: Custom Quote\n`;
-            } else {
-              response += `• ${plan.name}: $${plan.price}${plan.priceSuffix}\n`;
-            }
-          });
-        } else {
-          response += "• Monthly Clean: $35/month\n";
-          response += "• Bi-Weekly Clean (2x/Month): $65/month\n";
-          response += "• Bi-Monthly Plan – Yearly Package: $210/year\n";
-          response += "• Quarterly Plan – Yearly Package: $160/year\n";
-          response += "• Commercial & HOA Plans: Custom Quote\n";
-        }
+        plans.forEach((plan: any) => {
+          if (plan.id === "commercial") {
+            response += `• ${plan.name}: Custom Quote\n`;
+          } else {
+            response += `• ${plan.name}: $${plan.price}${plan.priceSuffix}\n`;
+          }
+        });
         
         response += "\nAdditional bins: +$10 each\n\n";
         response += "Would you like to book a cleaning now?";
