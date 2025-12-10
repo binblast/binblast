@@ -93,19 +93,12 @@ function RegisterForm() {
     setLoading(true);
 
     try {
-      // Dynamically import Firebase auth to avoid build-time initialization
-      const { getAuthInstance, getDbInstance } = await import("@/lib/firebase");
-      const auth = await getAuthInstance();
+      // Use safe wrapper functions that ensure Firebase is initialized
+      const { createUserWithEmailAndPassword, updateProfile, getDbInstance } = await import("@/lib/firebase");
       const db = await getDbInstance();
       
-      if (!auth) {
-        throw new Error("Firebase authentication is not configured. Please set up Firebase environment variables.");
-      }
-      
-      const { createUserWithEmailAndPassword, updateProfile } = await import("firebase/auth");
-      
       // Create Firebase user
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(email, password);
       
       // Update profile with display name
       await updateProfile(userCredential.user, {

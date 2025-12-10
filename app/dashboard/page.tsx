@@ -204,11 +204,9 @@ function DashboardPageContent() {
     
     async function loadUserData() {
       try {
-        await import("@/lib/firebase");
-        const { getAuthInstance, getDbInstance } = await import("@/lib/firebase");
+        const { getAuthInstance, getDbInstance, onAuthStateChanged } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
         const db = await getDbInstance();
-        const { onAuthStateChanged } = await import("firebase/auth");
         const { doc, getDoc } = await import("firebase/firestore");
 
         if (!auth || !db) {
@@ -219,7 +217,7 @@ function DashboardPageContent() {
           return;
         }
 
-        unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        unsubscribe = await onAuthStateChanged(async (firebaseUser) => {
           if (!firebaseUser) {
             if (mounted) {
               router.push("/login");

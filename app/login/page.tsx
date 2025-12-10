@@ -21,18 +21,11 @@ function LoginForm() {
     setError(null);
 
     try {
-      // Dynamically import Firebase auth to avoid build-time initialization
-      const { getAuthInstance } = await import("@/lib/firebase");
-      const auth = await getAuthInstance();
-      
-      if (!auth) {
-        throw new Error("Firebase authentication is not configured. Please set up Firebase environment variables.");
-      }
-      
-      const { signInWithEmailAndPassword } = await import("firebase/auth");
+      // Use safe wrapper function that ensures Firebase is initialized
+      const { signInWithEmailAndPassword } = await import("@/lib/firebase");
       
       // Sign in with Firebase
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(email, password);
       
       // Success - redirect to dashboard
       const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";

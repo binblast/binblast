@@ -31,12 +31,10 @@ function SubscriptionPageContent() {
     
     async function loadUserData() {
       try {
-        // Dynamically import Firebase
-        await import("@/lib/firebase");
-        const { getAuthInstance, getDbInstance } = await import("@/lib/firebase");
+        // Use safe wrapper functions
+        const { getAuthInstance, getDbInstance, onAuthStateChanged } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
         const db = await getDbInstance();
-        const { onAuthStateChanged } = await import("firebase/auth");
         const { doc, getDoc } = await import("firebase/firestore");
 
         if (!auth || !db) {
@@ -47,8 +45,8 @@ function SubscriptionPageContent() {
           return;
         }
 
-        // Wait for auth state
-        unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        // Wait for auth state using safe wrapper
+        unsubscribe = await onAuthStateChanged(async (firebaseUser) => {
           if (!firebaseUser) {
             if (mounted) {
               router.push("/login?callbackUrl=/subscription");

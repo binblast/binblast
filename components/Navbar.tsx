@@ -26,13 +26,13 @@ export function Navbar() {
     // Small delay to allow Firebase global initialization to complete
     const timeoutId = setTimeout(async () => {
       try {
-        const { getAuthInstance } = await import("@/lib/firebase");
+        const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
         
         // Only proceed if auth is available and valid
         if (auth && typeof auth === "object" && "currentUser" in auth) {
-          const { onAuthStateChanged } = await import("firebase/auth");
-          onAuthStateChanged(auth, (user) => {
+          // Use safe wrapper function
+          await onAuthStateChanged((user) => {
             setIsLoggedIn(!!user);
             setLoading(false);
           });
@@ -83,22 +83,14 @@ export function Navbar() {
 
   const handleLogout = async () => {
     try {
-      const { getAuthInstance } = await import("@/lib/firebase");
-      const auth = await getAuthInstance();
-      
-      if (auth && typeof auth === "object" && "currentUser" in auth) {
-        const { signOut } = await import("firebase/auth");
-        await signOut(auth);
-        router.push("/");
-        router.refresh();
-      } else {
-        // If auth is not available, just redirect
-        router.push("/");
-        router.refresh();
-      }
+      const { signOut } = await import("@/lib/firebase");
+      await signOut();
+      router.push("/");
+      router.refresh();
     } catch (err: any) {
-      console.warn("[Navbar] Error signing out:", err?.message || err);
-      // Still redirect even if logout fails
+      // Handle error - Firebase might not be configured
+      console.warn("[Navbar] Logout failed:", err?.message || err);
+      // Still redirect to home page
       router.push("/");
       router.refresh();
     }

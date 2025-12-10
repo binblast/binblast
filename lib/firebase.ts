@@ -386,3 +386,83 @@ export const getDbInstance = async () => {
 // Note: We don't export auth and db directly to prevent premature access
 // Always use getAuthInstance() and getDbInstance() instead
 
+// Helper functions to safely use Firebase auth functions
+// These ensure Firebase is initialized before importing auth modules
+export const onAuthStateChanged = async (callback: (user: any) => void) => {
+  try {
+    const authInstance = await getAuthInstance();
+    if (!authInstance) {
+      callback(null);
+      return () => {};
+    }
+    
+    // Import onAuthStateChanged only after auth is initialized
+    const { onAuthStateChanged: firebaseOnAuthStateChanged } = await import("firebase/auth");
+    return firebaseOnAuthStateChanged(authInstance, callback);
+  } catch (error: any) {
+    console.warn("[Firebase] onAuthStateChanged error:", error?.message || error);
+    callback(null);
+    return () => {};
+  }
+};
+
+export const signInWithEmailAndPassword = async (email: string, password: string) => {
+  try {
+    const authInstance = await getAuthInstance();
+    if (!authInstance) {
+      throw new Error("Firebase auth is not available");
+    }
+    
+    const { signInWithEmailAndPassword: firebaseSignIn } = await import("firebase/auth");
+    return await firebaseSignIn(authInstance, email, password);
+  } catch (error: any) {
+    console.error("[Firebase] signInWithEmailAndPassword error:", error?.message || error);
+    throw error;
+  }
+};
+
+export const createUserWithEmailAndPassword = async (email: string, password: string) => {
+  try {
+    const authInstance = await getAuthInstance();
+    if (!authInstance) {
+      throw new Error("Firebase auth is not available");
+    }
+    
+    const { createUserWithEmailAndPassword: firebaseCreateUser } = await import("firebase/auth");
+    return await firebaseCreateUser(authInstance, email, password);
+  } catch (error: any) {
+    console.error("[Firebase] createUserWithEmailAndPassword error:", error?.message || error);
+    throw error;
+  }
+};
+
+export const signOut = async () => {
+  try {
+    const authInstance = await getAuthInstance();
+    if (!authInstance) {
+      throw new Error("Firebase auth is not available");
+    }
+    
+    const { signOut: firebaseSignOut } = await import("firebase/auth");
+    return await firebaseSignOut(authInstance);
+  } catch (error: any) {
+    console.error("[Firebase] signOut error:", error?.message || error);
+    throw error;
+  }
+};
+
+export const updateProfile = async (user: any, profile: { displayName?: string; photoURL?: string }) => {
+  try {
+    const authInstance = await getAuthInstance();
+    if (!authInstance) {
+      throw new Error("Firebase auth is not available");
+    }
+    
+    const { updateProfile: firebaseUpdateProfile } = await import("firebase/auth");
+    return await firebaseUpdateProfile(user, profile);
+  } catch (error: any) {
+    console.error("[Firebase] updateProfile error:", error?.message || error);
+    throw error;
+  }
+};
+

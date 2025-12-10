@@ -111,19 +111,17 @@ export function PricingSection() {
   useEffect(() => {
     async function getCurrentUserId() {
       try {
-        const { getAuthInstance } = await import("@/lib/firebase");
+        const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
         
         if (auth && typeof auth === "object" && "currentUser" in auth) {
-          const { onAuthStateChanged } = await import("firebase/auth");
-          
           // Get current user immediately if available
           if (auth.currentUser) {
             setUserId(auth.currentUser.uid);
           }
           
-          // Also listen for auth state changes
-          const unsubscribe = onAuthStateChanged(auth, (user) => {
+          // Also listen for auth state changes using safe wrapper
+          const unsubscribe = await onAuthStateChanged((user) => {
             setUserId(user?.uid || null);
           });
           

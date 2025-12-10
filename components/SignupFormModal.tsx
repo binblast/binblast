@@ -42,17 +42,11 @@ export function SignupFormModal({ isOpen, onClose, selectedPlan }: SignupFormMod
     setLoading(true);
 
     try {
-      // Dynamically import Firebase auth to avoid build-time initialization
-      const { getAuthInstance } = await import("@/lib/firebase");
-      const auth = await getAuthInstance();
-      const { createUserWithEmailAndPassword, updateProfile } = await import("firebase/auth");
-      
-      if (!auth) {
-        throw new Error("Firebase authentication is not configured. Please set up Firebase environment variables.");
-      }
+      // Use safe wrapper functions that ensure Firebase is initialized
+      const { createUserWithEmailAndPassword, updateProfile } = await import("@/lib/firebase");
       
       // Create Firebase user
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(email, password);
       
       // Update profile with display name
       await updateProfile(userCredential.user, {
