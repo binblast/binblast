@@ -32,7 +32,7 @@ export function ChatWidget() {
       };
       setMessages([welcomeMessage]);
     }
-  }, [isOpen]);
+  }, [isOpen, messages.length]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -84,35 +84,44 @@ export function ChatWidget() {
   };
 
   const generateResponse = (userInput: string): { text: string; quickReplies?: string[] } => {
-    const lowerInput = userInput.toLowerCase();
+    try {
+      const lowerInput = userInput.toLowerCase();
 
-    // Pricing questions
-    if (
-      lowerInput.includes("price") ||
-      lowerInput.includes("cost") ||
-      lowerInput.includes("how much") ||
-      lowerInput.includes("pricing") ||
-      lowerInput.includes("plan")
-    ) {
-      const plans = Object.values(PLAN_CONFIGS);
-      let response = "Here are our current pricing plans:\n\n";
-      
-      plans.forEach((plan) => {
-        if (plan.id === "commercial") {
-          response += `• ${plan.name}: Custom Quote\n`;
+      // Pricing questions
+      if (
+        lowerInput.includes("price") ||
+        lowerInput.includes("cost") ||
+        lowerInput.includes("how much") ||
+        lowerInput.includes("pricing") ||
+        lowerInput.includes("plan")
+      ) {
+        const plans = Object.values(PLAN_CONFIGS || {});
+        let response = "Here are our current pricing plans:\n\n";
+        
+        if (plans.length > 0) {
+          plans.forEach((plan) => {
+            if (plan.id === "commercial") {
+              response += `• ${plan.name}: Custom Quote\n`;
+            } else {
+              response += `• ${plan.name}: $${plan.price}${plan.priceSuffix}\n`;
+            }
+          });
         } else {
-          response += `• ${plan.name}: $${plan.price}${plan.priceSuffix}\n`;
+          response += "• Monthly Clean: $35/month\n";
+          response += "• Bi-Weekly Clean (2x/Month): $65/month\n";
+          response += "• Bi-Monthly Plan – Yearly Package: $210/year\n";
+          response += "• Quarterly Plan – Yearly Package: $160/year\n";
+          response += "• Commercial & HOA Plans: Custom Quote\n";
         }
-      });
-      
-      response += "\nAdditional bins: +$10 each\n\n";
-      response += "Would you like to book a cleaning now?";
+        
+        response += "\nAdditional bins: +$10 each\n\n";
+        response += "Would you like to book a cleaning now?";
 
-      return {
-        text: response,
-        quickReplies: ["Schedule a cleaning", "How does it work?"],
-      };
-    }
+        return {
+          text: response,
+          quickReplies: ["Schedule a cleaning", "How does it work?"],
+        };
+      }
 
     // Booking questions
     if (
