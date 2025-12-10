@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { getDbInstance } from "@/lib/firebase";
-import { collection, query, where, getDocs, orderBy, limit as firestoreLimit } from "firebase/firestore";
+// Note: Firebase Firestore functions are imported dynamically inside useEffect to prevent build-time initialization errors
 
 interface ReferralHistoryProps {
   userId: string;
@@ -60,7 +60,7 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
         // Load referrals made by this user
         // Use currentUserId from auth to match Firestore security rules
         try {
-          const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy } = await import("firebase/firestore");
+          const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy, limit: firestoreLimit } = await import("firebase/firestore");
           
           const referralsQuery = firestoreQuery(
             firestoreCollection(db, "referrals"),
@@ -103,7 +103,7 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
 
         // Load credits earned (from referrals)
         try {
-          const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy } = await import("firebase/firestore");
+          const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy, limit: firestoreLimit } = await import("firebase/firestore");
           
           const creditsEarnedQuery = firestoreQuery(
             firestoreCollection(db, "credits"),
@@ -137,7 +137,7 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
 
         // Load credits used
         try {
-          const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy } = await import("firebase/firestore");
+          const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy, limit: firestoreLimit } = await import("firebase/firestore");
           
           const creditsUsedQuery = firestoreQuery(
             firestoreCollection(db, "credits"),
