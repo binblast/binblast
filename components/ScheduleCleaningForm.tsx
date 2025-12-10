@@ -110,7 +110,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
     try {
       const { getDbInstance } = await import("@/lib/firebase");
       const db = await getDbInstance();
-      const { collection, addDoc, serverTimestamp } = await import("firebase/firestore");
+      // CRITICAL: Use safe import wrapper to ensure Firebase app exists
+      const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+      const firestore = await safeImportFirestore();
+      const { collection, addDoc, serverTimestamp } = firestore;
 
       if (!db) {
         throw new Error("Firebase is not configured");

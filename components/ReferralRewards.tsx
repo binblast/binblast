@@ -23,8 +23,10 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
         const db = await getDbInstance();
         if (!db || !userId) return;
 
-        // Dynamically import Firestore functions
-        const { doc, getDoc, updateDoc, serverTimestamp } = await import("firebase/firestore");
+        // CRITICAL: Use safe import wrapper to ensure Firebase app exists
+        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+        const firestore = await safeImportFirestore();
+        const { doc, getDoc, updateDoc, serverTimestamp } = firestore;
         const userDocRef = doc(db, "users", userId);
         const userDoc = await getDoc(userDocRef);
 
@@ -61,7 +63,9 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
               return;
             }
             
-            const { collection, query, where, getDocs } = await import("firebase/firestore");
+            const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+            const firestore = await safeImportFirestore();
+            const { collection, query, where, getDocs } = firestore;
             const creditsQuery = query(
               collection(db, "credits"),
               where("userId", "==", currentUserId),

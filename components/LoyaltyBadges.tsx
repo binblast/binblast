@@ -80,8 +80,10 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
         const db = await getDbInstance();
         if (!db || !userId) return;
 
-        // Dynamically import Firestore functions
-        const { collection, query, where, getDocs } = await import("firebase/firestore");
+        // CRITICAL: Use safe import wrapper to ensure Firebase app exists
+        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+        const firestore = await safeImportFirestore();
+        const { collection, query, where, getDocs } = firestore;
         
         // Count completed cleanings
         const cleaningsQuery = query(

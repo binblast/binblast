@@ -58,7 +58,9 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
         // Load referrals made by this user
         // Use currentUserId from auth to match Firestore security rules
         try {
-          const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy, limit: firestoreLimit } = await import("firebase/firestore");
+          const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+          const firestore = await safeImportFirestore();
+          const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy, limit: firestoreLimit } = firestore;
           
           const referralsQuery = firestoreQuery(
             firestoreCollection(db, "referrals"),
@@ -101,7 +103,9 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
 
         // Load credits earned (from referrals)
         try {
-          const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy, limit: firestoreLimit } = await import("firebase/firestore");
+          const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+          const firestore = await safeImportFirestore();
+          const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy, limit: firestoreLimit } = firestore;
           
           const creditsEarnedQuery = firestoreQuery(
             firestoreCollection(db, "credits"),
@@ -135,7 +139,9 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
 
         // Load credits used
         try {
-          const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy, limit: firestoreLimit } = await import("firebase/firestore");
+          const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+          const firestore = await safeImportFirestore();
+          const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy, limit: firestoreLimit } = firestore;
           
           const creditsUsedQuery = firestoreQuery(
             firestoreCollection(db, "credits"),
