@@ -1,10 +1,24 @@
 // app/page.tsx
 
 import dynamic from "next/dynamic";
-import { Navbar } from "@/components/Navbar";
-import { PricingSection } from "@/components/PricingSection";
-import { FAQSection } from "@/components/FAQSection";
 import Link from "next/link";
+
+// CRITICAL: Dynamically import all components that use Firebase to prevent import-time errors
+// This ensures Firebase is initialized before these components load
+const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
+  ssr: false,
+  loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
+});
+
+const PricingSection = dynamic(() => import("@/components/PricingSection").then(mod => ({ default: mod.PricingSection })), {
+  ssr: false,
+  loading: () => <div style={{ minHeight: "400px", padding: "4rem 0" }} />,
+});
+
+const FAQSection = dynamic(() => import("@/components/FAQSection").then(mod => ({ default: mod.FAQSection })), {
+  ssr: false,
+  loading: () => <div style={{ minHeight: "400px", padding: "4rem 0" }} />,
+});
 
 // Dynamically import ChatWidget to prevent SSR issues
 const ChatWidget = dynamic(() => import("@/components/ChatWidget").then(mod => ({ default: mod.ChatWidget })), {
