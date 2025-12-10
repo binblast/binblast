@@ -511,7 +511,6 @@ function DashboardPageContent() {
                     e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
                   }}
                 >
-                  <span style={{ fontSize: "1.5rem" }}>📅</span>
                   <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>Schedule Cleaning</span>
                 </button>
 
@@ -539,7 +538,6 @@ function DashboardPageContent() {
                     e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
                   }}
                 >
-                  <span style={{ fontSize: "1.5rem" }}>⚙️</span>
                   <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>Manage Plan</span>
                 </button>
 
@@ -567,7 +565,6 @@ function DashboardPageContent() {
                     e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
                   }}
                 >
-                  <span style={{ fontSize: "1.5rem" }}>🎁</span>
                   <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>View Rewards</span>
                 </button>
 
@@ -595,7 +592,6 @@ function DashboardPageContent() {
                     e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
                   }}
                 >
-                  <span style={{ fontSize: "1.5rem" }}>👤</span>
                   <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>Update Info</span>
                 </button>
               </div>
@@ -610,17 +606,13 @@ function DashboardPageContent() {
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb"
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
-                  <span style={{ fontSize: "1.5rem" }}>🧹</span>
-                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0 }}>
-                    Schedule a Cleaning
-                  </h2>
-                </div>
+                <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "0.5rem" }}>
+                  Schedule a Cleaning
+                </h2>
                 <p style={{ 
                   fontSize: "0.95rem", 
                   color: "#6b7280", 
-                  marginBottom: "2rem",
-                  marginLeft: "2.25rem"
+                  marginBottom: "2rem"
                 }}>
                   Pick your trash day and confirm your address below.
                 </p>
@@ -635,7 +627,6 @@ function DashboardPageContent() {
                   fontSize: "0.875rem", 
                   color: "#6b7280", 
                   marginTop: "1rem",
-                  marginLeft: "2.25rem",
                   fontStyle: "italic"
                 }}>
                   We&apos;ll arrive on or shortly after your selected trash day.
@@ -653,12 +644,9 @@ function DashboardPageContent() {
                   boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                   border: "1px solid #e5e7eb"
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
-                    <span style={{ fontSize: "1.5rem" }}>📋</span>
-                    <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0 }}>
-                      Your Plan
-                    </h2>
-                  </div>
+                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1rem" }}>
+                    Your Plan
+                  </h2>
 
                   <div style={{
                     padding: "1.5rem",
@@ -800,12 +788,9 @@ function DashboardPageContent() {
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb"
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
-                  <span style={{ fontSize: "1.5rem" }}>📆</span>
-                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0 }}>
-                    Your Cleanings
-                  </h2>
-                </div>
+                <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1.5rem" }}>
+                  Your Cleanings
+                </h2>
 
                 {/* Upcoming */}
                 <div style={{ marginBottom: "2rem" }}>
@@ -957,12 +942,9 @@ function DashboardPageContent() {
                     padding: 0
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                    <span style={{ fontSize: "1.5rem" }}>👤</span>
-                    <h2 style={{ fontSize: "1.25rem", fontWeight: "600", color: "var(--text-dark)", margin: 0 }}>
-                      Account Information
-                    </h2>
-                  </div>
+                  <h2 style={{ fontSize: "1.25rem", fontWeight: "600", color: "var(--text-dark)", margin: 0 }}>
+                    Account Information
+                  </h2>
                   <span style={{ fontSize: "1.25rem", color: "#6b7280" }}>
                     {accountInfoExpanded ? "−" : "+"}
                   </span>

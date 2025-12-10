@@ -97,21 +97,17 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
       border: "1px solid #e5e7eb",
       marginBottom: "1.5rem"
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
-        <span style={{ fontSize: "1.5rem" }}>🎁</span>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0 }}>
-          Referral Rewards
-        </h2>
-      </div>
+      <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "0.5rem" }}>
+        Referral Rewards
+      </h2>
       <p style={{ 
         fontSize: "0.95rem", 
         color: "#6b7280", 
-        marginBottom: "1.5rem",
-        marginLeft: "2.25rem"
+        marginBottom: "1.5rem"
       }}>
         Share your link and both you and your friend get $10 off your next service.
       </p>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", marginLeft: "2.25rem" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
         <div style={{
           padding: "0.5rem 1rem",
           background: "#f0f9ff",
@@ -120,7 +116,7 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
           fontWeight: "600",
           color: "#0369a1"
         }}>
-          {referralCount} {referralCount === 1 ? "referral" : "referrals"} so far {referralCount === 0 ? "– your next $10 reward is waiting 🎉" : ""}
+          {referralCount} {referralCount === 1 ? "referral" : "referrals"} so far {referralCount === 0 ? "– your next $10 reward is waiting" : ""}
         </div>
       </div>
 
@@ -129,8 +125,7 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
         borderRadius: "12px",
         padding: "1.5rem",
         border: "2px solid #bae6fd",
-        marginBottom: "1rem",
-        marginLeft: "2.25rem"
+        marginBottom: "1rem"
       }}>
         
         <div style={{ marginBottom: "1rem" }}>

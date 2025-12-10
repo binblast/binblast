@@ -26,7 +26,7 @@ const BADGE_LEVELS: BadgeLevel[] = [
     description: "Getting started!",
     color: "#6b7280",
     bgColor: "#f3f4f6",
-    icon: "🧹",
+    icon: "",
     minServices: 1
   },
   {
@@ -35,7 +35,7 @@ const BADGE_LEVELS: BadgeLevel[] = [
     description: "5+ cleanings completed",
     color: "#3b82f6",
     bgColor: "#dbeafe",
-    icon: "👑",
+    icon: "",
     minServices: 5
   },
   {
@@ -44,7 +44,7 @@ const BADGE_LEVELS: BadgeLevel[] = [
     description: "15+ cleanings completed",
     color: "#8b5cf6",
     bgColor: "#ede9fe",
-    icon: "✨",
+    icon: "",
     minServices: 15
   },
   {
@@ -53,7 +53,7 @@ const BADGE_LEVELS: BadgeLevel[] = [
     description: "30+ cleanings completed",
     color: "#f59e0b",
     bgColor: "#fef3c7",
-    icon: "⭐",
+    icon: "",
     minServices: 30
   },
   {
@@ -62,7 +62,7 @@ const BADGE_LEVELS: BadgeLevel[] = [
     description: "50+ cleanings completed",
     color: "#dc2626",
     bgColor: "#fee2e2",
-    icon: "👑",
+    icon: "",
     minServices: 50
   }
 ];
@@ -154,12 +154,9 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
       border: "1px solid #e5e7eb",
       marginBottom: "1.5rem"
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
-        <span style={{ fontSize: "1.5rem" }}>🏆</span>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0 }}>
-          Loyalty & Badges
-        </h2>
-      </div>
+      <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "0.5rem" }}>
+        Loyalty & Badges
+      </h2>
       <p style={{ 
         fontSize: "0.95rem", 
         color: "#6b7280", 
