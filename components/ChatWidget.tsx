@@ -2,7 +2,23 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
+
+// Safely import PLAN_CONFIGS with fallback
+let PLAN_CONFIGS: Record<string, { id: string; name: string; price: number; priceSuffix: string }> = {};
+
+try {
+  const stripeConfig = require("@/lib/stripe-config");
+  PLAN_CONFIGS = stripeConfig.PLAN_CONFIGS || {};
+} catch (error) {
+  console.warn("Could not load PLAN_CONFIGS, using fallback pricing");
+  PLAN_CONFIGS = {
+    "one-time": { id: "one-time", name: "Monthly Clean", price: 35, priceSuffix: "/month" },
+    "twice-month": { id: "twice-month", name: "Bi-Weekly Clean (2x/Month)", price: 65, priceSuffix: "/month" },
+    "bi-monthly": { id: "bi-monthly", name: "Bi-Monthly Plan – Yearly Package", price: 210, priceSuffix: "/year" },
+    "quarterly": { id: "quarterly", name: "Quarterly Plan – Yearly Package", price: 160, priceSuffix: "/year" },
+    "commercial": { id: "commercial", name: "Commercial & HOA Plans", price: 0, priceSuffix: "/month" },
+  };
+}
 
 interface Message {
   id: string;
@@ -17,8 +33,14 @@ export function ChatWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Only render on client side
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Initialize with welcome message
   useEffect(() => {
@@ -202,6 +224,11 @@ export function ChatWidget() {
       pricingSection.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
+
+  // Don't render until mounted (prevents hydration errors)
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <>
