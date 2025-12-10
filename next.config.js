@@ -21,7 +21,7 @@ const nextConfig = {
               chunks: 'initial', // Only in initial chunks, never in async chunks
               enforce: true,
               priority: 50, // Higher priority to ensure it's in main bundle
-              maxAsyncRequests: 0, // Prevent async loading
+              maxAsyncRequests: 1, // Minimum value (1) to prevent async loading
               maxInitialRequests: Infinity,
             },
             // Prevent modules that import Firebase from being split separately
