@@ -22,8 +22,9 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
   // Mark as initializing immediately to prevent race conditions
   global.__firebaseInitialized = true;
   
-  // Start initialization immediately and store the promise
-  globalInitPromise = Promise.resolve().then(async () => {
+  // CRITICAL: Start initialization IMMEDIATELY and don't defer it
+  // This ensures Firebase is initialized before any dynamic chunks can load
+  globalInitPromise = (async () => {
     try {
       const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
       const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
@@ -31,7 +32,7 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
       
       // Only initialize if we have ALL required config
       if (apiKey && projectId && authDomain && apiKey.length > 0 && projectId.length > 0 && authDomain.length > 0) {
-        // Import and initialize Firebase immediately
+        // Import and initialize Firebase immediately (don't defer)
         const { initializeApp, getApps } = await import("firebase/app");
         
         // Check if app already exists
@@ -75,7 +76,10 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
       console.error("[Firebase] Global initialization error:", error?.message || error);
       // Don't throw - allow lazy initialization to handle it
     }
-  });
+  })();
+  
+  // Don't await, but ensure it starts immediately
+  // The promise is stored so other code can wait for it
 }
 
 async function ensureInitialized(): Promise<void> {
