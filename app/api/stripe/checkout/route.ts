@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, PLAN_CONFIGS, PlanId, isCustomQuote } from "@/lib/stripe-config";
+import { getReferralCouponId } from "@/lib/stripe-coupons";
 import Stripe from "stripe";
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { planId, userId } = body;
+    const { planId, userId, applyCredit } = body; // applyCredit: boolean flag from user
 
     if (!planId) {
       return NextResponse.json(
@@ -51,11 +52,11 @@ export async function POST(req: NextRequest) {
       line_items: [],
     };
 
-    // Check for unused referral credits and calculate discount
+    // Check for unused referral credits and calculate discount (only if user wants to apply credit)
     let discountAmount = 0;
     let creditsToUse: string[] = [];
     
-    if (userId) {
+    if (userId && applyCredit === true) {
       try {
         // Dynamically import Firebase to avoid build-time initialization
         const { getDbInstance } = await import("@/lib/firebase");
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
 
           if (!creditsSnapshot.empty) {
             const planPriceInCents = plan.price * 100;
-            const maxCreditToApply = Math.min(1000, planPriceInCents); // Max $10 off (1000 cents)
+            const maxCreditToApply = Math.min(1000, planPriceInCents); // Max $10 off (1000 cents), capped at plan price
 
             // Sort credits by creation date (oldest first) in memory
             const creditsArray = creditsSnapshot.docs.map(doc => {
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
 
             let remainingAmount = planPriceInCents;
 
-            // Apply credits up to $10 maximum
+            // Apply credits up to $10 maximum, but never more than the plan price
             for (const creditData of creditsArray) {
               if (remainingAmount <= 0 || discountAmount >= maxCreditToApply) break;
 
@@ -115,39 +116,35 @@ export async function POST(req: NextRequest) {
     // Calculate final price after discount (for response, Stripe will calculate actual final price)
     const finalPrice = Math.max(0, (plan.price * 100) - discountAmount);
 
-    // Apply discount using Stripe's discount system for better visibility on checkout page
-    if (discountAmount > 0 && discountAmount >= 100) { // Only apply if at least $1.00
+    // Apply discount using reusable Stripe coupon (only if user selected to apply credit)
+    if (discountAmount > 0 && discountAmount >= 100 && applyCredit === true) {
       try {
-        // Create a fixed-offset coupon that will show up clearly on Stripe Checkout
-        // For subscriptions, duration 'once' applies the discount only to the first invoice
-        // For one-time payments, it applies to the single payment
-        const coupon = await stripe.coupons.create({
-          amount_off: discountAmount,
-          currency: 'usd',
-          duration: 'once', // One-time discount (applies to first invoice for subscriptions)
-          name: 'Referral Credit',
-          metadata: {
-            type: 'referral_credit',
-            userId: userId || 'unknown',
-          },
-        });
+        // Get or create the reusable referral coupon
+        const couponId = await getReferralCouponId();
         
-        // Apply the discount to the session - this will show up as a discount line on Stripe Checkout
+        if (!couponId) {
+          console.error("[Checkout] Failed to get referral coupon ID");
+          return NextResponse.json(
+            { error: "Failed to apply referral discount. Please try again." },
+            { status: 500 }
+          );
+        }
+        
+        // Apply the reusable coupon to the session
         // Stripe will display this as: "Referral Credit -$10.00" (or whatever the discount amount is)
         sessionParams.discounts = [{
-          coupon: coupon.id,
+          coupon: couponId,
         }];
         
-        console.log("[Checkout] Applied referral discount coupon:", {
-          couponId: coupon.id,
+        console.log("[Checkout] Applied reusable referral discount coupon:", {
+          couponId,
           discountAmount: discountAmount / 100,
           planPrice: plan.price,
           finalPrice: (finalPrice / 100).toFixed(2),
         });
       } catch (couponError: any) {
-        console.error("[Checkout] Error creating discount coupon:", couponError);
-        // If coupon creation fails, we should not proceed with checkout
-        // This ensures the discount is always visible when credits exist
+        console.error("[Checkout] Error applying referral coupon:", couponError);
+        // If coupon application fails, don't proceed with checkout
         return NextResponse.json(
           { error: "Failed to apply referral discount. Please try again." },
           { status: 500 }

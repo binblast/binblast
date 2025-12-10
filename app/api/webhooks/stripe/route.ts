@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe-config";
 import { getDbInstance } from "@/lib/firebase";
-import { doc, updateDoc, getDoc, collection, query, where, getDocs, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, updateDoc, getDoc, collection, query, where, getDocs, setDoc, serverTimestamp, increment } from "firebase/firestore";
 import Stripe from "stripe";
 
 export const dynamic = 'force-dynamic';
@@ -95,20 +95,32 @@ export async function POST(req: NextRequest) {
             }
           }
           
-          // Mark credits as used if they were applied in checkout
+          // Mark credits as used if they were applied in checkout (idempotent)
           if (session.metadata?.creditsToUse && session.payment_status === 'paid' && userId) {
             try {
               const creditsToUseIds = session.metadata.creditsToUse.split(',');
               for (const creditId of creditsToUseIds) {
                 if (creditId) {
-                  await updateDoc(doc(db, "credits", creditId), {
-                    used: true,
-                    usedAt: serverTimestamp(),
-                    usedForAmount: parseFloat(session.metadata.creditApplied || "0"),
-                  });
+                  // Check if credit was already marked as used (idempotency check)
+                  const creditDocRef = doc(db, "credits", creditId);
+                  const creditDoc = await getDoc(creditDocRef);
+                  
+                  if (creditDoc.exists()) {
+                    const creditData = creditDoc.data();
+                    // Only mark as used if not already used
+                    if (!creditData.used) {
+                      await updateDoc(creditDocRef, {
+                        used: true,
+                        usedAt: serverTimestamp(),
+                        usedForAmount: parseFloat(session.metadata.creditApplied || "0"),
+                      });
+                      console.log("[Webhook] Marked credit as used:", creditId);
+                    } else {
+                      console.log("[Webhook] Credit already marked as used (idempotent):", creditId);
+                    }
+                  }
                 }
               }
-              console.log("[Webhook] Marked credits as used:", creditsToUseIds);
             } catch (creditError) {
               console.error("[Webhook] Error marking credits as used:", creditError);
             }
@@ -137,57 +149,73 @@ export async function POST(req: NextRequest) {
                     const referralData = referralDoc.data();
                     const referrerId = referralData.referrerId;
 
-                    // Check if credits were already awarded
-                    if (referralData.status !== "COMPLETED") {
-                      // Award $10 credit to the referred user
-                      const referredUserCreditRef = doc(collection(db, "credits"));
-                      await setDoc(referredUserCreditRef, {
-                        userId,
-                        amount: 10.00,
-                        currency: "USD",
-                        used: false,
-                        referralId: referralDoc.id,
-                        type: "referral_reward",
-                        createdAt: serverTimestamp(),
-                        expiresAt: null,
-                      });
+                    // Idempotency check: Only award credits if referral is still PENDING
+                    if (referralData.status === "PENDING") {
+                      // Check if credits were already created for this referral (idempotency)
+                      const existingCreditsQuery = query(
+                        collection(db, "credits"),
+                        where("referralId", "==", referralDoc.id),
+                        where("type", "==", "referral_reward")
+                      );
+                      const existingCreditsSnapshot = await getDocs(existingCreditsQuery);
 
-                      // Award $10 credit to the referrer
-                      const referrerCreditRef = doc(collection(db, "credits"));
-                      await setDoc(referrerCreditRef, {
-                        userId: referrerId,
-                        amount: 10.00,
-                        currency: "USD",
-                        used: false,
-                        referralId: referralDoc.id,
-                        type: "referral_reward",
-                        createdAt: serverTimestamp(),
-                        expiresAt: null,
-                      });
+                      // Only award if credits don't already exist
+                      if (existingCreditsSnapshot.empty) {
+                        // Award $10 credit to the referred user
+                        const referredUserCreditRef = doc(collection(db, "credits"));
+                        await setDoc(referredUserCreditRef, {
+                          userId,
+                          amount: 10.00,
+                          currency: "USD",
+                          used: false,
+                          referralId: referralDoc.id,
+                          type: "referral_reward",
+                          createdAt: serverTimestamp(),
+                          expiresAt: null,
+                        });
 
-                      // Mark referral as COMPLETED
-                      await updateDoc(doc(db, "referrals", referralDoc.id), {
-                        status: "COMPLETED",
-                        completedAt: serverTimestamp(),
-                        updatedAt: serverTimestamp(),
-                      });
+                        // Award $10 credit to the referrer
+                        const referrerCreditRef = doc(collection(db, "credits"));
+                        await setDoc(referrerCreditRef, {
+                          userId: referrerId,
+                          amount: 10.00,
+                          currency: "USD",
+                          used: false,
+                          referralId: referralDoc.id,
+                          type: "referral_reward",
+                          createdAt: serverTimestamp(),
+                          expiresAt: null,
+                        });
 
-                      // Update referrer's completed referral count
-                      const referrerDocRef = doc(db, "users", referrerId);
-                      const referrerDoc = await getDoc(referrerDocRef);
-                      if (referrerDoc.exists()) {
-                        const currentCount = referrerDoc.data().referralCount || 0;
-                        await updateDoc(referrerDocRef, {
-                          referralCount: currentCount + 1,
+                        // Mark referral as COMPLETED
+                        await updateDoc(doc(db, "referrals", referralDoc.id), {
+                          status: "COMPLETED",
+                          completedAt: serverTimestamp(),
                           updatedAt: serverTimestamp(),
                         });
-                      }
 
-                      console.log("[Webhook] Referral credits awarded:", {
-                        referralId: referralDoc.id,
-                        referredUserId: userId,
-                        referrerId,
-                      });
+                        // Update referrer's completed referral count (idempotent)
+                        const referrerDocRef = doc(db, "users", referrerId);
+                        const referrerDoc = await getDoc(referrerDocRef);
+                        if (referrerDoc.exists()) {
+                          const currentCount = referrerDoc.data().referralCount || 0;
+                          // Only increment if not already incremented (check if referral was just completed)
+                          await updateDoc(referrerDocRef, {
+                            referralCount: increment(1),
+                            updatedAt: serverTimestamp(),
+                          });
+                        }
+
+                        console.log("[Webhook] Referral credits awarded:", {
+                          referralId: referralDoc.id,
+                          referredUserId: userId,
+                          referrerId,
+                        });
+                      } else {
+                        console.log("[Webhook] Credits already awarded for referral (idempotent):", referralDoc.id);
+                      }
+                    } else {
+                      console.log("[Webhook] Referral already completed (idempotent):", referralDoc.id);
                     }
                   }
                 }

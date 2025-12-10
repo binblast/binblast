@@ -7,6 +7,7 @@ import { Navbar } from "@/components/Navbar";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
 import { SubscriptionManagerWrapper } from "@/components/SubscriptionManagerWrapper";
 import { ReferralRewards } from "@/components/ReferralRewards";
+import { ReferralHistory } from "@/components/ReferralHistory";
 import { LoyaltyBadges } from "@/components/LoyaltyBadges";
 import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
@@ -776,6 +777,7 @@ function DashboardPageContent() {
             {userId && (
               <div style={{ marginBottom: "2rem" }}>
                 <ReferralRewards userId={userId} />
+                <ReferralHistory userId={userId} />
               </div>
             )}
 

@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { PlanConfirmationModal } from "./PlanConfirmationModal";
 
 
 
@@ -102,6 +103,9 @@ export function PricingSection() {
   const [showMoreServices, setShowMoreServices] = useState(false);
   const [loadingPlanId, setLoadingPlanId] = useState<PlanId | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null);
+  const [availableCredit, setAvailableCredit] = useState<number>(0);
+  const [loadingCredit, setLoadingCredit] = useState(false);
 
   // Get current user ID from Firebase Auth
   useEffect(() => {
@@ -134,7 +138,30 @@ export function PricingSection() {
     getCurrentUserId();
   }, []);
 
-  const handlePlanClick = async (planId: PlanId) => {
+  // Load available credit when userId changes
+  useEffect(() => {
+    async function loadAvailableCredit() {
+      if (!userId) {
+        setAvailableCredit(0);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/referral/get-credits?userId=${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableCredit(data.totalCredits || 0);
+        }
+      } catch (err) {
+        console.warn("[PricingSection] Error loading credits:", err);
+        setAvailableCredit(0);
+      }
+    }
+
+    loadAvailableCredit();
+  }, [userId]);
+
+  const handlePlanClick = (planId: PlanId) => {
     if (planId === "commercial") {
       // For commercial plans, scroll to contact or handle differently
       const contactSection = document.getElementById("contact") || document.getElementById("faq");
@@ -148,18 +175,27 @@ export function PricingSection() {
       return;
     }
 
-    setLoadingPlanId(planId);
+    // Show confirmation modal instead of immediately redirecting
+    setSelectedPlanId(planId);
+  };
+
+  const handleConfirmCheckout = async (applyCredit: boolean) => {
+    if (!selectedPlanId) return;
+
+    setLoadingPlanId(selectedPlanId);
+    setLoadingCredit(true);
 
     try {
-      // Create Stripe checkout session with userId if available
+      // Create Stripe checkout session with userId and applyCredit flag
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ 
-          planId,
-          userId: userId || undefined, // Only include userId if user is logged in
+          planId: selectedPlanId,
+          userId: userId || undefined,
+          applyCredit: applyCredit && availableCredit > 0, // Only apply if user selected it and has credit
         }),
       });
 
@@ -169,7 +205,8 @@ export function PricingSection() {
         throw new Error(data.error || "Failed to create checkout session");
       }
 
-      // Redirect to Stripe Checkout
+      // Close modal and redirect to Stripe Checkout
+      setSelectedPlanId(null);
       if (data.url) {
         window.location.href = data.url;
       } else {
@@ -179,11 +216,27 @@ export function PricingSection() {
       console.error("Error creating checkout session:", error);
       alert(error.message || "Failed to start checkout. Please try again.");
       setLoadingPlanId(null);
+      setLoadingCredit(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    if (!loadingPlanId) {
+      setSelectedPlanId(null);
     }
   };
 
   return (
     <>
+      <PlanConfirmationModal
+        planId={selectedPlanId!}
+        isOpen={selectedPlanId !== null && selectedPlanId !== "commercial"}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmCheckout}
+        userId={userId}
+        availableCredit={availableCredit}
+        loading={loadingCredit}
+      />
       <section id="pricing" className="pricing-section">
 
       <div className="container">
