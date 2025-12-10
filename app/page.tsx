@@ -264,7 +264,7 @@ export default function HomePage() {
                 <p style={{ color: "var(--text-light)", fontSize: "0.95rem", lineHeight: "1.6", margin: 0 }}>
                   Review past and upcoming appointments so you always know when we were there.
                 </p>
-              </div>
+          </div>
 
               {/* Card 6: 24/7 AI Chat Support */}
               <div style={{

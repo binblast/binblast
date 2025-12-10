@@ -20,6 +20,9 @@ const nextConfig = {
               chunks: 'initial', // Only include in initial chunks, not async chunks
               enforce: true,
               priority: 30,
+              // Prevent Firebase from being split into async chunks
+              maxAsyncRequests: Infinity,
+              maxInitialRequests: Infinity,
             },
             // Prevent any module that imports Firebase from being split
             default: {
@@ -32,7 +35,7 @@ const nextConfig = {
         },
       };
       
-      // Ensure Firebase modules are resolved correctly
+      // Ensure Firebase modules are resolved correctly and not code-split
       config.resolve.alias = {
         ...config.resolve.alias,
       };

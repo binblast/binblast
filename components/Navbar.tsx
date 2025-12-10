@@ -115,7 +115,7 @@ export function Navbar() {
               color: "var(--text-dark)",
               letterSpacing: "0.02em"
             }}>
-              Bin Blast Co.
+          Bin Blast Co.
             </span>
           ) : (
             <div style={{ 
