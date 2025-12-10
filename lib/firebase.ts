@@ -27,8 +27,6 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
   // CRITICAL: Start initialization IMMEDIATELY and don't defer it
   // This ensures Firebase is initialized before any dynamic chunks can load
   globalInitPromise = (async () => {
-    // Store promise globally so other modules can wait for it
-    global.__firebaseInitPromise = globalInitPromise;
     try {
       const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
       const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
@@ -90,6 +88,11 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
       // Don't throw - allow lazy initialization to handle it
     }
   })();
+  
+  // Store promise globally so other modules can wait for it
+  if (globalInitPromise) {
+    global.__firebaseInitPromise = globalInitPromise;
+  }
   
   // Don't await, but ensure it starts immediately
   // The promise is stored so other code can wait for it
