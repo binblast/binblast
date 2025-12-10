@@ -92,15 +92,26 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
     <div style={{
       background: "#ffffff",
       borderRadius: "20px",
-      padding: "2rem",
-      boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
+      padding: "2.5rem",
+      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
       border: "1px solid #e5e7eb",
       marginBottom: "1.5rem"
     }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.25rem", fontWeight: "600", color: "var(--text-dark)", margin: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+        <span style={{ fontSize: "1.5rem" }}>🎁</span>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0 }}>
           Referral Rewards
         </h2>
+      </div>
+      <p style={{ 
+        fontSize: "0.95rem", 
+        color: "#6b7280", 
+        marginBottom: "1.5rem",
+        marginLeft: "2.25rem"
+      }}>
+        Share your link and both you and your friend get $10 off your next service.
+      </p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", marginLeft: "2.25rem" }}>
         <div style={{
           padding: "0.5rem 1rem",
           background: "#f0f9ff",
@@ -109,7 +120,7 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
           fontWeight: "600",
           color: "#0369a1"
         }}>
-          {referralCount} {referralCount === 1 ? "Referral" : "Referrals"}
+          {referralCount} {referralCount === 1 ? "referral" : "referrals"} so far {referralCount === 0 ? "– your next $10 reward is waiting 🎉" : ""}
         </div>
       </div>
 
@@ -117,17 +128,10 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
         background: "#f0f9ff",
         borderRadius: "12px",
         padding: "1.5rem",
-        border: "1px solid #bae6fd",
-        marginBottom: "1.5rem"
+        border: "2px solid #bae6fd",
+        marginBottom: "1rem",
+        marginLeft: "2.25rem"
       }}>
-        <p style={{ 
-          fontSize: "0.875rem", 
-          color: "#0c4a6e", 
-          margin: "0 0 1rem 0",
-          fontWeight: "500"
-        }}>
-          💰 Share your unique referral link and both you and your friend get $10 off!
-        </p>
         
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ 

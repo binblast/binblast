@@ -149,14 +149,24 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
     <div style={{
       background: "#ffffff",
       borderRadius: "20px",
-      padding: "2rem",
-      boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
+      padding: "2.5rem",
+      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
       border: "1px solid #e5e7eb",
       marginBottom: "1.5rem"
     }}>
-      <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
-        Loyalty Badges
-      </h2>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+        <span style={{ fontSize: "1.5rem" }}>🏆</span>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0 }}>
+          Loyalty & Badges
+        </h2>
+      </div>
+      <p style={{ 
+        fontSize: "0.95rem", 
+        color: "#6b7280", 
+        marginBottom: "1.5rem"
+      }}>
+        Earn badges as you keep your bins fresh. The more cleanings, the higher your level.
+      </p>
 
       {/* Current Badge */}
       <div style={{
