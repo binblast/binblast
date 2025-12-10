@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { FirebaseInitializer } from "@/components/FirebaseInitializer";
+import { FirebaseGate } from "@/components/FirebaseGate";
 // CRITICAL: Import Firebase sync init to ensure Firebase is initialized before any dynamic chunks load
 import "@/lib/firebase-init-sync";
 
@@ -19,7 +20,9 @@ export default function RootLayout({
       <body>
         {/* Initialize Firebase before any children render to prevent dynamic chunk errors */}
         <FirebaseInitializer />
-        {children}
+        <FirebaseGate>
+          {children}
+        </FirebaseGate>
       </body>
     </html>
   );

@@ -107,14 +107,28 @@ async function ensureInitialized(): Promise<void> {
     return initPromise;
   }
 
-  // CRITICAL: Wait for global initialization to complete before proceeding
-  // This prevents race conditions where dynamic chunks try to use Firebase before it's ready
-  if (globalInitPromise && typeof window !== 'undefined') {
-    try {
-      await globalInitPromise;
-    } catch (error) {
-      // Continue even if global init failed - will try lazy initialization
-      console.warn("[Firebase] Global initialization promise failed, continuing with lazy init");
+  // CRITICAL: Wait for sync initialization FIRST before doing anything
+  // This ensures Firebase app exists before any Firebase modules are imported
+  if (typeof window !== 'undefined') {
+    // Wait for sync init if it exists
+    if (global.__firebaseSyncInitPromise) {
+      try {
+        await global.__firebaseSyncInitPromise;
+      } catch (error) {
+        // Continue even if sync init failed
+        console.warn("[Firebase] Sync initialization failed, continuing with lazy init");
+      }
+    }
+    
+    // Also wait for global initialization to complete before proceeding
+    // This prevents race conditions where dynamic chunks try to use Firebase before it's ready
+    if (globalInitPromise) {
+      try {
+        await globalInitPromise;
+      } catch (error) {
+        // Continue even if global init failed - will try lazy initialization
+        console.warn("[Firebase] Global initialization promise failed, continuing with lazy init");
+      }
     }
   }
 
@@ -413,6 +427,15 @@ export const getDbInstance = async () => {
 // These ensure Firebase is initialized before importing auth modules
 export const onAuthStateChanged = async (callback: (user: any) => void) => {
   try {
+    // CRITICAL: Wait for sync initialization first
+    if (typeof window !== 'undefined' && global.__firebaseSyncInitPromise) {
+      try {
+        await global.__firebaseSyncInitPromise;
+      } catch {
+        // Continue even if sync init failed
+      }
+    }
+    
     const authInstance = await getAuthInstance();
     if (!authInstance) {
       callback(null);
