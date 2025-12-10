@@ -133,31 +133,95 @@ async function ensureInitialized(): Promise<void> {
       // Wrap in try-catch to handle build-time errors gracefully
       let initializeApp: any, getApps: any, getAuth: any, getFirestore: any;
       try {
-        // Use dynamic import with error handling
-        const [firebaseApp, firebaseAuth, firebaseFirestore] = await Promise.all([
-          import("firebase/app").catch((err) => {
-            if (err?.message?.includes("apiKey") || err?.message?.includes("authenticator")) {
-              throw new Error("FIREBASE_BUILD_ERROR");
-            }
-            throw err;
-          }),
-          import("firebase/auth").catch((err) => {
-            if (err?.message?.includes("apiKey") || err?.message?.includes("authenticator")) {
-              throw new Error("FIREBASE_BUILD_ERROR");
-            }
-            throw err;
-          }),
-          import("firebase/firestore").catch((err) => {
-            if (err?.message?.includes("apiKey") || err?.message?.includes("authenticator")) {
-              throw new Error("FIREBASE_BUILD_ERROR");
-            }
-            throw err;
-          }),
-        ]);
+        // CRITICAL: Import firebase/app first and ensure app exists before importing auth/firestore
+        // This prevents Firebase SDK from trying to access default app before initialization
+        const firebaseApp = await import("firebase/app").catch((err) => {
+          if (err?.message?.includes("apiKey") || err?.message?.includes("authenticator")) {
+            throw new Error("FIREBASE_BUILD_ERROR");
+          }
+          throw err;
+        });
         initializeApp = firebaseApp.initializeApp;
         getApps = firebaseApp.getApps;
-        getAuth = firebaseAuth.getAuth;
-        getFirestore = firebaseFirestore.getFirestore;
+        
+        // Check if app already exists before importing auth/firestore
+        // This prevents Firebase SDK from trying to create a default app
+        const existingApps = getApps();
+        let appExists = false;
+        if (existingApps.length > 0) {
+          for (const existingApp of existingApps) {
+            if (existingApp.options && existingApp.options.apiKey && typeof existingApp.options.apiKey === 'string' && existingApp.options.apiKey.length > 0) {
+              appExists = true;
+              break;
+            }
+          }
+        }
+        
+        // CRITICAL: Initialize app FIRST before importing auth/firestore
+        // This prevents Firebase SDK from trying to access default app before initialization
+        let appInitialized = false;
+        if (appExists) {
+          appInitialized = true;
+        } else if (apiKey && projectId && authDomain) {
+          // Create app before importing auth/firestore
+          const config: any = {
+            apiKey,
+            authDomain,
+            projectId,
+          };
+          
+          if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
+            config.storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+          }
+          if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
+            config.messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+          }
+          if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
+            config.appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+          }
+          
+          try {
+            app = initializeApp(config);
+            global.__firebaseApp = app;
+            appInitialized = true;
+            console.log("[Firebase] App initialized before importing auth/firestore");
+          } catch (initErr: any) {
+            // If initialization fails, check for existing apps
+            const apps = getApps();
+            if (apps.length > 0) {
+              app = apps[0];
+              global.__firebaseApp = app;
+              appInitialized = true;
+            } else {
+              throw new Error("FIREBASE_BUILD_ERROR");
+            }
+          }
+        } else {
+          throw new Error("FIREBASE_BUILD_ERROR");
+        }
+        
+        // Only import auth/firestore AFTER app is initialized
+        // This prevents the "Neither apiKey nor config.authenticator provided" error
+        if (appInitialized) {
+          const [firebaseAuth, firebaseFirestore] = await Promise.all([
+            import("firebase/auth").catch((err) => {
+              if (err?.message?.includes("apiKey") || err?.message?.includes("authenticator")) {
+                throw new Error("FIREBASE_BUILD_ERROR");
+              }
+              throw err;
+            }),
+            import("firebase/firestore").catch((err) => {
+              if (err?.message?.includes("apiKey") || err?.message?.includes("authenticator")) {
+                throw new Error("FIREBASE_BUILD_ERROR");
+              }
+              throw err;
+            }),
+          ]);
+          getAuth = firebaseAuth.getAuth;
+          getFirestore = firebaseFirestore.getFirestore;
+        } else {
+          throw new Error("FIREBASE_BUILD_ERROR");
+        }
       } catch (importError: any) {
         // If import fails (e.g., during build), gracefully handle it
         const errorMessage = importError?.message || String(importError);
@@ -170,87 +234,46 @@ async function ensureInitialized(): Promise<void> {
         throw importError;
       }
 
-      // CRITICAL: Check global app first (set during module load)
-      if (global.__firebaseApp && global.__firebaseApp.options && global.__firebaseApp.options.apiKey) {
-        app = global.__firebaseApp;
-        console.log("[Firebase] Using global app instance");
-      } else {
-        // Check if app already exists and validate it has proper config
-        const existingApps = getApps();
-        let existingAppWithConfig = null;
-        
-        if (existingApps.length > 0) {
-          // Find an existing app that matches our config OR has valid apiKey
-          for (const existingApp of existingApps) {
-            // Accept any app with a valid apiKey, not just exact match
-            // This handles cases where Firebase is initialized from different chunks
-            if (existingApp.options && existingApp.options.apiKey && typeof existingApp.options.apiKey === 'string' && existingApp.options.apiKey.length > 0) {
-              // Prefer exact match, but accept any valid app
-              if (existingApp.options.apiKey === apiKey) {
-                existingAppWithConfig = existingApp;
-                break;
-              } else if (!existingAppWithConfig) {
-                // Use first valid app as fallback
-                existingAppWithConfig = existingApp;
+      // CRITICAL: Use the app we just initialized (or found) above
+      // If app was already set during initialization above, use it
+      // Otherwise, check global app or existing apps
+      if (!app) {
+        if (global.__firebaseApp && global.__firebaseApp.options && global.__firebaseApp.options.apiKey) {
+          app = global.__firebaseApp;
+          console.log("[Firebase] Using global app instance");
+        } else {
+          // Check if app already exists and validate it has proper config
+          const existingApps = getApps();
+          let existingAppWithConfig = null;
+          
+          if (existingApps.length > 0) {
+            // Find an existing app that matches our config OR has valid apiKey
+            for (const existingApp of existingApps) {
+              // Accept any app with a valid apiKey, not just exact match
+              if (existingApp.options && existingApp.options.apiKey && typeof existingApp.options.apiKey === 'string' && existingApp.options.apiKey.length > 0) {
+                // Prefer exact match, but accept any valid app
+                if (existingApp.options.apiKey === apiKey) {
+                  existingAppWithConfig = existingApp;
+                  break;
+                } else if (!existingAppWithConfig) {
+                  // Use first valid app as fallback
+                  existingAppWithConfig = existingApp;
+                }
               }
             }
           }
-        }
-        
-        if (existingAppWithConfig) {
-          app = existingAppWithConfig;
-          global.__firebaseApp = app;
-          console.log("[Firebase] Using existing app:", existingAppWithConfig.options?.apiKey?.substring(0, 10) + '...');
-        } else {
-          // Ensure all required config values are present before initializing
-          const config = {
-          apiKey,
-          authDomain,
-          projectId,
-          };
           
-          // Only add optional fields if they exist
-          if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
-            (config as any).storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-          }
-          if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
-            (config as any).messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
-          }
-          if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
-            (config as any).appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
-          }
-          
-          try {
-            app = initializeApp(config);
+          if (existingAppWithConfig) {
+            app = existingAppWithConfig;
             global.__firebaseApp = app;
-            console.log("[Firebase] Created new app instance");
-          } catch (initError: any) {
-            // If initialization fails, try to get existing app
-            const apps = getApps();
-            if (apps.length > 0) {
-              app = apps[0];
-              global.__firebaseApp = app;
-              console.log("[Firebase] Initialization failed, using existing app:", apps[0].options?.apiKey?.substring(0, 10) + '...');
-            } else {
-              throw initError;
-            }
+            console.log("[Firebase] Using existing app:", existingAppWithConfig.options?.apiKey?.substring(0, 10) + '...');
           }
         }
       }
-
-      // Validate app has proper config before using it
-      if (!app || !app.options || !app.options.apiKey || app.options.apiKey !== apiKey) {
-        console.error("[Firebase] App missing required config (apiKey) or config mismatch");
-        auth = null;
-        db = null;
-        return;
-      }
-
-      // Final validation before initializing auth/db
-      const hasValidApiKey = app && app.options && app.options.apiKey && typeof app.options.apiKey === 'string' && app.options.apiKey.length > 0;
       
-      if (!hasValidApiKey) {
-        console.error("[Firebase] Cannot initialize - app missing valid apiKey");
+      // Ensure app exists and has valid config
+      if (!app || !app.options || !app.options.apiKey || app.options.apiKey.trim().length === 0) {
+        console.error("[Firebase] App missing required config (apiKey)");
         auth = null;
         db = null;
         return;
@@ -258,75 +281,17 @@ async function ensureInitialized(): Promise<void> {
 
       // Only get auth/db if app was successfully created and has valid config
       // Auth should only be initialized on client side
+      // App is already validated above, so we can safely initialize auth
       if (typeof window !== "undefined") {
         try {
-          // If app doesn't have valid config, try to get existing app from Firebase
-          if (!app || !app.options || !app.options.apiKey || app.options.apiKey.trim().length === 0) {
-            const { getApps } = await import("firebase/app");
-            const existingApps = getApps();
-            if (existingApps.length > 0) {
-              // Use first existing app that has apiKey
-              for (const existingApp of existingApps) {
-                if (existingApp.options && existingApp.options.apiKey && existingApp.options.apiKey.trim().length > 0) {
-                  app = existingApp;
-                  console.log("[Firebase] Using existing app from getApps()");
-                  break;
-                }
-              }
-            }
-          }
-          
-          // Triple-check: app exists, has options, and has non-empty apiKey
-          if (app && app.options && app.options.apiKey && typeof app.options.apiKey === 'string' && app.options.apiKey.trim().length > 0) {
-            // Call getAuth with explicit app to prevent default app lookup
-            try {
-        auth = getAuth(app);
-              console.log("[Firebase] Auth initialized successfully");
-            } catch (getAuthError: any) {
-              // If getAuth fails, don't crash - just set auth to null
-              console.error("[Firebase] getAuth() failed:", getAuthError);
-              auth = null;
-            }
-          } else {
-            console.warn("[Firebase] App missing valid apiKey configuration - skipping auth initialization");
-            auth = null;
-          }
-        } catch (authError: any) {
-          // Check if this is the specific "Neither apiKey nor config.authenticator provided" error
-          if (authError.message && authError.message.includes("apiKey") && authError.message.includes("authenticator")) {
-            console.error("[Firebase] Firebase tried to initialize without apiKey - trying to recover");
-            // Try to get existing app and use it
-            try {
-              const { getApps } = await import("firebase/app");
-              const existingApps = getApps();
-              if (existingApps.length > 0) {
-                // Find an app with valid apiKey
-                for (const existingApp of existingApps) {
-                  if (existingApp.options && existingApp.options.apiKey && typeof existingApp.options.apiKey === 'string' && existingApp.options.apiKey.trim().length > 0) {
-                    try {
-                      auth = getAuth(existingApp);
-                      console.log("[Firebase] Recovered by using existing app");
-                      break;
-                    } catch (getAuthErr: any) {
-                      console.warn("[Firebase] getAuth failed for existing app:", getAuthErr?.message || getAuthErr);
-                      continue;
-                    }
-                  }
-                }
-                if (!auth) {
-                  auth = null;
-                }
-              } else {
-                auth = null;
-              }
-            } catch (recoveryError: any) {
-              console.error("[Firebase] Recovery failed:", recoveryError?.message || recoveryError);
-              auth = null;
-            }
-          } else {
-            console.error("[Firebase] Error initializing auth:", authError);
-            auth = null;
-          }
+          // Call getAuth with explicit app to prevent default app lookup
+          // App is guaranteed to exist and have valid config at this point
+          auth = getAuth(app);
+          console.log("[Firebase] Auth initialized successfully");
+        } catch (getAuthError: any) {
+          // If getAuth fails, don't crash - just set auth to null
+          console.error("[Firebase] getAuth() failed:", getAuthError?.message || getAuthError);
+          auth = null;
         }
       } else {
         auth = null; // Auth not available on server side
@@ -379,10 +344,10 @@ export const getAuthInstance = async () => {
       }
     }
     
-    await ensureInitialized();
+  await ensureInitialized();
     // Validate auth before returning
     if (auth && typeof auth === "object") {
-      return auth;
+  return auth;
     }
     return null;
   } catch (error: any) {
@@ -403,8 +368,8 @@ export const getDbInstance = async () => {
   }
   
   try {
-    await ensureInitialized();
-    return db;
+  await ensureInitialized();
+  return db;
   } catch (error: any) {
     // During build, Firebase initialization may fail - return null gracefully
     const errorMessage = error?.message || String(error);
