@@ -23,7 +23,8 @@ export function Navbar() {
       return;
     }
 
-    async function checkAuth() {
+    // Small delay to allow Firebase global initialization to complete
+    const timeoutId = setTimeout(async () => {
       try {
         const { getAuthInstance } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
@@ -46,9 +47,9 @@ export function Navbar() {
         setIsLoggedIn(false);
         setLoading(false);
       }
-    }
+    }, 100); // Small delay to allow Firebase to initialize
 
-    checkAuth();
+    return () => clearTimeout(timeoutId);
   }, []);
 
   useEffect(() => {
