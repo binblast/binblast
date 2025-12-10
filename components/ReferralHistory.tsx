@@ -4,6 +4,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useFirebase } from "@/lib/firebase-context";
 // Note: Firebase functions are imported dynamically inside useEffect to prevent build-time initialization errors
 
 interface ReferralHistoryProps {
@@ -22,8 +23,17 @@ interface HistoryEntry {
 export function ReferralHistory({ userId }: ReferralHistoryProps) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isReady: firebaseReady } = useFirebase();
 
   useEffect(() => {
+    // Only load data when Firebase is ready
+    if (!firebaseReady) {
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+
     async function loadHistory() {
       try {
         // Ensure Firebase is initialized before querying
@@ -180,12 +190,18 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
       } catch (error) {
         console.error("Error loading referral history:", error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
     loadHistory();
-  }, [userId]); // Still depend on userId prop for re-fetching when it changes
+
+    return () => {
+      mounted = false;
+    };
+  }, [firebaseReady, userId]); // Depend on firebaseReady and userId
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("en-US", {

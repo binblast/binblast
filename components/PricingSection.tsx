@@ -107,25 +107,37 @@ export function PricingSection() {
   const [availableCredit, setAvailableCredit] = useState<number>(0);
   const [loadingCredit, setLoadingCredit] = useState(false);
 
-  // Get current user ID from Firebase Auth
+  const { isReady: firebaseReady } = useFirebase();
+
+  // Get current user ID from Firebase Auth - only when Firebase is ready
   useEffect(() => {
+    if (!firebaseReady) {
+      // Firebase not ready yet - skip auth check
+      return;
+    }
+
+    let unsubscribe: (() => void) | null = null;
+    let mounted = true;
+
     async function getCurrentUserId() {
       try {
         const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
         
+        if (!mounted) return;
+        
         if (auth && typeof auth === "object" && "currentUser" in auth) {
           // Get current user immediately if available
-          if (auth.currentUser) {
+          if (auth.currentUser && mounted) {
             setUserId(auth.currentUser.uid);
           }
           
           // Also listen for auth state changes using safe wrapper
-          const unsubscribe = await onAuthStateChanged((user) => {
-            setUserId(user?.uid || null);
+          unsubscribe = await onAuthStateChanged((user) => {
+            if (mounted) {
+              setUserId(user?.uid || null);
+            }
           });
-          
-          return () => unsubscribe();
         }
       } catch (err) {
         console.warn("[PricingSection] Error getting user ID:", err);
@@ -134,7 +146,14 @@ export function PricingSection() {
     }
     
     getCurrentUserId();
-  }, []);
+
+    return () => {
+      mounted = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [firebaseReady]);
 
   // Load available credit when userId changes
   useEffect(() => {

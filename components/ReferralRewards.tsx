@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useFirebase } from "@/lib/firebase-context";
 // Note: Firebase functions are imported dynamically inside useEffect to prevent build-time initialization errors
 
 interface ReferralRewardsProps {
@@ -14,8 +15,17 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
   const [totalCredits, setTotalCredits] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const { isReady: firebaseReady } = useFirebase();
 
   useEffect(() => {
+    // Only load data when Firebase is ready
+    if (!firebaseReady || !userId) {
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+
     async function loadReferralData() {
       try {
         // Ensure Firebase is initialized before querying
@@ -87,14 +97,18 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
       } catch (error) {
         console.error("Error loading referral data:", error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
-    if (userId) {
-      loadReferralData();
-    }
-  }, [userId]);
+    loadReferralData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [firebaseReady, userId]);
 
   const referralUrl = typeof window !== "undefined" 
     ? `${window.location.origin}/register?ref=${referralCode}`

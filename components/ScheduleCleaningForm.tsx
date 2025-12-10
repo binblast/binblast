@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useFirebase } from "@/lib/firebase-context";
 
 interface ScheduledCleaning {
   id: string;
@@ -105,19 +106,27 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
       return;
     }
 
+    // Don't submit if Firebase is not ready
+    if (!firebaseReady) {
+      setError("Firebase is not ready. Please wait a moment and try again.");
+      return;
+    }
+
     setLoading(true);
+    setError(null);
 
     try {
       const { getDbInstance } = await import("@/lib/firebase");
       const db = await getDbInstance();
+      
+      if (!db) {
+        throw new Error("Firebase is not configured");
+      }
+      
       // CRITICAL: Use safe import wrapper to ensure Firebase app exists
       const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
       const firestore = await safeImportFirestore();
       const { collection, addDoc, serverTimestamp } = firestore;
-
-      if (!db) {
-        throw new Error("Firebase is not configured");
-      }
 
       // Save scheduled cleaning to Firestore
       const scheduledCleaning = {

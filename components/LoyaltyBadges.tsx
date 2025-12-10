@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useFirebase } from "@/lib/firebase-context";
 // Note: Firebase functions are imported dynamically inside useEffect to prevent build-time initialization errors
 
 interface LoyaltyBadgesProps {
@@ -72,8 +73,17 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
   const [loading, setLoading] = useState(true);
   const [nextLevel, setNextLevel] = useState<BadgeLevel | null>(null);
   const [progress, setProgress] = useState<number>(0);
+  const { isReady: firebaseReady } = useFirebase();
 
   useEffect(() => {
+    // Only load data when Firebase is ready
+    if (!firebaseReady || !userId) {
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+
     async function loadLoyaltyData() {
       try {
         const { getDbInstance } = await import("@/lib/firebase");
@@ -126,14 +136,18 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
       } catch (error) {
         console.error("Error loading loyalty data:", error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
-    if (userId) {
-      loadLoyaltyData();
-    }
-  }, [userId]);
+    loadLoyaltyData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [firebaseReady, userId]);
 
   if (loading) {
     return (

@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useFirebase } from "@/lib/firebase-context";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,42 +16,68 @@ export function Navbar() {
   const isHomePage = pathname === "/";
   const isDashboard = pathname === "/dashboard";
   const showTextLogo = isHomePage || isDashboard;
+  const { isReady: firebaseReady } = useFirebase();
 
   useEffect(() => {
+    // Only check Firebase auth state when Firebase is ready
+    if (!firebaseReady) {
+      // Firebase not ready yet - show logged out state
+      setIsLoggedIn(false);
+      setLoading(false);
+      return;
+    }
+
     // Check Firebase auth state - only on client side
     if (typeof window === "undefined") {
       setLoading(false);
       return;
     }
 
-    // Small delay to allow Firebase global initialization to complete
-    const timeoutId = setTimeout(async () => {
+    let unsubscribe: (() => void) | null = null;
+    let mounted = true;
+
+    async function checkAuthState() {
       try {
         const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
         
+        if (!mounted) return;
+        
         // Only proceed if auth is available and valid
         if (auth && typeof auth === "object" && "currentUser" in auth) {
           // Use safe wrapper function
-          await onAuthStateChanged((user) => {
-            setIsLoggedIn(!!user);
-            setLoading(false);
+          unsubscribe = await onAuthStateChanged((user) => {
+            if (mounted) {
+              setIsLoggedIn(!!user);
+              setLoading(false);
+            }
           });
         } else {
           // Firebase not available or not configured - just show logged out state
-          setIsLoggedIn(false);
-          setLoading(false);
+          if (mounted) {
+            setIsLoggedIn(false);
+            setLoading(false);
+          }
         }
       } catch (err: any) {
         // Silently handle errors - don't crash the page
         console.warn("[Navbar] Firebase auth check failed:", err?.message || err);
-        setIsLoggedIn(false);
-        setLoading(false);
+        if (mounted) {
+          setIsLoggedIn(false);
+          setLoading(false);
+        }
       }
-    }, 100); // Small delay to allow Firebase to initialize
+    }
 
-    return () => clearTimeout(timeoutId);
-  }, []);
+    checkAuthState();
+
+    return () => {
+      mounted = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [firebaseReady]);
 
   useEffect(() => {
     // Smooth scrolling for anchor links
