@@ -387,26 +387,26 @@ function DashboardPageContent() {
                 marginBottom: "0.5rem"
               }}>
                 Welcome back, {user.firstName}!
-              </h1>
+            </h1>
               <p style={{ 
                 fontSize: "1rem", 
                 color: "#6b7280", 
                 marginBottom: "1.5rem"
               }}>
                 Here&apos;s a quick look at your bin cleaning status.
-              </p>
+            </p>
 
               {/* Status Summary Card */}
-              <div style={{
-                background: "#ffffff",
+            <div style={{
+              background: "#ffffff",
                 borderRadius: "16px",
                 padding: "1.5rem",
                 boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-                border: "1px solid #e5e7eb",
+              border: "1px solid #e5e7eb",
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
                 gap: "1.5rem"
-              }}>
+            }}>
                 {/* Next Cleaning */}
                 <div>
                   <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -466,10 +466,10 @@ function DashboardPageContent() {
                 </div>
 
                 {/* Payments */}
-                <div>
+                  <div>
                   <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     Payments
-                  </div>
+                    </div>
                   <div style={{ 
                     fontSize: "1.125rem", 
                     fontWeight: "600", 
@@ -649,19 +649,19 @@ function DashboardPageContent() {
                     Your Plan
                   </h2>
 
-                  <div style={{
+                    <div style={{ 
                     padding: "1.5rem",
                     background: user.paymentStatus === "paid" ? "#ecfdf5" : "#fef3c7",
                     borderRadius: "12px",
                     border: `2px solid ${user.paymentStatus === "paid" ? "#16a34a" : "#f59e0b"}`,
                     marginBottom: "1.5rem"
-                  }}>
+                    }}>
                     <div style={{ fontSize: "1.25rem", fontWeight: "700", color: user.paymentStatus === "paid" ? "#047857" : "#92400e", marginBottom: "0.5rem" }}>
                       {PLAN_NAMES[user.selectedPlan] || user.selectedPlan}
                     </div>
                     <div style={{ fontSize: "0.95rem", color: user.paymentStatus === "paid" ? "#065f46" : "#78350f", marginBottom: "1rem" }}>
                       {PLAN_DESCRIPTIONS[user.selectedPlan] || "Professional bin cleaning service."}
-                    </div>
+                  </div>
                     <div style={{ 
                       display: "inline-block",
                       padding: "0.375rem 0.875rem",
@@ -680,15 +680,15 @@ function DashboardPageContent() {
                       <ErrorBoundary fallback={null}>
                         <Suspense fallback={null}>
                           <SubscriptionManagerWrapper
-                            userId={userId}
-                            currentPlanId={user.selectedPlan as PlanId}
-                            stripeSubscriptionId={user.stripeSubscriptionId || null}
-                            stripeCustomerId={user.stripeCustomerId || null}
+                          userId={userId}
+                          currentPlanId={user.selectedPlan as PlanId}
+                          stripeSubscriptionId={user.stripeSubscriptionId || null}
+                          stripeCustomerId={user.stripeCustomerId || null}
                             billingPeriodEnd={undefined}
-                            onPlanChanged={() => {
-                              window.location.reload();
-                            }}
-                          />
+                          onPlanChanged={() => {
+                            window.location.reload();
+                          }}
+                        />
                         </Suspense>
                       </ErrorBoundary>
                     </div>
@@ -778,28 +778,28 @@ function DashboardPageContent() {
               <div style={{ marginBottom: "2rem" }}>
                 <ReferralRewards userId={userId} />
                 <ReferralHistory userId={userId} />
-              </div>
+            </div>
             )}
 
             {/* (G) Upcoming & Past Cleanings */}
             <div style={{ marginBottom: "2rem" }}>
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "20px",
+            <div style={{
+              background: "#ffffff",
+              borderRadius: "20px",
                 padding: "2.5rem",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb"
-              }}>
+            }}>
                 <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1.5rem" }}>
                   Your Cleanings
-                </h2>
-
+              </h2>
+              
                 {/* Upcoming */}
                 <div style={{ marginBottom: "2rem" }}>
                   <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
                     Upcoming
                   </h3>
-                  {cleaningsLoading ? (
+              {cleaningsLoading ? (
                     <p style={{ color: "#6b7280" }}>Loading scheduled cleanings...</p>
                   ) : upcomingCleanings.length === 0 ? (
                     <div style={{
@@ -813,63 +813,63 @@ function DashboardPageContent() {
                         No cleanings scheduled yet. Use the Schedule button above to book your first cleaning.
                       </p>
                     </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                       {upcomingCleanings.map((cleaning) => {
-                        const cleaningDate = new Date(cleaning.scheduledDate);
-                        return (
-                          <div
-                            key={cleaning.id}
-                            style={{
-                              padding: "1.25rem",
+                    const cleaningDate = new Date(cleaning.scheduledDate);
+                    return (
+                      <div
+                        key={cleaning.id}
+                        style={{
+                          padding: "1.25rem",
                               background: "#f0f9ff",
-                              borderRadius: "12px",
+                          borderRadius: "12px",
                               border: "1px solid #bae6fd"
-                            }}
-                          >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "0.75rem" }}>
-                              <div>
-                                <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
-                                  {cleaningDate.toLocaleDateString("en-US", { 
-                                    weekday: "long", 
-                                    month: "long", 
-                                    day: "numeric",
-                                    year: "numeric"
-                                  })}
-                                </div>
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "0.75rem" }}>
+                          <div>
+                            <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
+                              {cleaningDate.toLocaleDateString("en-US", { 
+                                weekday: "long", 
+                                month: "long", 
+                                day: "numeric",
+                                year: "numeric"
+                              })}
+                            </div>
                                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                                  {cleaning.scheduledTime}
-                                </div>
-                              </div>
-                              <span style={{
-                                padding: "0.25rem 0.75rem",
-                                borderRadius: "999px",
-                                fontSize: "0.75rem",
-                                fontWeight: "600",
+                              {cleaning.scheduledTime}
+                            </div>
+                          </div>
+                          <span style={{
+                            padding: "0.25rem 0.75rem",
+                            borderRadius: "999px",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
                                 background: "#3b82f620",
                                 color: "#3b82f6",
-                                textTransform: "capitalize"
-                              }}>
+                            textTransform: "capitalize"
+                          }}>
                                 Scheduled
-                              </span>
-                            </div>
+                          </span>
+                        </div>
                             <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
-                              <strong>Address:</strong> {cleaning.addressLine1}
-                              {cleaning.addressLine2 && `, ${cleaning.addressLine2}`}
-                              <br />
-                              {cleaning.city}, {cleaning.state} {cleaning.zipCode}
-                            </div>
-                            {cleaning.trashDay && (
+                          <strong>Address:</strong> {cleaning.addressLine1}
+                          {cleaning.addressLine2 && `, ${cleaning.addressLine2}`}
+                          <br />
+                          {cleaning.city}, {cleaning.state} {cleaning.zipCode}
+                        </div>
+                        {cleaning.trashDay && (
                               <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                                <strong>Trash Day:</strong> {cleaning.trashDay}
-                              </div>
-                            )}
+                            <strong>Trash Day:</strong> {cleaning.trashDay}
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+              )}
+            </div>
 
                 {/* History */}
                 {pastCleanings.length > 0 && (
@@ -924,10 +924,10 @@ function DashboardPageContent() {
 
             {/* (H) Account Information (Collapsible) */}
             <div ref={accountSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
-              <div style={{
+            <div style={{
                 background: "#ffffff",
-                borderRadius: "20px",
-                padding: "1.5rem",
+              borderRadius: "20px",
+              padding: "1.5rem",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb"
               }}>
