@@ -222,21 +222,30 @@ async function ensureInitialized(): Promise<void> {
             console.error("[Firebase] Firebase tried to initialize without apiKey - trying to recover");
             // Try to get existing app and use it
             try {
-              const { getApps, getApp } = await import("firebase/app");
+              const { getApps } = await import("firebase/app");
               const existingApps = getApps();
               if (existingApps.length > 0) {
-                const existingApp = existingApps[0];
-                if (existingApp.options && existingApp.options.apiKey) {
-                  auth = getAuth(existingApp);
-                  console.log("[Firebase] Recovered by using existing app");
-                } else {
+                // Find an app with valid apiKey
+                for (const existingApp of existingApps) {
+                  if (existingApp.options && existingApp.options.apiKey && typeof existingApp.options.apiKey === 'string' && existingApp.options.apiKey.trim().length > 0) {
+                    try {
+                      auth = getAuth(existingApp);
+                      console.log("[Firebase] Recovered by using existing app");
+                      break;
+                    } catch (getAuthErr: any) {
+                      console.warn("[Firebase] getAuth failed for existing app:", getAuthErr?.message || getAuthErr);
+                      continue;
+                    }
+                  }
+                }
+                if (!auth) {
                   auth = null;
                 }
               } else {
                 auth = null;
               }
-            } catch (recoveryError) {
-              console.error("[Firebase] Recovery failed:", recoveryError);
+            } catch (recoveryError: any) {
+              console.error("[Firebase] Recovery failed:", recoveryError?.message || recoveryError);
               auth = null;
             }
           } else {
