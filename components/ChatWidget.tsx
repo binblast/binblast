@@ -14,14 +14,9 @@ const FALLBACK_PLANS = {
 
 // Function to get pricing plans safely
 function getPricingPlans() {
-  try {
-    // Dynamic import to avoid SSR issues
-    const stripeConfig = require("@/lib/stripe-config");
-    return stripeConfig.PLAN_CONFIGS || FALLBACK_PLANS;
-  } catch (error) {
-    console.warn("Could not load PLAN_CONFIGS, using fallback pricing");
-    return FALLBACK_PLANS;
-  }
+  // Use fallback pricing directly to avoid import issues
+  // In production, you could fetch this from an API or use a different approach
+  return FALLBACK_PLANS;
 }
 
 interface Message {
