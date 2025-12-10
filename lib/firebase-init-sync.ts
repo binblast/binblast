@@ -24,18 +24,7 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
     // See: https://firebase.google.com/support/guides/init-options
     const headConfig = (window as any).__firebaseConfig;
     if (headConfig && headConfig.apiKey && headConfig.projectId && headConfig.appId) {
-      // Validate all required fields are present
-      if (!headConfig.apiKey || !headConfig.projectId || !headConfig.appId) {
-        console.error("[Firebase Sync Init] Head script config missing REQUIRED fields:", {
-          hasApiKey: !!headConfig.apiKey,
-          hasProjectId: !!headConfig.projectId,
-          hasAppId: !!headConfig.appId,
-        });
-        global.__firebaseSyncInitialized = true;
-        return;
-      }
-      
-      // Initialize immediately using head script config
+      // All required fields are present - initialize immediately using head script config
       global.__firebaseSyncInitPromise = (async () => {
         try {
           const firebaseApp = await import("firebase/app");
