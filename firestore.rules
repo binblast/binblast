@@ -28,18 +28,26 @@ service cloud.firestore {
       // Users can update their own document
       // Also allow server-side updates (from API routes) that maintain data integrity
       allow update: if (
-        // Client-side: user updating their own document
+        // Client-side: user updating their own document (can update referralCode, referralCount)
         (isOwner(userId) && request.resource.data.email == resource.data.email)
         ||
-        // Server-side: API route updating subscription-related fields only
-        // This allows the change-subscription API to update selectedPlan, stripeSubscriptionId, etc.
+        // Server-side: API route updating subscription-related or referral-related fields
+        // This allows the change-subscription API and referral API to update specific fields
         // Note: Server-side requests have request.auth == null
         (request.auth == null && 
          request.resource.data.email == resource.data.email && // Can't change email
-         // Only allow updates to subscription-related fields (check that other fields aren't changed)
-         request.resource.data.firstName == resource.data.firstName &&
-         request.resource.data.lastName == resource.data.lastName &&
-         request.resource.data.phone == resource.data.phone
+         request.resource.data.userId == resource.data.userId && // Can't change userId
+         // Allow updates to subscription-related fields only
+         (request.resource.data.firstName == resource.data.firstName &&
+          request.resource.data.lastName == resource.data.lastName &&
+          request.resource.data.phone == resource.data.phone)
+         ||
+         // Allow updates to referral-related fields (referralCount, referredBy, referredByCode)
+         // These can be updated by the referral API
+         (request.resource.data.firstName == resource.data.firstName &&
+          request.resource.data.lastName == resource.data.lastName &&
+          request.resource.data.phone == resource.data.phone &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'referredBy', 'referredByCode', 'updatedAt']))
         )
       );
       

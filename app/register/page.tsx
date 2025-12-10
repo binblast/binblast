@@ -20,6 +20,7 @@ function RegisterForm() {
   const selectedPlanId = searchParams.get("plan") || "";
   const sessionId = searchParams.get("session_id") || "";
   const initialEmail = searchParams.get("email") || "";
+  const referralCode = searchParams.get("ref") || "";
   
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -135,9 +136,36 @@ function RegisterForm() {
           stripeSubscriptionId: stripeData?.subscriptionId || null,
           subscriptionStatus,
           paymentStatus: stripeData ? "paid" : "pending",
+          referralCode: null, // Will be generated when user views dashboard
+          referralCount: 0, // Initialize referral count
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
+
+        // Process referral if referral code was provided
+        if (referralCode && db && userCredential.user) {
+          try {
+            const response = await fetch("/api/referral/process", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                referralCode,
+                newUserId: userCredential.user.uid,
+                newUserEmail: email,
+              }),
+            });
+
+            if (!response.ok) {
+              console.warn("Failed to process referral:", await response.text());
+              // Don't block registration if referral processing fails
+            }
+          } catch (err) {
+            console.error("Error processing referral:", err);
+            // Don't block registration if referral processing fails
+          }
+        }
       }
       
       setSuccess(true);

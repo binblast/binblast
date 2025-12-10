@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
 import { SubscriptionManagerWrapper } from "@/components/SubscriptionManagerWrapper";
+import { ReferralRewards } from "@/components/ReferralRewards";
+import { LoyaltyBadges } from "@/components/LoyaltyBadges";
 import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
 
@@ -516,6 +518,16 @@ function DashboardPageContent() {
                   </>
                 )}
               </div>
+            )}
+
+            {/* Referral Rewards */}
+            {userId && (
+              <ReferralRewards userId={userId} />
+            )}
+
+            {/* Loyalty Badges */}
+            {userId && (
+              <LoyaltyBadges userId={userId} />
             )}
 
             {/* Next Steps */}
