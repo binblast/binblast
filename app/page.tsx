@@ -1,10 +1,16 @@
 // app/page.tsx
 
+import dynamic from "next/dynamic";
 import { Navbar } from "@/components/Navbar";
 import { PricingSection } from "@/components/PricingSection";
 import { FAQSection } from "@/components/FAQSection";
-import { ChatWidget } from "@/components/ChatWidget";
 import Link from "next/link";
+
+// Dynamically import ChatWidget to prevent SSR issues
+const ChatWidget = dynamic(() => import("@/components/ChatWidget").then(mod => ({ default: mod.ChatWidget })), {
+  ssr: false,
+  loading: () => null,
+});
 
 export default function HomePage() {
   return (
