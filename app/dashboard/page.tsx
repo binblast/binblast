@@ -213,6 +213,14 @@ function DashboardPageContent() {
           throw new Error("Firebase is not initialized. Check environment variables.");
         }
         
+        // CRITICAL: Wait for Firebase sync initialization before importing firestore
+        if (typeof window !== 'undefined' && (window as any).__firebaseSyncInitPromise) {
+          try {
+            await (window as any).__firebaseSyncInitPromise;
+          } catch {
+            // Continue even if sync init failed
+          }
+        }
         const { doc, getDoc } = await import("firebase/firestore");
 
         if (!auth || !db) {
@@ -260,6 +268,14 @@ function DashboardPageContent() {
                   throw new Error("Firebase Firestore is not available");
                 }
                 db = dbInstance;
+              }
+              // CRITICAL: Wait for Firebase sync initialization before importing firestore
+              if (typeof window !== 'undefined' && (window as any).__firebaseSyncInitPromise) {
+                try {
+                  await (window as any).__firebaseSyncInitPromise;
+                } catch {
+                  // Continue even if sync init failed
+                }
               }
               const { collection, query, where, getDocs, orderBy } = await import("firebase/firestore");
               const cleaningsQuery = query(

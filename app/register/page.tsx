@@ -106,6 +106,14 @@ function RegisterForm() {
       });
 
       // Save user data to Firestore
+      // CRITICAL: Wait for Firebase sync initialization before importing firestore
+      if (typeof window !== 'undefined' && (window as any).__firebaseSyncInitPromise) {
+        try {
+          await (window as any).__firebaseSyncInitPromise;
+        } catch {
+          // Continue even if sync init failed
+        }
+      }
       const { collection, doc, setDoc, serverTimestamp } = await import("firebase/firestore");
       
       if (db && userCredential.user) {

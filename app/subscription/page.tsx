@@ -31,10 +31,21 @@ function SubscriptionPageContent() {
     
     async function loadUserData() {
       try {
+        // CRITICAL: Wait for Firebase sync initialization before importing any Firebase modules
+        if (typeof window !== 'undefined' && (window as any).__firebaseSyncInitPromise) {
+          try {
+            await (window as any).__firebaseSyncInitPromise;
+          } catch {
+            // Continue even if sync init failed
+          }
+        }
+        
         // Use safe wrapper functions
         const { getAuthInstance, getDbInstance, onAuthStateChanged } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
         const db = await getDbInstance();
+        
+        // Only import firestore AFTER Firebase app is initialized
         const { doc, getDoc } = await import("firebase/firestore");
 
         if (!auth || !db) {
