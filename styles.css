@@ -1424,3 +1424,19 @@ section {
     }
 }
 
+
+/* Chat Widget Typing Animation */
+@keyframes chat-typing-bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.chat-typing-dot {
+    animation: chat-typing-bounce 1.4s infinite ease-in-out;
+}
