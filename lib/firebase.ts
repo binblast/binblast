@@ -24,6 +24,34 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
   // Mark as initializing immediately to prevent race conditions
   global.__firebaseInitialized = true;
   
+  // CRITICAL: Initialize Firebase SYNCHRONOUSLY if config is available
+  // This prevents page chunks from loading before Firebase is ready
+  const config = (window as any).__firebaseConfig;
+  if (config && config.apiKey) {
+    // Config is available - initialize immediately
+    (async () => {
+      try {
+        const firebaseAppModule = await import("firebase/app");
+        const { initializeApp, getApps } = firebaseAppModule;
+        
+        const existingApps = getApps();
+        if (existingApps.length === 0) {
+          initializeApp(config);
+          global.__firebaseApp = getApps()[0];
+          global.__firebaseReady = true;
+          (window as any).__firebaseAppReady = true;
+          console.log("[Firebase] Synchronously initialized from head script config");
+        } else {
+          global.__firebaseApp = existingApps[0];
+          global.__firebaseReady = true;
+          (window as any).__firebaseAppReady = true;
+        }
+      } catch (error: any) {
+        console.error("[Firebase] Sync init error:", error?.message || error);
+      }
+    })();
+  }
+  
   // CRITICAL: Start initialization IMMEDIATELY and BLOCK until complete
   // This ensures Firebase is initialized before any dynamic chunks can load
   globalInitPromise = (async () => {
