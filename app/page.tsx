@@ -3,7 +3,6 @@
 import { Navbar } from "@/components/Navbar";
 import { PricingSection } from "@/components/PricingSection";
 import { FAQSection } from "@/components/FAQSection";
-import Image from "next/image";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -14,16 +13,6 @@ export default function HomePage() {
         {/* Hero Section with Background Image */}
         <section id="home" className="hero">
           <div className="container">
-            <div style={{ marginBottom: "2rem", display: "flex", justifyContent: "center" }}>
-              <Image 
-                src="/logo.png" 
-                alt="Bin Blast Co. Logo" 
-                width={250} 
-                height={100}
-                style={{ objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5))" }}
-                priority
-              />
-            </div>
             <h1 className="hero-headline">Sparkling Clean Bins, Every Time</h1>
             <p className="hero-subheadline">
               Professional trash bin cleaning service that keeps your bins fresh, sanitized, and odor-free. Book your cleaning today!

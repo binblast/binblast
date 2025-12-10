@@ -4,13 +4,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+  const isHomePage = pathname === "/";
 
   useEffect(() => {
     // Check Firebase auth state
@@ -85,32 +87,43 @@ export function Navbar() {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", height: "40px", overflow: "hidden" }}>
-          <div style={{ 
-            width: "100px", 
-            height: "40px", 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "flex-start", 
-            overflow: "hidden", 
-            position: "relative",
-            padding: "2px 0"
-          }}>
-            <Image 
-              src="/logo.png" 
-              alt="Bin Blast Co. Logo" 
-              width={100} 
-              height={40}
-              style={{ 
-                objectFit: "contain", 
-                objectPosition: "left center", 
-                width: "auto", 
-                height: "100%",
-                maxWidth: "100%"
-              }}
-              priority
-            />
-          </div>
+        <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", height: "40px" }}>
+          {isHomePage ? (
+            <span style={{ 
+              fontSize: "1.5rem", 
+              fontWeight: "700", 
+              color: "var(--text-dark)",
+              letterSpacing: "0.02em"
+            }}>
+              Bin Blast Co.
+            </span>
+          ) : (
+            <div style={{ 
+              width: "100px", 
+              height: "40px", 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "flex-start", 
+              overflow: "hidden", 
+              position: "relative",
+              padding: "2px 0"
+            }}>
+              <Image 
+                src="/logo.png" 
+                alt="Bin Blast Co. Logo" 
+                width={100} 
+                height={40}
+                style={{ 
+                  objectFit: "contain", 
+                  objectPosition: "left center", 
+                  width: "auto", 
+                  height: "100%",
+                  maxWidth: "100%"
+                }}
+                priority
+              />
+            </div>
+          )}
         </Link>
         <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
           <li>
