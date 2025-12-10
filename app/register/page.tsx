@@ -126,6 +126,10 @@ function RegisterForm() {
           subscriptionStatus = "one_time_paid";
         }
 
+        // Generate unique referral code
+        const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const generatedCode = userCredential.user.uid.substring(0, 8).toUpperCase() + randomChars;
+
         await setDoc(userDocRef, {
           firstName,
           lastName,
@@ -136,7 +140,7 @@ function RegisterForm() {
           stripeSubscriptionId: stripeData?.subscriptionId || null,
           subscriptionStatus,
           paymentStatus: stripeData ? "paid" : "pending",
-          referralCode: null, // Will be generated when user views dashboard
+          referralCode: generatedCode, // Generate unique code on registration
           referralCount: 0, // Initialize referral count
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),

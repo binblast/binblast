@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
-import { collection, query, where, getDocs, doc, updateDoc, getDoc, increment, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, increment, serverTimestamp } from "firebase/firestore";
 
 export const dynamic = 'force-dynamic';
 
@@ -58,16 +58,37 @@ export async function POST(req: NextRequest) {
     const newUserDocRef = doc(db, "users", newUserId);
     const newUserDoc = await getDoc(newUserDocRef);
     
-    // Note: We'll track referrals in a separate collection to prevent duplicates
-    // For now, we'll just increment the referrer's count
-    // In production, you'd want to:
-    // 1. Create a referrals collection to track each referral
-    // 2. Check if this newUserId was already referred
-    // 3. Apply $10 discount codes to both users
+    // Check if this user was already referred (prevent duplicate referrals)
+    if (newUserDoc.exists() && newUserDoc.data().referredBy) {
+      return NextResponse.json(
+        { error: "User already has a referral" },
+        { status: 400 }
+      );
+    }
 
-    // Increment referrer's referral count
-    await updateDoc(doc(db, "users", referrerId), {
-      referralCount: increment(1),
+    // Check if a referral record already exists for this user
+    const referralsQuery = query(
+      collection(db, "referrals"),
+      where("referredUserId", "==", newUserId)
+    );
+    const existingReferrals = await getDocs(referralsQuery);
+    
+    if (!existingReferrals.empty) {
+      return NextResponse.json(
+        { error: "Referral already exists for this user" },
+        { status: 400 }
+      );
+    }
+
+    // Create a PENDING referral record
+    const referralRef = doc(collection(db, "referrals"));
+    await setDoc(referralRef, {
+      referrerId,
+      referredUserId: newUserId,
+      referredUserEmail: newUserEmail,
+      referralCode,
+      status: "PENDING",
+      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
@@ -78,21 +99,19 @@ export async function POST(req: NextRequest) {
       updatedAt: serverTimestamp(),
     });
 
-    console.log("[Referral Process] Referral processed successfully:", {
+    console.log("[Referral Process] Referral created successfully:", {
+      referralId: referralRef.id,
       referrerId,
       newUserId,
       referralCode,
+      status: "PENDING",
     });
-
-    // TODO: In production, you would:
-    // 1. Create discount codes for both users ($10 off)
-    // 2. Send notification emails
-    // 3. Track referral in a separate collection for analytics
 
     return NextResponse.json({
       success: true,
+      referralId: referralRef.id,
       referrerId,
-      message: "Referral processed successfully. Both users will receive $10 off!",
+      message: "Referral processed successfully. Credits will be awarded after first purchase!",
     });
   } catch (err: any) {
     console.error("Referral processing error:", err);

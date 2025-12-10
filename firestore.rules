@@ -117,6 +117,32 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
     
+    // Referrals collection - server-side only (created by API routes)
+    match /referrals/{referralId} {
+      // Users can read referrals where they are the referrer or referred user
+      allow read: if isAuthenticated() 
+        && (resource.data.referrerId == request.auth.uid || resource.data.referredUserId == request.auth.uid);
+      
+      // Only server-side API routes can create/update referrals
+      allow create, update: if request.auth == null;
+      
+      // No deletions allowed
+      allow delete: if false;
+    }
+    
+    // Credits collection - users can read their own credits
+    match /credits/{creditId} {
+      // Users can read their own credits
+      allow read: if isAuthenticated() 
+        && resource.data.userId == request.auth.uid;
+      
+      // Only server-side API routes can create/update credits
+      allow create, update: if request.auth == null;
+      
+      // No deletions allowed
+      allow delete: if false;
+    }
+    
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

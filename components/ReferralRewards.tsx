@@ -12,6 +12,7 @@ interface ReferralRewardsProps {
 export function ReferralRewards({ userId }: ReferralRewardsProps) {
   const [referralCode, setReferralCode] = useState<string>("");
   const [referralCount, setReferralCount] = useState<number>(0);
+  const [totalCredits, setTotalCredits] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -44,6 +45,27 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
 
           setReferralCode(code);
           setReferralCount(count);
+
+          // Load unused credits
+          try {
+            const { collection, query, where, getDocs } = await import("firebase/firestore");
+            const creditsQuery = query(
+              collection(db, "credits"),
+              where("userId", "==", userId),
+              where("used", "==", false)
+            );
+            const creditsSnapshot = await getDocs(creditsQuery);
+            
+            let total = 0;
+            creditsSnapshot.forEach((creditDoc) => {
+              const creditData = creditDoc.data();
+              total += creditData.amount || 0;
+            });
+            
+            setTotalCredits(total);
+          } catch (creditError) {
+            console.error("Error loading credits:", creditError);
+          }
         }
       } catch (error) {
         console.error("Error loading referral data:", error);
@@ -107,17 +129,33 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
       }}>
         Share your link and both you and your friend get $10 off your next service.
       </p>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1.5rem" }}>
         <div style={{
-          padding: "0.5rem 1rem",
+          padding: "0.75rem 1rem",
           background: "#f0f9ff",
-          borderRadius: "999px",
+          borderRadius: "12px",
           fontSize: "0.875rem",
           fontWeight: "600",
-          color: "#0369a1"
+          color: "#0369a1",
+          border: "1px solid #bae6fd"
         }}>
-          {referralCount} {referralCount === 1 ? "referral" : "referrals"} so far {referralCount === 0 ? "– your next $10 reward is waiting" : ""}
+          {referralCount === 0 
+            ? "0 referrals so far — your next $10 reward is waiting."
+            : `${referralCount} ${referralCount === 1 ? "referral" : "referrals"} completed`}
         </div>
+        {totalCredits > 0 && (
+          <div style={{
+            padding: "0.75rem 1rem",
+            background: "#ecfdf5",
+            borderRadius: "12px",
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            color: "#047857",
+            border: "1px solid #86efac"
+          }}>
+            You have ${totalCredits.toFixed(2)} in referral rewards ready to use on your next service.
+          </div>
+        )}
       </div>
 
       <div style={{
