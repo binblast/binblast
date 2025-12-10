@@ -22,20 +22,32 @@ export default function RootLayout({
 (function() {
   if (typeof window === 'undefined') return;
   
+  // CRITICAL: According to Firebase docs, these three fields are REQUIRED:
+  // - apiKey (API key)
+  // - projectId (Project ID)
+  // - appId (Application ID)
+  // See: https://firebase.google.com/support/guides/init-options
   var apiKey = "${process.env.NEXT_PUBLIC_FIREBASE_API_KEY || ''}".trim();
   var projectId = "${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || ''}".trim();
+  var appId = "${process.env.NEXT_PUBLIC_FIREBASE_APP_ID || ''}".trim();
   var authDomain = "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || ''}".trim();
   
-  if (apiKey && projectId && authDomain && apiKey.length > 0 && projectId.length > 0 && authDomain.length > 0) {
+  // Validate all REQUIRED fields are present
+  if (apiKey && projectId && appId && apiKey.length > 0 && projectId.length > 0 && appId.length > 0) {
     window.__firebaseConfig = {
       apiKey: apiKey,
-      authDomain: authDomain,
-      projectId: projectId${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ? `,\n      storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ? `,\n      messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_APP_ID ? `,\n      appId: "${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}"` : ''}
+      projectId: projectId,
+      appId: appId${authDomain && authDomain.length > 0 ? `,\n      authDomain: "${authDomain}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ? `,\n      storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ? `,\n      messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}"` : ''}
     };
     window.__firebaseConfigReady = true;
-    console.log('[Firebase Init] Config stored in window.__firebaseConfig');
+    console.log('[Firebase Init] Config stored in window.__firebaseConfig (apiKey, projectId, appId validated)');
   } else {
-    console.warn('[Firebase Init] Missing environment variables');
+    console.error('[Firebase Init] Missing REQUIRED Firebase options:', {
+      hasApiKey: !!apiKey && apiKey.length > 0,
+      hasProjectId: !!projectId && projectId.length > 0,
+      hasAppId: !!appId && appId.length > 0
+    });
+    console.error('[Firebase Init] All three fields (apiKey, projectId, appId) are REQUIRED per Firebase documentation');
   }
 })();
 `;

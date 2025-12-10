@@ -57,45 +57,62 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
   globalInitPromise = (async () => {
     try {
       // CRITICAL: Check if config was stored by the head script
+      // According to Firebase docs, REQUIRED fields are: apiKey, projectId, appId
+      // See: https://firebase.google.com/support/guides/init-options
       let config: any = null;
       if (typeof window !== 'undefined' && (window as any).__firebaseConfig) {
         config = (window as any).__firebaseConfig;
         console.log("[Firebase] Using config from head script");
+        
+        // Validate required fields are present
+        if (!config.apiKey || !config.projectId || !config.appId) {
+          console.error("[Firebase] Config from head script missing REQUIRED fields:", {
+            hasApiKey: !!config.apiKey,
+            hasProjectId: !!config.projectId,
+            hasAppId: !!config.appId,
+          });
+          console.error("[Firebase] All three fields (apiKey, projectId, appId) are REQUIRED per Firebase documentation");
+          return;
+        }
       } else {
         // Fallback to environment variables
         const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
         const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
+        const appId = (process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "").trim();
         const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
         
-        // Debug: Log environment variable availability (without exposing values)
-        if (!apiKey || !projectId || !authDomain || apiKey.length === 0 || projectId.length === 0 || authDomain.length === 0) {
-          console.warn("[Firebase] Missing environment variables - skipping global initialization:", {
+        // CRITICAL: Validate all REQUIRED fields per Firebase documentation
+        if (!apiKey || !projectId || !appId || apiKey.length === 0 || projectId.length === 0 || appId.length === 0) {
+          console.error("[Firebase] Missing REQUIRED Firebase options:", {
             hasApiKey: !!apiKey && apiKey.length > 0,
             hasProjectId: !!projectId && projectId.length > 0,
-            hasAuthDomain: !!authDomain && authDomain.length > 0,
+            hasAppId: !!appId && appId.length > 0,
           });
+          console.error("[Firebase] All three fields (apiKey, projectId, appId) are REQUIRED per Firebase documentation");
+          console.error("[Firebase] See: https://firebase.google.com/support/guides/init-options");
           return;
         }
         
         config = {
           apiKey,
-          authDomain,
           projectId,
+          appId,
         };
         
+        // Optional fields
+        if (authDomain && authDomain.length > 0) {
+          config.authDomain = authDomain;
+        }
         if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
           config.storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
         }
         if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
           config.messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
         }
-        if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
-          config.appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
-        }
       }
       
-      if (!config) {
-        console.error("[Firebase] No config available - cannot initialize");
+      if (!config || !config.apiKey || !config.projectId || !config.appId) {
+        console.error("[Firebase] Invalid config - missing REQUIRED fields (apiKey, projectId, appId)");
         return;
       }
       

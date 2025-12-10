@@ -20,8 +20,21 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
     logFirebaseEnvStatus();
     
     // CRITICAL: Check if config is available from head script and initialize immediately
+    // According to Firebase docs, REQUIRED fields are: apiKey, projectId, appId
+    // See: https://firebase.google.com/support/guides/init-options
     const headConfig = (window as any).__firebaseConfig;
-    if (headConfig && headConfig.apiKey) {
+    if (headConfig && headConfig.apiKey && headConfig.projectId && headConfig.appId) {
+      // Validate all required fields are present
+      if (!headConfig.apiKey || !headConfig.projectId || !headConfig.appId) {
+        console.error("[Firebase Sync Init] Head script config missing REQUIRED fields:", {
+          hasApiKey: !!headConfig.apiKey,
+          hasProjectId: !!headConfig.projectId,
+          hasAppId: !!headConfig.appId,
+        });
+        global.__firebaseSyncInitialized = true;
+        return;
+      }
+      
       // Initialize immediately using head script config
       global.__firebaseSyncInitPromise = (async () => {
         try {
@@ -34,7 +47,7 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
             global.__firebaseSyncInitialized = true;
             global.__firebaseAppReady = true;
             (window as any).__firebaseAppReady = true;
-            console.log("[Firebase Sync Init] Initialized immediately from head script");
+            console.log("[Firebase Sync Init] Initialized immediately from head script (apiKey, projectId, appId validated)");
           } else {
             global.__firebaseSyncInitialized = true;
             global.__firebaseAppReady = true;
@@ -54,65 +67,69 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
         try {
         const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
         const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
+        const appId = (process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "").trim();
         const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
         
-        // Debug: Log environment variable availability (without exposing values)
-        if (!apiKey || !projectId || !authDomain) {
-          console.error("[Firebase Sync Init] Missing environment variables:", {
+        // CRITICAL: Validate all REQUIRED fields per Firebase documentation
+        if (!apiKey || !projectId || !appId || apiKey.length === 0 || projectId.length === 0 || appId.length === 0) {
+          console.error("[Firebase Sync Init] Missing REQUIRED Firebase options:", {
             hasApiKey: !!apiKey && apiKey.length > 0,
             hasProjectId: !!projectId && projectId.length > 0,
-            hasAuthDomain: !!authDomain && authDomain.length > 0,
+            hasAppId: !!appId && appId.length > 0,
           });
-          console.error("[Firebase Sync Init] Make sure NEXT_PUBLIC_FIREBASE_* variables are set in your deployment environment");
+          console.error("[Firebase Sync Init] All three fields (apiKey, projectId, appId) are REQUIRED per Firebase documentation");
+          console.error("[Firebase Sync Init] See: https://firebase.google.com/support/guides/init-options");
           global.__firebaseSyncInitialized = true; // Mark as done even if failed
           return;
         }
         
-        if (apiKey.length > 0 && projectId.length > 0 && authDomain.length > 0) {
-          // CRITICAL: Import firebase/app FIRST and initialize BEFORE any other Firebase modules
-          // This prevents other Firebase modules from trying to access default app before it exists
-          const firebaseApp = await import("firebase/app");
-          const { initializeApp, getApps } = firebaseApp;
-          
-          // Check if app already exists
-          const existingApps = getApps();
-          if (existingApps.length > 0) {
-            // Verify existing app has valid config
-            for (const existingApp of existingApps) {
-              if (existingApp.options && existingApp.options.apiKey && typeof existingApp.options.apiKey === 'string' && existingApp.options.apiKey.length > 0) {
-                console.log("[Firebase Sync Init] Using existing app with valid config");
-                global.__firebaseSyncInitialized = true;
-                global.__firebaseAppReady = true;
-                return;
-              }
+        // CRITICAL: Import firebase/app FIRST and initialize BEFORE any other Firebase modules
+        // This prevents other Firebase modules from trying to access default app before it exists
+        const firebaseApp = await import("firebase/app");
+        const { initializeApp, getApps } = firebaseApp;
+        
+        // Check if app already exists
+        const existingApps = getApps();
+        if (existingApps.length > 0) {
+          // Verify existing app has valid config with all required fields
+          for (const existingApp of existingApps) {
+            if (existingApp.options && 
+                existingApp.options.apiKey && 
+                existingApp.options.projectId &&
+                existingApp.options.appId &&
+                typeof existingApp.options.apiKey === 'string' && 
+                existingApp.options.apiKey.length > 0) {
+              console.log("[Firebase Sync Init] Using existing app with valid config");
+              global.__firebaseSyncInitialized = true;
+              global.__firebaseAppReady = true;
+              return;
             }
           }
-          
-          // Create new app BEFORE any other Firebase modules can be imported
-          const config: any = {
-            apiKey,
-            authDomain,
-            projectId,
-          };
-          
-          if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
-            config.storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-          }
-          if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
-            config.messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
-          }
-          if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
-            config.appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
-          }
-          
-          initializeApp(config);
-          global.__firebaseSyncInitialized = true;
-          global.__firebaseAppReady = true;
-          console.log("[Firebase Sync Init] Firebase initialized synchronously");
-        } else {
-          console.warn("[Firebase Sync Init] Environment variables are empty strings");
-          global.__firebaseSyncInitialized = true;
         }
+        
+        // Create new app BEFORE any other Firebase modules can be imported
+        // Include all REQUIRED fields: apiKey, projectId, appId
+        const config: any = {
+          apiKey,
+          projectId,
+          appId,
+        };
+        
+        // Optional fields
+        if (authDomain && authDomain.length > 0) {
+          config.authDomain = authDomain;
+        }
+        if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
+          config.storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+        }
+        if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
+          config.messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+        }
+        
+        initializeApp(config);
+        global.__firebaseSyncInitialized = true;
+        global.__firebaseAppReady = true;
+        console.log("[Firebase Sync Init] Firebase initialized synchronously (apiKey, projectId, appId validated)");
       } catch (error: any) {
         // Log all errors to help debug
         const errorMessage = error?.message || String(error);
