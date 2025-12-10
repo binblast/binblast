@@ -15,12 +15,15 @@ let initPromise: Promise<void> | null = null;
 
 // CRITICAL: Initialize Firebase immediately in browser to prevent chunk loading errors
 // This ensures Firebase app exists before any dynamic chunks try to use it
+// Create a promise that will be resolved when Firebase is initialized
+let globalInitPromise: Promise<void> | null = null;
+
 if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
   // Mark as initializing immediately to prevent race conditions
   global.__firebaseInitialized = true;
   
-  // Start initialization immediately (don't await - let it run in background)
-  Promise.resolve().then(async () => {
+  // Start initialization immediately and store the promise
+  globalInitPromise = Promise.resolve().then(async () => {
     try {
       const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
       const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
@@ -82,6 +85,17 @@ async function ensureInitialized(): Promise<void> {
   }
   if (initPromise) {
     return initPromise;
+  }
+
+  // CRITICAL: Wait for global initialization to complete before proceeding
+  // This prevents race conditions where dynamic chunks try to use Firebase before it's ready
+  if (globalInitPromise && typeof window !== 'undefined') {
+    try {
+      await globalInitPromise;
+    } catch (error) {
+      // Continue even if global init failed - will try lazy initialization
+      console.warn("[Firebase] Global initialization promise failed, continuing with lazy init");
+    }
   }
 
   initPromise = (async () => {

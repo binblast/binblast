@@ -15,6 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        {/* Initialize Firebase before any children render to prevent dynamic chunk errors */}
         <FirebaseInitializer />
         {children}
       </body>
