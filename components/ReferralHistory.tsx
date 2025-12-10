@@ -34,13 +34,26 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
         
         // Get the authenticated user's UID (required for Firestore security rules)
         if (!auth || !auth.currentUser) {
+          console.log("[ReferralHistory] User not authenticated, skipping history load");
           setLoading(false);
           return;
         }
         
         const currentUserId = auth.currentUser.uid;
+        if (!currentUserId) {
+          console.log("[ReferralHistory] No user ID available");
+          setLoading(false);
+          return;
+        }
+        
         const db = await getDbInstance();
-        if (!db || !currentUserId) return;
+        if (!db) {
+          console.error("[ReferralHistory] Firestore not initialized");
+          setLoading(false);
+          return;
+        }
+        
+        console.log("[ReferralHistory] Loading history for user:", currentUserId);
 
         const historyEntries: HistoryEntry[] = [];
 
@@ -55,7 +68,9 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
             firestoreOrderBy("createdAt", "desc"),
             firestoreLimit(20)
           );
+          console.log("[ReferralHistory] Querying referrals for referrerId:", currentUserId);
           const referralsSnapshot = await firestoreGetDocs(referralsQuery);
+          console.log("[ReferralHistory] Found", referralsSnapshot.size, "referrals");
 
           referralsSnapshot.forEach((doc) => {
             const data = doc.data();
@@ -79,8 +94,11 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
               });
             }
           });
-        } catch (referralError) {
-          console.error("Error loading referrals:", referralError);
+        } catch (referralError: any) {
+          console.error("[ReferralHistory] Error loading referrals:", referralError);
+          if (referralError.code === 'permission-denied') {
+            console.error("[ReferralHistory] Permission denied - ensure Firestore rules are deployed and user is authenticated");
+          }
         }
 
         // Load credits earned (from referrals)
@@ -94,7 +112,9 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
             firestoreOrderBy("createdAt", "desc"),
             firestoreLimit(20)
           );
+          console.log("[ReferralHistory] Querying credits earned for userId:", currentUserId);
           const creditsEarnedSnapshot = await firestoreGetDocs(creditsEarnedQuery);
+          console.log("[ReferralHistory] Found", creditsEarnedSnapshot.size, "credits earned");
 
           creditsEarnedSnapshot.forEach((doc) => {
             const data = doc.data();
@@ -108,8 +128,11 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
               amount: data.amount || 0,
             });
           });
-        } catch (creditEarnedError) {
-          console.error("Error loading credits earned:", creditEarnedError);
+        } catch (creditEarnedError: any) {
+          console.error("[ReferralHistory] Error loading credits earned:", creditEarnedError);
+          if (creditEarnedError.code === 'permission-denied') {
+            console.error("[ReferralHistory] Permission denied - ensure Firestore rules are deployed");
+          }
         }
 
         // Load credits used
@@ -123,7 +146,9 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
             firestoreOrderBy("usedAt", "desc"),
             firestoreLimit(20)
           );
+          console.log("[ReferralHistory] Querying credits used for userId:", currentUserId);
           const creditsUsedSnapshot = await firestoreGetDocs(creditsUsedQuery);
+          console.log("[ReferralHistory] Found", creditsUsedSnapshot.size, "credits used");
 
           creditsUsedSnapshot.forEach((doc) => {
             const data = doc.data();
@@ -137,8 +162,11 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
               amount: data.usedForAmount || data.amount || 0,
             });
           });
-        } catch (creditUsedError) {
-          console.error("Error loading credits used:", creditUsedError);
+        } catch (creditUsedError: any) {
+          console.error("[ReferralHistory] Error loading credits used:", creditUsedError);
+          if (creditUsedError.code === 'permission-denied') {
+            console.error("[ReferralHistory] Permission denied - ensure Firestore rules are deployed");
+          }
         }
 
         // Sort all entries by date (most recent first)
