@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { getDbInstance } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+// Note: Firebase Firestore functions are imported dynamically inside useEffect to prevent build-time initialization errors
 
 interface LoyaltyBadgesProps {
   userId: string;
@@ -80,6 +80,9 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
         const db = await getDbInstance();
         if (!db || !userId) return;
 
+        // Dynamically import Firestore functions
+        const { collection, query, where, getDocs } = await import("firebase/firestore");
+        
         // Count completed cleanings
         const cleaningsQuery = query(
           collection(db, "scheduledCleanings"),
