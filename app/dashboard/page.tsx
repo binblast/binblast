@@ -207,6 +207,12 @@ function DashboardPageContent() {
         const { getAuthInstance, getDbInstance, onAuthStateChanged } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
         const db = await getDbInstance();
+        
+        // Ensure Firebase is initialized before importing firestore
+        if (!db) {
+          throw new Error("Firebase is not initialized. Check environment variables.");
+        }
+        
         const { doc, getDoc } = await import("firebase/firestore");
 
         if (!auth || !db) {
@@ -247,6 +253,14 @@ function DashboardPageContent() {
 
             // Load scheduled cleanings
             try {
+              // Ensure db is still available before importing firestore
+              if (!db) {
+                const dbInstance = await getDbInstance();
+                if (!dbInstance) {
+                  throw new Error("Firebase Firestore is not available");
+                }
+                db = dbInstance;
+              }
               const { collection, query, where, getDocs, orderBy } = await import("firebase/firestore");
               const cleaningsQuery = query(
                 collection(db, "scheduledCleanings"),

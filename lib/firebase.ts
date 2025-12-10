@@ -6,6 +6,8 @@
 declare global {
   var __firebaseInitialized: boolean | undefined;
   var __firebaseApp: any | undefined;
+  var __firebaseInitPromise: Promise<any> | undefined;
+  var __firebaseReady: boolean | undefined;
 }
 
 let app: any = undefined;
@@ -25,55 +27,66 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
   // CRITICAL: Start initialization IMMEDIATELY and don't defer it
   // This ensures Firebase is initialized before any dynamic chunks can load
   globalInitPromise = (async () => {
+    // Store promise globally so other modules can wait for it
+    global.__firebaseInitPromise = globalInitPromise;
     try {
       const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
       const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
       const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
       
+      // Debug: Log environment variable availability (without exposing values)
+      if (!apiKey || !projectId || !authDomain || apiKey.length === 0 || projectId.length === 0 || authDomain.length === 0) {
+        console.warn("[Firebase] Missing environment variables - skipping global initialization:", {
+          hasApiKey: !!apiKey && apiKey.length > 0,
+          hasProjectId: !!projectId && projectId.length > 0,
+          hasAuthDomain: !!authDomain && authDomain.length > 0,
+        });
+        return;
+      }
+      
       // Only initialize if we have ALL required config
-      if (apiKey && projectId && authDomain && apiKey.length > 0 && projectId.length > 0 && authDomain.length > 0) {
-        // Import and initialize Firebase immediately (don't defer)
-        const { initializeApp, getApps } = await import("firebase/app");
-        
-        // Check if app already exists
-        const existingApps = getApps();
-        if (existingApps.length > 0) {
-          // Use existing app only if it has valid apiKey
-          for (const existingApp of existingApps) {
+      // Import and initialize Firebase immediately (don't defer)
+      const { initializeApp, getApps } = await import("firebase/app");
+      
+      // Check if app already exists
+      const existingApps = getApps();
+      if (existingApps.length > 0) {
+        // Use existing app only if it has valid apiKey
+        for (const existingApp of existingApps) {
             if (existingApp.options && existingApp.options.apiKey && typeof existingApp.options.apiKey === 'string' && existingApp.options.apiKey.length > 0) {
               app = existingApp;
               global.__firebaseApp = app;
+              global.__firebaseReady = true;
               console.log("[Firebase] Using existing app from global initialization");
               return;
             }
-          }
         }
-        
-        // Create new app only if we have valid config
-        const config: any = {
-          apiKey,
-          authDomain,
-          projectId,
-        };
-        
-        if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
-          config.storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-        }
-        if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
-          config.messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
-        }
-        if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
-          config.appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
-        }
-        
+      }
+      
+      // Create new app only if we have valid config
+      const config: any = {
+        apiKey,
+        authDomain,
+        projectId,
+      };
+      
+      if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
+        config.storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+      }
+      if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
+        config.messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+      }
+      if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
+        config.appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+      }
+      
         app = initializeApp(config);
         global.__firebaseApp = app;
+        global.__firebaseReady = true;
         console.log("[Firebase] Created app in global initialization");
-      } else {
-        console.warn("[Firebase] Missing environment variables - skipping global initialization");
-      }
     } catch (error: any) {
-      console.error("[Firebase] Global initialization error:", error?.message || error);
+      const errorMessage = error?.message || String(error);
+      console.error("[Firebase] Global initialization error:", errorMessage);
       // Don't throw - allow lazy initialization to handle it
     }
   })();
@@ -300,13 +313,20 @@ async function ensureInitialized(): Promise<void> {
       // Firestore can be used on both client and server
       try {
         if (app && app.options && app.options.apiKey && app.options.apiKey.trim().length > 0) {
-        db = getFirestore(app);
-        console.log("[Firebase] Successfully initialized");
+          // CRITICAL: Always pass app explicitly to prevent default app lookup
+          db = getFirestore(app);
+          console.log("[Firebase] Successfully initialized");
         } else {
+          console.error("[Firebase] App missing valid apiKey configuration:", {
+            hasApp: !!app,
+            hasOptions: !!(app && app.options),
+            hasApiKey: !!(app && app.options && app.options.apiKey),
+          });
           throw new Error("App missing valid apiKey configuration");
         }
       } catch (dbError: any) {
-        console.error("[Firebase] Error initializing Firestore:", dbError);
+        const errorMessage = dbError?.message || String(dbError);
+        console.error("[Firebase] Error initializing Firestore:", errorMessage);
         db = null;
       }
     } catch (error: any) {
