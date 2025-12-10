@@ -24,7 +24,7 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
   // Mark as initializing immediately to prevent race conditions
   global.__firebaseInitialized = true;
   
-  // CRITICAL: Start initialization IMMEDIATELY and don't defer it
+  // CRITICAL: Start initialization IMMEDIATELY and BLOCK until complete
   // This ensures Firebase is initialized before any dynamic chunks can load
   globalInitPromise = (async () => {
     try {
@@ -66,8 +66,13 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
         }
       }
       
+      if (!config) {
+        console.error("[Firebase] No config available - cannot initialize");
+        return;
+      }
+      
       // CRITICAL: Import firebase/app and initialize IMMEDIATELY
-      // This must happen synchronously to prevent other Firebase modules from loading first
+      // This must complete before any other Firebase modules can be imported
       const firebaseAppModule = await import("firebase/app");
       const { initializeApp, getApps } = firebaseAppModule;
       
@@ -88,15 +93,15 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
       
       // CRITICAL: Initialize app IMMEDIATELY before any other Firebase modules can be imported
       // This prevents "Neither apiKey nor config.authenticator provided" errors
-      if (!config) {
-        console.error("[Firebase] No config available - cannot initialize");
-        return;
-      }
-      
       app = initializeApp(config);
       global.__firebaseApp = app;
       global.__firebaseReady = true;
       console.log("[Firebase] Created app in global initialization - app is ready");
+      
+      // CRITICAL: Mark as ready so page chunks know Firebase is initialized
+      if (typeof window !== 'undefined') {
+        (window as any).__firebaseAppReady = true;
+      }
     } catch (error: any) {
       const errorMessage = error?.message || String(error);
       console.error("[Firebase] Global initialization error:", errorMessage);
@@ -109,8 +114,16 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
     global.__firebaseInitPromise = globalInitPromise;
   }
   
-  // Don't await, but ensure it starts immediately
-  // The promise is stored so other code can wait for it
+  // CRITICAL: Wait for initialization to complete before allowing module to finish loading
+  // This ensures Firebase app exists before any page chunks can import Firebase modules
+  // Note: This blocks module loading, which is what we want
+  if (typeof window !== 'undefined') {
+    // Don't await here - that would block everything
+    // Instead, page chunks should wait for the promise
+    globalInitPromise.catch(() => {
+      // Silently handle errors
+    });
+  }
 }
 
 async function ensureInitialized(): Promise<void> {

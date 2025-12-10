@@ -31,12 +31,34 @@ function SubscriptionPageContent() {
     
     async function loadUserData() {
       try {
-        // CRITICAL: Wait for Firebase sync initialization before importing any Firebase modules
-        if (typeof window !== 'undefined' && (window as any).__firebaseSyncInitPromise) {
-          try {
-            await (window as any).__firebaseSyncInitPromise;
-          } catch {
-            // Continue even if sync init failed
+        // CRITICAL: Wait for Firebase initialization to complete before importing any Firebase modules
+        // This prevents "Neither apiKey nor config.authenticator provided" errors
+        if (typeof window !== 'undefined') {
+          // Wait for sync init if it exists
+          if ((window as any).__firebaseSyncInitPromise) {
+            try {
+              await (window as any).__firebaseSyncInitPromise;
+            } catch {
+              // Continue even if sync init failed
+            }
+          }
+          
+          // Wait for global init promise
+          if ((window as any).__firebaseInitPromise) {
+            try {
+              await (window as any).__firebaseInitPromise;
+            } catch {
+              // Continue even if global init failed
+            }
+          }
+          
+          // Wait for app to be ready
+          if (!(window as any).__firebaseAppReady) {
+            // Poll until app is ready (with timeout)
+            const startTime = Date.now();
+            while (!(window as any).__firebaseAppReady && Date.now() - startTime < 5000) {
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
           }
         }
         
