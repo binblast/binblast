@@ -120,13 +120,9 @@ service cloud.firestore {
     // Referrals collection - server-side only (created by API routes)
     match /referrals/{referralId} {
       // Users can read referrals where they are the referrer or referred user
+      // This allows both individual reads and list queries
       allow read: if isAuthenticated() 
         && (resource.data.referrerId == request.auth.uid || resource.data.referredUserId == request.auth.uid);
-      
-      // Allow list queries - Firestore validates queries by checking if they match read rules
-      // Queries with where("referrerId", "==", request.auth.uid) are allowed
-      // because they ensure only documents matching the read rule are returned
-      allow list: if isAuthenticated();
       
       // Only server-side API routes can create/update referrals
       allow create, update: if request.auth == null;
@@ -138,13 +134,9 @@ service cloud.firestore {
     // Credits collection - users can read their own credits
     match /credits/{creditId} {
       // Users can read their own credits
+      // This allows both individual reads and list queries
       allow read: if isAuthenticated() 
         && resource.data.userId == request.auth.uid;
-      
-      // Allow list queries - Firestore validates queries by checking if they match read rules
-      // Queries with where("userId", "==", request.auth.uid) are allowed
-      // because they ensure only documents matching the read rule are returned
-      allow list: if isAuthenticated();
       
       // Only server-side API routes can create/update credits
       allow create, update: if request.auth == null;
