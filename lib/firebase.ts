@@ -307,10 +307,20 @@ async function ensureInitialized(): Promise<void> {
 // Export getters that ensure initialization
 export const getAuthInstance = async () => {
   try {
-  await ensureInitialized();
+    // CRITICAL: Wait for global initialization first if it exists
+    if (globalInitPromise && typeof window !== 'undefined') {
+      try {
+        await globalInitPromise;
+      } catch (error) {
+        // Continue even if global init failed
+        console.warn("[Firebase] Global init promise failed, continuing with lazy init");
+      }
+    }
+    
+    await ensureInitialized();
     // Validate auth before returning
     if (auth && typeof auth === "object") {
-  return auth;
+      return auth;
     }
     return null;
   } catch (error: any) {
@@ -320,6 +330,16 @@ export const getAuthInstance = async () => {
 };
 
 export const getDbInstance = async () => {
+  // CRITICAL: Wait for global initialization first if it exists
+  if (globalInitPromise && typeof window !== 'undefined') {
+    try {
+      await globalInitPromise;
+    } catch (error) {
+      // Continue even if global init failed
+      console.warn("[Firebase] Global init promise failed, continuing with lazy init");
+    }
+  }
+  
   await ensureInitialized();
   return db;
 };
