@@ -39,8 +39,8 @@ export default function HomePage() {
               More than a cleaning service. Your bins stay fresh, and you get a modern customer experience to match.
             </p>
             <div style={{ 
-              display: "grid", 
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", 
+              display: "flex", 
+              flexWrap: "wrap",
               gap: "1.5rem",
               justifyContent: "center",
               maxWidth: "1200px",
@@ -52,7 +52,10 @@ export default function HomePage() {
                 padding: "2rem", 
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
-                transition: "transform 0.2s, box-shadow 0.2s"
+                transition: "transform 0.2s, box-shadow 0.2s",
+                flex: "0 1 calc(33.333% - 1rem)",
+                minWidth: "280px",
+                maxWidth: "350px"
               }}>
                 <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
                   Personalized Customer Dashboard
@@ -67,7 +70,10 @@ export default function HomePage() {
                 padding: "2rem", 
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
-                transition: "transform 0.2s, box-shadow 0.2s"
+                transition: "transform 0.2s, box-shadow 0.2s",
+                flex: "0 1 calc(33.333% - 1rem)",
+                minWidth: "280px",
+                maxWidth: "350px"
               }}>
                 <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
                   Smart Scheduling
@@ -82,7 +88,10 @@ export default function HomePage() {
                 padding: "2rem", 
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
-                transition: "transform 0.2s, box-shadow 0.2s"
+                transition: "transform 0.2s, box-shadow 0.2s",
+                flex: "0 1 calc(33.333% - 1rem)",
+                minWidth: "280px",
+                maxWidth: "350px"
               }}>
                 <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
                   Loyalty Rewards
@@ -97,7 +106,10 @@ export default function HomePage() {
                 padding: "2rem", 
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
-                transition: "transform 0.2s, box-shadow 0.2s"
+                transition: "transform 0.2s, box-shadow 0.2s",
+                flex: "0 1 calc(33.333% - 1rem)",
+                minWidth: "280px",
+                maxWidth: "350px"
               }}>
                 <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
                   Referral Program
@@ -112,7 +124,10 @@ export default function HomePage() {
                 padding: "2rem", 
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
-                transition: "transform 0.2s, box-shadow 0.2s"
+                transition: "transform 0.2s, box-shadow 0.2s",
+                flex: "0 1 calc(33.333% - 1rem)",
+                minWidth: "280px",
+                maxWidth: "350px"
               }}>
                 <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
                   Built-In AI Assistant
