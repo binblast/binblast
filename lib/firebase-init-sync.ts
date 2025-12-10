@@ -66,19 +66,17 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
         }
       })();
       
-      // CRITICAL: Wait for initialization to complete before allowing module to finish loading
-      // This blocks module execution until Firebase is ready
+      // CRITICAL: Store promise on window so other modules can wait for it
+      // Note: We can't await here (not in async context), but we start the promise immediately
+      // Other modules will wait for this promise before importing Firebase modules
       if (global.__firebaseSyncInitPromise) {
-        // Store promise on window so other modules can wait for it
         (window as any).__firebaseSyncInitPromise = global.__firebaseSyncInitPromise;
         
-        // Wait for it to complete (this blocks module loading)
-        try {
-          await global.__firebaseSyncInitPromise;
-          console.log("[Firebase Sync Init] Initialization complete - module can now load");
-        } catch (error) {
-          console.warn("[Firebase Sync Init] Initialization failed, but continuing");
-        }
+        // Start the promise immediately - don't await (would cause syntax error)
+        // The promise will complete asynchronously, and other modules will wait for it
+        global.__firebaseSyncInitPromise.catch((error) => {
+          console.warn("[Firebase Sync Init] Initialization failed:", error);
+        });
       }
     } else {
       // Fallback to async initialization with env vars
