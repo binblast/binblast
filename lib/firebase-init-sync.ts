@@ -2,9 +2,12 @@
 // This module ensures Firebase is initialized synchronously before any dynamic chunks load
 // It's imported in the root layout to run before React hydrates
 
-if (typeof window !== 'undefined') {
+// CRITICAL: Skip initialization during Next.js build
+// During build, Next.js executes this module, but Firebase shouldn't initialize
+if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
   // Initialize Firebase immediately when this module loads
   // This happens before any page components can load
+  // Only run in browser (not server) and not during build
   (async () => {
     try {
       const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
@@ -44,7 +47,11 @@ if (typeof window !== 'undefined') {
         console.log("[Firebase Sync Init] Firebase initialized synchronously");
       }
     } catch (error: any) {
-      console.error("[Firebase Sync Init] Error:", error?.message || error);
+      // Silently handle errors during build - this is expected
+      const errorMessage = error?.message || String(error);
+      if (!errorMessage.includes("apiKey") && !errorMessage.includes("authenticator")) {
+        console.error("[Firebase Sync Init] Error:", errorMessage);
+      }
     }
   })();
 }

@@ -2,13 +2,15 @@
 // This endpoint retrieves unused referral credits for a user
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
+    // Dynamically import Firebase to prevent build-time initialization
+    const { getDbInstance } = await import("@/lib/firebase");
+    const { collection, query, where, getDocs } = await import("firebase/firestore");
+    
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
 

@@ -2,13 +2,15 @@
 // This endpoint awards referral credits after a user completes their first paid service
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    // Dynamically import Firebase to prevent build-time initialization
+    const { getDbInstance } = await import("@/lib/firebase");
+    const { collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, serverTimestamp } = await import("firebase/firestore");
+    
     const body = await req.json();
     const { userId } = body;
 

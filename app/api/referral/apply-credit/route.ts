@@ -2,13 +2,15 @@
 // This endpoint applies referral credits to a checkout session
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { collection, query, where, getDocs, doc, updateDoc, orderBy, limit } from "firebase/firestore";
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    // Dynamically import Firebase to prevent build-time initialization
+    const { getDbInstance } = await import("@/lib/firebase");
+    const { collection, query, where, getDocs, doc, updateDoc, orderBy, limit } = await import("firebase/firestore");
+    
     const body = await req.json();
     const { userId, amount } = body;
 

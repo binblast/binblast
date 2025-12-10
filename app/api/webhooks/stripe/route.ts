@@ -2,8 +2,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe-config";
-import { getDbInstance } from "@/lib/firebase";
-import { doc, updateDoc, getDoc, collection, query, where, getDocs, setDoc, serverTimestamp, increment } from "firebase/firestore";
 import Stripe from "stripe";
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +10,10 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+  // Dynamically import Firebase to prevent build-time initialization
+  const { getDbInstance } = await import("@/lib/firebase");
+  const { doc, updateDoc, getDoc, collection, query, where, getDocs, setDoc, serverTimestamp, increment } = await import("firebase/firestore");
+  
   const body = await req.text();
   const signature = req.headers.get("stripe-signature");
 
@@ -62,7 +64,6 @@ export async function POST(req: NextRequest) {
         const db = await getDbInstance();
         if (customerEmail && db && session.payment_status === 'paid') {
           // Find user by email or stripeCustomerId
-          const { collection, query, where, getDocs } = await import("firebase/firestore");
           
           let userId: string | null = null;
           

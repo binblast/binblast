@@ -103,14 +103,26 @@ async function ensureInitialized(): Promise<void> {
   }
 
   initPromise = (async () => {
+    // Wrap entire initialization in try-catch to handle build-time errors
     try {
+      // CRITICAL: During Next.js build, environment variables may not be available
+      // Skip initialization during build to prevent errors
+      // Check if we're in a build context (Next.js sets NEXT_PHASE during build)
+      if (process.env.NEXT_PHASE === 'phase-production-build' || 
+          (typeof process.env.NODE_ENV !== 'undefined' && process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_FIREBASE_API_KEY)) {
+        console.warn("[Firebase] Skipping initialization during build phase");
+        auth = null;
+        db = null;
+        return;
+      }
+
       // Check environment variables FIRST before importing Firebase
       const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
       const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
       const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
 
       // Only initialize if we have valid config
-      if (!apiKey || !projectId || !authDomain) {
+      if (!apiKey || !projectId || !authDomain || apiKey.length === 0 || projectId.length === 0 || authDomain.length === 0) {
         console.warn("[Firebase] Missing required environment variables. Firebase features will not work.");
         auth = null;
         db = null;
@@ -118,9 +130,45 @@ async function ensureInitialized(): Promise<void> {
       }
 
       // Only import Firebase after confirming we have config
-      const { initializeApp, getApps } = await import("firebase/app");
-      const { getAuth } = await import("firebase/auth");
-      const { getFirestore } = await import("firebase/firestore");
+      // Wrap in try-catch to handle build-time errors gracefully
+      let initializeApp: any, getApps: any, getAuth: any, getFirestore: any;
+      try {
+        // Use dynamic import with error handling
+        const [firebaseApp, firebaseAuth, firebaseFirestore] = await Promise.all([
+          import("firebase/app").catch((err) => {
+            if (err?.message?.includes("apiKey") || err?.message?.includes("authenticator")) {
+              throw new Error("FIREBASE_BUILD_ERROR");
+            }
+            throw err;
+          }),
+          import("firebase/auth").catch((err) => {
+            if (err?.message?.includes("apiKey") || err?.message?.includes("authenticator")) {
+              throw new Error("FIREBASE_BUILD_ERROR");
+            }
+            throw err;
+          }),
+          import("firebase/firestore").catch((err) => {
+            if (err?.message?.includes("apiKey") || err?.message?.includes("authenticator")) {
+              throw new Error("FIREBASE_BUILD_ERROR");
+            }
+            throw err;
+          }),
+        ]);
+        initializeApp = firebaseApp.initializeApp;
+        getApps = firebaseApp.getApps;
+        getAuth = firebaseAuth.getAuth;
+        getFirestore = firebaseFirestore.getFirestore;
+      } catch (importError: any) {
+        // If import fails (e.g., during build), gracefully handle it
+        const errorMessage = importError?.message || String(importError);
+        if (errorMessage.includes("apiKey") || errorMessage.includes("authenticator") || errorMessage === "FIREBASE_BUILD_ERROR") {
+          console.warn("[Firebase] Firebase import failed - likely during build. Skipping initialization.");
+          auth = null;
+          db = null;
+          return;
+        }
+        throw importError;
+      }
 
       // CRITICAL: Check global app first (set during module load)
       if (global.__firebaseApp && global.__firebaseApp.options && global.__firebaseApp.options.apiKey) {
@@ -297,11 +345,21 @@ async function ensureInitialized(): Promise<void> {
         db = null;
       }
     } catch (error: any) {
+      // During build, Firebase initialization may fail - handle gracefully
+      const errorMessage = error?.message || String(error);
+      if (errorMessage.includes("apiKey") || errorMessage.includes("authenticator")) {
+        console.warn("[Firebase] Initialization failed during build - this is expected. Skipping.");
+        auth = null;
+        db = null;
+        // Don't reset initPromise - mark as completed (failed)
+        return;
+      }
       console.error("[Firebase] Initialization error:", error);
       auth = null;
       db = null;
       // Reset initPromise so we can retry
       initPromise = null;
+      // Don't throw - allow getDbInstance to return null gracefully
     }
   })();
 
@@ -344,8 +402,20 @@ export const getDbInstance = async () => {
     }
   }
   
-  await ensureInitialized();
-  return db;
+  try {
+    await ensureInitialized();
+    return db;
+  } catch (error: any) {
+    // During build, Firebase initialization may fail - return null gracefully
+    const errorMessage = error?.message || String(error);
+    if (errorMessage.includes("apiKey") || errorMessage.includes("authenticator")) {
+      console.warn("[Firebase] getDbInstance failed - likely during build. Returning null.");
+      return null;
+    }
+    // For other errors, still return null to prevent crashes
+    console.warn("[Firebase] getDbInstance error:", errorMessage);
+    return null;
+  }
 };
 
 // Note: We don't export auth and db directly to prevent premature access

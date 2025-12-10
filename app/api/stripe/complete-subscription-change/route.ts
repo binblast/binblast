@@ -3,14 +3,16 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
-import { getDbInstance } from "@/lib/firebase";
-import { doc, updateDoc } from "firebase/firestore";
 import Stripe from "stripe";
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    // Dynamically import Firebase to prevent build-time initialization
+    const { getDbInstance } = await import("@/lib/firebase");
+    const { doc, updateDoc } = await import("firebase/firestore");
+    
     const body = await req.json();
     const { checkoutSessionId, userId, newPlanId, subscriptionId } = body;
 
