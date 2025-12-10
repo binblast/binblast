@@ -165,23 +165,7 @@ export default function HomePage() {
         </section>
 
         {/* Plans & Pricing Section */}
-        <section id="pricing" style={{ padding: "5rem 0", background: "#ffffff" }}>
-          <div className="container">
-            <h2 className="section-title">Plans & Pricing</h2>
-            <p style={{ 
-              textAlign: "center", 
-              marginBottom: "3rem", 
-              color: "var(--text-light)", 
-              fontSize: "1.125rem",
-              maxWidth: "800px",
-              marginLeft: "auto",
-              marginRight: "auto"
-            }}>
-              Every plan includes full access to your Bin Blast Co. dashboard, smart scheduling tools, loyalty rewards, and referral credits.
-            </p>
-            <PricingSection />
-          </div>
-        </section>
+        <PricingSection />
 
         {/* Your Bin Blast Dashboard Section */}
         <section id="dashboard" className="account-section" style={{ padding: "5rem 0", background: "#f9fafb" }}>
