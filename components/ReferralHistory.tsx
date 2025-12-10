@@ -29,18 +29,29 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
       try {
         // Ensure Firebase is initialized before querying
         await import("@/lib/firebase");
+        const { getAuthInstance } = await import("@/lib/firebase");
+        const auth = await getAuthInstance();
+        
+        // Get the authenticated user's UID (required for Firestore security rules)
+        if (!auth || !auth.currentUser) {
+          setLoading(false);
+          return;
+        }
+        
+        const currentUserId = auth.currentUser.uid;
         const db = await getDbInstance();
-        if (!db || !userId) return;
+        if (!db || !currentUserId) return;
 
         const historyEntries: HistoryEntry[] = [];
 
         // Load referrals made by this user
+        // Use currentUserId from auth to match Firestore security rules
         try {
           const { collection: firestoreCollection, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, orderBy: firestoreOrderBy } = await import("firebase/firestore");
           
           const referralsQuery = firestoreQuery(
             firestoreCollection(db, "referrals"),
-            firestoreWhere("referrerId", "==", userId),
+            firestoreWhere("referrerId", "==", currentUserId),
             firestoreOrderBy("createdAt", "desc"),
             firestoreLimit(20)
           );
@@ -78,7 +89,7 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
           
           const creditsEarnedQuery = firestoreQuery(
             firestoreCollection(db, "credits"),
-            firestoreWhere("userId", "==", userId),
+            firestoreWhere("userId", "==", currentUserId),
             firestoreWhere("type", "==", "referral_reward"),
             firestoreOrderBy("createdAt", "desc"),
             firestoreLimit(20)
@@ -107,7 +118,7 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
           
           const creditsUsedQuery = firestoreQuery(
             firestoreCollection(db, "credits"),
-            firestoreWhere("userId", "==", userId),
+            firestoreWhere("userId", "==", currentUserId),
             firestoreWhere("used", "==", true),
             firestoreOrderBy("usedAt", "desc"),
             firestoreLimit(20)
@@ -141,10 +152,8 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
       }
     }
 
-    if (userId) {
-      loadHistory();
-    }
-  }, [userId]);
+    loadHistory();
+  }, [userId]); // Still depend on userId prop for re-fetching when it changes
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("en-US", {

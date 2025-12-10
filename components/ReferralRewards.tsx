@@ -49,11 +49,21 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
           setReferralCount(count);
 
           // Load unused credits
+          // Get authenticated user's UID to match Firestore security rules
           try {
+            const { getAuthInstance } = await import("@/lib/firebase");
+            const auth = await getAuthInstance();
+            const currentUserId = auth?.currentUser?.uid;
+            
+            if (!currentUserId) {
+              setTotalCredits(0);
+              return;
+            }
+            
             const { collection, query, where, getDocs } = await import("firebase/firestore");
             const creditsQuery = query(
               collection(db, "credits"),
-              where("userId", "==", userId),
+              where("userId", "==", currentUserId),
               where("used", "==", false)
             );
             const creditsSnapshot = await getDocs(creditsQuery);
