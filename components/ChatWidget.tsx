@@ -387,31 +387,31 @@ export function ChatWidget() {
                 }}
               >
                 <div
+                  className="chat-typing-dot"
                   style={{
                     width: "8px",
                     height: "8px",
                     borderRadius: "50%",
                     background: "#9ca3af",
-                    animation: "bounce 1.4s infinite ease-in-out",
                   }}
                 />
                 <div
+                  className="chat-typing-dot"
                   style={{
                     width: "8px",
                     height: "8px",
                     borderRadius: "50%",
                     background: "#9ca3af",
-                    animation: "bounce 1.4s infinite ease-in-out",
                     animationDelay: "0.2s",
                   }}
                 />
                 <div
+                  className="chat-typing-dot"
                   style={{
                     width: "8px",
                     height: "8px",
                     borderRadius: "50%",
                     background: "#9ca3af",
-                    animation: "bounce 1.4s infinite ease-in-out",
                     animationDelay: "0.4s",
                   }}
                 />
@@ -472,17 +472,6 @@ export function ChatWidget() {
         </div>
       )}
 
-      {/* CSS Animation for typing indicator */}
-      <style jsx>{`
-        @keyframes bounce {
-          0%, 80%, 100% {
-            transform: scale(0);
-          }
-          40% {
-            transform: scale(1);
-          }
-        }
-      `}</style>
     </>
   );
 }
