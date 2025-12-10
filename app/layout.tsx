@@ -37,7 +37,7 @@ export default function RootLayout({
     window.__firebaseConfig = {
       apiKey: apiKey,
       projectId: projectId,
-      appId: appId${authDomain && authDomain.length > 0 ? `,\n      authDomain: "${authDomain}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ? `,\n      storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ? `,\n      messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}"` : ''}
+      appId: appId${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN && process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN.trim().length > 0 ? `,\n      authDomain: "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ? `,\n      storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ? `,\n      messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}"` : ''}
     };
     window.__firebaseConfigReady = true;
     console.log('[Firebase Init] Config stored in window.__firebaseConfig (apiKey, projectId, appId validated)');
