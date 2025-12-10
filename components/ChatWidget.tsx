@@ -50,7 +50,7 @@ export function ChatWidget() {
     handleSendMessage(text);
   };
 
-  const handleSendMessage = async (text?: string) => {
+  const handleSendMessage = (text?: string) => {
     const messageText = text || inputValue.trim();
     if (!messageText) return;
 
@@ -65,22 +65,33 @@ export function ChatWidget() {
     setInputValue("");
     setIsTyping(true);
 
-    // Simulate typing delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Simulate typing delay, then generate response
+    setTimeout(() => {
+      try {
+        // Generate response
+        const response = generateResponse(messageText);
+        
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: response.text,
+          sender: "assistant",
+          timestamp: new Date(),
+          quickReplies: response.quickReplies,
+        };
 
-    // Generate response
-    const response = generateResponse(messageText);
-    
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      text: response.text,
-      sender: "assistant",
-      timestamp: new Date(),
-      quickReplies: response.quickReplies,
-    };
-
-    setIsTyping(false);
-    setMessages((prev) => [...prev, assistantMessage]);
+        setIsTyping(false);
+        setMessages((prev) => [...prev, assistantMessage]);
+      } catch (error) {
+        console.error("Error generating response:", error);
+        setIsTyping(false);
+        setMessages((prev) => [...prev, {
+          id: (Date.now() + 1).toString(),
+          text: "I apologize, but I encountered an error. Please try asking your question again or scroll down to our pricing section for more information.",
+          sender: "assistant",
+          timestamp: new Date(),
+        }]);
+      }
+    }, 500);
   };
 
   const generateResponse = (userInput: string): { text: string; quickReplies?: string[] } => {
