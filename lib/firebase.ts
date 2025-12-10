@@ -274,8 +274,17 @@ async function ensureInitialized(): Promise<void> {
 
 // Export getters that ensure initialization
 export const getAuthInstance = async () => {
-  await ensureInitialized();
-  return auth;
+  try {
+    await ensureInitialized();
+    // Validate auth before returning
+    if (auth && typeof auth === "object") {
+      return auth;
+    }
+    return null;
+  } catch (error: any) {
+    console.warn("[Firebase] getAuthInstance error:", error?.message || error);
+    return null;
+  }
 };
 
 export const getDbInstance = async () => {
