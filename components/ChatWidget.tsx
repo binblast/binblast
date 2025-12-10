@@ -179,6 +179,13 @@ export function ChatWidget() {
       text: "I can help you with:\n\n• Pricing information\n• Scheduling a cleaning\n• Understanding how our service works\n• Checking availability\n\nWhat would you like to know?",
       quickReplies: ["What are your prices?", "Schedule a cleaning", "How does it work?"],
     };
+    } catch (error) {
+      console.error("Error in generateResponse:", error);
+      return {
+        text: "I apologize, but I encountered an error processing your question. Please try asking again or scroll down to our pricing section for more information.",
+        quickReplies: ["What are your prices?", "Schedule a cleaning"],
+      };
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
