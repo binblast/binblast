@@ -5,10 +5,24 @@
 /**
  * Safely import firebase/firestore functions
  * Ensures Firebase app is initialized before importing
+ * CRITICAL: This MUST complete before any Firebase modules can be imported
  */
 export async function safeImportFirestore() {
-  // Wait for Firebase app to be ready
+  // CRITICAL: Wait for Firebase app to be ready - this blocks until initialization completes
   await waitForFirebaseApp();
+  
+  // Verify app exists before importing
+  try {
+    const firebaseApp = await import("firebase/app");
+    const { getApps } = firebaseApp;
+    const apps = getApps();
+    if (apps.length === 0 || !apps[0].options?.apiKey) {
+      throw new Error("Firebase app not initialized - missing apiKey");
+    }
+  } catch (error: any) {
+    console.error("[Firebase Module Loader] Cannot import firestore - app not ready:", error?.message || error);
+    throw new Error("Firebase app must be initialized before importing firestore modules");
+  }
   
   // Now safe to import
   return await import("firebase/firestore");
@@ -17,10 +31,24 @@ export async function safeImportFirestore() {
 /**
  * Safely import firebase/auth functions
  * Ensures Firebase app is initialized before importing
+ * CRITICAL: This MUST complete before any Firebase modules can be imported
  */
 export async function safeImportAuth() {
-  // Wait for Firebase app to be ready
+  // CRITICAL: Wait for Firebase app to be ready - this blocks until initialization completes
   await waitForFirebaseApp();
+  
+  // Verify app exists before importing
+  try {
+    const firebaseApp = await import("firebase/app");
+    const { getApps } = firebaseApp;
+    const apps = getApps();
+    if (apps.length === 0 || !apps[0].options?.apiKey) {
+      throw new Error("Firebase app not initialized - missing apiKey");
+    }
+  } catch (error: any) {
+    console.error("[Firebase Module Loader] Cannot import auth - app not ready:", error?.message || error);
+    throw new Error("Firebase app must be initialized before importing auth modules");
+  }
   
   // Now safe to import
   return await import("firebase/auth");
