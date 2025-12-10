@@ -16,73 +16,39 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Generate Firebase initialization script that runs before page chunks load
+  // Generate Firebase initialization script
+  // Store config globally so Firebase can initialize immediately when module loads
   const firebaseInitScript = `
 (function() {
   if (typeof window === 'undefined') return;
-  if (window.__firebaseAppInitialized) return;
   
-  window.__firebaseAppInitialized = false;
-  window.__firebaseInitPromise = (function() {
-    var apiKey = "${process.env.NEXT_PUBLIC_FIREBASE_API_KEY || ''}".trim();
-    var projectId = "${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || ''}".trim();
-    var authDomain = "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || ''}".trim();
-    
-    if (!apiKey || !projectId || !authDomain || apiKey.length === 0 || projectId.length === 0 || authDomain.length === 0) {
-      console.warn('[Firebase Head Script] Missing environment variables');
-      window.__firebaseAppInitialized = true;
-      return Promise.resolve();
-    }
-    
-    return import('firebase/app').then(function(firebaseApp) {
-      try {
-        var getApps = firebaseApp.getApps;
-        var initializeApp = firebaseApp.initializeApp;
-        var existingApps = getApps();
-        
-        if (existingApps.length > 0) {
-          for (var i = 0; i < existingApps.length; i++) {
-            var app = existingApps[i];
-            if (app && app.options && app.options.apiKey && typeof app.options.apiKey === 'string' && app.options.apiKey.length > 0) {
-              window.__firebaseAppInitialized = true;
-              return;
-            }
-          }
-        }
-        
-        var config = {
-          apiKey: apiKey,
-          authDomain: authDomain,
-          projectId: projectId
-        };
-        ${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ? `config.storageBucket = "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}";` : ''}
-        ${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ? `config.messagingSenderId = "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}";` : ''}
-        ${process.env.NEXT_PUBLIC_FIREBASE_APP_ID ? `config.appId = "${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}";` : ''}
-        
-        initializeApp(config);
-        window.__firebaseAppInitialized = true;
-        console.log('[Firebase Head Script] Firebase initialized');
-      } catch (err) {
-        console.error('[Firebase Head Script] Error:', err);
-        window.__firebaseAppInitialized = true;
-      }
-    }).catch(function(err) {
-      console.error('[Firebase Head Script] Import error:', err);
-      window.__firebaseAppInitialized = true;
-    });
-  })();
+  var apiKey = "${process.env.NEXT_PUBLIC_FIREBASE_API_KEY || ''}".trim();
+  var projectId = "${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || ''}".trim();
+  var authDomain = "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || ''}".trim();
+  
+  if (apiKey && projectId && authDomain && apiKey.length > 0 && projectId.length > 0 && authDomain.length > 0) {
+    window.__firebaseConfig = {
+      apiKey: apiKey,
+      authDomain: authDomain,
+      projectId: projectId${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ? `,\n      storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ? `,\n      messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_APP_ID ? `,\n      appId: "${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}"` : ''}
+    };
+    window.__firebaseConfigReady = true;
+    console.log('[Firebase Init] Config stored in window.__firebaseConfig');
+  } else {
+    console.warn('[Firebase Init] Missing environment variables');
+  }
 })();
 `;
 
   return (
     <html lang="en">
-      <body>
-        {/* CRITICAL: Initialize Firebase BEFORE React loads to prevent module import errors */}
-        <Script
-          id="firebase-init"
-          strategy="beforeInteractive"
+      <head>
+        {/* CRITICAL: Store Firebase config BEFORE any modules load */}
+        <script
           dangerouslySetInnerHTML={{ __html: firebaseInitScript }}
         />
+      </head>
+      <body>
         {/* Initialize Firebase before any children render to prevent dynamic chunk errors */}
         <FirebaseInitializer />
         <FirebaseGate>

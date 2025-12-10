@@ -28,23 +28,48 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
   // This ensures Firebase is initialized before any dynamic chunks can load
   globalInitPromise = (async () => {
     try {
-      const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
-      const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
-      const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
-      
-      // Debug: Log environment variable availability (without exposing values)
-      if (!apiKey || !projectId || !authDomain || apiKey.length === 0 || projectId.length === 0 || authDomain.length === 0) {
-        console.warn("[Firebase] Missing environment variables - skipping global initialization:", {
-          hasApiKey: !!apiKey && apiKey.length > 0,
-          hasProjectId: !!projectId && projectId.length > 0,
-          hasAuthDomain: !!authDomain && authDomain.length > 0,
-        });
-        return;
+      // CRITICAL: Check if config was stored by the head script
+      let config: any = null;
+      if (typeof window !== 'undefined' && (window as any).__firebaseConfig) {
+        config = (window as any).__firebaseConfig;
+        console.log("[Firebase] Using config from head script");
+      } else {
+        // Fallback to environment variables
+        const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
+        const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
+        const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
+        
+        // Debug: Log environment variable availability (without exposing values)
+        if (!apiKey || !projectId || !authDomain || apiKey.length === 0 || projectId.length === 0 || authDomain.length === 0) {
+          console.warn("[Firebase] Missing environment variables - skipping global initialization:", {
+            hasApiKey: !!apiKey && apiKey.length > 0,
+            hasProjectId: !!projectId && projectId.length > 0,
+            hasAuthDomain: !!authDomain && authDomain.length > 0,
+          });
+          return;
+        }
+        
+        config = {
+          apiKey,
+          authDomain,
+          projectId,
+        };
+        
+        if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
+          config.storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+        }
+        if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
+          config.messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+        }
+        if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
+          config.appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+        }
       }
       
-      // Only initialize if we have ALL required config
-      // Import and initialize Firebase immediately (don't defer)
-      const { initializeApp, getApps } = await import("firebase/app");
+      // CRITICAL: Import firebase/app and initialize IMMEDIATELY
+      // This must happen synchronously to prevent other Firebase modules from loading first
+      const firebaseAppModule = await import("firebase/app");
+      const { initializeApp, getApps } = firebaseAppModule;
       
       // Check if app already exists
       const existingApps = getApps();
@@ -61,27 +86,17 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
         }
       }
       
-      // Create new app only if we have valid config
-      const config: any = {
-        apiKey,
-        authDomain,
-        projectId,
-      };
-      
-      if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
-        config.storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-      }
-      if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
-        config.messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
-      }
-      if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
-        config.appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+      // CRITICAL: Initialize app IMMEDIATELY before any other Firebase modules can be imported
+      // This prevents "Neither apiKey nor config.authenticator provided" errors
+      if (!config) {
+        console.error("[Firebase] No config available - cannot initialize");
+        return;
       }
       
-        app = initializeApp(config);
-        global.__firebaseApp = app;
-        global.__firebaseReady = true;
-        console.log("[Firebase] Created app in global initialization");
+      app = initializeApp(config);
+      global.__firebaseApp = app;
+      global.__firebaseReady = true;
+      console.log("[Firebase] Created app in global initialization - app is ready");
     } catch (error: any) {
       const errorMessage = error?.message || String(error);
       console.error("[Firebase] Global initialization error:", errorMessage);
