@@ -116,17 +116,24 @@ export async function POST(req: NextRequest) {
     const finalPrice = Math.max(0, (plan.price * 100) - discountAmount);
 
     // Apply discount using Stripe's discount system for better visibility on checkout page
-    if (discountAmount > 0) {
+    if (discountAmount > 0 && discountAmount >= 100) { // Only apply if at least $1.00
       try {
         // Create a fixed-offset coupon that will show up clearly on Stripe Checkout
+        // For subscriptions, duration 'once' applies the discount only to the first invoice
+        // For one-time payments, it applies to the single payment
         const coupon = await stripe.coupons.create({
           amount_off: discountAmount,
           currency: 'usd',
-          duration: 'once',
+          duration: 'once', // One-time discount (applies to first invoice for subscriptions)
           name: 'Referral Credit',
+          metadata: {
+            type: 'referral_credit',
+            userId: userId || 'unknown',
+          },
         });
         
         // Apply the discount to the session - this will show up as a discount line on Stripe Checkout
+        // Stripe will display this as: "Referral Credit -$10.00" (or whatever the discount amount is)
         sessionParams.discounts = [{
           coupon: coupon.id,
         }];
@@ -134,11 +141,17 @@ export async function POST(req: NextRequest) {
         console.log("[Checkout] Applied referral discount coupon:", {
           couponId: coupon.id,
           discountAmount: discountAmount / 100,
+          planPrice: plan.price,
+          finalPrice: (finalPrice / 100).toFixed(2),
         });
       } catch (couponError: any) {
         console.error("[Checkout] Error creating discount coupon:", couponError);
-        // If coupon creation fails, fall back to price adjustment
-        // The discount will still be applied, just less visible
+        // If coupon creation fails, we should not proceed with checkout
+        // This ensures the discount is always visible when credits exist
+        return NextResponse.json(
+          { error: "Failed to apply referral discount. Please try again." },
+          { status: 500 }
+        );
       }
     }
 
