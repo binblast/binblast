@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PlanConfirmationModal } from "./PlanConfirmationModal";
+import { useFirebase } from "@/lib/firebase-context";
 
 
 
