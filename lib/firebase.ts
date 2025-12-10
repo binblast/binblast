@@ -16,6 +16,9 @@ let initPromise: Promise<void> | null = null;
 // CRITICAL: Initialize Firebase immediately in browser to prevent chunk loading errors
 // This ensures Firebase app exists before any dynamic chunks try to use it
 if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
+  // Mark as initializing immediately to prevent race conditions
+  global.__firebaseInitialized = true;
+  
   // Start initialization immediately (don't await - let it run in background)
   Promise.resolve().then(async () => {
     try {
@@ -37,7 +40,6 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
               app = existingApp;
               global.__firebaseApp = app;
               console.log("[Firebase] Using existing app from global initialization");
-              global.__firebaseInitialized = true;
               return;
             }
           }
@@ -63,16 +65,11 @@ if (typeof window !== 'undefined' && !global.__firebaseInitialized) {
         app = initializeApp(config);
         global.__firebaseApp = app;
         console.log("[Firebase] Created app in global initialization");
-        global.__firebaseInitialized = true;
       } else {
-        // Mark as initialized even if config is missing to prevent retries
-        global.__firebaseInitialized = true;
         console.warn("[Firebase] Missing environment variables - skipping global initialization");
       }
     } catch (error: any) {
       console.error("[Firebase] Global initialization error:", error?.message || error);
-      // Mark as initialized to prevent retries
-      global.__firebaseInitialized = true;
       // Don't throw - allow lazy initialization to handle it
     }
   });
@@ -217,7 +214,7 @@ async function ensureInitialized(): Promise<void> {
           if (app && app.options && app.options.apiKey && typeof app.options.apiKey === 'string' && app.options.apiKey.trim().length > 0) {
             // Call getAuth with explicit app to prevent default app lookup
             try {
-              auth = getAuth(app);
+        auth = getAuth(app);
               console.log("[Firebase] Auth initialized successfully");
             } catch (getAuthError: any) {
               // If getAuth fails, don't crash - just set auth to null
@@ -296,10 +293,10 @@ async function ensureInitialized(): Promise<void> {
 // Export getters that ensure initialization
 export const getAuthInstance = async () => {
   try {
-    await ensureInitialized();
+  await ensureInitialized();
     // Validate auth before returning
     if (auth && typeof auth === "object") {
-      return auth;
+  return auth;
     }
     return null;
   } catch (error: any) {
