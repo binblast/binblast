@@ -19,34 +19,67 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
     // Log environment variable status for debugging
     logFirebaseEnvStatus();
     
-    // CRITICAL: Check if config is available from head script and initialize immediately
+    // CRITICAL: Check if config is available from head script and initialize IMMEDIATELY
     // According to Firebase docs, REQUIRED fields are: apiKey, projectId, appId
     // See: https://firebase.google.com/support/guides/init-options
+    // This MUST complete before any page chunks can execute their imports
     const headConfig = (window as any).__firebaseConfig;
-    if (headConfig && headConfig.apiKey && headConfig.projectId && headConfig.appId) {
-      // All required fields are present - initialize immediately using head script config
+    const shouldInit = (window as any).__firebaseShouldInit;
+    
+    if (headConfig && headConfig.apiKey && headConfig.projectId && headConfig.appId && shouldInit) {
+      // All required fields are present - initialize IMMEDIATELY and BLOCK until complete
+      // This prevents page chunks from loading before Firebase is ready
       global.__firebaseSyncInitPromise = (async () => {
         try {
+          console.log("[Firebase Sync Init] Starting immediate initialization from head script config");
           const firebaseApp = await import("firebase/app");
           const { initializeApp, getApps } = firebaseApp;
           
           const existingApps = getApps();
           if (existingApps.length === 0) {
-            initializeApp(headConfig);
+            const app = initializeApp(headConfig);
             global.__firebaseSyncInitialized = true;
             global.__firebaseAppReady = true;
             (window as any).__firebaseAppReady = true;
-            console.log("[Firebase Sync Init] Initialized immediately from head script (apiKey, projectId, appId validated)");
+            console.log("[Firebase Sync Init] Firebase app initialized successfully (apiKey, projectId, appId validated)");
+            console.log("[Firebase Sync Init] App name:", app.name);
           } else {
-            global.__firebaseSyncInitialized = true;
-            global.__firebaseAppReady = true;
-            (window as any).__firebaseAppReady = true;
+            // Verify existing app has all required fields
+            const existingApp = existingApps[0];
+            if (existingApp.options?.apiKey && existingApp.options?.projectId && existingApp.options?.appId) {
+              global.__firebaseSyncInitialized = true;
+              global.__firebaseAppReady = true;
+              (window as any).__firebaseAppReady = true;
+              console.log("[Firebase Sync Init] Using existing Firebase app with valid config");
+            } else {
+              // Existing app is invalid, create new one
+              const app = initializeApp(headConfig);
+              global.__firebaseSyncInitialized = true;
+              global.__firebaseAppReady = true;
+              (window as any).__firebaseAppReady = true;
+              console.log("[Firebase Sync Init] Created new Firebase app (existing app was invalid)");
+            }
           }
         } catch (error: any) {
           console.error("[Firebase Sync Init] Immediate init error:", error?.message || error);
           global.__firebaseSyncInitialized = true;
         }
       })();
+      
+      // CRITICAL: Wait for initialization to complete before allowing module to finish loading
+      // This blocks module execution until Firebase is ready
+      if (global.__firebaseSyncInitPromise) {
+        // Store promise on window so other modules can wait for it
+        (window as any).__firebaseSyncInitPromise = global.__firebaseSyncInitPromise;
+        
+        // Wait for it to complete (this blocks module loading)
+        try {
+          await global.__firebaseSyncInitPromise;
+          console.log("[Firebase Sync Init] Initialization complete - module can now load");
+        } catch (error) {
+          console.warn("[Firebase Sync Init] Initialization failed, but continuing");
+        }
+      }
     } else {
       // Fallback to async initialization with env vars
       // Initialize Firebase immediately when this module loads

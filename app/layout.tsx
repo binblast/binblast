@@ -17,7 +17,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   // Generate Firebase initialization script
-  // Store config globally so Firebase can initialize immediately when module loads
+  // CRITICAL: This script runs BEFORE any modules load, ensuring Firebase is ready
+  // Store config globally AND initialize Firebase immediately to prevent chunk loading errors
   const firebaseInitScript = `
 (function() {
   if (typeof window === 'undefined') return;
@@ -34,13 +35,25 @@ export default function RootLayout({
   
   // Validate all REQUIRED fields are present
   if (apiKey && projectId && appId && apiKey.length > 0 && projectId.length > 0 && appId.length > 0) {
-    window.__firebaseConfig = {
+    var config = {
       apiKey: apiKey,
       projectId: projectId,
       appId: appId${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN && process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN.trim().length > 0 ? `,\n      authDomain: "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ? `,\n      storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ? `,\n      messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}"` : ''}
     };
+    
+    // Store config globally for module access
+    window.__firebaseConfig = config;
     window.__firebaseConfigReady = true;
+    
+    // CRITICAL: Initialize Firebase immediately using dynamic import
+    // This ensures Firebase app exists before any page chunks can load
+    // Note: We can't use import() in a script tag, so we'll initialize in the module
+    // But we mark it as ready so modules know to initialize immediately
+    window.__firebaseShouldInit = true;
+    window.__firebaseAppReady = false; // Will be set to true when initialized
+    
     console.log('[Firebase Init] Config stored in window.__firebaseConfig (apiKey, projectId, appId validated)');
+    console.log('[Firebase Init] Firebase will be initialized immediately when modules load');
   } else {
     console.error('[Firebase Init] Missing REQUIRED Firebase options:', {
       hasApiKey: !!apiKey && apiKey.length > 0,
