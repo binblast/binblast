@@ -186,146 +186,117 @@ export default function HomePage() {
         {/* Your Bin Blast Dashboard Section */}
         <section id="dashboard" className="account-section" style={{ padding: "5rem 0", background: "#f9fafb" }}>
           <div className="container">
-            <h2 className="section-title">Your Bin Blast Dashboard</h2>
-            <p className="section-subtitle">
+            <h2 className="section-title" style={{ textAlign: "center" }}>Your Bin Blast Dashboard</h2>
+            <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem" }}>
               When you sign up, you get access to a modern online dashboard that makes managing your service simple.
             </p>
             <div style={{ 
               display: "grid", 
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", 
-              gap: "3rem",
-              alignItems: "center",
-              marginTop: "3rem"
-            }}>
-              {/* Left side - Dashboard mockup */}
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "1.5rem",
+              maxWidth: "1200px",
+              margin: "0 auto"
+            }} className="dashboard-grid">
+              {/* Card 1: Plan Overview */}
               <div style={{
                 background: "#ffffff",
-                borderRadius: "20px",
+                borderRadius: "16px",
                 padding: "2rem",
-                boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
-                minHeight: "400px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "1rem"
+                transition: "transform 0.2s, box-shadow 0.2s"
               }}>
-                {/* Mock dashboard cards */}
-                <div style={{
-                  background: "#f9fafb",
-                  borderRadius: "12px",
-                  padding: "1.5rem",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <div style={{ height: "12px", background: "#d1d5db", borderRadius: "6px", width: "60%", marginBottom: "0.75rem" }}></div>
-                  <div style={{ height: "8px", background: "#e5e7eb", borderRadius: "4px", width: "80%" }}></div>
-                </div>
-                <div style={{
-                  background: "#f9fafb",
-                  borderRadius: "12px",
-                  padding: "1.5rem",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <div style={{ height: "12px", background: "#d1d5db", borderRadius: "6px", width: "70%", marginBottom: "0.75rem" }}></div>
-                  <div style={{ height: "8px", background: "#e5e7eb", borderRadius: "4px", width: "90%", marginBottom: "0.5rem" }}></div>
-                  <div style={{ height: "8px", background: "#e5e7eb", borderRadius: "4px", width: "75%" }}></div>
-                </div>
-                <div style={{
-                  background: "#f9fafb",
-                  borderRadius: "12px",
-                  padding: "1.5rem",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <div style={{ height: "12px", background: "#d1d5db", borderRadius: "6px", width: "65%", marginBottom: "0.75rem" }}></div>
-                  <div style={{ height: "8px", background: "#e5e7eb", borderRadius: "4px", width: "85%" }}></div>
-                </div>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  Plan Overview
+                </h3>
+                <p style={{ color: "var(--text-light)", fontSize: "0.95rem", lineHeight: "1.6", margin: 0 }}>
+                  See your current plan, billing status, and upcoming cleanings at a glance.
+                </p>
               </div>
 
-              {/* Right side - Feature list */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                <div style={{
-                  background: "#ffffff",
-                  borderRadius: "12px",
-                  padding: "1.5rem",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                    Plan Overview
-                  </h3>
-                  <p style={{ color: "var(--text-light)", fontSize: "0.95rem", margin: 0 }}>
-                    See your current plan, billing status, and upcoming cleanings at a glance.
-                  </p>
-                </div>
-                <div style={{
-                  background: "#ffffff",
-                  borderRadius: "12px",
-                  padding: "1.5rem",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                    Schedule Cleanings Anytime
-                  </h3>
-                  <p style={{ color: "var(--text-light)", fontSize: "0.95rem", margin: 0 }}>
-                    Choose your trash day, confirm your address, and add special instructions for our team.
-                  </p>
-                </div>
-                <div style={{
-                  background: "#ffffff",
-                  borderRadius: "12px",
-                  padding: "1.5rem",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                    Loyalty Levels
-                  </h3>
-                  <p style={{ color: "var(--text-light)", fontSize: "0.95rem", margin: 0 }}>
-                    Track your progress from Level 1 up as you complete more cleanings.
-                  </p>
-                </div>
-                <div style={{
-                  background: "#ffffff",
-                  borderRadius: "12px",
-                  padding: "1.5rem",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                    Referral Rewards
-                  </h3>
-                  <p style={{ color: "var(--text-light)", fontSize: "0.95rem", margin: 0 }}>
-                    Access your referral link, track how many referrals you have, and see upcoming credits.
-                  </p>
-                </div>
-                <div style={{
-                  background: "#ffffff",
-                  borderRadius: "12px",
-                  padding: "1.5rem",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                    Cleaning History
-                  </h3>
-                  <p style={{ color: "var(--text-light)", fontSize: "0.95rem", margin: 0 }}>
-                    Review past and upcoming appointments so you always know when we were there.
-                  </p>
-                </div>
-                <div style={{
-                  background: "#ffffff",
-                  borderRadius: "12px",
-                  padding: "1.5rem",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                    24/7 AI Chat Support
-                  </h3>
-                  <p style={{ color: "var(--text-light)", fontSize: "0.95rem", margin: 0 }}>
-                    Ask questions, get help with booking, and learn more about our services directly from the assistant.
-                  </p>
-                </div>
+              {/* Card 2: Schedule Cleanings Anytime */}
+              <div style={{
+                background: "#ffffff",
+                borderRadius: "16px",
+                padding: "2rem",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  Schedule Cleanings Anytime
+                </h3>
+                <p style={{ color: "var(--text-light)", fontSize: "0.95rem", lineHeight: "1.6", margin: 0 }}>
+                  Choose your trash day, confirm your address, and add special instructions for our team.
+                </p>
+              </div>
+
+              {/* Card 3: Loyalty Levels */}
+              <div style={{
+                background: "#ffffff",
+                borderRadius: "16px",
+                padding: "2rem",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  Loyalty Levels
+                </h3>
+                <p style={{ color: "var(--text-light)", fontSize: "0.95rem", lineHeight: "1.6", margin: 0 }}>
+                  Track your progress from Level 1 up as you complete more cleanings.
+                </p>
+              </div>
+
+              {/* Card 4: Referral Rewards */}
+              <div style={{
+                background: "#ffffff",
+                borderRadius: "16px",
+                padding: "2rem",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  Referral Rewards
+                </h3>
+                <p style={{ color: "var(--text-light)", fontSize: "0.95rem", lineHeight: "1.6", margin: 0 }}>
+                  Access your referral link, see how many referrals you have, and view upcoming credits.
+                </p>
+              </div>
+
+              {/* Card 5: Cleaning History */}
+              <div style={{
+                background: "#ffffff",
+                borderRadius: "16px",
+                padding: "2rem",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  Cleaning History
+                </h3>
+                <p style={{ color: "var(--text-light)", fontSize: "0.95rem", lineHeight: "1.6", margin: 0 }}>
+                  Review past and upcoming appointments so you always know when we were there.
+                </p>
+              </div>
+
+              {/* Card 6: 24/7 AI Chat Support */}
+              <div style={{
+                background: "#ffffff",
+                borderRadius: "16px",
+                padding: "2rem",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  24/7 AI Chat Support
+                </h3>
+                <p style={{ color: "var(--text-light)", fontSize: "0.95rem", lineHeight: "1.6", margin: 0 }}>
+                  Ask questions, get help with booking, and learn more about our services directly from the assistant.
+                </p>
               </div>
             </div>
           </div>
