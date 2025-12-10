@@ -175,12 +175,6 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
         marginBottom: "1.5rem"
       }}>
         <div style={{
-          fontSize: "4rem",
-          marginBottom: "1rem"
-        }}>
-          {currentLevel.icon}
-        </div>
-        <div style={{
           fontSize: "1.5rem",
           fontWeight: "700",
           color: currentLevel.color,
@@ -280,9 +274,32 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
                   opacity: isUnlocked ? 1 : 0.6
                 }}
               >
-                <span style={{ fontSize: "1.5rem" }}>
-                  {isUnlocked ? badge.icon : "🔒"}
-                </span>
+                <div style={{
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  background: isUnlocked ? badge.color : "#d1d5db",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0
+                }}>
+                  {isUnlocked ? (
+                    <div style={{
+                      width: "12px",
+                      height: "12px",
+                      borderRadius: "50%",
+                      background: "#ffffff"
+                    }} />
+                  ) : (
+                    <div style={{
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      background: "#9ca3af"
+                    }} />
+                  )}
+                </div>
                 <div style={{ flex: 1 }}>
                   <div style={{
                     fontSize: "0.875rem",
