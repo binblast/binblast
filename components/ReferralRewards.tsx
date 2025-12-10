@@ -19,6 +19,8 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
   useEffect(() => {
     async function loadReferralData() {
       try {
+        // Ensure Firebase is initialized before querying
+        await import("@/lib/firebase");
         const db = await getDbInstance();
         if (!db || !userId) return;
 

@@ -27,6 +27,8 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
   useEffect(() => {
     async function loadHistory() {
       try {
+        // Ensure Firebase is initialized before querying
+        await import("@/lib/firebase");
         const db = await getDbInstance();
         if (!db || !userId) return;
 
