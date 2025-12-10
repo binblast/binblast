@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import "./globals.css";
 import { FirebaseInitializer } from "@/components/FirebaseInitializer";
 import { FirebaseGate } from "@/components/FirebaseGate";
@@ -71,34 +70,6 @@ export default function RootLayout({
         {/* CRITICAL: Store Firebase config BEFORE any modules load */}
         <script
           dangerouslySetInnerHTML={{ __html: firebaseInitScript }}
-        />
-        {/* CRITICAL: Load Firebase SDK and initialize BEFORE React hydrates */}
-        {/* This ensures Firebase app exists before any page chunks can execute */}
-        <Script
-          src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"
-          strategy="beforeInteractive"
-          onLoad={() => {
-            // Initialize Firebase immediately when SDK loads
-            if (typeof window !== 'undefined' && (window as any).__firebaseConfig && (window as any).firebase) {
-              try {
-                const firebase = (window as any).firebase;
-                const config = (window as any).__firebaseConfig;
-                
-                // Check if app already exists
-                const existingApps = firebase.apps || [];
-                if (existingApps.length === 0) {
-                  firebase.initializeApp(config);
-                  (window as any).__firebaseAppReady = true;
-                  console.log('[Firebase Head Script] Firebase initialized synchronously from CDN');
-                } else {
-                  (window as any).__firebaseAppReady = true;
-                  console.log('[Firebase Head Script] Firebase app already exists');
-                }
-              } catch (error: any) {
-                console.error('[Firebase Head Script] Initialization error:', error?.message || error);
-              }
-            }
-          }}
         />
       </head>
       <body>
