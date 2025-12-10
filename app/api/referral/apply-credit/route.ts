@@ -46,12 +46,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Sort credits by creation date (oldest first) in memory
-    const creditsArray = creditsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })).sort((a, b) => {
-      const aTime = a.createdAt?.toMillis?.() || 0;
-      const bTime = b.createdAt?.toMillis?.() || 0;
+    const creditsArray = creditsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        amount: data.amount || 0,
+        createdAt: data.createdAt,
+      };
+    }).sort((a, b) => {
+      const aTime = a.createdAt?.toMillis?.() || (a.createdAt as any)?.seconds * 1000 || 0;
+      const bTime = b.createdAt?.toMillis?.() || (b.createdAt as any)?.seconds * 1000 || 0;
       return aTime - bTime;
     });
 
