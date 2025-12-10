@@ -220,13 +220,22 @@ async function ensureInitialized(): Promise<void> {
       }
 
       // Check environment variables FIRST before importing Firebase
+      // CRITICAL: According to Firebase docs, REQUIRED fields are: apiKey, projectId, appId
+      // See: https://firebase.google.com/support/guides/init-options
       const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
       const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
+      const appId = (process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "").trim();
       const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
 
-      // Only initialize if we have valid config
-      if (!apiKey || !projectId || !authDomain || apiKey.length === 0 || projectId.length === 0 || authDomain.length === 0) {
-        console.warn("[Firebase] Missing required environment variables. Firebase features will not work.");
+      // CRITICAL: Validate all REQUIRED fields per Firebase documentation
+      if (!apiKey || !projectId || !appId || apiKey.length === 0 || projectId.length === 0 || appId.length === 0) {
+        console.error("[Firebase] Missing REQUIRED Firebase options:", {
+          hasApiKey: !!apiKey && apiKey.length > 0,
+          hasProjectId: !!projectId && projectId.length > 0,
+          hasAppId: !!appId && appId.length > 0,
+        });
+        console.error("[Firebase] All three fields (apiKey, projectId, appId) are REQUIRED per Firebase documentation");
+        console.error("[Firebase] See: https://firebase.google.com/support/guides/init-options");
         auth = null;
         db = null;
         return;
@@ -265,22 +274,24 @@ async function ensureInitialized(): Promise<void> {
         let appInitialized = false;
         if (appExists) {
           appInitialized = true;
-        } else if (apiKey && projectId && authDomain) {
+        } else if (apiKey && projectId && appId) {
           // Create app before importing auth/firestore
+          // Include all REQUIRED fields: apiKey, projectId, appId
           const config: any = {
             apiKey,
-            authDomain,
             projectId,
+            appId,
           };
           
+          // Optional fields
+          if (authDomain && authDomain.length > 0) {
+            config.authDomain = authDomain;
+          }
           if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
             config.storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
           }
           if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
             config.messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
-          }
-          if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
-            config.appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
           }
           
           try {
