@@ -124,8 +124,9 @@ export async function POST(req: NextRequest) {
           const customPrice = await stripe.prices.create({
             currency: "usd",
             product_data: {
-              name: plan.name,
-              description: `Bin Blast Co. ${plan.name} ($${(discountAmount / 100).toFixed(2)} referral credit applied)`,
+              name: discountAmount > 0 
+                ? `${plan.name} ($${(discountAmount / 100).toFixed(2)} referral credit applied)`
+                : plan.name,
             },
             unit_amount: finalPrice,
             recurring: {
@@ -156,10 +157,9 @@ export async function POST(req: NextRequest) {
               price_data: {
                 currency: "usd",
                 product_data: {
-                  name: plan.name,
-                  description: discountAmount > 0 
-                    ? `Bin Blast Co. ${plan.name} ($${(discountAmount / 100).toFixed(2)} referral credit applied)`
-                    : `Bin Blast Co. ${plan.name}`,
+                  name: discountAmount > 0 
+                    ? `${plan.name} ($${(discountAmount / 100).toFixed(2)} referral credit applied)`
+                    : plan.name,
                 },
                 unit_amount: finalPrice, // Apply discount
                 recurring: {
@@ -177,10 +177,9 @@ export async function POST(req: NextRequest) {
               price_data: {
                 currency: "usd",
                 product_data: {
-                  name: plan.name,
-                  description: discountAmount > 0 
-                    ? `Bin Blast Co. ${plan.name} ($${(discountAmount / 100).toFixed(2)} referral credit applied)`
-                    : `Bin Blast Co. ${plan.name}`,
+                  name: discountAmount > 0 
+                    ? `${plan.name} ($${(discountAmount / 100).toFixed(2)} referral credit applied)`
+                    : plan.name,
                 },
                 unit_amount: finalPrice, // Apply discount
                 recurring: {
@@ -199,10 +198,9 @@ export async function POST(req: NextRequest) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: plan.name,
-              description: discountAmount > 0 
-                ? `Bin Blast Co. ${plan.name} ($${(discountAmount / 100).toFixed(2)} referral credit applied)`
-                : `Bin Blast Co. ${plan.name}`,
+              name: discountAmount > 0 
+                ? `${plan.name} ($${(discountAmount / 100).toFixed(2)} referral credit applied)`
+                : plan.name,
             },
             unit_amount: finalPrice, // Apply discount
           },
