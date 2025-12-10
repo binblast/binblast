@@ -27,16 +27,21 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
     const shouldInit = (window as any).__firebaseShouldInit;
     
     if (headConfig && headConfig.apiKey && headConfig.projectId && headConfig.appId && shouldInit) {
-      // All required fields are present - initialize IMMEDIATELY and BLOCK until complete
-      // This prevents page chunks from loading before Firebase is ready
+      // All required fields are present - initialize IMMEDIATELY
+      // CRITICAL: Use a synchronous-like approach by starting initialization immediately
+      // and storing the promise so other modules MUST wait for it
       global.__firebaseSyncInitPromise = (async () => {
         try {
           console.log("[Firebase Sync Init] Starting immediate initialization from head script config");
+          
+          // CRITICAL: Import firebase/app FIRST - this is the only way to initialize
           const firebaseApp = await import("firebase/app");
           const { initializeApp, getApps } = firebaseApp;
           
+          // Check if app already exists
           const existingApps = getApps();
           if (existingApps.length === 0) {
+            // No app exists - create one immediately
             const app = initializeApp(headConfig);
             global.__firebaseSyncInitialized = true;
             global.__firebaseAppReady = true;
@@ -66,9 +71,8 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
         }
       })();
       
-      // CRITICAL: Store promise on window so other modules can wait for it
-      // Note: We can't await here (not in async context), but we start the promise immediately
-      // Other modules will wait for this promise before importing Firebase modules
+      // CRITICAL: Store promise on window IMMEDIATELY so other modules can wait for it
+      // This promise MUST complete before any Firebase modules can be imported
       if (global.__firebaseSyncInitPromise) {
         (window as any).__firebaseSyncInitPromise = global.__firebaseSyncInitPromise;
         
