@@ -27,6 +27,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
   const [trashDay, setTrashDay] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isReady: firebaseReady } = useFirebase();
   
   // Form fields
   const [addressLine1, setAddressLine1] = useState("");
