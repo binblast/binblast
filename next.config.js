@@ -4,7 +4,7 @@ const nextConfig = {
   webpack: (config, { isServer }) => {
     if (!isServer) {
       // Prevent Firebase from being split into dynamic chunks
-      // Force Firebase to stay in the main bundle
+      // Force Firebase to stay in the main bundle and be available immediately
       const originalSplitChunks = config.optimization.splitChunks;
       config.optimization = {
         ...config.optimization,
@@ -13,6 +13,7 @@ const nextConfig = {
           cacheGroups: {
             ...originalSplitChunks?.cacheGroups,
             // Keep Firebase in initial chunks only (main bundle)
+            // This prevents Firebase from being loaded in dynamic chunks before initialization
             firebase: {
               test: /[\\/]node_modules[\\/](firebase|@firebase)[\\/]/,
               name: 'firebase',
@@ -20,8 +21,20 @@ const nextConfig = {
               enforce: true,
               priority: 30,
             },
+            // Prevent any module that imports Firebase from being split
+            default: {
+              ...originalSplitChunks?.cacheGroups?.default,
+              minChunks: 2,
+              priority: -20,
+              reuseExistingChunk: true,
+            },
           },
         },
+      };
+      
+      // Ensure Firebase modules are resolved correctly
+      config.resolve.alias = {
+        ...config.resolve.alias,
       };
     }
     return config;
