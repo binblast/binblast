@@ -202,12 +202,19 @@ async function ensureInitialized(): Promise<void> {
           }
           
           // Triple-check: app exists, has options, and has non-empty apiKey
-          if (app && app.options && app.options.apiKey && app.options.apiKey.trim().length > 0) {
+          if (app && app.options && app.options.apiKey && typeof app.options.apiKey === 'string' && app.options.apiKey.trim().length > 0) {
             // Call getAuth with explicit app to prevent default app lookup
-        auth = getAuth(app);
-            console.log("[Firebase] Auth initialized successfully");
+            try {
+              auth = getAuth(app);
+              console.log("[Firebase] Auth initialized successfully");
+            } catch (getAuthError: any) {
+              // If getAuth fails, don't crash - just set auth to null
+              console.error("[Firebase] getAuth() failed:", getAuthError);
+              auth = null;
+            }
           } else {
-            throw new Error("App missing valid apiKey configuration");
+            console.warn("[Firebase] App missing valid apiKey configuration - skipping auth initialization");
+            auth = null;
           }
         } catch (authError: any) {
           // Check if this is the specific "Neither apiKey nor config.authenticator provided" error

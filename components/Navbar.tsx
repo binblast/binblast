@@ -17,23 +17,33 @@ export function Navbar() {
   const showTextLogo = isHomePage || isDashboard;
 
   useEffect(() => {
-    // Check Firebase auth state
+    // Check Firebase auth state - only on client side
+    if (typeof window === "undefined") {
+      setLoading(false);
+      return;
+    }
+
     async function checkAuth() {
       try {
         const { getAuthInstance } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
-        const { onAuthStateChanged } = await import("firebase/auth");
         
-        if (auth) {
+        // Only proceed if auth is available and valid
+        if (auth && typeof auth === "object" && "currentUser" in auth) {
+          const { onAuthStateChanged } = await import("firebase/auth");
           onAuthStateChanged(auth, (user) => {
             setIsLoggedIn(!!user);
             setLoading(false);
           });
         } else {
+          // Firebase not available or not configured - just show logged out state
+          setIsLoggedIn(false);
           setLoading(false);
         }
-      } catch (err) {
-        console.error("Error checking auth:", err);
+      } catch (err: any) {
+        // Silently handle errors - don't crash the page
+        console.warn("[Navbar] Firebase auth check failed:", err?.message || err);
+        setIsLoggedIn(false);
         setLoading(false);
       }
     }
@@ -74,15 +84,22 @@ export function Navbar() {
     try {
       const { getAuthInstance } = await import("@/lib/firebase");
       const auth = await getAuthInstance();
-      const { signOut } = await import("firebase/auth");
       
-      if (auth) {
+      if (auth && typeof auth === "object" && "currentUser" in auth) {
+        const { signOut } = await import("firebase/auth");
         await signOut(auth);
         router.push("/");
         router.refresh();
+      } else {
+        // If auth is not available, just redirect
+        router.push("/");
+        router.refresh();
       }
-    } catch (err) {
-      console.error("Error signing out:", err);
+    } catch (err: any) {
+      console.warn("[Navbar] Error signing out:", err?.message || err);
+      // Still redirect even if logout fails
+      router.push("/");
+      router.refresh();
     }
   };
 
