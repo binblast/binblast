@@ -4,8 +4,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getDbInstance } from "@/lib/firebase";
-// Note: Firebase Firestore functions are imported dynamically inside useEffect to prevent build-time initialization errors
+// Note: Firebase functions are imported dynamically inside useEffect to prevent build-time initialization errors
 
 interface ReferralHistoryProps {
   userId: string;
@@ -28,8 +27,7 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
     async function loadHistory() {
       try {
         // Ensure Firebase is initialized before querying
-        await import("@/lib/firebase");
-        const { getAuthInstance } = await import("@/lib/firebase");
+        const { getAuthInstance, getDbInstance } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
         
         // Get the authenticated user's UID (required for Firestore security rules)

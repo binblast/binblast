@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getDbInstance } from "@/lib/firebase";
-// Note: Firebase Firestore functions are imported dynamically inside useEffect to prevent build-time initialization errors
+// Note: Firebase functions are imported dynamically inside useEffect to prevent build-time initialization errors
 
 interface LoyaltyBadgesProps {
   userId: string;
@@ -77,6 +76,7 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
   useEffect(() => {
     async function loadLoyaltyData() {
       try {
+        const { getDbInstance } = await import("@/lib/firebase");
         const db = await getDbInstance();
         if (!db || !userId) return;
 

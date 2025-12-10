@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getDbInstance } from "@/lib/firebase";
-// Note: Firebase Firestore functions are imported dynamically inside useEffect to prevent build-time initialization errors
+// Note: Firebase functions are imported dynamically inside useEffect to prevent build-time initialization errors
 
 interface ReferralRewardsProps {
   userId: string;
@@ -20,7 +19,7 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
     async function loadReferralData() {
       try {
         // Ensure Firebase is initialized before querying
-        await import("@/lib/firebase");
+        const { getDbInstance } = await import("@/lib/firebase");
         const db = await getDbInstance();
         if (!db || !userId) return;
 
