@@ -51,7 +51,7 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
       // This happens before any page components can load
       // Only run in browser (not server) and not during build
       global.__firebaseSyncInitPromise = (async () => {
-      try {
+        try {
         const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
         const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
         const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
@@ -120,13 +120,16 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
         global.__firebaseSyncInitialized = true; // Mark as done even if failed
         // Don't throw - allow app to continue and try lazy initialization
       }
-    })();
+      })();
+    }
     
     // CRITICAL: Start the promise immediately and don't await
     // This ensures initialization starts as soon as this module loads
-    global.__firebaseSyncInitPromise.catch(() => {
-      // Silently handle errors
-    });
+    if (global.__firebaseSyncInitPromise) {
+      global.__firebaseSyncInitPromise.catch(() => {
+        // Silently handle errors
+      });
+    }
   }
 }
 
