@@ -38,7 +38,14 @@ export default function HomePage() {
             <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem", color: "var(--text-light)", fontSize: "1.125rem" }}>
               More than a cleaning service. Your bins stay fresh, and you get a modern customer experience to match.
             </p>
-            <div className="benefits-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem" }}>
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", 
+              gap: "1.5rem",
+              justifyContent: "center",
+              maxWidth: "1200px",
+              margin: "0 auto"
+            }}>
               <div className="benefit-card" style={{ 
                 background: "#ffffff", 
                 borderRadius: "16px", 
