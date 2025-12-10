@@ -19,10 +19,38 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
     // Log environment variable status for debugging
     logFirebaseEnvStatus();
     
-    // Initialize Firebase immediately when this module loads
-    // This happens before any page components can load
-    // Only run in browser (not server) and not during build
-    global.__firebaseSyncInitPromise = (async () => {
+    // CRITICAL: Check if config is available from head script and initialize immediately
+    const headConfig = (window as any).__firebaseConfig;
+    if (headConfig && headConfig.apiKey) {
+      // Initialize immediately using head script config
+      global.__firebaseSyncInitPromise = (async () => {
+        try {
+          const firebaseApp = await import("firebase/app");
+          const { initializeApp, getApps } = firebaseApp;
+          
+          const existingApps = getApps();
+          if (existingApps.length === 0) {
+            initializeApp(headConfig);
+            global.__firebaseSyncInitialized = true;
+            global.__firebaseAppReady = true;
+            (window as any).__firebaseAppReady = true;
+            console.log("[Firebase Sync Init] Initialized immediately from head script");
+          } else {
+            global.__firebaseSyncInitialized = true;
+            global.__firebaseAppReady = true;
+            (window as any).__firebaseAppReady = true;
+          }
+        } catch (error: any) {
+          console.error("[Firebase Sync Init] Immediate init error:", error?.message || error);
+          global.__firebaseSyncInitialized = true;
+        }
+      })();
+    } else {
+      // Fallback to async initialization with env vars
+      // Initialize Firebase immediately when this module loads
+      // This happens before any page components can load
+      // Only run in browser (not server) and not during build
+      global.__firebaseSyncInitPromise = (async () => {
       try {
         const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
         const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
