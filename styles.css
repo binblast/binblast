@@ -1440,3 +1440,10 @@ section {
 .chat-typing-dot {
     animation: chat-typing-bounce 1.4s infinite ease-in-out;
 }
+
+/* Dashboard Grid Responsive Styles */
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
