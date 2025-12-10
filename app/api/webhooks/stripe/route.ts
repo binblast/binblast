@@ -66,8 +66,13 @@ export async function POST(req: NextRequest) {
           
           let userId: string | null = null;
           
-          // Try to find by Stripe customer ID first
-          if (customerId) {
+          // First, try to get userId from session metadata (most reliable)
+          if (session.metadata?.userId) {
+            userId = session.metadata.userId;
+          }
+          
+          // If not in metadata, try to find by Stripe customer ID
+          if (!userId && customerId) {
             const usersByStripeQuery = query(
               collection(db, "users"),
               where("stripeCustomerId", "==", customerId)
@@ -78,7 +83,7 @@ export async function POST(req: NextRequest) {
             }
           }
           
-          // If not found, try by email
+          // If still not found, try by email
           if (!userId && customerEmail) {
             const usersByEmailQuery = query(
               collection(db, "users"),
@@ -91,14 +96,15 @@ export async function POST(req: NextRequest) {
           }
           
           // Mark credits as used if they were applied in checkout
-          if (session.metadata?.creditsToUse && session.payment_status === 'paid') {
+          if (session.metadata?.creditsToUse && session.payment_status === 'paid' && userId) {
             try {
               const creditsToUseIds = session.metadata.creditsToUse.split(',');
               for (const creditId of creditsToUseIds) {
                 if (creditId) {
                   await updateDoc(doc(db, "credits", creditId), {
                     used: true,
-                    usedAt: new Date(),
+                    usedAt: serverTimestamp(),
+                    usedForAmount: parseFloat(session.metadata.creditApplied || "0"),
                   });
                 }
               }

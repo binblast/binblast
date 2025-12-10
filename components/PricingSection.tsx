@@ -1,7 +1,7 @@
 // components/PricingSection.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 
@@ -101,6 +101,38 @@ export function PricingSection() {
   const router = useRouter();
   const [showMoreServices, setShowMoreServices] = useState(false);
   const [loadingPlanId, setLoadingPlanId] = useState<PlanId | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Get current user ID from Firebase Auth
+  useEffect(() => {
+    async function getCurrentUserId() {
+      try {
+        const { getAuthInstance } = await import("@/lib/firebase");
+        const auth = await getAuthInstance();
+        
+        if (auth && typeof auth === "object" && "currentUser" in auth) {
+          const { onAuthStateChanged } = await import("firebase/auth");
+          
+          // Get current user immediately if available
+          if (auth.currentUser) {
+            setUserId(auth.currentUser.uid);
+          }
+          
+          // Also listen for auth state changes
+          const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setUserId(user?.uid || null);
+          });
+          
+          return () => unsubscribe();
+        }
+      } catch (err) {
+        console.warn("[PricingSection] Error getting user ID:", err);
+        // Continue without userId - checkout will work without referral credits
+      }
+    }
+    
+    getCurrentUserId();
+  }, []);
 
   const handlePlanClick = async (planId: PlanId) => {
     if (planId === "commercial") {
@@ -119,13 +151,16 @@ export function PricingSection() {
     setLoadingPlanId(planId);
 
     try {
-      // Create Stripe checkout session
+      // Create Stripe checkout session with userId if available
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ 
+          planId,
+          userId: userId || undefined, // Only include userId if user is logged in
+        }),
       });
 
       const data = await response.json();

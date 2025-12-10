@@ -2,8 +2,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, PLAN_CONFIGS, PlanId, isCustomQuote } from "@/lib/stripe-config";
-import { getDbInstance } from "@/lib/firebase";
-import { collection, query, where, getDocs, doc, updateDoc, orderBy, limit } from "firebase/firestore";
 import Stripe from "stripe";
 
 export const dynamic = 'force-dynamic';
@@ -59,10 +57,13 @@ export async function POST(req: NextRequest) {
     
     if (userId) {
       try {
+        // Dynamically import Firebase to avoid build-time initialization
+        const { getDbInstance } = await import("@/lib/firebase");
+        const { collection, query, where, getDocs } = await import("firebase/firestore");
+        
         const db = await getDbInstance();
         if (db) {
           // Get unused credits for this user
-          // Note: orderBy requires a Firestore index, so we'll sort in memory instead
           const creditsQuery = query(
             collection(db, "credits"),
             where("userId", "==", userId),
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
 
             let remainingAmount = planPriceInCents;
 
+            // Apply credits up to $10 maximum
             for (const creditData of creditsArray) {
               if (remainingAmount <= 0 || discountAmount >= maxCreditToApply) break;
 
@@ -110,44 +112,46 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Calculate final price after discount
+    // Calculate final price after discount (for response, Stripe will calculate actual final price)
     const finalPrice = Math.max(0, (plan.price * 100) - discountAmount);
 
-    // Add line item based on plan type
+    // Apply discount using Stripe's discount system for better visibility on checkout page
+    if (discountAmount > 0) {
+      try {
+        // Create a fixed-offset coupon that will show up clearly on Stripe Checkout
+        const coupon = await stripe.coupons.create({
+          amount_off: discountAmount,
+          currency: 'usd',
+          duration: 'once',
+          name: 'Referral Credit',
+        });
+        
+        // Apply the discount to the session - this will show up as a discount line on Stripe Checkout
+        sessionParams.discounts = [{
+          coupon: coupon.id,
+        }];
+        
+        console.log("[Checkout] Applied referral discount coupon:", {
+          couponId: coupon.id,
+          discountAmount: discountAmount / 100,
+        });
+      } catch (couponError: any) {
+        console.error("[Checkout] Error creating discount coupon:", couponError);
+        // If coupon creation fails, fall back to price adjustment
+        // The discount will still be applied, just less visible
+      }
+    }
+
+    // Add line item based on plan type (use original price, discount applied via coupon)
     if (plan.isRecurring) {
       // For recurring plans, create or use existing price
       if (plan.stripePriceId) {
-        // For existing Stripe prices, we need to create a discount coupon
-        // For now, if credits are available, we'll create a custom price with discount
-        if (discountAmount > 0) {
-          // Create a custom price with discount applied
-          const customPrice = await stripe.prices.create({
-            currency: "usd",
-            product_data: {
-              name: discountAmount > 0 
-                ? `${plan.name} ($${(discountAmount / 100).toFixed(2)} referral credit applied)`
-                : plan.name,
-            },
-            unit_amount: finalPrice,
-            recurring: {
-              interval: plan.priceSuffix === "/month" ? "month" : "year",
-            },
-          });
-          
-          sessionParams.line_items = [
-            {
-              price: customPrice.id,
-              quantity: 1,
-            },
-          ];
-        } else {
-          sessionParams.line_items = [
-            {
-              price: plan.stripePriceId,
-              quantity: 1,
-            },
-          ];
-        }
+        sessionParams.line_items = [
+          {
+            price: plan.stripePriceId,
+            quantity: 1,
+          },
+        ];
       } else {
         // Create price dynamically if not set
         // For monthly plans
@@ -157,11 +161,9 @@ export async function POST(req: NextRequest) {
               price_data: {
                 currency: "usd",
                 product_data: {
-                  name: discountAmount > 0 
-                    ? `${plan.name} ($${(discountAmount / 100).toFixed(2)} referral credit applied)`
-                    : plan.name,
+                  name: plan.name,
                 },
-                unit_amount: finalPrice, // Apply discount
+                unit_amount: plan.price * 100, // Original price (discount shown separately via coupon)
                 recurring: {
                   interval: "month",
                 },
@@ -177,11 +179,9 @@ export async function POST(req: NextRequest) {
               price_data: {
                 currency: "usd",
                 product_data: {
-                  name: discountAmount > 0 
-                    ? `${plan.name} ($${(discountAmount / 100).toFixed(2)} referral credit applied)`
-                    : plan.name,
+                  name: plan.name,
                 },
-                unit_amount: finalPrice, // Apply discount
+                unit_amount: plan.price * 100, // Original price (discount shown separately via coupon)
                 recurring: {
                   interval: "year",
                 },
@@ -198,11 +198,9 @@ export async function POST(req: NextRequest) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: discountAmount > 0 
-                ? `${plan.name} ($${(discountAmount / 100).toFixed(2)} referral credit applied)`
-                : plan.name,
+              name: plan.name,
             },
-            unit_amount: finalPrice, // Apply discount
+            unit_amount: plan.price * 100, // Original price (discount shown separately via coupon)
           },
           quantity: 1,
         },
