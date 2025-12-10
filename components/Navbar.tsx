@@ -13,6 +13,8 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const isHomePage = pathname === "/";
+  const isDashboard = pathname === "/dashboard";
+  const showTextLogo = isHomePage || isDashboard;
 
   useEffect(() => {
     // Check Firebase auth state
@@ -88,7 +90,7 @@ export function Navbar() {
     <nav className="navbar">
       <div className="nav-container">
         <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", height: "40px" }}>
-          {isHomePage ? (
+          {showTextLogo ? (
             <span style={{ 
               fontSize: "1.5rem", 
               fontWeight: "700", 

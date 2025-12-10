@@ -7,7 +7,6 @@ import { Navbar } from "@/components/Navbar";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
 import { SubscriptionManagerWrapper } from "@/components/SubscriptionManagerWrapper";
 import { PlanId } from "@/lib/stripe-config";
-import Image from "next/image";
 import Link from "next/link";
 
 // Error boundary to catch component rendering errors
@@ -357,15 +356,8 @@ function DashboardPageContent() {
       <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
         <div className="container">
           <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-                    <h1 className="section-title" style={{ textAlign: "left", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", fontSize: "clamp(1.5rem, 4vw, 2rem)" }}>
-                      <span>Welcome back, {user.firstName}!</span>
-                      <Image 
-                        src="/logo.png" 
-                        alt="Bin Blast Co. Logo" 
-                        width={32} 
-                        height={32}
-                        style={{ objectFit: "contain", opacity: 0.8, height: "1em", width: "auto", verticalAlign: "middle", flexShrink: 0 }}
-                      />
+                    <h1 className="section-title" style={{ textAlign: "left", marginBottom: "0.5rem", fontSize: "clamp(1.5rem, 4vw, 2rem)" }}>
+                      Welcome Back, {user.firstName}!
             </h1>
             <p style={{ color: "var(--text-light)", marginBottom: "2rem" }}>
               Here&apos;s your account information and selected plan.
