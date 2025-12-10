@@ -206,7 +206,7 @@ function DashboardPageContent() {
       try {
         const { getAuthInstance, getDbInstance, onAuthStateChanged } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
-        const db = await getDbInstance();
+        let db = await getDbInstance();
         
         // Ensure Firebase is initialized before importing firestore
         if (!db) {
