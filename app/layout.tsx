@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { FirebaseInitializer } from "@/components/FirebaseInitializer";
+// CRITICAL: Import Firebase sync init to ensure Firebase is initialized before any dynamic chunks load
+import "@/lib/firebase-init-sync";
 
 export const metadata: Metadata = {
   title: "Bin Blast Co. - Professional Trash Bin Cleaning Service",
