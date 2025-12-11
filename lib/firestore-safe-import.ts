@@ -3,8 +3,7 @@
 // DEPRECATED: Use firebase-module-loader.ts instead
 // This file is kept for backward compatibility but now uses the unified firebase-module-loader
 
-import { getDbInstance } from "./firebase";
-import { safeImportFirestore as safeImportFirestoreFromLoader } from "./firebase-module-loader";
+// CRITICAL: Use dynamic imports to prevent webpack from bundling firebase-client.ts into page chunks
 
 let firestoreModuleCache: any = null;
 let importPromise: Promise<any> | null = null;
@@ -34,6 +33,10 @@ export async function safeImportFirestore(): Promise<{ firestore: any; db: any }
   // Start new import using the unified safe wrapper
   importPromise = (async () => {
     try {
+      // CRITICAL: Use dynamic imports to prevent webpack from bundling firebase-client.ts into page chunks
+      const { safeImportFirestore: safeImportFirestoreFromLoader } = await import("./firebase-module-loader");
+      const { getDbInstance } = await import("./firebase");
+      
       // CRITICAL: Use the unified safe import wrapper from firebase-module-loader
       // This ensures Firebase app is initialized before importing firestore modules
       const firestore = await safeImportFirestoreFromLoader();

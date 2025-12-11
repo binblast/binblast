@@ -4,8 +4,7 @@
 // DEPRECATED: Use firebase-module-loader.ts instead
 // This file is kept for backward compatibility but now uses the unified firebase-module-loader
 
-import { getDbInstance } from "./firebase";
-import { safeImportFirestore } from "./firebase-module-loader";
+// CRITICAL: Use dynamic imports to prevent webpack from bundling firebase-client.ts into page chunks
 
 // Cache for Firestore functions to avoid repeated imports
 let firestoreModule: any = null;
@@ -23,6 +22,8 @@ async function ensureFirestoreModule() {
   // CRITICAL: Use the unified safe import wrapper from firebase-module-loader
   // This ensures Firebase app is initialized before importing firestore modules
   firestoreImportPromise = (async () => {
+    // CRITICAL: Use dynamic imports to prevent webpack from bundling firebase-client.ts into page chunks
+    const { safeImportFirestore } = await import("./firebase-module-loader");
     // Wait for Firebase to be initialized first using the unified safe wrapper
     firestoreModule = await safeImportFirestore();
     return firestoreModule;
@@ -34,17 +35,20 @@ async function ensureFirestoreModule() {
 // Export commonly used Firestore functions with safe initialization
 export async function getFirestoreDoc(path: string, ...pathSegments: string[]) {
   const firestore = await ensureFirestoreModule();
+  const { getDbInstance } = await import("./firebase");
   return firestore.doc(await getDbInstance(), path, ...pathSegments);
 }
 
 export async function getFirestoreCollection(path: string, ...pathSegments: string[]) {
   const firestore = await ensureFirestoreModule();
+  const { getDbInstance } = await import("./firebase");
   return firestore.collection(await getDbInstance(), path, ...pathSegments);
 }
 
 // Re-export Firestore functions with initialization guarantee
 export async function getFirestoreFunctions() {
   const firestore = await ensureFirestoreModule();
+  const { getDbInstance } = await import("./firebase");
   const db = await getDbInstance();
   if (!db) {
     throw new Error("Firebase Firestore is not available");
@@ -72,6 +76,7 @@ export async function getFirestoreFunctions() {
 // Helper to safely import firestore and get db instance
 export async function getFirestoreModule() {
   const firestore = await ensureFirestoreModule();
+  const { getDbInstance } = await import("./firebase");
   const db = await getDbInstance();
   if (!db) {
     throw new Error("Firebase Firestore is not available");
