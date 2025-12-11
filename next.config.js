@@ -37,6 +37,16 @@ const nextConfig = {
               priority: 100, // Same priority as Firebase modules
               minSize: 0,
             },
+            // CRITICAL: Prevent any dynamic imports of firebase/auth or firebase/firestore from being code-split
+            // Force them into the firebase bundle so they load together
+            firebaseDynamicImports: {
+              test: /[\\/]node_modules[\\/](firebase|@firebase)[\\/]/,
+              name: 'firebase',
+              chunks: 'all', // Include in all chunks to prevent code-splitting
+              enforce: true,
+              priority: 100,
+              minSize: 0,
+            },
             // Prevent modules that import Firebase from being split separately
             // This ensures Firebase initialization happens before page chunks load
             default: {
