@@ -49,7 +49,7 @@ function getFirebaseConfig(): any | null {
       return headConfig;
     }
 
-    // Fallback to environment variables
+    // Fallback to environment variables (for cases where head script hasn't run yet)
     const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
     const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
     const appId = (process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "").trim();
@@ -101,53 +101,6 @@ async function initializeFirebase(): Promise<void> {
 
   initPromise = (async () => {
     try {
-      // CRITICAL: If head script already initialized Firebase, use that app
-      if (typeof window !== 'undefined' && (window as any).__firebaseClientInitPromise) {
-        try {
-          // Wait for head script initialization to complete
-          const headApp = await (window as any).__firebaseClientInitPromise;
-          if (headApp) {
-            app = headApp;
-            console.log("[Firebase Client] Using Firebase app from head script initialization");
-            
-            // Still need to initialize auth and firestore
-            const [firebaseAuth, firebaseFirestore] = await Promise.all([
-              import("firebase/auth"),
-              import("firebase/firestore"),
-            ]);
-
-            // Get auth instance (client-side only)
-            if (typeof window !== "undefined") {
-              try {
-                auth = firebaseAuth.getAuth(app);
-                console.log("[Firebase Client] Auth initialized");
-              } catch (error: any) {
-                console.error("[Firebase Client] Failed to initialize auth:", error?.message);
-                auth = null;
-              }
-            } else {
-              auth = null;
-            }
-
-            // Get Firestore instance
-            try {
-              db = firebaseFirestore.getFirestore(app);
-              console.log("[Firebase Client] Firestore initialized");
-            } catch (error: any) {
-              console.error("[Firebase Client] Failed to initialize Firestore:", error?.message);
-              db = null;
-            }
-
-            isInitialized = true;
-            return;
-          }
-        } catch (error: any) {
-          // Head script init failed - continue with normal initialization
-          console.warn("[Firebase Client] Head script initialization failed, continuing with normal init:", error?.message);
-        }
-      }
-      
-      // Normal initialization path (if head script didn't initialize)
       // Wait for head script config if on client-side (with timeout)
       let config: any = null;
       if (typeof window !== 'undefined') {
@@ -179,7 +132,8 @@ async function initializeFirebase(): Promise<void> {
         return;
       }
 
-      // Import firebase/app
+      // CRITICAL: Import firebase/app FIRST and initialize BEFORE importing auth/firestore
+      // This prevents "Neither apiKey nor config.authenticator provided" errors
       const firebaseApp = await import("firebase/app");
       const { initializeApp, getApps } = firebaseApp;
 
@@ -200,7 +154,8 @@ async function initializeFirebase(): Promise<void> {
         throw new Error("Firebase app missing required config (apiKey, projectId, appId)");
       }
 
-      // Import auth and firestore AFTER app is initialized
+      // CRITICAL: Only import auth/firestore AFTER app is initialized
+      // This prevents the "Neither apiKey nor config.authenticator provided" error
       const [firebaseAuth, firebaseFirestore] = await Promise.all([
         import("firebase/auth"),
         import("firebase/firestore"),
@@ -209,6 +164,7 @@ async function initializeFirebase(): Promise<void> {
       // Get auth instance (client-side only)
       if (typeof window !== "undefined") {
         try {
+          // CRITICAL: Always pass app explicitly to prevent default app lookup
           auth = firebaseAuth.getAuth(app);
           console.log("[Firebase Client] Auth initialized");
         } catch (error: any) {
@@ -221,6 +177,7 @@ async function initializeFirebase(): Promise<void> {
 
       // Get Firestore instance
       try {
+        // CRITICAL: Always pass app explicitly to prevent default app lookup
         db = firebaseFirestore.getFirestore(app);
         console.log("[Firebase Client] Firestore initialized");
       } catch (error: any) {
@@ -250,6 +207,20 @@ async function initializeFirebase(): Promise<void> {
  * Get Firebase app instance
  */
 export async function getFirebaseApp(): Promise<any> {
+  // CRITICAL: Wait for early initialization promise if it exists
+  // This ensures we don't start a second initialization
+  if (typeof window !== 'undefined' && (window as any).__firebaseClientInitPromise) {
+    try {
+      await (window as any).__firebaseClientInitPromise;
+      // If early init completed and we have an app, return it
+      if (app) {
+        return app;
+      }
+    } catch {
+      // Early init failed - continue with normal initialization
+    }
+  }
+  
   await initializeFirebase();
   return app;
 }
@@ -344,4 +315,3 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
     }
   });
 }
-
