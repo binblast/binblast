@@ -1,8 +1,7 @@
 // lib/firebase-module-loader.ts
 // Wrapper to ensure Firebase app exists before importing Firebase modules
 // Uses the unified firebase-client.ts for initialization
-
-import { getFirebaseApp } from "./firebase-client";
+// CRITICAL: Use dynamic import to prevent webpack from bundling firebase-client.ts into page chunks
 
 /**
  * Safely import firebase/firestore functions
@@ -49,6 +48,8 @@ export async function safeImportFirestore() {
   }
   
   // Wait for Firebase app to be initialized via the unified client
+  // CRITICAL: Use dynamic import to prevent webpack from bundling firebase-client.ts into page chunks
+  const { getFirebaseApp } = await import("./firebase-client");
   const app = await getFirebaseApp();
   
   if (!app) {
@@ -109,6 +110,8 @@ export async function safeImportAuth() {
   }
   
   // Wait for Firebase app to be initialized via the unified client
+  // CRITICAL: Use dynamic import to prevent webpack from bundling firebase-client.ts into page chunks
+  const { getFirebaseApp } = await import("./firebase-client");
   const app = await getFirebaseApp();
   
   if (!app) {
