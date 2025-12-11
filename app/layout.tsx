@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { FirebaseInitializer } from "@/components/FirebaseInitializer";
 import { FirebaseGate } from "@/components/FirebaseGate";
+import { FirebaseErrorBoundary } from "@/components/FirebaseErrorBoundary";
 // CRITICAL: Import Firebase sync init FIRST to ensure Firebase is initialized before any dynamic chunks load
 // This must be imported before any other modules that might use Firebase
 import "@/lib/firebase-init-sync";
@@ -78,11 +79,14 @@ export default function RootLayout({
         />
       </head>
       <body>
-        {/* Initialize Firebase before any children render to prevent dynamic chunk errors */}
-        <FirebaseInitializer />
-        <FirebaseGate>
-          {children}
-        </FirebaseGate>
+        {/* Error boundary to catch Firebase errors and allow site to render */}
+        <FirebaseErrorBoundary>
+          {/* Initialize Firebase before any children render to prevent dynamic chunk errors */}
+          <FirebaseInitializer />
+          <FirebaseGate>
+            {children}
+          </FirebaseGate>
+        </FirebaseErrorBoundary>
       </body>
     </html>
   );
