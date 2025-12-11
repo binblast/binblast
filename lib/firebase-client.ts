@@ -104,9 +104,13 @@ async function initializeFirebase(): Promise<void> {
 
       // CRITICAL: Only import auth/firestore AFTER app is initialized
       // This prevents the "Neither apiKey nor config.authenticator provided" error
+      // Use safe import wrappers to ensure app exists before importing
+      const { safeImportAuth } = await import("./firebase-module-loader");
+      const { safeImportFirestore } = await import("./firebase-module-loader");
+      
       const [firebaseAuth, firebaseFirestore] = await Promise.all([
-        import("firebase/auth"),
-        import("firebase/firestore"),
+        safeImportAuth(),
+        safeImportFirestore(),
       ]);
 
       // Get auth instance (client-side only)
