@@ -1,9 +1,9 @@
 // lib/firebase-context.tsx
 // Context and hook for tracking Firebase initialization state
+// CRITICAL: This file must NOT import firebase-client.ts statically to prevent webpack bundling
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-// CRITICAL: Use dynamic import to prevent webpack from bundling firebase-client.ts into page chunks
 
 interface FirebaseContextType {
   isReady: boolean;
@@ -28,9 +28,13 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     // Check Firebase readiness in background - don't block rendering
     async function checkFirebaseReady() {
       try {
-        // CRITICAL: Use dynamic import to prevent webpack from bundling firebase-client.ts into page chunks
-        const { isFirebaseReady } = await import("./firebase-client");
-        const ready = await isFirebaseReady();
+        // CRITICAL: Use dynamic import with string literal to prevent webpack from analyzing the import
+        // This prevents webpack from bundling firebase-client.ts into page chunks
+        const firebaseClientModule = await import(
+          /* webpackIgnore: true */
+          "./firebase-client"
+        );
+        const ready = await firebaseClientModule.isFirebaseReady();
         if (!mounted) return;
         
         setIsReady(ready);
