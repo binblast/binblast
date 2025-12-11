@@ -284,10 +284,13 @@ export async function updateProfile(user: any, profile: { displayName?: string; 
 
 // Initialize Firebase early if on client-side
 // This ensures Firebase is ready before page chunks load
+// CRITICAL: Start initialization immediately when module loads
 if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
   // Start initialization immediately (don't await - let it happen in background)
-  initializeFirebase().catch(() => {
-    // Silently handle errors - they'll be logged in initializeFirebase
+  // Store the promise on window so page chunks can wait for it if needed
+  (window as any).__firebaseClientInitPromise = initializeFirebase().catch((error) => {
+    // Log errors but don't throw - allow app to continue
+    console.error("[Firebase Client] Early initialization error:", error?.message || error);
   });
 }
 

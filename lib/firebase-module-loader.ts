@@ -9,6 +9,16 @@ import { getFirebaseApp } from "./firebase-client";
  * Ensures Firebase app is initialized before importing
  */
 export async function safeImportFirestore() {
+  // CRITICAL: Wait for early initialization promise if it exists
+  // This ensures Firebase is initialized before importing modules
+  if (typeof window !== 'undefined' && (window as any).__firebaseClientInitPromise) {
+    try {
+      await (window as any).__firebaseClientInitPromise;
+    } catch {
+      // Continue even if early init failed - will try again below
+    }
+  }
+  
   // Wait for Firebase app to be initialized via the unified client
   const app = await getFirebaseApp();
   
@@ -30,6 +40,16 @@ export async function safeImportFirestore() {
  * Ensures Firebase app is initialized before importing
  */
 export async function safeImportAuth() {
+  // CRITICAL: Wait for early initialization promise if it exists
+  // This ensures Firebase is initialized before importing modules
+  if (typeof window !== 'undefined' && (window as any).__firebaseClientInitPromise) {
+    try {
+      await (window as any).__firebaseClientInitPromise;
+    } catch {
+      // Continue even if early init failed - will try again below
+    }
+  }
+  
   // Wait for Firebase app to be initialized via the unified client
   const app = await getFirebaseApp();
   
