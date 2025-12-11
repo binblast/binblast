@@ -5,7 +5,7 @@ import Link from "next/link";
 
 // CRITICAL: Dynamically import all components that use Firebase to prevent import-time errors
 // This ensures Firebase is initialized before these components load
-const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
+const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
   ssr: false,
   loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
 });
