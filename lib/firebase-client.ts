@@ -203,49 +203,64 @@ export async function isFirebaseReady(): Promise<boolean> {
 
 // Re-export Firebase auth functions for convenience
 export async function onAuthStateChanged(callback: (user: any) => void) {
+  // CRITICAL: Wait for Firebase to be initialized before importing auth module
   const authInstance = await getAuthInstance();
   if (!authInstance) {
     callback(null);
     return () => {};
   }
-  const { onAuthStateChanged: firebaseOnAuthStateChanged } = await import("firebase/auth");
-  return firebaseOnAuthStateChanged(authInstance, callback);
+  // Use safe import to ensure app exists before importing auth module
+  const { safeImportAuth } = await import("./firebase-module-loader");
+  const firebaseAuth = await safeImportAuth();
+  return firebaseAuth.onAuthStateChanged(authInstance, callback);
 }
 
 export async function signInWithEmailAndPassword(email: string, password: string) {
+  // CRITICAL: Wait for Firebase to be initialized before importing auth module
   const authInstance = await getAuthInstance();
   if (!authInstance) {
     throw new Error("Firebase auth is not available");
   }
-  const { signInWithEmailAndPassword: firebaseSignIn } = await import("firebase/auth");
-  return await firebaseSignIn(authInstance, email, password);
+  // Use safe import to ensure app exists before importing auth module
+  const { safeImportAuth } = await import("./firebase-module-loader");
+  const firebaseAuth = await safeImportAuth();
+  return await firebaseAuth.signInWithEmailAndPassword(authInstance, email, password);
 }
 
 export async function createUserWithEmailAndPassword(email: string, password: string) {
+  // CRITICAL: Wait for Firebase to be initialized before importing auth module
   const authInstance = await getAuthInstance();
   if (!authInstance) {
     throw new Error("Firebase auth is not available");
   }
-  const { createUserWithEmailAndPassword: firebaseCreateUser } = await import("firebase/auth");
-  return await firebaseCreateUser(authInstance, email, password);
+  // Use safe import to ensure app exists before importing auth module
+  const { safeImportAuth } = await import("./firebase-module-loader");
+  const firebaseAuth = await safeImportAuth();
+  return await firebaseAuth.createUserWithEmailAndPassword(authInstance, email, password);
 }
 
 export async function signOut() {
+  // CRITICAL: Wait for Firebase to be initialized before importing auth module
   const authInstance = await getAuthInstance();
   if (!authInstance) {
     throw new Error("Firebase auth is not available");
   }
-  const { signOut: firebaseSignOut } = await import("firebase/auth");
-  return await firebaseSignOut(authInstance);
+  // Use safe import to ensure app exists before importing auth module
+  const { safeImportAuth } = await import("./firebase-module-loader");
+  const firebaseAuth = await safeImportAuth();
+  return await firebaseAuth.signOut(authInstance);
 }
 
 export async function updateProfile(user: any, profile: { displayName?: string; photoURL?: string }) {
+  // CRITICAL: Wait for Firebase to be initialized before importing auth module
   const authInstance = await getAuthInstance();
   if (!authInstance) {
     throw new Error("Firebase auth is not available");
   }
-  const { updateProfile: firebaseUpdateProfile } = await import("firebase/auth");
-  return await firebaseUpdateProfile(user, profile);
+  // Use safe import to ensure app exists before importing auth module
+  const { safeImportAuth } = await import("./firebase-module-loader");
+  const firebaseAuth = await safeImportAuth();
+  return await firebaseAuth.updateProfile(user, profile);
 }
 
 // Initialize Firebase early if on client-side
