@@ -3,7 +3,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { isFirebaseReady } from "./firebase-client";
+// CRITICAL: Use dynamic import to prevent webpack from bundling firebase-client.ts into page chunks
 
 interface FirebaseContextType {
   isReady: boolean;
@@ -28,6 +28,8 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     // Check Firebase readiness in background - don't block rendering
     async function checkFirebaseReady() {
       try {
+        // CRITICAL: Use dynamic import to prevent webpack from bundling firebase-client.ts into page chunks
+        const { isFirebaseReady } = await import("./firebase-client");
         const ready = await isFirebaseReady();
         if (!mounted) return;
         
