@@ -33,36 +33,7 @@ export default function RootLayout({
       appId: appId${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN && process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN.trim().length > 0 ? `,\n      authDomain: "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ? `,\n      storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}"` : ''}${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ? `,\n      messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}"` : ''}
     };
     window.__firebaseConfigReady = true;
-    
-    // CRITICAL: Start Firebase initialization immediately using dynamic import
-    // This ensures Firebase app exists before page chunks can import Firebase modules
-    // Store the promise so modules can wait for it
-    window.__firebaseClientInitPromise = import('firebase/app').then(function(firebaseApp) {
-      try {
-        var getApps = firebaseApp.getApps;
-        var initializeApp = firebaseApp.initializeApp;
-        var apps = getApps();
-        
-        if (apps.length === 0) {
-          // No app exists - initialize one immediately
-          var app = initializeApp(window.__firebaseConfig);
-          window.__firebaseAppReady = true;
-          return app;
-        } else {
-          // App already exists
-          window.__firebaseAppReady = true;
-          return apps[0];
-        }
-      } catch (err) {
-        console.error('[Firebase Head Script] Initialization error:', err);
-        window.__firebaseAppReady = false;
-        throw err;
-      }
-    }).catch(function(err) {
-      console.error('[Firebase Head Script] Failed to initialize:', err);
-      window.__firebaseAppReady = false;
-      throw err;
-    });
+  = true;
   }
 })();
 `;
