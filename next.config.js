@@ -30,7 +30,8 @@ const nextConfig = {
             // CRITICAL: Force firebase-client.ts and firebase-module-loader.ts into main bundle
             // This ensures Firebase initialization happens before any page chunks can execute
             firebaseClient: {
-              test: /[\\/]lib[\\/](firebase-client|firebase-module-loader)[\\/]/,
+              // Match the actual files (not a directory)
+              test: /[\\/]lib[\\/](firebase-client|firebase-module-loader)\.(t|j)sx?$/,
               name: 'firebase-client',
               chunks: 'initial',
               enforce: true,

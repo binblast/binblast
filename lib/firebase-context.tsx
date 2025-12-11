@@ -28,12 +28,10 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     // Check Firebase readiness in background - don't block rendering
     async function checkFirebaseReady() {
       try {
-        // CRITICAL: Use dynamic import with string literal to prevent webpack from analyzing the import
-        // This prevents webpack from bundling firebase-client.ts into page chunks
-        const firebaseClientModule = await import(
-          /* webpackIgnore: true */
-          "./firebase-client"
-        );
+        // CRITICAL: Use dynamic import (but DO NOT webpackIgnore).
+        // `webpackIgnore: true` forces a runtime fetch like `/_next/static/chunks/app/firebase-client`,
+        // which 404s in Next.js and can cascade into repeated client-side exceptions.
+        const firebaseClientModule = await import("./firebase-client");
         const ready = await firebaseClientModule.isFirebaseReady();
         if (!mounted) return;
         
