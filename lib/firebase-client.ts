@@ -82,7 +82,7 @@ async function initializeFirebase(): Promise<void> {
       // CRITICAL: Import firebase/app FIRST and initialize BEFORE importing auth/firestore
       // This prevents "Neither apiKey nor config.authenticator provided" errors
       const firebaseApp = await import("firebase/app");
-      const { initializeApp, getApps } = firebaseApp;
+      const { initializeApp, getApps, getApp } = firebaseApp;
 
       // Check if app already exists
       const existingApps = getApps();
@@ -91,9 +91,22 @@ async function initializeFirebase(): Promise<void> {
         app = existingApps[0];
         console.log("[Firebase Client] Using existing Firebase app");
       } else {
-        // Initialize new app
+        // Initialize new app as DEFAULT app (no name parameter)
+        // CRITICAL: This ensures firebase/auth can find the default app when imported
         app = initializeApp(config);
-        console.log("[Firebase Client] ✅ Firebase app initialized");
+        console.log("[Firebase Client] ✅ Firebase app initialized as default app");
+      }
+      
+      // CRITICAL: Verify default app exists and is accessible
+      // firebase/auth module looks for default app when imported
+      try {
+        const defaultApp = getApp();
+        if (defaultApp !== app) {
+          console.warn("[Firebase Client] Default app mismatch - this may cause auth errors");
+        }
+      } catch (error) {
+        // No default app - this will cause firebase/auth to fail
+        throw new Error("Firebase default app not accessible - firebase/auth will fail");
       }
 
       // Verify app has valid config
@@ -118,7 +131,20 @@ async function initializeFirebase(): Promise<void> {
         throw new Error("Firebase app not ready - cannot import auth/firestore modules");
       }
       
+      // CRITICAL: Verify app is actually initialized in Firebase's registry
+      // Sometimes getApps() returns an app that isn't fully initialized
+      const registryApps = getApps();
+      const ourApp = registryApps.find((a: any) => a.options?.apiKey === app.options?.apiKey);
+      if (!ourApp || !ourApp.options?.apiKey) {
+        throw new Error("Firebase app not properly initialized in registry");
+      }
+      
+      // CRITICAL: Wait a tick to ensure app is fully registered before importing modules
+      // This prevents race conditions where firebase/auth tries to access default app
+      await new Promise(resolve => setTimeout(resolve, 0));
+      
       // Now safe to import - app is guaranteed to exist with valid config
+      // CRITICAL: Import these modules AFTER app is fully initialized and registered
       const [firebaseAuth, firebaseFirestore] = await Promise.all([
         import("firebase/auth"),
         import("firebase/firestore"),
@@ -128,10 +154,23 @@ async function initializeFirebase(): Promise<void> {
       if (typeof window !== "undefined") {
         try {
           // CRITICAL: Always pass app explicitly to prevent default app lookup
+          // CRITICAL: getAuth() MUST be called with the app instance, never without
+          // Calling getAuth() without an app causes it to look for default app, which may not exist
           auth = firebaseAuth.getAuth(app);
+          
+          // CRITICAL: Verify auth instance was created successfully
+          if (!auth) {
+            throw new Error("getAuth() returned null");
+          }
+          
           console.log("[Firebase Client] Auth initialized");
         } catch (error: any) {
-          console.error("[Firebase Client] Failed to initialize auth:", error?.message);
+          const errorMsg = error?.message || String(error);
+          console.error("[Firebase Client] Failed to initialize auth:", errorMsg);
+          // If error is about apiKey/authenticator, the app wasn't ready when firebase/auth imported
+          if (errorMsg.includes("apiKey") || errorMsg.includes("authenticator")) {
+            throw new Error(`Firebase auth module imported before app was ready: ${errorMsg}`);
+          }
           auth = null;
         }
       } else {

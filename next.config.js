@@ -15,17 +15,19 @@ const nextConfig = {
             ...originalSplitChunks?.cacheGroups,
             // CRITICAL: Keep ALL Firebase modules in the main bundle
             // This prevents firebase/auth and firebase/firestore from loading before firebase/app initializes
+            // CRITICAL: Do NOT create a separate chunk - force into main bundle by omitting 'name'
             firebase: {
               test: /[\\/]node_modules[\\/](firebase|@firebase)[\\/]/,
-              name: 'firebase',
+              // Don't set 'name' - this forces it into the main bundle instead of a separate chunk
               chunks: 'initial', // Only in initial chunks, never in async chunks
               enforce: true,
-              priority: 100, // Highest priority to ensure it's in main bundle FIRST
+              priority: 200, // Higher priority to ensure it loads FIRST
               maxAsyncRequests: 1, // Minimum value (1) to prevent async loading
               maxInitialRequests: Infinity,
               // CRITICAL: Force Firebase into main bundle by setting minSize to 0
               // This ensures Firebase loads before any page chunks
               minSize: 0,
+              maxSize: 0, // Force into main bundle regardless of size
             },
             // CRITICAL: Force firebase-client.ts and firebase-module-loader.ts into main bundle
             // This ensures Firebase initialization happens before any page chunks can execute

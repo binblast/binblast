@@ -147,7 +147,25 @@ export async function safeImportAuth() {
     throw err;
   }
   
-  // Now safe to import auth - app is guaranteed to exist
+  // CRITICAL: Verify app is in Firebase's registry before importing
+  // firebase/auth module has top-level code that runs on import and will fail if app isn't ready
+  const { getApps } = await import("firebase/app");
+  const registryApps = getApps();
+  const appInRegistry = registryApps.find((a: any) => 
+    a.options?.apiKey === options.apiKey && 
+    a.options?.projectId === options.projectId
+  );
+  
+  if (!appInRegistry) {
+    throw new Error("[Firebase Loader] App not found in Firebase registry - cannot import firebase/auth");
+  }
+  
+  // CRITICAL: Double-check app has all required options
+  if (!appInRegistry.options?.apiKey || !appInRegistry.options?.projectId || !appInRegistry.options?.appId) {
+    throw new Error(`[Firebase Loader] App in registry missing required options: ${JSON.stringify(appInRegistry.options)}`);
+  }
+  
+  // Now safe to import auth - app is guaranteed to exist in registry with valid config
   return await import("firebase/auth");
 }
 
