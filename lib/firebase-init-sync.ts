@@ -28,14 +28,22 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
     
     if (headConfig && headConfig.apiKey && headConfig.projectId && headConfig.appId && shouldInit) {
       // All required fields are present - initialize IMMEDIATELY
-      // CRITICAL: Use a synchronous-like approach by starting initialization immediately
-      // and storing the promise so other modules MUST wait for it
+      // CRITICAL: This MUST complete before any page chunks can execute their imports
+      // Use a blocking approach by starting initialization immediately and storing the promise
       global.__firebaseSyncInitPromise = (async () => {
         try {
           console.log("[Firebase Sync Init] Starting immediate initialization from head script config");
           
           // CRITICAL: Import firebase/app FIRST - this is the only way to initialize
-          const firebaseApp = await import("firebase/app");
+          // Use dynamic import to ensure we can catch errors
+          let firebaseApp: any;
+          try {
+            firebaseApp = await import("firebase/app");
+          } catch (importError: any) {
+            console.error("[Firebase Sync Init] Failed to import firebase/app:", importError?.message || importError);
+            throw importError;
+          }
+          
           const { initializeApp, getApps } = firebaseApp;
           
           // Check if app already exists
@@ -46,8 +54,10 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
             global.__firebaseSyncInitialized = true;
             global.__firebaseAppReady = true;
             (window as any).__firebaseAppReady = true;
+            (window as any).__firebaseSyncInitPromise = global.__firebaseSyncInitPromise;
             console.log("[Firebase Sync Init] Firebase app initialized successfully (apiKey, projectId, appId validated)");
             console.log("[Firebase Sync Init] App name:", app.name);
+            console.log("[Firebase Sync Init] Firebase is now ready - page chunks can safely import Firebase modules");
           } else {
             // Verify existing app has all required fields
             const existingApp = existingApps[0];
@@ -55,6 +65,7 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
               global.__firebaseSyncInitialized = true;
               global.__firebaseAppReady = true;
               (window as any).__firebaseAppReady = true;
+              (window as any).__firebaseSyncInitPromise = global.__firebaseSyncInitPromise;
               console.log("[Firebase Sync Init] Using existing Firebase app with valid config");
             } else {
               // Existing app is invalid, create new one
@@ -62,12 +73,15 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
               global.__firebaseSyncInitialized = true;
               global.__firebaseAppReady = true;
               (window as any).__firebaseAppReady = true;
+              (window as any).__firebaseSyncInitPromise = global.__firebaseSyncInitPromise;
               console.log("[Firebase Sync Init] Created new Firebase app (existing app was invalid)");
             }
           }
         } catch (error: any) {
           console.error("[Firebase Sync Init] Immediate init error:", error?.message || error);
           global.__firebaseSyncInitialized = true;
+          // Still store promise so other modules know initialization was attempted
+          (window as any).__firebaseSyncInitPromise = global.__firebaseSyncInitPromise;
         }
       })();
       
