@@ -185,12 +185,32 @@ async function ensureInitialized(): Promise<void> {
   // CRITICAL: Wait for sync initialization FIRST before doing anything
   // This ensures Firebase app exists before any Firebase modules are imported
   if (typeof window !== 'undefined') {
-    // Wait for sync init if it exists
-    if (global.__firebaseSyncInitPromise) {
+    // CRITICAL: Wait for sync init promise - this MUST complete before importing Firebase modules
+    if ((window as any).__firebaseSyncInitPromise) {
+      try {
+        await (window as any).__firebaseSyncInitPromise;
+        // Verify app exists after sync init
+        try {
+          const firebaseApp = await import("firebase/app");
+          const { getApps } = firebaseApp;
+          const apps = getApps();
+          if (apps.length > 0 && apps[0].options?.apiKey) {
+            // App is ready - can proceed
+          } else {
+            console.warn("[Firebase] Sync init completed but app not found");
+          }
+        } catch {
+          console.warn("[Firebase] Could not verify app after sync init");
+        }
+      } catch (error) {
+        // Continue even if sync init failed
+        console.warn("[Firebase] Sync initialization failed, continuing with lazy init");
+      }
+    } else if (global.__firebaseSyncInitPromise) {
+      // Fallback to global promise
       try {
         await global.__firebaseSyncInitPromise;
       } catch (error) {
-        // Continue even if sync init failed
         console.warn("[Firebase] Sync initialization failed, continuing with lazy init");
       }
     }
@@ -204,6 +224,28 @@ async function ensureInitialized(): Promise<void> {
         // Continue even if global init failed - will try lazy initialization
         console.warn("[Firebase] Global initialization promise failed, continuing with lazy init");
       }
+    }
+    
+    // CRITICAL: Verify Firebase app exists before proceeding
+    // This prevents importing Firebase modules before app is initialized
+    try {
+      const firebaseApp = await import("firebase/app");
+      const { getApps } = firebaseApp;
+      const apps = getApps();
+      if (apps.length === 0 || !apps[0].options?.apiKey) {
+        console.warn("[Firebase] Firebase app not initialized - waiting...");
+        // Wait a bit more and retry
+        await new Promise(resolve => setTimeout(resolve, 200));
+        const retryApps = getApps();
+        if (retryApps.length === 0 || !retryApps[0].options?.apiKey) {
+          throw new Error("Firebase app must be initialized before importing Firebase modules");
+        }
+      }
+    } catch (error: any) {
+      if (error?.message?.includes("must be initialized")) {
+        throw error; // Re-throw this specific error
+      }
+      console.warn("[Firebase] Error checking app:", error?.message || error);
     }
   }
 
