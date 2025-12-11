@@ -18,6 +18,8 @@ let importPromise: Promise<any> | null = null;
 export async function safeImportFirestore(): Promise<{ firestore: any; db: any }> {
   // If already cached, return immediately
   if (firestoreModuleCache) {
+    // CRITICAL: Use dynamic import to prevent webpack from bundling firebase-client.ts into page chunks
+    const { getDbInstance } = await import("./firebase");
     const db = await getDbInstance();
     if (!db) {
       throw new Error("Firebase Firestore is not available. Check environment variables.");
