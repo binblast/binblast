@@ -27,6 +27,16 @@ const nextConfig = {
               // This ensures Firebase loads before any page chunks
               minSize: 0,
             },
+            // CRITICAL: Force firebase-client.ts and firebase-module-loader.ts into main bundle
+            // This ensures Firebase initialization happens before any page chunks can execute
+            firebaseClient: {
+              test: /[\\/]lib[\\/](firebase-client|firebase-module-loader)[\\/]/,
+              name: 'firebase-client',
+              chunks: 'initial',
+              enforce: true,
+              priority: 100, // Same priority as Firebase modules
+              minSize: 0,
+            },
             // Prevent modules that import Firebase from being split separately
             // This ensures Firebase initialization happens before page chunks load
             default: {

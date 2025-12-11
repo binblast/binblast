@@ -1,8 +1,10 @@
 // lib/firestore-safe-import.ts
 // Safe wrapper for importing firebase/firestore that ensures Firebase is initialized first
-// Use this instead of directly importing firebase/firestore to prevent initialization errors
+// DEPRECATED: Use firebase-module-loader.ts instead
+// This file is kept for backward compatibility but now uses the unified firebase-module-loader
 
 import { getDbInstance } from "./firebase";
+import { safeImportFirestore as safeImportFirestoreFromLoader } from "./firebase-module-loader";
 
 let firestoreModuleCache: any = null;
 let importPromise: Promise<any> | null = null;
@@ -12,6 +14,7 @@ let importPromise: Promise<any> | null = null;
  * This ensures Firebase app is initialized before importing firestore modules.
  * 
  * @returns Promise that resolves to firestore module and db instance
+ * @deprecated Use safeImportFirestore from firebase-module-loader.ts instead
  */
 export async function safeImportFirestore(): Promise<{ firestore: any; db: any }> {
   // If already cached, return immediately
@@ -28,19 +31,19 @@ export async function safeImportFirestore(): Promise<{ firestore: any; db: any }
     return importPromise;
   }
   
-  // Start new import
+  // Start new import using the unified safe wrapper
   importPromise = (async () => {
     try {
-      // CRITICAL: Wait for Firebase to be initialized FIRST
-      // This prevents "Neither apiKey nor config.authenticator provided" errors
+      // CRITICAL: Use the unified safe import wrapper from firebase-module-loader
+      // This ensures Firebase app is initialized before importing firestore modules
+      const firestore = await safeImportFirestoreFromLoader();
+      
+      // Get db instance
       const db = await getDbInstance();
       
       if (!db) {
         throw new Error("Firebase Firestore is not available. Check that NEXT_PUBLIC_FIREBASE_* environment variables are set.");
       }
-      
-      // Now safe to import firestore - Firebase app is already initialized
-      const firestore = await import("firebase/firestore");
       
       // Cache the module
       firestoreModuleCache = firestore;

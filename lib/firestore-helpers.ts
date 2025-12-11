@@ -1,8 +1,11 @@
 // lib/firestore-helpers.ts
 // Helper functions to safely import and use Firestore functions
 // This ensures Firebase app is initialized before importing firestore modules
+// DEPRECATED: Use firebase-module-loader.ts instead
+// This file is kept for backward compatibility but now uses the unified firebase-module-loader
 
 import { getDbInstance } from "./firebase";
+import { safeImportFirestore } from "./firebase-module-loader";
 
 // Cache for Firestore functions to avoid repeated imports
 let firestoreModule: any = null;
@@ -17,17 +20,11 @@ async function ensureFirestoreModule() {
     return firestoreImportPromise;
   }
   
-  // CRITICAL: Ensure Firebase is initialized before importing firestore
-  // This prevents "Neither apiKey nor config.authenticator provided" errors
+  // CRITICAL: Use the unified safe import wrapper from firebase-module-loader
+  // This ensures Firebase app is initialized before importing firestore modules
   firestoreImportPromise = (async () => {
-    // Wait for Firebase to be initialized first
-    const db = await getDbInstance();
-    if (!db) {
-      throw new Error("Firebase Firestore is not available. Check environment variables.");
-    }
-    
-    // Now safe to import firestore - app is already initialized
-    firestoreModule = await import("firebase/firestore");
+    // Wait for Firebase to be initialized first using the unified safe wrapper
+    firestoreModule = await safeImportFirestore();
     return firestoreModule;
   })();
   
