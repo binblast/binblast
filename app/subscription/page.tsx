@@ -3,9 +3,15 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { Navbar } from "@/components/Navbar";
+import dynamic from "next/dynamic";
 import { SubscriptionManager } from "@/components/SubscriptionManager";
 import { PlanId } from "@/lib/stripe-config";
+
+// CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
+const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
+  ssr: false,
+  loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
+});
 
 interface UserData {
   firstName: string;

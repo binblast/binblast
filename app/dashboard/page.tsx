@@ -3,7 +3,7 @@
 
 import { useEffect, useState, Component, ErrorInfo, ReactNode, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Navbar } from "@/components/Navbar";
+import dynamic from "next/dynamic";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
 import { SubscriptionManagerWrapper } from "@/components/SubscriptionManagerWrapper";
 import { ReferralRewards } from "@/components/ReferralRewards";
@@ -11,6 +11,12 @@ import { ReferralHistory } from "@/components/ReferralHistory";
 import { LoyaltyBadges } from "@/components/LoyaltyBadges";
 import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
+
+// CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
+const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
+  ssr: false,
+  loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
+});
 
 // Error boundary to catch component rendering errors
 class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode; onRetry?: () => void }> {
