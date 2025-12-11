@@ -1,6 +1,8 @@
 // lib/firebase.ts
 // IMPORTANT: This module uses lazy initialization to prevent Firebase from initializing
 // at module load time, which can cause errors if environment variables aren't set.
+// CRITICAL: This module MUST wait for Firebase app to be initialized before importing
+// any Firebase modules to prevent "Neither apiKey nor config.authenticator provided" errors.
 
 // Store Firebase initialization state globally to prevent re-initialization
 declare global {

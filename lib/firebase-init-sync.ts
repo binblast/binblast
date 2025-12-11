@@ -1,8 +1,35 @@
 // lib/firebase-init-sync.ts
 // This module ensures Firebase is initialized synchronously before any dynamic chunks load
 // It's imported in the root layout to run before React hydrates
+// CRITICAL: This module MUST initialize Firebase before any page chunks can execute
 
 import { logFirebaseEnvStatus } from "./firebase-env-check";
+
+// CRITICAL: Export a function that blocks until Firebase is initialized
+// This can be called by modules that need to ensure Firebase is ready
+export async function ensureFirebaseReady(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  
+  // Wait for sync init promise
+  if ((window as any).__firebaseSyncInitPromise) {
+    await (window as any).__firebaseSyncInitPromise;
+  }
+  
+  // Verify app exists
+  try {
+    const firebaseApp = await import("firebase/app");
+    const { getApps } = firebaseApp;
+    const apps = getApps();
+    if (apps.length > 0 && apps[0].options?.apiKey) {
+      return;
+    }
+  } catch {
+    // App not ready yet
+  }
+  
+  // Wait a bit more if needed
+  await new Promise(resolve => setTimeout(resolve, 100));
+}
 
 // Store initialization promise and state globally
 declare global {
