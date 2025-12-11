@@ -5,8 +5,6 @@ import { FirebaseGate } from "@/components/FirebaseGate";
 // CRITICAL: Import Firebase sync init FIRST to ensure Firebase is initialized before any dynamic chunks load
 // This must be imported before any other modules that might use Firebase
 import "@/lib/firebase-init-sync";
-// CRITICAL: Import Firebase interceptor to intercept Firebase module imports
-import "@/lib/firebase-interceptor";
 
 export const metadata: Metadata = {
   title: "Bin Blast Co. - Professional Trash Bin Cleaning Service",
