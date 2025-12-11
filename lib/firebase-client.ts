@@ -303,10 +303,11 @@ export async function updateProfile(user: any, profile: { displayName?: string; 
 // Initialize Firebase early if on client-side
 // This ensures Firebase is ready before page chunks load
 // CRITICAL: Start initialization immediately when module loads
+// Store promise globally so all Firebase imports can wait for it
 if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
   // Start initialization immediately (don't await - let it happen in background)
   // Store the promise on window so page chunks can wait for it if needed
-  (window as any).__firebaseClientInitPromise = initializeFirebase().catch((error) => {
+  const initPromise = initializeFirebase().catch((error) => {
     // Log errors but don't throw - allow app to continue
     const errorMsg = error?.message || String(error);
     // Don't log "Failed to resolve module specifier" - that's expected if head script tried to import
@@ -314,4 +315,11 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
       console.error("[Firebase Client] Early initialization error:", errorMsg);
     }
   });
+  
+  (window as any).__firebaseClientInitPromise = initPromise;
+  
+  // CRITICAL: Also store on global for modules that check global
+  if (typeof global !== 'undefined') {
+    (global as any).__firebaseClientInitPromise = initPromise;
+  }
 }

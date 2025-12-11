@@ -9,13 +9,22 @@ import { getFirebaseApp } from "./firebase-client";
  * Ensures Firebase app is initialized before importing
  */
 export async function safeImportFirestore() {
-  // CRITICAL: Wait for early initialization promise if it exists
-  // This ensures Firebase is initialized before importing modules
-  if (typeof window !== 'undefined' && (window as any).__firebaseClientInitPromise) {
-    try {
-      await (window as any).__firebaseClientInitPromise;
-    } catch {
-      // Continue even if early init failed - will try again below
+  // CRITICAL: Wait for early initialization promise FIRST
+  // This ensures Firebase app exists before importing Firebase modules
+  if (typeof window !== 'undefined') {
+    // Check both window and global for the promise
+    const initPromise = (window as any).__firebaseClientInitPromise || (global as any).__firebaseClientInitPromise;
+    if (initPromise) {
+      try {
+        // Wait for initialization to complete - this is critical
+        await initPromise;
+      } catch (error: any) {
+        // Log but continue - will verify app exists below
+        const errorMsg = error?.message || String(error);
+        if (!errorMsg.includes("Failed to resolve module specifier")) {
+          console.warn("[Firebase Module Loader] Early init promise failed:", errorMsg);
+        }
+      }
     }
   }
   
@@ -31,7 +40,7 @@ export async function safeImportFirestore() {
     throw new Error("Firebase app missing required config");
   }
   
-  // Now safe to import firestore
+  // Now safe to import firestore - app is guaranteed to exist
   return await import("firebase/firestore");
 }
 
@@ -40,13 +49,22 @@ export async function safeImportFirestore() {
  * Ensures Firebase app is initialized before importing
  */
 export async function safeImportAuth() {
-  // CRITICAL: Wait for early initialization promise if it exists
-  // This ensures Firebase is initialized before importing modules
-  if (typeof window !== 'undefined' && (window as any).__firebaseClientInitPromise) {
-    try {
-      await (window as any).__firebaseClientInitPromise;
-    } catch {
-      // Continue even if early init failed - will try again below
+  // CRITICAL: Wait for early initialization promise FIRST
+  // This ensures Firebase app exists before importing Firebase modules
+  if (typeof window !== 'undefined') {
+    // Check both window and global for the promise
+    const initPromise = (window as any).__firebaseClientInitPromise || (global as any).__firebaseClientInitPromise;
+    if (initPromise) {
+      try {
+        // Wait for initialization to complete - this is critical
+        await initPromise;
+      } catch (error: any) {
+        // Log but continue - will verify app exists below
+        const errorMsg = error?.message || String(error);
+        if (!errorMsg.includes("Failed to resolve module specifier")) {
+          console.warn("[Firebase Module Loader] Early init promise failed:", errorMsg);
+        }
+      }
     }
   }
   
@@ -62,7 +80,7 @@ export async function safeImportAuth() {
     throw new Error("Firebase app missing required config");
   }
   
-  // Now safe to import auth
+  // Now safe to import auth - app is guaranteed to exist
   return await import("firebase/auth");
 }
 
