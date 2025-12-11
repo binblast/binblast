@@ -101,6 +101,53 @@ async function initializeFirebase(): Promise<void> {
 
   initPromise = (async () => {
     try {
+      // CRITICAL: If head script already initialized Firebase, use that app
+      if (typeof window !== 'undefined' && (window as any).__firebaseClientInitPromise) {
+        try {
+          // Wait for head script initialization to complete
+          const headApp = await (window as any).__firebaseClientInitPromise;
+          if (headApp) {
+            app = headApp;
+            console.log("[Firebase Client] Using Firebase app from head script initialization");
+            
+            // Still need to initialize auth and firestore
+            const [firebaseAuth, firebaseFirestore] = await Promise.all([
+              import("firebase/auth"),
+              import("firebase/firestore"),
+            ]);
+
+            // Get auth instance (client-side only)
+            if (typeof window !== "undefined") {
+              try {
+                auth = firebaseAuth.getAuth(app);
+                console.log("[Firebase Client] Auth initialized");
+              } catch (error: any) {
+                console.error("[Firebase Client] Failed to initialize auth:", error?.message);
+                auth = null;
+              }
+            } else {
+              auth = null;
+            }
+
+            // Get Firestore instance
+            try {
+              db = firebaseFirestore.getFirestore(app);
+              console.log("[Firebase Client] Firestore initialized");
+            } catch (error: any) {
+              console.error("[Firebase Client] Failed to initialize Firestore:", error?.message);
+              db = null;
+            }
+
+            isInitialized = true;
+            return;
+          }
+        } catch (error: any) {
+          // Head script init failed - continue with normal initialization
+          console.warn("[Firebase Client] Head script initialization failed, continuing with normal init:", error?.message);
+        }
+      }
+      
+      // Normal initialization path (if head script didn't initialize)
       // Wait for head script config if on client-side (with timeout)
       let config: any = null;
       if (typeof window !== 'undefined') {
