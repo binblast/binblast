@@ -13,7 +13,7 @@ import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
-const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
+const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
   ssr: false,
   loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
 });
