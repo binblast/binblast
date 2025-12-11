@@ -21,6 +21,12 @@ function getFirebaseConfig(): any | null {
   const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
 
   if (!apiKey || !projectId || !appId) {
+    // Surface which vars are missing without leaking values
+    const missing: string[] = [];
+    if (!apiKey) missing.push("NEXT_PUBLIC_FIREBASE_API_KEY");
+    if (!projectId) missing.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID");
+    if (!appId) missing.push("NEXT_PUBLIC_FIREBASE_APP_ID");
+    console.error("[Firebase Client] Missing required Firebase env vars:", missing);
     return null;
   }
 
@@ -69,9 +75,8 @@ async function initializeFirebase(): Promise<void> {
       const config = getFirebaseConfig();
       
       if (!config) {
-        console.warn("[Firebase Client] Firebase config not available - Firebase features will not work");
-        isInitialized = true;
-        return;
+        // Reject so callers can surface a meaningful message instead of falling through to Firebase's internal error
+        throw new Error("Firebase config not available. Check NEXT_PUBLIC_FIREBASE_API_KEY/PROJECT_ID/APP_ID on this deployment.");
       }
 
       // CRITICAL: Import firebase/app FIRST and initialize BEFORE importing auth/firestore
@@ -141,7 +146,10 @@ async function initializeFirebase(): Promise<void> {
     } catch (error: any) {
       const errorMsg = error?.message || String(error);
       if (errorMsg.includes("apiKey") || errorMsg.includes("authenticator")) {
-        console.warn("[Firebase Client] Firebase initialization failed - likely during build or missing config");
+        console.error("[Firebase Client] Firebase initialization failed - likely missing env vars or app config:", errorMsg);
+        if (typeof window !== "undefined") {
+          console.error("[Firebase Client] Check NEXT_PUBLIC_FIREBASE_* env vars on this deployment.");
+        }
       } else {
         console.error("[Firebase Client] Firebase initialization error:", errorMsg);
       }
