@@ -24,6 +24,37 @@ export default function RootLayout({
 (function() {
   if (typeof window === 'undefined') return;
   
+  // CRITICAL: Catch and suppress Firebase initialization errors so site can render
+  // This prevents Firebase errors from blocking the entire site
+  var originalError = window.onerror;
+  window.onerror = function(message, source, lineno, colno, error) {
+    // Check if this is a Firebase initialization error
+    if (typeof message === 'string' && (
+      message.includes('apiKey') || 
+      message.includes('authenticator') ||
+      message.includes('Firebase')
+    )) {
+      console.warn('[Firebase Error Handler] Suppressing Firebase error to allow site to render:', message);
+      // Suppress the error - don't let it crash the site
+      return true; // Return true to prevent default error handling
+    }
+    // For other errors, use original handler
+    if (originalError) {
+      return originalError.apply(this, arguments);
+    }
+    return false;
+  };
+  
+  // Also catch unhandled promise rejections
+  window.addEventListener('unhandledrejection', function(event) {
+    var reason = event.reason;
+    var message = reason?.message || String(reason || '');
+    if (message.includes('apiKey') || message.includes('authenticator') || message.includes('Firebase')) {
+      console.warn('[Firebase Error Handler] Suppressing Firebase promise rejection to allow site to render:', message);
+      event.preventDefault(); // Prevent the error from being logged
+    }
+  });
+  
   // CRITICAL: According to Firebase docs, these three fields are REQUIRED:
   // - apiKey (API key)
   // - projectId (Project ID)
