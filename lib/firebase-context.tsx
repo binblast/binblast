@@ -30,16 +30,24 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
 
     async function checkFirebaseReady() {
       try {
-        // Wait for Firebase app to be initialized with a timeout
-        // Don't wait forever - allow site to render even if Firebase fails
-        await Promise.race([
-          waitForFirebaseApp(),
-          new Promise(resolve => setTimeout(resolve, 2000)), // 2 second timeout
-        ]);
+        // CRITICAL: Wait for sync init to complete first
+        // This ensures Firebase app is initialized before we try to use it
+        await waitForFirebaseApp();
 
         if (!mounted) return;
 
-        // Verify Firebase is actually ready by checking if we can get instances
+        // CRITICAL: Only check Firebase readiness if sync init completed successfully
+        // Don't try to import Firebase modules if sync init didn't complete
+        if (!(window as any).__firebaseAppReady) {
+          // Sync init didn't complete - Firebase is not available
+          setIsReady(false);
+          setIsInitializing(false);
+          console.warn("[FirebaseProvider] Firebase sync initialization did not complete - Firebase features may not be available");
+          return;
+        }
+
+        // Now safe to verify Firebase is ready by getting instances
+        // This will use the app initialized by sync init
         try {
           const { getAuthInstance, getDbInstance } = await import("@/lib/firebase");
           const auth = await getAuthInstance();
@@ -50,22 +58,34 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
           // Firebase is ready if we have at least one instance
           if (auth || db) {
             setIsReady(true);
-            console.log("[FirebaseProvider] Firebase is ready");
+            setIsInitializing(false);
+            console.log("[FirebaseProvider] ✅ Firebase is ready");
           } else {
             // Firebase not configured, but allow app to render
             setIsReady(false);
-            console.warn("[FirebaseProvider] Firebase not configured");
+            setIsInitializing(false);
+            console.warn("[FirebaseProvider] Firebase instances not available");
           }
         } catch (importError: any) {
           // If import fails, Firebase is not ready
           setIsReady(false);
-          console.warn("[FirebaseProvider] Could not import Firebase:", importError?.message);
+          setIsInitializing(false);
+          const errorMsg = importError?.message || String(importError);
+          // Don't log "apiKey" errors - those are expected if Firebase isn't configured
+          if (!errorMsg.includes("apiKey") && !errorMsg.includes("authenticator")) {
+            console.warn("[FirebaseProvider] Could not import Firebase:", errorMsg);
+          }
         }
       } catch (err: any) {
         if (!mounted) return;
-        console.error("[FirebaseProvider] Error checking Firebase:", err);
-        setError(err);
         setIsReady(false);
+        setIsInitializing(false);
+        const errorMsg = err?.message || String(err);
+        // Don't log "apiKey" errors - those are expected if Firebase isn't configured
+        if (!errorMsg.includes("apiKey") && !errorMsg.includes("authenticator")) {
+          console.error("[FirebaseProvider] Error checking Firebase:", errorMsg);
+          setError(err);
+        }
         // Don't block rendering - components will handle errors gracefully
       }
     }
@@ -91,61 +111,44 @@ export function useFirebase() {
 
 /**
  * Wait for Firebase app to be initialized
+ * CRITICAL: This function does NOT import Firebase modules directly to prevent
+ * "Neither apiKey nor config.authenticator provided" errors.
+ * It only waits for the sync init promise to complete.
  */
 async function waitForFirebaseApp(): Promise<void> {
   if (typeof window === 'undefined') return;
 
-  // Check if app is already ready
+  // Check if app is already ready (set by sync init)
   if ((window as any).__firebaseAppReady) {
     return;
   }
 
-  // Wait for sync init promise with timeout
+  // CRITICAL: Wait for sync init promise - this is the SINGLE source of truth
+  // Do NOT import Firebase modules here - that causes the error
   if ((window as any).__firebaseSyncInitPromise) {
     try {
+      // Wait for sync init to complete (with timeout)
       await Promise.race([
         (window as any).__firebaseSyncInitPromise,
-        new Promise(resolve => setTimeout(resolve, 1000)), // 1 second timeout
+        new Promise(resolve => setTimeout(resolve, 3000)), // 3 second timeout
       ]);
-    } catch {
-      // Continue even if failed
-    }
-  }
-
-  // Wait for global init promise with timeout
-  if ((window as any).__firebaseInitPromise) {
-    try {
-      await Promise.race([
-        (window as any).__firebaseInitPromise,
-        new Promise(resolve => setTimeout(resolve, 1000)), // 1 second timeout
-      ]);
-    } catch {
-      // Continue even if failed
-    }
-  }
-
-  // Poll until app is ready (with shorter timeout)
-  const startTime = Date.now();
-  const timeout = 2000; // 2 seconds - shorter timeout
-
-  while (!(window as any).__firebaseAppReady && Date.now() - startTime < timeout) {
-    // Check if app exists by trying to get apps
-    try {
-      const firebaseApp = await import("firebase/app");
-      const { getApps } = firebaseApp;
-      const apps = getApps();
-      if (apps.length > 0 && apps[0].options?.apiKey) {
-        (window as any).__firebaseAppReady = true;
-        break;
+      
+      // After sync init completes, check if app is ready
+      // Don't import Firebase modules - just check the flag set by sync init
+      if ((window as any).__firebaseAppReady) {
+        return;
       }
-    } catch {
-      // Continue polling
+    } catch (error: any) {
+      // If sync init failed, Firebase won't work
+      console.warn("[FirebaseProvider] Sync initialization failed:", error?.message || error);
+      return;
     }
-    await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  if (!(window as any).__firebaseAppReady) {
-    console.warn("[FirebaseProvider] Firebase app not ready after timeout - site will render anyway");
+  // If no sync init promise exists, Firebase is not being initialized
+  // This is OK - the site can still render
+  if (!(window as any).__firebaseSyncInitPromise) {
+    console.warn("[FirebaseProvider] No sync initialization found - Firebase may not be configured");
   }
 }
 
