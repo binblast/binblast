@@ -9,21 +9,28 @@ import { getFirebaseApp } from "./firebase-client";
  * Ensures Firebase app is initialized before importing
  */
 export async function safeImportFirestore() {
-  // CRITICAL: Wait for early initialization promise FIRST
-  // This ensures Firebase app exists before importing Firebase modules
+  // CRITICAL: Wait for Firebase app to be ready before importing
   if (typeof window !== 'undefined') {
-    // Check both window and global for the promise
-    const initPromise = (window as any).__firebaseClientInitPromise || (global as any).__firebaseClientInitPromise;
-    if (initPromise) {
-      try {
-        // Wait for initialization to complete - this is critical
-        await initPromise;
-      } catch (error: any) {
-        // Log but continue - will verify app exists below
-        const errorMsg = error?.message || String(error);
-        if (!errorMsg.includes("Failed to resolve module specifier")) {
-          console.warn("[Firebase Module Loader] Early init promise failed:", errorMsg);
+    // Check if app is already ready
+    if ((window as any).__firebaseAppReady && (window as any).__firebaseApp) {
+      // App is ready - safe to import
+    } else {
+      // Wait for initialization promise
+      const initPromise = (window as any).__firebaseClientInitPromise || (global as any).__firebaseClientInitPromise;
+      if (initPromise) {
+        try {
+          // Wait for initialization to complete - this is critical
+          await initPromise;
+        } catch (error: any) {
+          // Log but continue - will verify app exists below
+          const errorMsg = error?.message || String(error);
+          if (!errorMsg.includes("Failed to resolve module specifier")) {
+            console.warn("[Firebase Module Loader] Early init promise failed:", errorMsg);
+          }
         }
+      } else {
+        // No promise - wait a bit for initialization to start
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
   }
@@ -49,21 +56,28 @@ export async function safeImportFirestore() {
  * Ensures Firebase app is initialized before importing
  */
 export async function safeImportAuth() {
-  // CRITICAL: Wait for early initialization promise FIRST
-  // This ensures Firebase app exists before importing Firebase modules
+  // CRITICAL: Wait for Firebase app to be ready before importing
   if (typeof window !== 'undefined') {
-    // Check both window and global for the promise
-    const initPromise = (window as any).__firebaseClientInitPromise || (global as any).__firebaseClientInitPromise;
-    if (initPromise) {
-      try {
-        // Wait for initialization to complete - this is critical
-        await initPromise;
-      } catch (error: any) {
-        // Log but continue - will verify app exists below
-        const errorMsg = error?.message || String(error);
-        if (!errorMsg.includes("Failed to resolve module specifier")) {
-          console.warn("[Firebase Module Loader] Early init promise failed:", errorMsg);
+    // Check if app is already ready
+    if ((window as any).__firebaseAppReady && (window as any).__firebaseApp) {
+      // App is ready - safe to import
+    } else {
+      // Wait for initialization promise
+      const initPromise = (window as any).__firebaseClientInitPromise || (global as any).__firebaseClientInitPromise;
+      if (initPromise) {
+        try {
+          // Wait for initialization to complete - this is critical
+          await initPromise;
+        } catch (error: any) {
+          // Log but continue - will verify app exists below
+          const errorMsg = error?.message || String(error);
+          if (!errorMsg.includes("Failed to resolve module specifier")) {
+            console.warn("[Firebase Module Loader] Early init promise failed:", errorMsg);
+          }
         }
+      } else {
+        // No promise - wait a bit for initialization to start
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
   }

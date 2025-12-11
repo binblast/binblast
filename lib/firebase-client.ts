@@ -154,6 +154,12 @@ async function initializeFirebase(): Promise<void> {
         throw new Error("Firebase app missing required config (apiKey, projectId, appId)");
       }
 
+      // CRITICAL: Mark app as ready on window so page chunks can check
+      if (typeof window !== 'undefined') {
+        (window as any).__firebaseAppReady = true;
+        (window as any).__firebaseApp = app;
+      }
+
       // CRITICAL: Only import auth/firestore AFTER app is initialized
       // This prevents the "Neither apiKey nor config.authenticator provided" error
       const [firebaseAuth, firebaseFirestore] = await Promise.all([
