@@ -143,12 +143,23 @@ async function initializeFirebase(): Promise<void> {
       // This prevents race conditions where firebase/auth tries to access default app
       await new Promise(resolve => setTimeout(resolve, 0));
       
+      // CRITICAL: Mark that Firebase is ready before importing modules
+      // This prevents page chunks from importing firebase/auth before we're ready
+      if (typeof window !== 'undefined') {
+        (window as any).__firebaseReadyForAuthImport = true;
+      }
+      
       // Now safe to import - app is guaranteed to exist with valid config
       // CRITICAL: Import these modules AFTER app is fully initialized and registered
       const [firebaseAuth, firebaseFirestore] = await Promise.all([
         import("firebase/auth"),
         import("firebase/firestore"),
       ]);
+      
+      // Mark that auth has been imported
+      if (typeof window !== 'undefined') {
+        (window as any).__firebaseAuthImported = true;
+      }
 
       // Get auth instance (client-side only)
       if (typeof window !== "undefined") {

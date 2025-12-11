@@ -42,16 +42,9 @@ const nextConfig = {
               minSize: 0,
               maxSize: 0, // Force into main bundle regardless of size
             },
-            // CRITICAL: Prevent any dynamic imports of firebase/auth or firebase/firestore from being code-split
-            // Force them into the firebase bundle so they load together
-            firebaseDynamicImports: {
-              test: /[\\/]node_modules[\\/](firebase|@firebase)[\\/]/,
-              name: 'firebase',
-              chunks: 'all', // Include in all chunks to prevent code-splitting
-              enforce: true,
-              priority: 100,
-              minSize: 0,
-            },
+            // REMOVED: firebaseDynamicImports cacheGroup was creating a separate chunk
+            // This conflicted with our goal of keeping Firebase in the main bundle
+            // Firebase modules should go through the 'firebase' cacheGroup above (no name = main bundle)
             // Prevent modules that import Firebase from being split separately
             // This ensures Firebase initialization happens before page chunks load
             default: {

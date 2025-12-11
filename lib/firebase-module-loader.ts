@@ -165,6 +165,30 @@ export async function safeImportAuth() {
     throw new Error(`[Firebase Loader] App in registry missing required options: ${JSON.stringify(appInRegistry.options)}`);
   }
   
+  // CRITICAL: Wait for main bundle to import firebase/auth first
+  // This ensures firebase/auth is in the main bundle, not code-split into page chunks
+  if (typeof window !== 'undefined') {
+    // Wait for main bundle to mark Firebase as ready for auth import
+    if (!(window as any).__firebaseReadyForAuthImport) {
+      const startTime = Date.now();
+      const timeout = 10000; // 10 second timeout
+      
+      while (!(window as any).__firebaseReadyForAuthImport && Date.now() - startTime < timeout) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      
+      if (!(window as any).__firebaseReadyForAuthImport) {
+        throw new Error("[Firebase Loader] Timeout waiting for Firebase to be ready for auth import");
+      }
+    }
+    
+    // If main bundle has already imported auth, reuse that import
+    if ((window as any).__firebaseAuthImported) {
+      // Re-import to get the module (webpack will reuse the same chunk from main bundle)
+      return await import("firebase/auth");
+    }
+  }
+  
   // Now safe to import auth - app is guaranteed to exist in registry with valid config
   return await import("firebase/auth");
 }
