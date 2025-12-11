@@ -29,14 +29,16 @@ const nextConfig = {
             },
             // CRITICAL: Force firebase-client.ts and firebase-module-loader.ts into main bundle
             // This ensures Firebase initialization happens before any page chunks can execute
+            // DO NOT create a separate chunk - force into main bundle by NOT setting 'name'
             firebaseClient: {
               // Match the actual files (not a directory)
               test: /[\\/]lib[\\/](firebase-client|firebase-module-loader)\.(t|j)sx?$/,
-              name: 'firebase-client',
+              // Don't set 'name' - this forces it into the main bundle instead of a separate chunk
               chunks: 'initial',
               enforce: true,
-              priority: 100, // Same priority as Firebase modules
+              priority: 200, // Higher priority than Firebase modules to ensure it loads first
               minSize: 0,
+              maxSize: 0, // Force into main bundle regardless of size
             },
             // CRITICAL: Prevent any dynamic imports of firebase/auth or firebase/firestore from being code-split
             // Force them into the firebase bundle so they load together

@@ -55,10 +55,22 @@ export async function safeImportFirestore() {
   if (!app) {
     throw new Error("Firebase app is not initialized");
   }
-  
-  // Verify app has valid config
-  if (!app.options?.apiKey || !app.options?.projectId || !app.options?.appId) {
-    throw new Error("Firebase app missing required config");
+
+  // Verify app has valid config and surface stack for debugging
+  const options = (app as any).options || {};
+  const missing: string[] = [];
+  if (!options.apiKey) missing.push("apiKey");
+  if (!options.projectId) missing.push("projectId");
+  if (!options.appId) missing.push("appId");
+
+  if (missing.length > 0) {
+    const err = new Error(`[Firebase Loader] Firebase app missing required options: ${missing.join(", ")}`);
+    console.error("[Firebase Loader] App options check failed", {
+      missing,
+      options,
+      stack: err.stack,
+    });
+    throw err;
   }
   
   // Now safe to import firestore - app is guaranteed to exist
@@ -117,10 +129,22 @@ export async function safeImportAuth() {
   if (!app) {
     throw new Error("Firebase app is not initialized");
   }
-  
-  // Verify app has valid config
-  if (!app.options?.apiKey || !app.options?.projectId || !app.options?.appId) {
-    throw new Error("Firebase app missing required config");
+
+  // Verify app has valid config and surface stack for debugging
+  const options = (app as any).options || {};
+  const missing: string[] = [];
+  if (!options.apiKey) missing.push("apiKey");
+  if (!options.projectId) missing.push("projectId");
+  if (!options.appId) missing.push("appId");
+
+  if (missing.length > 0) {
+    const err = new Error(`[Firebase Loader] Firebase app missing required options: ${missing.join(", ")}`);
+    console.error("[Firebase Loader] App options check failed", {
+      missing,
+      options,
+      stack: err.stack,
+    });
+    throw err;
   }
   
   // Now safe to import auth - app is guaranteed to exist

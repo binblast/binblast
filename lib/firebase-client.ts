@@ -112,6 +112,12 @@ async function initializeFirebase(): Promise<void> {
       // At this point, app is already initialized and marked as ready on window
       // We've verified app has valid config above, so it's safe to import modules
       
+      // CRITICAL: Double-check app exists and has config before importing Firebase modules
+      // Firebase modules have top-level code that runs on import and will fail if app isn't ready
+      if (!app || !app.options?.apiKey) {
+        throw new Error("Firebase app not ready - cannot import auth/firestore modules");
+      }
+      
       // Now safe to import - app is guaranteed to exist with valid config
       const [firebaseAuth, firebaseFirestore] = await Promise.all([
         import("firebase/auth"),
@@ -279,6 +285,8 @@ export async function updateProfile(user: any, profile: { displayName?: string; 
 // This ensures Firebase is ready before page chunks load
 // CRITICAL: Start initialization immediately when module loads
 // Store promise globally so all Firebase imports can wait for it
+// CRITICAL: This file is now statically imported in FirebaseGate (root layout)
+// so it's guaranteed to be in the main bundle and will initialize before page chunks
 if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
   // CRITICAL: Start initialization immediately and store promise BEFORE any page chunks can load
   // This promise MUST be available immediately so page chunks can wait for it
