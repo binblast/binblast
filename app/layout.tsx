@@ -2,8 +2,15 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { FirebaseGate } from "@/components/FirebaseGate";
 import { FirebaseErrorBoundary } from "@/components/FirebaseErrorBoundary";
-// Initialize Firebase client early - it uses environment variables directly
-import "@/lib/firebase-client";
+// CRITICAL: Use dynamic import to prevent webpack from bundling firebase-client.ts into page chunks
+// Firebase will initialize when first needed via the dynamic import in firebase-client.ts itself
+if (typeof window !== 'undefined') {
+  // Start Firebase initialization early on client-side only
+  // Use dynamic import to prevent webpack code-splitting
+  import("@/lib/firebase-client").catch(() => {
+    // Silently handle errors - Firebase will initialize when needed
+  });
+}
 
 export const metadata: Metadata = {
   title: "Bin Blast Co. - Professional Trash Bin Cleaning Service",
