@@ -337,7 +337,11 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
   // Store the promise on window so page chunks can wait for it if needed
   (window as any).__firebaseClientInitPromise = initializeFirebase().catch((error) => {
     // Log errors but don't throw - allow app to continue
-    console.error("[Firebase Client] Early initialization error:", error?.message || error);
+    const errorMsg = error?.message || String(error);
+    // Don't log "Failed to resolve module specifier" - that's expected if head script tried to import
+    if (!errorMsg.includes("Failed to resolve module specifier")) {
+      console.error("[Firebase Client] Early initialization error:", errorMsg);
+    }
   });
 }
 
