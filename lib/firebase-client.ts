@@ -253,8 +253,8 @@ export async function updateProfile(user: any, profile: { displayName?: string; 
 // CRITICAL: Start initialization immediately when module loads
 // Store promise globally so all Firebase imports can wait for it
 if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
-  // Start initialization immediately (don't await - let it happen in background)
-  // Store the promise on window so page chunks can wait for it if needed
+  // CRITICAL: Start initialization immediately and store promise BEFORE any page chunks can load
+  // This promise MUST be available immediately so page chunks can wait for it
   const initPromise = initializeFirebase().catch((error) => {
     // Log errors but don't throw - allow app to continue
     const errorMsg = error?.message || String(error);
@@ -264,10 +264,15 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PHASE) {
     }
   });
   
+  // Store promise on window IMMEDIATELY so page chunks can wait for it
   (window as any).__firebaseClientInitPromise = initPromise;
   
   // CRITICAL: Also store on global for modules that check global
   if (typeof global !== 'undefined') {
     (global as any).__firebaseClientInitPromise = initPromise;
   }
+  
+  // CRITICAL: Also store a flag that indicates initialization has started
+  // This allows page chunks to detect if initialization is in progress
+  (window as any).__firebaseInitStarted = true;
 }

@@ -10,16 +10,17 @@ import { getFirebaseApp } from "./firebase-client";
  */
 export async function safeImportFirestore() {
   // CRITICAL: Wait for Firebase app to be ready before importing
+  // This MUST complete before importing firebase/firestore to prevent "Neither apiKey nor config.authenticator provided" errors
   if (typeof window !== 'undefined') {
     // Check if app is already ready
     if ((window as any).__firebaseAppReady && (window as any).__firebaseApp) {
       // App is ready - safe to import
     } else {
-      // Wait for initialization promise
+      // CRITICAL: Wait for initialization promise - this blocks until Firebase is initialized
       const initPromise = (window as any).__firebaseClientInitPromise || (global as any).__firebaseClientInitPromise;
       if (initPromise) {
         try {
-          // Wait for initialization to complete - this is critical
+          // Wait for initialization to complete - this is critical and blocking
           await initPromise;
         } catch (error: any) {
           // Log but continue - will verify app exists below
@@ -29,8 +30,20 @@ export async function safeImportFirestore() {
           }
         }
       } else {
-        // No promise - wait a bit for initialization to start
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // No promise yet - wait for initialization to start
+        // Poll until promise is available or app is ready
+        const startTime = Date.now();
+        const timeout = 5000; // 5 second timeout
+        
+        while (!(window as any).__firebaseClientInitPromise && !(window as any).__firebaseAppReady && Date.now() - startTime < timeout) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        
+        // If promise is now available, wait for it
+        const promise = (window as any).__firebaseClientInitPromise || (global as any).__firebaseClientInitPromise;
+        if (promise) {
+          await promise;
+        }
       }
     }
   }
@@ -57,16 +70,17 @@ export async function safeImportFirestore() {
  */
 export async function safeImportAuth() {
   // CRITICAL: Wait for Firebase app to be ready before importing
+  // This MUST complete before importing firebase/auth to prevent "Neither apiKey nor config.authenticator provided" errors
   if (typeof window !== 'undefined') {
     // Check if app is already ready
     if ((window as any).__firebaseAppReady && (window as any).__firebaseApp) {
       // App is ready - safe to import
     } else {
-      // Wait for initialization promise
+      // CRITICAL: Wait for initialization promise - this blocks until Firebase is initialized
       const initPromise = (window as any).__firebaseClientInitPromise || (global as any).__firebaseClientInitPromise;
       if (initPromise) {
         try {
-          // Wait for initialization to complete - this is critical
+          // Wait for initialization to complete - this is critical and blocking
           await initPromise;
         } catch (error: any) {
           // Log but continue - will verify app exists below
@@ -76,8 +90,20 @@ export async function safeImportAuth() {
           }
         }
       } else {
-        // No promise - wait a bit for initialization to start
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // No promise yet - wait for initialization to start
+        // Poll until promise is available or app is ready
+        const startTime = Date.now();
+        const timeout = 5000; // 5 second timeout
+        
+        while (!(window as any).__firebaseClientInitPromise && !(window as any).__firebaseAppReady && Date.now() - startTime < timeout) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        
+        // If promise is now available, wait for it
+        const promise = (window as any).__firebaseClientInitPromise || (global as any).__firebaseClientInitPromise;
+        if (promise) {
+          await promise;
+        }
       }
     }
   }
