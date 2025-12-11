@@ -30,85 +30,12 @@ if (typeof window !== 'undefined') {
 async function waitForFirebaseApp(): Promise<void> {
   if (typeof window === 'undefined') return;
   
-  // Check if app is already ready
-  if ((window as any).__firebaseAppReady) {
-    // Verify app actually exists
-    try {
-      const firebaseApp = await import("firebase/app");
-      const { getApps } = firebaseApp;
-      const apps = getApps();
-      if (apps.length > 0 && apps[0].options?.apiKey) {
-        return; // App is ready
-      }
-    } catch {
-      // Continue waiting
-    }
-  }
-  
-  // Wait for sync init promise FIRST (this is the earliest initialization)
-  if ((window as any).__firebaseSyncInitPromise) {
-    try {
-      await (window as any).__firebaseSyncInitPromise;
-      // After sync init completes, verify app exists
-      try {
-        const firebaseApp = await import("firebase/app");
-        const { getApps } = firebaseApp;
-        const apps = getApps();
-        if (apps.length > 0 && apps[0].options?.apiKey) {
-          (window as any).__firebaseAppReady = true;
-          return;
-        }
-      } catch {
-        // Continue waiting
-      }
-    } catch {
-      // Continue even if failed
-    }
-  }
-  
-  // Wait for global init promise
-  if ((window as any).__firebaseInitPromise) {
-    try {
-      await (window as any).__firebaseInitPromise;
-      // After global init completes, verify app exists
-      try {
-        const firebaseApp = await import("firebase/app");
-        const { getApps } = firebaseApp;
-        const apps = getApps();
-        if (apps.length > 0 && apps[0].options?.apiKey) {
-          (window as any).__firebaseAppReady = true;
-          return;
-        }
-      } catch {
-        // Continue waiting
-      }
-    } catch {
-      // Continue even if failed
-    }
-  }
-  
-  // Poll until app is ready (with timeout)
-  const startTime = Date.now();
-  const timeout = 10000; // 10 seconds
-  
-  while (!(window as any).__firebaseAppReady && Date.now() - startTime < timeout) {
-    try {
-      const firebaseApp = await import("firebase/app");
-      const { getApps } = firebaseApp;
-      const apps = getApps();
-      if (apps.length > 0 && apps[0].options?.apiKey) {
-        (window as any).__firebaseAppReady = true;
-        console.log("[Firebase Interceptor] Firebase app verified and ready");
-        break;
-      }
-    } catch {
-      // Continue polling
-    }
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-  
-  if (!(window as any).__firebaseAppReady) {
-    console.error("[Firebase Interceptor] Firebase app not ready after timeout");
+  // Use firebase-client.ts to wait for initialization
+  try {
+    const { getFirebaseApp } = await import("./firebase-client");
+    await getFirebaseApp();
+  } catch (error: any) {
+    console.warn("[Firebase Interceptor] Failed to wait for Firebase app:", error?.message);
   }
 }
 

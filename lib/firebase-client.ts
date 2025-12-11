@@ -11,72 +11,36 @@ let initPromise: Promise<void> | null = null;
 let isInitialized = false;
 
 /**
- * Get Firebase config from head script or environment variables
+ * Get Firebase config from environment variables
+ * This is the ONLY source of Firebase configuration
  */
 function getFirebaseConfig(): any | null {
-  if (typeof window === 'undefined') {
-    // Server-side: use environment variables
-    const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
-    const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
-    const appId = (process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "").trim();
-    const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
+  const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
+  const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
+  const appId = (process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "").trim();
+  const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
 
-    if (!apiKey || !projectId || !appId) {
-      return null;
-    }
-
-    const config: any = {
-      apiKey,
-      projectId,
-      appId,
-    };
-
-    if (authDomain) {
-      config.authDomain = authDomain;
-    }
-    if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
-      config.storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-    }
-    if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
-      config.messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
-    }
-
-    return config;
-  } else {
-    // Client-side: prefer head script config, fallback to env vars
-    const headConfig = (window as any).__firebaseConfig;
-    if (headConfig && headConfig.apiKey && headConfig.projectId && headConfig.appId) {
-      return headConfig;
-    }
-
-    // Fallback to environment variables (for cases where head script hasn't run yet)
-    const apiKey = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "").trim();
-    const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
-    const appId = (process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "").trim();
-    const authDomain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
-
-    if (!apiKey || !projectId || !appId) {
-      return null;
-    }
-
-    const config: any = {
-      apiKey,
-      projectId,
-      appId,
-    };
-
-    if (authDomain) {
-      config.authDomain = authDomain;
-    }
-    if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
-      config.storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-    }
-    if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
-      config.messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
-    }
-
-    return config;
+  if (!apiKey || !projectId || !appId) {
+    return null;
   }
+
+  const config: any = {
+    apiKey,
+    projectId,
+    appId,
+  };
+
+  if (authDomain) {
+    config.authDomain = authDomain;
+  }
+  if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
+    config.storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  }
+  if (process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID) {
+    config.messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+  }
+
+  return config;
 }
 
 /**
@@ -101,30 +65,8 @@ async function initializeFirebase(): Promise<void> {
 
   initPromise = (async () => {
     try {
-      // Wait for head script config if on client-side (with timeout)
-      let config: any = null;
-      if (typeof window !== 'undefined') {
-        // Wait for head script to set config (with timeout)
-        if (!(window as any).__firebaseConfig && !(window as any).__firebaseConfigReady) {
-          const startTime = Date.now();
-          const timeout = 2000; // 2 seconds max wait
-          
-          while (!(window as any).__firebaseConfig && Date.now() - startTime < timeout) {
-            await new Promise(resolve => setTimeout(resolve, 50));
-          }
-        }
-        
-        // Prefer head script config if available
-        const headConfig = (window as any).__firebaseConfig;
-        if (headConfig && headConfig.apiKey && headConfig.projectId && headConfig.appId) {
-          config = headConfig;
-        }
-      }
-      
-      // Fallback to getFirebaseConfig() if head script config not available
-      if (!config) {
-        config = getFirebaseConfig();
-      }
+      // Get config from environment variables (the ONLY source)
+      const config = getFirebaseConfig();
       
       if (!config) {
         console.warn("[Firebase Client] Firebase config not available - Firebase features will not work");
