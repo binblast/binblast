@@ -104,21 +104,8 @@ async function initializeFirebase(): Promise<void> {
 
       // CRITICAL: Only import auth/firestore AFTER app is initialized
       // This prevents the "Neither apiKey nor config.authenticator provided" error
-      // CRITICAL: Wait for app to be marked as ready before importing modules
-      // This ensures webpack doesn't bundle Firebase modules into page chunks that execute before initialization
-      if (typeof window !== 'undefined') {
-        // Wait for app to be marked as ready
-        const startTime = Date.now();
-        const timeout = 5000;
-        while (!(window as any).__firebaseAppReady && Date.now() - startTime < timeout) {
-          await new Promise(resolve => setTimeout(resolve, 50));
-        }
-      }
-      
-      // Verify app exists and has valid config before importing modules
-      if (!app || !app.options?.apiKey || !app.options?.projectId || !app.options?.appId) {
-        throw new Error("Firebase app is not properly initialized");
-      }
+      // At this point, app is already initialized and marked as ready on window
+      // We've verified app has valid config above, so it's safe to import modules
       
       // Now safe to import - app is guaranteed to exist with valid config
       const [firebaseAuth, firebaseFirestore] = await Promise.all([
