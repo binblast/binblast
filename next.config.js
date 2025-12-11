@@ -20,9 +20,12 @@ const nextConfig = {
               name: 'firebase',
               chunks: 'initial', // Only in initial chunks, never in async chunks
               enforce: true,
-              priority: 50, // Higher priority to ensure it's in main bundle
+              priority: 100, // Highest priority to ensure it's in main bundle FIRST
               maxAsyncRequests: 1, // Minimum value (1) to prevent async loading
               maxInitialRequests: Infinity,
+              // CRITICAL: Force Firebase into main bundle by setting minSize to 0
+              // This ensures Firebase loads before any page chunks
+              minSize: 0,
             },
             // Prevent modules that import Firebase from being split separately
             // This ensures Firebase initialization happens before page chunks load
