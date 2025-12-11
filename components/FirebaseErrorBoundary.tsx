@@ -20,32 +20,16 @@ export class FirebaseErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
-    // After fixing initialization, Firebase errors should not occur
-    // But if they do, log them for debugging
+    // With the unified Firebase client, initialization errors should not occur
+    // If they do, it's a genuine error that should be logged
     const errorMsg = error?.message || String(error);
     
-    // Check if this is a Firebase initialization error
-    // These should NOT happen after proper initialization
-    const isFirebaseInitError = 
-      errorMsg.includes("apiKey") ||
-      errorMsg.includes("authenticator");
+    // Log all errors for debugging
+    console.error("[FirebaseErrorBoundary] Error caught:", errorMsg);
     
-    if (isFirebaseInitError) {
-      // This should not happen - log as error for debugging
-      console.error("[FirebaseErrorBoundary] ❌ Firebase initialization error (this should not happen):", errorMsg);
-      console.error("[FirebaseErrorBoundary] This indicates Firebase modules were imported before app initialization completed");
-      // Still allow site to render, but log as error
-      return { hasError: false, error: null };
-    }
-    
-    // Other Firebase errors (not initialization) - allow site to render
-    if (errorMsg.includes("Firebase")) {
-      console.warn("[FirebaseErrorBoundary] Caught Firebase runtime error - allowing site to render:", errorMsg);
-      return { hasError: false, error: null };
-    }
-    
-    // Non-Firebase errors - show error UI
-    return { hasError: true, error: error || null };
+    // Allow site to render for all errors - don't block the UI
+    // Components will handle Firebase unavailability gracefully
+    return { hasError: false, error: null };
   }
 
   componentDidCatch(error: Error, errorInfo: any) {

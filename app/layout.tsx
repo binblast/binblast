@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { FirebaseInitializer } from "@/components/FirebaseInitializer";
 import { FirebaseGate } from "@/components/FirebaseGate";
 import { FirebaseErrorBoundary } from "@/components/FirebaseErrorBoundary";
-// CRITICAL: Import Firebase sync init FIRST to ensure Firebase is initialized before any dynamic chunks load
-// This must be imported before any other modules that might use Firebase
-import "@/lib/firebase-init-sync";
+// Initialize Firebase client early (it will wait for head script config)
+import "@/lib/firebase-client";
 
 export const metadata: Metadata = {
   title: "Bin Blast Co. - Professional Trash Bin Cleaning Service",
@@ -112,8 +110,6 @@ export default function RootLayout({
       <body>
         {/* Error boundary to catch Firebase errors and allow site to render */}
         <FirebaseErrorBoundary>
-          {/* Initialize Firebase before any children render to prevent dynamic chunk errors */}
-          <FirebaseInitializer />
           <FirebaseGate>
             {children}
           </FirebaseGate>
