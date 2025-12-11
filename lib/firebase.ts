@@ -318,9 +318,26 @@ async function ensureInitialized(): Promise<void> {
           throw new Error("FIREBASE_BUILD_ERROR");
         }
         
-        // Only import auth/firestore AFTER app is initialized
-        // This prevents the "Neither apiKey nor config.authenticator provided" error
+        // CRITICAL: Wait for Firebase app to be ready before importing auth/firestore
+        // This prevents Firebase SDK from trying to access default app before initialization
         if (appInitialized) {
+          // CRITICAL: Wait for sync init promise to ensure app is fully initialized
+          if (typeof window !== 'undefined' && (window as any).__firebaseSyncInitPromise) {
+            try {
+              await (window as any).__firebaseSyncInitPromise;
+            } catch {
+              // Continue even if failed
+            }
+          }
+          
+          // Verify app exists before importing auth/firestore modules
+          const verifyApps = getApps();
+          if (verifyApps.length === 0 || !verifyApps[0].options?.apiKey) {
+            throw new Error("Firebase app not initialized - cannot import auth/firestore");
+          }
+          
+          // Only import auth/firestore AFTER app is verified to exist
+          // This prevents the "Neither apiKey nor config.authenticator provided" error
           const [firebaseAuth, firebaseFirestore] = await Promise.all([
             import("firebase/auth").catch((err) => {
               if (err?.message?.includes("apiKey") || err?.message?.includes("authenticator")) {
