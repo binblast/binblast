@@ -297,6 +297,10 @@ async function ensureInitialized(): Promise<void> {
           try {
             app = initializeApp(config);
             global.__firebaseApp = app;
+            global.__firebaseReady = true;
+            if (typeof window !== 'undefined') {
+              (window as any).__firebaseAppReady = true;
+            }
             appInitialized = true;
             console.log("[Firebase] App initialized before importing auth/firestore");
           } catch (initErr: any) {
