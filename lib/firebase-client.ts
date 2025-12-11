@@ -101,17 +101,10 @@ async function initializeFirebase(): Promise<void> {
 
   initPromise = (async () => {
     try {
-      // Get config
-      const config = getFirebaseConfig();
-      if (!config) {
-        console.warn("[Firebase Client] Firebase config not available - Firebase features will not work");
-        isInitialized = true;
-        return;
-      }
-
       // Wait for head script config if on client-side (with timeout)
+      let config: any = null;
       if (typeof window !== 'undefined') {
-        // If head script hasn't set config yet, wait a bit
+        // Wait for head script to set config (with timeout)
         if (!(window as any).__firebaseConfig && !(window as any).__firebaseConfigReady) {
           const startTime = Date.now();
           const timeout = 2000; // 2 seconds max wait
@@ -119,14 +112,24 @@ async function initializeFirebase(): Promise<void> {
           while (!(window as any).__firebaseConfig && Date.now() - startTime < timeout) {
             await new Promise(resolve => setTimeout(resolve, 50));
           }
-          
-          // Check again after waiting
-          const headConfig = (window as any).__firebaseConfig;
-          if (headConfig && headConfig.apiKey && headConfig.projectId && headConfig.appId) {
-            // Use head script config
-            Object.assign(config, headConfig);
-          }
         }
+        
+        // Prefer head script config if available
+        const headConfig = (window as any).__firebaseConfig;
+        if (headConfig && headConfig.apiKey && headConfig.projectId && headConfig.appId) {
+          config = headConfig;
+        }
+      }
+      
+      // Fallback to getFirebaseConfig() if head script config not available
+      if (!config) {
+        config = getFirebaseConfig();
+      }
+      
+      if (!config) {
+        console.warn("[Firebase Client] Firebase config not available - Firebase features will not work");
+        isInitialized = true;
+        return;
       }
 
       // Import firebase/app
