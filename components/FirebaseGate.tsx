@@ -2,17 +2,21 @@
 // This component provides Firebase context and blocks rendering until Firebase is ready
 "use client";
 
+import { useEffect } from "react";
 import { FirebaseProvider } from "@/lib/firebase-context";
 
-// CRITICAL: Import firebase-client.ts statically here so it's guaranteed to be in the main bundle
-// Since FirebaseGate is imported in the root layout, this ensures firebase-client.ts
-// is always in the main bundle and initializes before any page chunks load
-// The webpack config ensures this file stays in the main bundle (not code-split)
-import "@/lib/firebase-client";
-
 export function FirebaseGate({ children }: { children: React.ReactNode }) {
-  // Firebase initialization happens automatically when firebase-client.ts module loads
-  // The top-level code in firebase-client.ts starts initialization immediately
+  // CRITICAL: Use dynamic import to initialize Firebase
+  // This prevents webpack from analyzing firebase-client.ts and code-splitting firebase/auth
+  // We initialize Firebase in a useEffect to ensure it happens after component mount
+  useEffect(() => {
+    // Dynamically import firebase-client to start initialization
+    // This import is completely opaque to webpack's static analysis
+    import("@/lib/firebase-client").catch((error) => {
+      // Silently handle errors - Firebase will initialize when needed
+      console.error("[FirebaseGate] Failed to initialize Firebase:", error);
+    });
+  }, []);
   
   return <FirebaseProvider>{children}</FirebaseProvider>;
 }

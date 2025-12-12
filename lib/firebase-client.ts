@@ -147,56 +147,21 @@ async function initializeFirebase(): Promise<void> {
       // This prevents page chunks from importing firebase/auth before we're ready
       if (typeof window !== 'undefined') {
         (window as any).__firebaseReadyForAuthImport = true;
+        (window as any).__firebaseAppInitialized = true;
       }
       
-      // Now safe to import - app is guaranteed to exist with valid config
-      // CRITICAL: Import these modules AFTER app is fully initialized and registered
-      const [firebaseAuth, firebaseFirestore] = await Promise.all([
-        import("firebase/auth"),
-        import("firebase/firestore"),
-      ]);
+      // CRITICAL: Don't import firebase/auth and firebase/firestore here
+      // Instead, import them lazily only when actually needed
+      // This prevents webpack from code-splitting them into page chunks
+      // We'll import them in getAuthInstance() and getDbInstance() when called
       
-      // Mark that auth has been imported
+      // Mark that initialization is complete (but modules not yet imported)
       if (typeof window !== 'undefined') {
-        (window as any).__firebaseAuthImported = true;
+        (window as any).__firebaseInitComplete = true;
       }
-
-      // Get auth instance (client-side only)
-      if (typeof window !== "undefined") {
-        try {
-          // CRITICAL: Always pass app explicitly to prevent default app lookup
-          // CRITICAL: getAuth() MUST be called with the app instance, never without
-          // Calling getAuth() without an app causes it to look for default app, which may not exist
-          auth = firebaseAuth.getAuth(app);
-          
-          // CRITICAL: Verify auth instance was created successfully
-          if (!auth) {
-            throw new Error("getAuth() returned null");
-          }
-          
-          console.log("[Firebase Client] Auth initialized");
-        } catch (error: any) {
-          const errorMsg = error?.message || String(error);
-          console.error("[Firebase Client] Failed to initialize auth:", errorMsg);
-          // If error is about apiKey/authenticator, the app wasn't ready when firebase/auth imported
-          if (errorMsg.includes("apiKey") || errorMsg.includes("authenticator")) {
-            throw new Error(`Firebase auth module imported before app was ready: ${errorMsg}`);
-          }
-          auth = null;
-        }
-      } else {
-        auth = null;
-      }
-
-      // Get Firestore instance
-      try {
-        // CRITICAL: Always pass app explicitly to prevent default app lookup
-        db = firebaseFirestore.getFirestore(app);
-        console.log("[Firebase Client] Firestore initialized");
-      } catch (error: any) {
-        console.error("[Firebase Client] Failed to initialize Firestore:", error?.message);
-        db = null;
-      }
+      
+      // CRITICAL: Auth and Firestore will be lazy-loaded when getAuthInstance() or getDbInstance() is called
+      // This prevents webpack from code-splitting firebase/auth and firebase/firestore into page chunks
 
       isInitialized = true;
     } catch (error: any) {
@@ -241,11 +206,46 @@ export async function getFirebaseApp(): Promise<any> {
   return app;
 }
 
+// Lazy-loaded Firebase modules (imported only when needed)
+let firebaseAuthModule: any = null;
+let firebaseFirestoreModule: any = null;
+
 /**
  * Get Firebase auth instance
  */
 export async function getAuthInstance(): Promise<any> {
   await initializeFirebase();
+  
+  // CRITICAL: Lazy-load firebase/auth only when actually needed
+  // This prevents webpack from code-splitting it into page chunks
+  if (!auth && typeof window !== 'undefined') {
+    if (!firebaseAuthModule) {
+      // Verify Firebase is ready before importing
+      if (!(window as any).__firebaseAppInitialized) {
+        throw new Error("Firebase app not initialized - cannot import firebase/auth");
+      }
+      
+      // Now safe to import - app is guaranteed to exist
+      firebaseAuthModule = await import("firebase/auth");
+      
+      // Get auth instance
+      const app = await getFirebaseApp();
+      if (app) {
+        auth = firebaseAuthModule.getAuth(app);
+        if (typeof window !== 'undefined') {
+          (window as any).__firebaseAuthImported = true;
+        }
+        console.log("[Firebase Client] Auth initialized (lazy-loaded)");
+      }
+    } else if (!auth) {
+      // Module already loaded, just get auth instance
+      const app = await getFirebaseApp();
+      if (app) {
+        auth = firebaseAuthModule.getAuth(app);
+      }
+    }
+  }
+  
   return auth;
 }
 
@@ -254,6 +254,34 @@ export async function getAuthInstance(): Promise<any> {
  */
 export async function getDbInstance(): Promise<any> {
   await initializeFirebase();
+  
+  // CRITICAL: Lazy-load firebase/firestore only when actually needed
+  // This prevents webpack from code-splitting it into page chunks
+  if (!db && typeof window !== 'undefined') {
+    if (!firebaseFirestoreModule) {
+      // Verify Firebase is ready before importing
+      if (!(window as any).__firebaseAppInitialized) {
+        throw new Error("Firebase app not initialized - cannot import firebase/firestore");
+      }
+      
+      // Now safe to import - app is guaranteed to exist
+      firebaseFirestoreModule = await import("firebase/firestore");
+      
+      // Get Firestore instance
+      const app = await getFirebaseApp();
+      if (app) {
+        db = firebaseFirestoreModule.getFirestore(app);
+        console.log("[Firebase Client] Firestore initialized (lazy-loaded)");
+      }
+    } else if (!db) {
+      // Module already loaded, just get db instance
+      const app = await getFirebaseApp();
+      if (app) {
+        db = firebaseFirestoreModule.getFirestore(app);
+      }
+    }
+  }
+  
   return db;
 }
 
