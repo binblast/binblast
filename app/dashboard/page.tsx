@@ -648,12 +648,6 @@ function DashboardPageContent() {
     );
   }
 
-  // Compute subscription manager visibility
-  const validPlans = ["one-time", "twice-month", "bi-monthly", "quarterly"];
-  const hasValidPlan = Boolean(user.selectedPlan && validPlans.includes(user.selectedPlan));
-  const hasValidSubscription = Boolean(user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId));
-  const shouldShowSubscriptionManager = hasValidPlan && hasValidSubscription && Boolean(userId) && Boolean(firebaseReady);
-
   return (
     <>
       <Navbar />
