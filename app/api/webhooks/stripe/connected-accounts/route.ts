@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
 
       case "transfer.created":
       case "transfer.updated": {
-        const transfer = event.data.object as Stripe.Transfer;
+        const transfer = event.data.object as Stripe.Transfer & { status?: string; reversed?: boolean };
         
         // Update partner booking commission status if transfer is related
         if (transfer.metadata?.partnerBookingId) {
@@ -126,14 +126,30 @@ export async function POST(req: NextRequest) {
           const bookingDoc = await getDoc(bookingRef);
           
           if (bookingDoc.exists()) {
-            // Determine status based on transfer status property
-            // Stripe transfer statuses: 'pending', 'paid', 'failed', 'canceled', 'reversed'
+            // Determine status based on transfer properties
+            // Note: Status may not be available in all Stripe API versions
+            // For legacy transfers, we primarily track creation/updates
+            // Actual payout status is handled by v2.money_management.outbound_transfer events
             let commissionStatus = 'held';
-            if (transfer.status === 'paid') {
-              commissionStatus = 'paid';
-            } else if (transfer.status === 'failed' || transfer.status === 'canceled' || transfer.status === 'reversed') {
+            
+            // Check if transfer has status property (may vary by Stripe API version)
+            if ('status' in transfer && transfer.status) {
+              if (transfer.status === 'paid') {
+                commissionStatus = 'paid';
+              } else if (transfer.status === 'failed' || transfer.status === 'canceled') {
+                commissionStatus = 'failed';
+              } else if (transfer.status === 'pending' || transfer.status === 'in_transit') {
+                commissionStatus = 'held';
+              }
+            }
+            
+            // Check if transfer was reversed
+            if ('reversed' in transfer && transfer.reversed === true) {
               commissionStatus = 'failed';
-            } else if (transfer.status === 'pending') {
+            }
+            
+            // For transfer.created, always set to 'held' (funds are held until payout)
+            if (event.type === "transfer.created") {
               commissionStatus = 'held';
             }
             
@@ -146,7 +162,8 @@ export async function POST(req: NextRequest) {
             console.log("[Connected Account Webhook] Updated commission status:", {
               bookingId: transfer.metadata.partnerBookingId,
               transferId: transfer.id,
-              transferStatus: transfer.status,
+              transferStatus: 'status' in transfer ? transfer.status : 'unknown',
+              reversed: 'reversed' in transfer ? transfer.reversed : false,
               commissionStatus,
               payloadStyle: webhookSecret === snapshotSecret ? 'snapshot' : 'thin',
             });
