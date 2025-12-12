@@ -27,6 +27,7 @@ function RegisterForm() {
   const sessionId = searchParams.get("session_id") || "";
   const initialEmail = searchParams.get("email") || "";
   const referralCode = searchParams.get("ref") || "";
+  const redirectParam = searchParams.get("redirect") || "";
   
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -215,10 +216,6 @@ function RegisterForm() {
       }
       
       setSuccess(true);
-      
-      // Check for redirect parameter (e.g., from partner application)
-      const urlParams = new URLSearchParams(window.location.search);
-      const redirectParam = urlParams.get("redirect");
       
       // Redirect logic:
       // 1. If redirect parameter exists -> use it (e.g., /partners/apply)
