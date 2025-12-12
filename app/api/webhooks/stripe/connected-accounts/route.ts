@@ -118,7 +118,8 @@ export async function POST(req: NextRequest) {
 
       case "transfer.created":
       case "transfer.updated": {
-        const transfer = event.data.object as Stripe.Transfer & { status?: string; reversed?: boolean };
+        const transfer = event.data.object as Stripe.Transfer;
+        const transferWithStatus = transfer as Stripe.Transfer & { status?: string; reversed?: boolean };
         
         // Update partner booking commission status if transfer is related
         if (transfer.metadata?.partnerBookingId) {
@@ -133,18 +134,19 @@ export async function POST(req: NextRequest) {
             let commissionStatus = 'held';
             
             // Check if transfer has status property (may vary by Stripe API version)
-            if ('status' in transfer && transfer.status) {
-              if (transfer.status === 'paid') {
+            const transferStatus = transferWithStatus.status;
+            if (transferStatus) {
+              if (transferStatus === 'paid') {
                 commissionStatus = 'paid';
-              } else if (transfer.status === 'failed' || transfer.status === 'canceled') {
+              } else if (transferStatus === 'failed' || transferStatus === 'canceled') {
                 commissionStatus = 'failed';
-              } else if (transfer.status === 'pending' || transfer.status === 'in_transit') {
+              } else if (transferStatus === 'pending' || transferStatus === 'in_transit') {
                 commissionStatus = 'held';
               }
             }
             
             // Check if transfer was reversed
-            if ('reversed' in transfer && transfer.reversed === true) {
+            if (transferWithStatus.reversed === true) {
               commissionStatus = 'failed';
             }
             
@@ -162,8 +164,8 @@ export async function POST(req: NextRequest) {
             console.log("[Connected Account Webhook] Updated commission status:", {
               bookingId: transfer.metadata.partnerBookingId,
               transferId: transfer.id,
-              transferStatus: 'status' in transfer ? transfer.status : 'unknown',
-              reversed: 'reversed' in transfer ? transfer.reversed : false,
+              transferStatus: transferStatus || 'unknown',
+              reversed: transferWithStatus.reversed || false,
               commissionStatus,
               payloadStyle: webhookSecret === snapshotSecret ? 'snapshot' : 'thin',
             });
