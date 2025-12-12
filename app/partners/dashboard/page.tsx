@@ -22,7 +22,7 @@ interface PartnerData {
   revenueSharePartner: number;
   revenueSharePlatform: number;
   referralCode: string;
-  partnerCode?: string; // Legacy field
+  partnerCode?: string;
   bookingLinkSlug: string;
   websiteOrInstagram?: string;
   hasInsurance?: boolean;
@@ -56,6 +56,14 @@ interface Customer {
   activeSubscriptions: number;
 }
 
+interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  assignedArea: string;
+  activeJobsToday: number;
+}
+
 export default function PartnerDashboardPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
@@ -63,15 +71,17 @@ export default function PartnerDashboardPage() {
   const [partnerData, setPartnerData] = useState<PartnerData | null>(null);
   const [bookings, setBookings] = useState<PartnerBooking[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [upcomingCleanings, setUpcomingCleanings] = useState<Array<{ customer: string; date: Date; plan: string }>>([]);
+  const [upcomingCleanings, setUpcomingCleanings] = useState<Array<{ customer: string; date: Date; plan: string; address?: string }>>([]);
   const [stats, setStats] = useState({
-    thisMonthEarnings: 0, // in cents
+    thisMonthEarnings: 0,
     totalCustomers: 0,
     activeSubscriptions: 0,
     nextPayoutDate: "Payouts processed on the 25th of each month",
   });
   const [copied, setCopied] = useState(false);
   const [copiedSignupLink, setCopiedSignupLink] = useState(false);
+  const [showPlaybookScripts, setShowPlaybookScripts] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkAuth() {
@@ -115,8 +125,6 @@ export default function PartnerDashboardPage() {
       const db = await getDbInstance();
       if (!db) return;
 
-      // Get partner data - only active partners can access dashboard
-      // First try by userId
       let partnersQuery = query(
         collection(db, "partners"),
         where("userId", "==", uid),
@@ -124,9 +132,7 @@ export default function PartnerDashboardPage() {
       );
       let partnersSnapshot = await getDocs(partnersQuery);
 
-      // If not found by userId, try by email (in case partner was approved before registration)
       if (partnersSnapshot.empty) {
-        // Get user email from auth
         const { getAuthInstance } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
         const userEmail = auth?.currentUser?.email;
@@ -140,24 +146,18 @@ export default function PartnerDashboardPage() {
           const partnersByEmailSnapshot = await getDocs(partnersByEmailQuery);
           
           if (!partnersByEmailSnapshot.empty) {
-            // Found by email - use this snapshot
-            // Note: Don't try to update userId client-side - let the API handle it when agreement is accepted
-            // This avoids Firestore permission errors
             partnersSnapshot = partnersByEmailSnapshot;
           }
         }
       }
 
-      // If still empty after checking by email, check for pending agreement
       if (partnersSnapshot.empty) {
-        // Check if they have a pending application or pending agreement
         let allPartnersQuery = query(
           collection(db, "partners"),
           where("userId", "==", uid)
         );
         let allPartnersSnapshot = await getDocs(allPartnersQuery);
         
-        // Also check by email if userId query is empty
         if (allPartnersSnapshot.empty) {
           const { getAuthInstance } = await import("@/lib/firebase");
           const auth = await getAuthInstance();
@@ -169,23 +169,17 @@ export default function PartnerDashboardPage() {
               where("email", "==", userEmail)
             );
             allPartnersSnapshot = await getDocs(allPartnersQuery);
-            
-            // Found by email - use this snapshot
-            // Note: Don't try to update userId client-side - let the API handle it when agreement is accepted
-            // This avoids Firestore permission errors
           }
         }
         
         if (!allPartnersSnapshot.empty) {
           const partnerData = allPartnersSnapshot.docs[0].data();
           if (partnerData.status === "pending_agreement") {
-            // Redirect to agreement page
             router.push(`/partners/agreement/${allPartnersSnapshot.docs[0].id}`);
             return;
           }
         }
         
-        // Not a partner - set loading to false and let component show "not found" message
         setLoading(false);
         return;
       }
@@ -193,7 +187,6 @@ export default function PartnerDashboardPage() {
       const partnerDoc = partnersSnapshot.docs[0];
       const data = partnerDoc.data();
       
-      // Ensure we have the data before setting it
       if (data && partnerDoc.id) {
         setPartnerData({
           id: partnerDoc.id,
@@ -204,7 +197,6 @@ export default function PartnerDashboardPage() {
         return;
       }
 
-      // Load partner bookings for this partner
       const bookingsQuery = query(
         collection(db, "partnerBookings"),
         where("partnerId", "==", partnerDoc.id)
@@ -216,7 +208,6 @@ export default function PartnerDashboardPage() {
       let thisMonthEarningsCents = 0;
       let activeSubscriptionsCount = 0;
 
-      // Get current month start
       const now = new Date();
       const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -229,7 +220,6 @@ export default function PartnerDashboardPage() {
         
         bookingsList.push(booking);
 
-        // Track customers
         const email = bookingData.customerEmail;
         if (email) {
           if (!customerMap.has(email)) {
@@ -244,7 +234,6 @@ export default function PartnerDashboardPage() {
           const customer = customerMap.get(email)!;
           customer.bookings.push(booking);
           
-          // Track next service date
           if (bookingData.nextServiceDate) {
             const nextDate = bookingData.nextServiceDate?.toDate?.() || new Date(bookingData.nextServiceDate?.seconds * 1000);
             if (!customer.nextServiceDate || nextDate < customer.nextServiceDate) {
@@ -252,36 +241,31 @@ export default function PartnerDashboardPage() {
             }
           }
           
-          // Count active subscriptions
           if (bookingData.status === "active") {
             customer.activeSubscriptions++;
             activeSubscriptionsCount++;
           }
         }
 
-        // Calculate this month's earnings
         const bookingDate = bookingData.createdAt?.toDate?.() || new Date(bookingData.createdAt?.seconds * 1000 || Date.now());
         if (bookingDate >= currentMonthStart && bookingData.status !== "refunded") {
           thisMonthEarningsCents += bookingData.partnerShareAmount || 0;
         }
       });
 
-      // Sort bookings by date (newest first)
       bookingsList.sort((a, b) => {
         const aTime = a.createdAt?.toMillis?.() || (a.createdAt as any)?.seconds * 1000 || 0;
         const bTime = b.createdAt?.toMillis?.() || (b.createdAt as any)?.seconds * 1000 || 0;
         return bTime - aTime;
       });
 
-      // Convert customer map to array and sort by next service date
       const customersList = Array.from(customerMap.values()).sort((a, b) => {
         if (!a.nextServiceDate) return 1;
         if (!b.nextServiceDate) return -1;
         return a.nextServiceDate.getTime() - b.nextServiceDate.getTime();
       });
 
-      // Build upcoming cleanings list
-      const cleanings: Array<{ customer: string; date: Date; plan: string }> = [];
+      const cleanings: Array<{ customer: string; date: Date; plan: string; address?: string }> = [];
       customersList.forEach(customer => {
         if (customer.nextServiceDate && customer.nextServiceDate >= now) {
           const activeBooking = customer.bookings.find(b => b.status === "active");
@@ -345,13 +329,44 @@ export default function PartnerDashboardPage() {
     }
   };
 
+  const generateQRCode = () => {
+    if (!partnerLink) return;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(partnerLink)}`;
+    setQrCodeUrl(qrUrl);
+  };
+
+  // Calculate next payout date
+  const now = new Date();
+  const currentDay = now.getDate();
+  const nextPayoutDate = currentDay >= 25 
+    ? new Date(now.getFullYear(), now.getMonth() + 1, 25)
+    : new Date(now.getFullYear(), now.getMonth(), 25);
+  const daysUntilPayout = Math.ceil((nextPayoutDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+  // Group upcoming jobs by date
+  const jobsToday = upcomingCleanings.filter(j => {
+    const jobDate = new Date(j.date);
+    return jobDate.toDateString() === now.toDateString();
+  });
+  const jobsTomorrow = upcomingCleanings.filter(j => {
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return new Date(j.date).toDateString() === tomorrow.toDateString();
+  });
+  const jobsThisWeek = upcomingCleanings.filter(j => {
+    const weekFromNow = new Date(now);
+    weekFromNow.setDate(weekFromNow.getDate() + 7);
+    const jobDate = new Date(j.date);
+    return jobDate > now && jobDate <= weekFromNow && !jobsToday.includes(j) && !jobsTomorrow.includes(j);
+  });
+
   if (loading) {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
-          <div className="container">
-            <div style={{ textAlign: "center" }}>Loading...</div>
+        <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-20">
+          <div className="container mx-auto px-4 py-8">
+            <div className="text-center">Loading...</div>
           </div>
         </main>
       </>
@@ -365,338 +380,413 @@ export default function PartnerDashboardPage() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
-        <div className="container">
-          <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-            <div style={{ marginBottom: "2rem" }}>
-              <h1 className="section-title" style={{ marginBottom: "0.5rem" }}>
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-100">
+        {/* Hero Section */}
+        <div className="relative bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white overflow-hidden">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+          <div className="container mx-auto px-4 py-16 relative z-10">
+            <div className="max-w-4xl">
+              <h1 className="text-5xl font-bold mb-4 tracking-tight">
                 Welcome back, {partnerData.businessName}
               </h1>
-              <p style={{ fontSize: "1rem", color: "var(--text-light)", margin: 0 }}>
+              <p className="text-xl text-blue-100 mb-6">
                 Here's how your Bin Blast Co. partnership is performing.
               </p>
-            </div>
-
-            {/* Stats Overview */}
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: "1.5rem",
-              marginBottom: "2rem"
-            }}>
-              <div style={{
-                background: "#ecfdf5",
-                borderRadius: "16px",
-                padding: "1.5rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "2px solid #86efac"
-              }}>
-                <div style={{ fontSize: "0.875rem", color: "#047857", marginBottom: "0.5rem", fontWeight: "600" }}>
-                  This Month's Earnings
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Active Partner</span>
                 </div>
-                <div style={{ fontSize: "2rem", fontWeight: "700", color: "#047857" }}>
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{(partnerData.revenueSharePartner * 100).toFixed(0)}% Revenue Share</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Analytics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {/* This Month's Earnings */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-green-100 hover:border-green-200 group">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-green-100 rounded-xl group-hover:bg-green-200 transition-colors">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-semibold text-green-600 uppercase tracking-wide">This Month</span>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">
                   ${(stats.thisMonthEarnings / 100).toFixed(2)}
                 </div>
+                <div className="text-sm text-gray-500">Earnings this month</div>
               </div>
 
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "16px",
-                padding: "1.5rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb"
-              }}>
-                <div style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.5rem" }}>
-                  Total Customers Referred
+              {/* Total Customers */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-blue-100 hover:border-blue-200 group">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-blue-100 rounded-xl group-hover:bg-blue-200 transition-colors">
+                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Customers</span>
                 </div>
-                <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                <div className="text-3xl font-bold text-gray-900 mb-1">
                   {stats.totalCustomers}
                 </div>
+                <div className="text-sm text-gray-500">Total referred</div>
               </div>
 
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "16px",
-                padding: "1.5rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb"
-              }}>
-                <div style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.5rem" }}>
-                  Active Subscriptions
+              {/* Active Subscriptions */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-purple-100 hover:border-purple-200 group">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-purple-100 rounded-xl group-hover:bg-purple-200 transition-colors">
+                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Active</span>
                 </div>
-                <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                <div className="text-3xl font-bold text-gray-900 mb-1">
                   {stats.activeSubscriptions}
                 </div>
+                <div className="text-sm text-gray-500">Active subscriptions</div>
               </div>
 
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "16px",
-                padding: "1.5rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb"
-              }}>
-                <div style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.5rem" }}>
-                  Next Payout Date
+              {/* Next Payout */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-orange-100 hover:border-orange-200 group">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-orange-100 rounded-xl group-hover:bg-orange-200 transition-colors">
+                    <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Payout</span>
                 </div>
-                <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                  {stats.nextPayoutDate}
+                <div className="text-2xl font-bold text-gray-900 mb-1">
+                  {daysUntilPayout} days
                 </div>
+                <div className="text-sm text-gray-500">{nextPayoutDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
               </div>
             </div>
 
-            {/* Partner Tools Section */}
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-              gap: "2rem",
-              marginBottom: "2rem"
-            }}>
-              {/* Your Booking Link Card */}
-              <div style={{
-                background: "#f0f9ff",
-                borderRadius: "20px",
-                padding: "2rem",
-                border: "2px solid #bae6fd"
-              }}>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
-                  Your Booking Link
-                </h2>
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap", marginBottom: "1rem" }}>
+            {/* Booking Link & Partner Signup Link Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* Booking Link Card */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 shadow-lg border-2 border-blue-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900">Your Booking Link</h2>
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="flex gap-2 mb-4">
                   <input
                     type="text"
                     readOnly
                     value={partnerLink}
-                    style={{
-                      flex: "1",
-                      padding: "0.75rem 1rem",
-                      background: "#ffffff",
-                      borderRadius: "8px",
-                      border: "1px solid #bae6fd",
-                      fontSize: "0.875rem",
-                      color: "#0369a1",
-                      minWidth: "250px",
-                      fontFamily: "monospace"
-                    }}
+                    className="flex-1 px-4 py-3 bg-white rounded-lg border-2 border-blue-200 text-sm font-mono text-blue-700 focus:outline-none focus:border-blue-400"
                   />
                   <button
                     onClick={handleCopy}
-                    style={{
-                      padding: "0.75rem 1.5rem",
-                      background: copied ? "#16a34a" : "#0369a1",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "8px",
-                      fontSize: "0.875rem",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap"
-                    }}
+                    className={`px-6 py-3 rounded-lg font-semibold text-white transition-all ${
+                      copied ? "bg-green-500" : "bg-blue-600 hover:bg-blue-700"
+                    } shadow-md hover:shadow-lg`}
                   >
-                    {copied ? "Copied!" : "Copy Link"}
+                    {copied ? "✓ Copied" : "Copy"}
                   </button>
                 </div>
-                <p style={{ fontSize: "0.875rem", color: "#0c4a6e", margin: 0 }}>
-                  Share this link with your customers. All bookings through this link will be automatically tracked and attributed to you.
-                </p>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={generateQRCode}
+                    className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border-2 border-blue-200 text-sm font-semibold text-blue-700 hover:bg-blue-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                    </svg>
+                    QR Code
+                  </button>
+                  {qrCodeUrl && (
+                    <div className="p-2 bg-white rounded-lg border-2 border-blue-200">
+                      <img src={qrCodeUrl} alt="QR Code" className="w-16 h-16" />
+                    </div>
+                  )}
+                  <div className="flex-1 text-xs text-gray-600">
+                    Share this link with customers. All bookings are automatically tracked.
+                  </div>
+                </div>
               </div>
 
-              {/* Partner Signup Link Card */}
-              <div style={{
-                background: "#fef3c7",
-                borderRadius: "20px",
-                padding: "2rem",
-                border: "2px solid #fcd34d"
-              }}>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "1rem", color: "#92400e" }}>
-                  Partner Signup Link
-                </h2>
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap", marginBottom: "1rem" }}>
+              {/* Partner Signup Link Card - Team Growth */}
+              <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-2xl p-6 shadow-lg border-2 border-amber-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Team Growth</h2>
+                    <p className="text-sm text-gray-600 mt-1">Partner Signup Link</p>
+                  </div>
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="flex gap-2 mb-4">
                   <input
                     type="text"
                     readOnly
                     value={partnerSignupLink}
-                    style={{
-                      flex: "1",
-                      padding: "0.75rem 1rem",
-                      background: "#ffffff",
-                      borderRadius: "8px",
-                      border: "1px solid #fcd34d",
-                      fontSize: "0.875rem",
-                      color: "#92400e",
-                      minWidth: "250px",
-                      fontFamily: "monospace"
-                    }}
+                    className="flex-1 px-4 py-3 bg-white rounded-lg border-2 border-amber-200 text-sm font-mono text-amber-700 focus:outline-none focus:border-amber-400"
                   />
                   <button
                     onClick={handleCopySignupLink}
-                    style={{
-                      padding: "0.75rem 1.5rem",
-                      background: copiedSignupLink ? "#16a34a" : "#f59e0b",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "8px",
-                      fontSize: "0.875rem",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap"
-                    }}
+                    className={`px-6 py-3 rounded-lg font-semibold text-white transition-all ${
+                      copiedSignupLink ? "bg-green-500" : "bg-amber-600 hover:bg-amber-700"
+                    } shadow-md hover:shadow-lg`}
                   >
-                    {copiedSignupLink ? "Copied!" : "Copy Link"}
+                    {copiedSignupLink ? "✓ Copied" : "Copy"}
                   </button>
                 </div>
-                <p style={{ fontSize: "0.875rem", color: "#78350f", margin: 0 }}>
-                  Use this link to sign up for your partner account. Share with team members who need partner access.
+                <p className="text-xs text-gray-600">
+                  Share this link with team members who need partner access. They'll be able to sign up and join your team.
                 </p>
-              </div>
-
-              {/* Quick Tips Card */}
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "20px",
-                padding: "2rem",
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)"
-              }}>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                  How to Sell Bin Blast Co.
-                </h2>
-                <ul style={{ 
-                  listStyle: "none", 
-                  padding: 0, 
-                  margin: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.75rem"
-                }}>
-                  <li style={{ fontSize: "0.875rem", color: "var(--text-light)", display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
-                    <span style={{ color: "#16a34a", fontWeight: "600" }}>•</span>
-                    <span>Put your link on invoices and receipts</span>
-                  </li>
-                  <li style={{ fontSize: "0.875rem", color: "var(--text-light)", display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
-                    <span style={{ color: "#16a34a", fontWeight: "600" }}>•</span>
-                    <span>Text it to customers after service</span>
-                  </li>
-                  <li style={{ fontSize: "0.875rem", color: "var(--text-light)", display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
-                    <span style={{ color: "#16a34a", fontWeight: "600" }}>•</span>
-                    <span>Add it to your website or service menu</span>
-                  </li>
-                  <li style={{ fontSize: "0.875rem", color: "var(--text-light)", display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
-                    <span style={{ color: "#16a34a", fontWeight: "600" }}>•</span>
-                    <span>Include it in follow-up emails</span>
-                  </li>
-                </ul>
               </div>
             </div>
 
-            {/* Upcoming Cleanings */}
-            {upcomingCleanings.length > 0 && (
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "20px",
-                padding: "2rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb",
-                marginBottom: "2rem"
-              }}>
-                <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
-                  Upcoming Cleanings
-                </h2>
-                <div style={{ display: "grid", gap: "0.75rem" }}>
-                  {upcomingCleanings.slice(0, 10).map((cleaning, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        padding: "1rem",
-                        background: "#f9fafb",
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center"
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
-                          {cleaning.customer}
-                        </div>
-                        <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>{cleaning.plan}</div>
+            {/* How to Sell - Playbook Section */}
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">How to Sell Bin Blast Co.</h2>
+                  <p className="text-gray-600">A guided playbook to maximize your earnings</p>
+                </div>
+                <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold text-gray-700 transition-colors">
+                  Download PDF
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Put on invoices</h3>
+                    <p className="text-sm text-gray-600">Add your booking link to every invoice and receipt</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Text after service</h3>
+                    <p className="text-sm text-gray-600">Send your link via text message after completing a service</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Add to website</h3>
+                    <p className="text-sm text-gray-600">Include your booking link on your website or service menu</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Follow-up emails</h3>
+                    <p className="text-sm text-gray-600">Include your link in customer follow-up emails</p>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPlaybookScripts(!showPlaybookScripts)}
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold text-gray-700 transition-colors flex items-center justify-center gap-2"
+              >
+                {showPlaybookScripts ? "Hide" : "Show"} Top Performing Sales Scripts
+                <svg className={`w-5 h-5 transition-transform ${showPlaybookScripts ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {showPlaybookScripts && (
+                <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
+                  <h3 className="font-bold text-lg text-gray-900 mb-4">Top Performing Sales Scripts</h3>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-white rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-2">Script 1: After Service Completion</h4>
+                      <p className="text-sm text-gray-700 italic">"Thanks for choosing us! Want to keep your bins clean year-round? Check out Bin Blast Co.'s subscription service - [your link]. They offer monthly and bi-weekly cleaning plans."</p>
+                    </div>
+                    <div className="p-4 bg-white rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-2">Script 2: Invoice Follow-up</h4>
+                      <p className="text-sm text-gray-700 italic">"Your invoice is attached. As a bonus, here's a special link to Bin Blast Co.'s professional bin cleaning service: [your link]. They offer flexible plans perfect for maintaining clean bins between our visits."</p>
+                    </div>
+                    <div className="p-4 bg-white rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-2">Script 3: Social Media Post</h4>
+                      <p className="text-sm text-gray-700 italic">"Partnered with Bin Blast Co. to offer you the best bin cleaning service! Use my link to get started: [your link]. They handle everything - you just enjoy clean bins!"</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Upcoming Jobs Calendar */}
+            {(jobsToday.length > 0 || jobsTomorrow.length > 0 || jobsThisWeek.length > 0) && (
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Upcoming Jobs</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {jobsToday.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <h3 className="font-bold text-gray-900">Today ({jobsToday.length})</h3>
                       </div>
-                      <div style={{ fontSize: "1rem", fontWeight: "600", color: "#0369a1" }}>
-                        {cleaning.date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      <div className="space-y-2">
+                        {jobsToday.map((job, idx) => (
+                          <div key={idx} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                            <div className="font-semibold text-gray-900">{job.customer}</div>
+                            <div className="text-sm text-gray-600">{job.plan}</div>
+                            <div className="text-xs text-gray-500 mt-1">{job.date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  )}
+                  {jobsTomorrow.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <h3 className="font-bold text-gray-900">Tomorrow ({jobsTomorrow.length})</h3>
+                      </div>
+                      <div className="space-y-2">
+                        {jobsTomorrow.map((job, idx) => (
+                          <div key={idx} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="font-semibold text-gray-900">{job.customer}</div>
+                            <div className="text-sm text-gray-600">{job.plan}</div>
+                            <div className="text-xs text-gray-500 mt-1">{job.date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {jobsThisWeek.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                        <h3 className="font-bold text-gray-900">This Week ({jobsThisWeek.length})</h3>
+                      </div>
+                      <div className="space-y-2">
+                        {jobsThisWeek.slice(0, 5).map((job, idx) => (
+                          <div key={idx} className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                            <div className="font-semibold text-gray-900">{job.customer}</div>
+                            <div className="text-sm text-gray-600">{job.plan}</div>
+                            <div className="text-xs text-gray-500 mt-1">{job.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Customers List */}
-            {customers.length > 0 && (
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "20px",
-                padding: "2rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb",
-                marginBottom: "2rem"
-              }}>
-                <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
-                  Your Customers ({customers.length})
-                </h2>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            {/* Team Management Section */}
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Your Team</h2>
+                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Team Member
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b-2 border-gray-200">
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Name</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Role</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Assigned Area</th>
+                      <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Active Jobs Today</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-gray-100">
+                      <td colSpan={4} className="py-8 text-center text-gray-500">
+                        <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <p>No team members yet. Click "Add Team Member" to get started.</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Active Subscribers List */}
+            {customers.filter(c => c.activeSubscriptions > 0).length > 0 && (
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Active Subscribers</h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
                     <thead>
-                      <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                        <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                          Customer
-                        </th>
-                        <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                          Email
-                        </th>
-                        <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                          Active Subscriptions
-                        </th>
-                        <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                          Next Service
-                        </th>
-                        <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                          Total Bookings
-                        </th>
+                      <tr className="border-b-2 border-gray-200">
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Customer Name</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Email</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Plan Type</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Next Service Date</th>
+                        <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {customers.map((customer) => {
+                      {customers.filter(c => c.activeSubscriptions > 0).map((customer) => {
+                        const activeBooking = customer.bookings.find(b => b.status === "active");
                         const emailParts = customer.email.split("@");
                         const maskedEmail = emailParts[0].substring(0, 3) + "***@" + (emailParts[1] || "");
+                        const planType = activeBooking?.planName || "N/A";
+                        const isMonthly = planType.toLowerCase().includes("monthly");
+                        const isBiWeekly = planType.toLowerCase().includes("bi-weekly") || planType.toLowerCase().includes("biweekly");
                         
                         return (
-                          <tr key={customer.email} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                            <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)", fontWeight: "600" }}>
-                              {customer.name || customer.email.split("@")[0]}
-                            </td>
-                            <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)" }}>
-                              {maskedEmail}
-                            </td>
-                            <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)" }}>
-                              <span style={{
-                                padding: "0.25rem 0.75rem",
-                                borderRadius: "12px",
-                                fontSize: "0.75rem",
-                                fontWeight: "600",
-                                background: customer.activeSubscriptions > 0 ? "#ecfdf5" : "#f3f4f6",
-                                color: customer.activeSubscriptions > 0 ? "#047857" : "#6b7280",
-                              }}>
-                                {customer.activeSubscriptions}
+                          <tr key={customer.email} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td className="py-3 px-4 font-semibold text-gray-900">{customer.name || customer.email.split("@")[0]}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">{maskedEmail}</td>
+                            <td className="py-3 px-4">
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                isMonthly ? "bg-blue-100 text-blue-700" : isBiWeekly ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-700"
+                              }`}>
+                                {planType}
                               </span>
                             </td>
-                            <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)" }}>
+                            <td className="py-3 px-4 text-sm text-gray-900">
                               {customer.nextServiceDate 
-                                ? customer.nextServiceDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                                ? customer.nextServiceDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                                 : "N/A"}
                             </td>
-                            <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)", textAlign: "right", fontWeight: "600" }}>
-                              {customer.bookings.length}
+                            <td className="py-3 px-4 text-center">
+                              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Active</span>
                             </td>
                           </tr>
                         );
@@ -707,94 +797,68 @@ export default function PartnerDashboardPage() {
               </div>
             )}
 
-            {/* Bookings List */}
-            <div style={{
-              background: "#ffffff",
-              borderRadius: "20px",
-              padding: "2rem",
-              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-              border: "1px solid #e5e7eb"
-            }}>
-              <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
-                Recent Bookings
-              </h2>
-              {bookings.length > 20 && (
-                <p style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "1rem" }}>
-                  Showing 20 most recent bookings
-                </p>
-              )}
-
+            {/* Recent Bookings Table */}
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Bookings</h2>
               {bookings.length === 0 ? (
-                <p style={{ color: "var(--text-light)", textAlign: "center", padding: "2rem" }}>
-                  No bookings yet. Share your partner link to start earning!
-                </p>
+                <div className="text-center py-12">
+                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-gray-500 text-lg mb-2">No bookings yet</p>
+                  <p className="text-gray-400">Share your partner link to start earning!</p>
+                </div>
               ) : (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
                     <thead>
-                      <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                        <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                          Date
-                        </th>
-                        <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                          Customer
-                        </th>
-                        <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                          Plan
-                        </th>
-                        <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                          Status
-                        </th>
-                        <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                          Earnings
-                        </th>
-                        <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                          Next Service
-                        </th>
+                      <tr className="border-b-2 border-gray-200">
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Date</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Customer Name</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Service Address</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Subscription Type</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Next Cleaning Date</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
+                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Earnings</th>
                       </tr>
                     </thead>
                     <tbody>
                       {bookings.slice(0, 20).map((booking) => {
                         const bookingDate = booking.createdAt?.toDate?.() || new Date(booking.createdAt?.seconds * 1000 || Date.now());
                         const nextServiceDate = booking.nextServiceDate?.toDate?.() || null;
-                        
-                        // Mask customer email (show first part only)
                         const emailParts = booking.customerEmail.split("@");
                         const maskedEmail = emailParts[0].substring(0, 3) + "***@" + (emailParts[1] || "");
-                        
-                        // Get customer name if available, otherwise use masked email
                         const customerDisplay = booking.customerName 
                           ? `${booking.customerName.split(" ")[0]} ${booking.customerName.split(" ")[1]?.[0] || ""}.`
                           : maskedEmail;
                         
                         return (
-                          <tr key={booking.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                            <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)" }}>
-                              {bookingDate.toLocaleDateString()}
-                            </td>
-                            <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)" }}>
-                              {customerDisplay}
-                            </td>
-                            <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)" }}>
-                              {booking.planName || booking.planId || "N/A"}
-                            </td>
-                            <td style={{ padding: "0.75rem" }}>
-                              <span style={{
-                                padding: "0.25rem 0.75rem",
-                                borderRadius: "12px",
-                                fontSize: "0.75rem",
-                                fontWeight: "600",
-                                background: booking.status === "active" ? "#ecfdf5" : booking.status === "cancelled" ? "#fef2f2" : "#fef3c7",
-                                color: booking.status === "active" ? "#047857" : booking.status === "cancelled" ? "#dc2626" : "#92400e",
-                              }}>
-                                {booking.status.toUpperCase()}
+                          <tr key={booking.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td className="py-3 px-4 text-sm text-gray-900">{bookingDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                            <td className="py-3 px-4 font-semibold text-gray-900">{customerDisplay}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">—</td>
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-semibold">
+                                {booking.planName || booking.planId || "N/A"}
                               </span>
                             </td>
-                            <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#047857", fontWeight: "600", textAlign: "right" }}>
-                              ${(booking.partnerShareAmount / 100).toFixed(2)}
+                            <td className="py-3 px-4 text-sm text-gray-900">
+                              {nextServiceDate ? nextServiceDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "N/A"}
                             </td>
-                            <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)" }}>
-                              {nextServiceDate ? nextServiceDate.toLocaleDateString() : "N/A"}
+                            <td className="py-3 px-4">
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                booking.status === "active" ? "bg-green-100 text-green-700" :
+                                booking.status === "cancelled" ? "bg-red-100 text-red-700" :
+                                booking.status === "refunded" ? "bg-gray-100 text-gray-700" :
+                                "bg-yellow-100 text-yellow-700"
+                              }`}>
+                                {booking.status === "active" ? "Active" :
+                                 booking.status === "cancelled" ? "Cancelled" :
+                                 booking.status === "refunded" ? "Refunded" : "Trial"}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-right font-semibold text-green-600">
+                              ${(booking.partnerShareAmount / 100).toFixed(2)}
                             </td>
                           </tr>
                         );
@@ -805,113 +869,74 @@ export default function PartnerDashboardPage() {
               )}
             </div>
 
-            {/* Partner Information */}
-            <div style={{
-              background: "#ffffff",
-              borderRadius: "20px",
-              padding: "2rem",
-              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-              border: "1px solid #e5e7eb",
-              marginTop: "2rem"
-            }}>
-              <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
-                Partner Information
-              </h2>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1.5rem" }}>
+            {/* Partner Information - Business Profile */}
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Partner Information</h2>
+                <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold text-gray-700 transition-colors flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Business Name
-                  </div>
-                  <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                    {partnerData.businessName}
-                  </div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Business Name</div>
+                  <div className="text-lg font-bold text-gray-900">{partnerData.businessName}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Owner Name
-                  </div>
-                  <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                    {partnerData.ownerName}
-                  </div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Owner Name</div>
+                  <div className="text-lg font-semibold text-gray-900">{partnerData.ownerName}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Email
-                  </div>
-                  <div style={{ fontSize: "1rem", color: "var(--text-dark)" }}>
-                    {partnerData.email}
-                  </div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Email</div>
+                  <div className="text-lg text-gray-900">{partnerData.email}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Phone
-                  </div>
-                  <div style={{ fontSize: "1rem", color: "var(--text-dark)" }}>
-                    {partnerData.phone}
-                  </div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Phone</div>
+                  <div className="text-lg text-gray-900">{partnerData.phone}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Service Area
-                  </div>
-                  <div style={{ fontSize: "1rem", fontWeight: "600", color: "#0369a1" }}>
-                    {partnerData.serviceArea || "N/A"}
-                  </div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Service Area</div>
+                  <div className="text-lg font-semibold text-blue-600">{partnerData.serviceArea || "N/A"}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Service Type
-                  </div>
-                  <div style={{ fontSize: "1rem", color: "var(--text-dark)" }}>
-                    {partnerData.serviceType}
-                  </div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Service Type</div>
+                  <div className="text-lg text-gray-900">{partnerData.serviceType}</div>
                 </div>
                 {partnerData.websiteOrInstagram && (
                   <div>
-                    <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      Website/Instagram
-                    </div>
-                    <div style={{ fontSize: "1rem", color: "var(--text-dark)" }}>
-                      <a href={partnerData.websiteOrInstagram.startsWith("http") ? partnerData.websiteOrInstagram : `https://${partnerData.websiteOrInstagram}`} target="_blank" rel="noopener noreferrer" style={{ color: "#0369a1", textDecoration: "none" }}>
-                        {partnerData.websiteOrInstagram}
-                      </a>
-                    </div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Website/Instagram</div>
+                    <a href={partnerData.websiteOrInstagram.startsWith("http") ? partnerData.websiteOrInstagram : `https://${partnerData.websiteOrInstagram}`} target="_blank" rel="noopener noreferrer" className="text-lg text-blue-600 hover:underline">
+                      {partnerData.websiteOrInstagram}
+                    </a>
                   </div>
                 )}
+                <div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Insurance Status</div>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                    partnerData.hasInsurance ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                  }`}>
+                    {partnerData.hasInsurance ? "✓ Insured" : "✗ Not Insured"}
+                  </span>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Revenue Share</div>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-700">
+                    {(partnerData.revenueSharePartner * 100).toFixed(0)}% Partner
+                  </span>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Referral Code</div>
+                  <div className="text-lg font-mono font-bold text-blue-600">{partnerData.referralCode}</div>
+                </div>
                 {partnerData.promotionMethod && (
                   <div>
-                    <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      Promotion Method
-                    </div>
-                    <div style={{ fontSize: "1rem", color: "var(--text-dark)" }}>
-                      {partnerData.promotionMethod}
-                    </div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Promotion Method</div>
+                    <div className="text-lg text-gray-900">{partnerData.promotionMethod}</div>
                   </div>
                 )}
-                <div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Insurance
-                  </div>
-                  <div style={{ fontSize: "1rem", fontWeight: "600", color: partnerData.hasInsurance ? "#16a34a" : "#dc2626" }}>
-                    {partnerData.hasInsurance ? "Yes" : "No"}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Referral Code
-                  </div>
-                  <div style={{ fontSize: "1rem", fontWeight: "600", color: "#0369a1", fontFamily: "monospace" }}>
-                    {partnerData.referralCode}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Revenue Share
-                  </div>
-                  <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                    {(partnerData.revenueSharePartner * 100).toFixed(0)}% Partner / {(partnerData.revenueSharePlatform * 100).toFixed(0)}% Platform
-                  </div>
-                </div>
               </div>
             </div>
           </div>
