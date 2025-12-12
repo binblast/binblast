@@ -30,7 +30,9 @@ export async function POST(req: NextRequest) {
 
     // Dynamically import Firebase (same pattern as webhook route)
     const { getDbInstance } = await import("@/lib/firebase");
-    const { collection, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp } = await import("firebase/firestore");
+    const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+    const firestore = await safeImportFirestore();
+    const { collection, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp } = firestore;
     
     const db = await getDbInstance();
     if (!db) {

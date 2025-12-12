@@ -171,8 +171,11 @@ function PartnerSignupPageContent() {
       const data = await response.json();
 
       if (data.success) {
-        // Redirect to partner dashboard
-        router.push("/partners/dashboard");
+        // Wait a moment for Firestore to update, then redirect to partner dashboard
+        // Use window.location to ensure a full page reload and fresh auth state
+        setTimeout(() => {
+          window.location.href = "/partners/dashboard";
+        }, 500);
       } else {
         setError(data.error || "Failed to complete signup");
         setSubmitting(false);
