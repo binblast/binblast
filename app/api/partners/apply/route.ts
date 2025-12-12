@@ -31,22 +31,22 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate unique partner code and slug helper functions
-    function generatePartnerCode(): string {
+    const generatePartnerCode = (): string => {
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Exclude confusing chars
       let code = "";
       for (let i = 0; i < 8; i++) {
         code += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       return code;
-    }
+    };
 
-    function generatePartnerSlug(businessName: string): string {
+    const generatePartnerSlug = (businessName: string): string => {
       return businessName
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "")
         .substring(0, 50) || `partner-${Date.now()}`;
-    }
+    };
 
     // Check if user already has a partner application
     const partnersQuery = query(
