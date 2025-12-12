@@ -9,6 +9,6 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2024-06-20', // Stable API version compatible with stripe v20.0.0
+  apiVersion: '2025-11-17.clover', // API version required by stripe v20.0.0
   typescript: true,
 });
