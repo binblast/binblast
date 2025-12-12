@@ -344,9 +344,11 @@ export async function POST(req: NextRequest) {
       case "invoice.upcoming": {
         // Handle invoice before it's finalized - apply referral discounts based on referrals in billing period
         const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = typeof invoice.subscription === 'string'
-          ? invoice.subscription
-          : invoice.subscription?.id;
+        // Safely access subscription property - Stripe types may vary, so we use type assertion
+        const invoiceSubscription = (invoice as any).subscription;
+        const subscriptionId = typeof invoiceSubscription === 'string'
+          ? invoiceSubscription
+          : invoiceSubscription?.id;
         const customerId = typeof invoice.customer === 'string'
           ? invoice.customer
           : invoice.customer?.id;
