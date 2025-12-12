@@ -581,7 +581,9 @@ function DashboardPageContent() {
     return allCustomers.filter((customer: any) => {
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
-        const name = `${customer.firstName || ""} ${customer.lastName || ""}`.toLowerCase();
+        const firstName = customer.firstName || "";
+        const lastName = customer.lastName || "";
+        const name = (firstName + " " + lastName).toLowerCase();
         const email = (customer.email || "").toLowerCase();
         if (!name.includes(search) && !email.includes(search)) return false;
       }
