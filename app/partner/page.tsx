@@ -141,11 +141,27 @@ function PartnerSignupPageContent() {
         return;
       }
 
-      // Check if userId matches
-      if (data.userId !== uid) {
+      // Check if userId matches OR if userId is null (partner approved before registration)
+      // If userId is null, we'll link it during signup
+      if (data.userId && data.userId !== uid) {
         setError("This signup link is not for your account. Please use the correct link.");
         setLoading(false);
         return;
+      }
+
+      // If userId is null, link it to the current user
+      if (!data.userId && uid) {
+        try {
+          const { updateDoc, serverTimestamp } = firestore;
+          await updateDoc(partnerRef, {
+            userId: uid,
+            updatedAt: serverTimestamp(),
+          });
+          console.log("[Partner Signup] Linked userId to partner record:", uid);
+        } catch (linkErr) {
+          console.warn("[Partner Signup] Error linking userId:", linkErr);
+          // Continue anyway - userId will be set when agreement is accepted
+        }
       }
 
       setPartnerInfo({

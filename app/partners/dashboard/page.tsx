@@ -116,20 +116,84 @@ export default function PartnerDashboardPage() {
       if (!db) return;
 
       // Get partner data - only active partners can access dashboard
-      const partnersQuery = query(
+      // First try by userId
+      let partnersQuery = query(
         collection(db, "partners"),
         where("userId", "==", uid),
         where("status", "==", "active")
       );
-      const partnersSnapshot = await getDocs(partnersQuery);
+      let partnersSnapshot = await getDocs(partnersQuery);
+
+      // If not found by userId, try by email (in case partner was approved before registration)
+      if (partnersSnapshot.empty) {
+        // Get user email from auth
+        const { getAuthInstance } = await import("@/lib/firebase");
+        const auth = await getAuthInstance();
+        const userEmail = auth?.currentUser?.email;
+        
+        if (userEmail) {
+          const partnersByEmailQuery = query(
+            collection(db, "partners"),
+            where("email", "==", userEmail),
+            where("status", "==", "active")
+          );
+          const partnersByEmailSnapshot = await getDocs(partnersByEmailQuery);
+          
+          if (!partnersByEmailSnapshot.empty) {
+            // Found by email - link userId now
+            const partnerDoc = partnersByEmailSnapshot.docs[0];
+            const { updateDoc, serverTimestamp } = firestore;
+            try {
+              await updateDoc(partnerDoc.ref, {
+                userId: uid,
+                updatedAt: serverTimestamp(),
+              });
+              console.log("[Partner Dashboard] Linked userId to partner:", uid);
+            } catch (linkErr) {
+              console.warn("[Partner Dashboard] Error linking userId:", linkErr);
+            }
+            partnersSnapshot = partnersByEmailSnapshot;
+          }
+        }
+      }
 
       if (partnersSnapshot.empty) {
         // Check if they have a pending application or pending agreement
-        const allPartnersQuery = query(
+        let allPartnersQuery = query(
           collection(db, "partners"),
           where("userId", "==", uid)
         );
-        const allPartnersSnapshot = await getDocs(allPartnersQuery);
+        let allPartnersSnapshot = await getDocs(allPartnersQuery);
+        
+        // Also check by email if userId query is empty
+        if (allPartnersSnapshot.empty) {
+          const { getAuthInstance } = await import("@/lib/firebase");
+          const auth = await getAuthInstance();
+          const userEmail = auth?.currentUser?.email;
+          
+          if (userEmail) {
+            allPartnersQuery = query(
+              collection(db, "partners"),
+              where("email", "==", userEmail)
+            );
+            allPartnersSnapshot = await getDocs(allPartnersQuery);
+            
+            // Link userId if found by email
+            if (!allPartnersSnapshot.empty) {
+              const partnerDoc = allPartnersSnapshot.docs[0];
+              const { updateDoc, serverTimestamp } = firestore;
+              try {
+                await updateDoc(partnerDoc.ref, {
+                  userId: uid,
+                  updatedAt: serverTimestamp(),
+                });
+                console.log("[Partner Dashboard] Linked userId to partner:", uid);
+              } catch (linkErr) {
+                console.warn("[Partner Dashboard] Error linking userId:", linkErr);
+              }
+            }
+          }
+        }
         
         if (!allPartnersSnapshot.empty) {
           const partnerData = allPartnersSnapshot.docs[0].data();

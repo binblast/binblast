@@ -186,10 +186,14 @@ service cloud.firestore {
     
     // Partners collection - approved business partners
     match /partners/{partnerId} {
-      // Partners can read their own partner record
-      allow read: if isAuthenticated() 
-        && resource.data.userId == request.auth.uid
-        || request.auth == null; // Allow server-side reads (for admin, checkout, etc.)
+      // Partners can read their own partner record (by userId or email)
+      allow read: if (
+        (isAuthenticated() && (
+          resource.data.userId == request.auth.uid ||
+          resource.data.email == request.auth.token.email
+        ))
+        || request.auth == null // Allow server-side reads (for admin, checkout, etc.)
+      );
       
       // Only server-side can create partners (after approval)
       allow create: if request.auth == null;

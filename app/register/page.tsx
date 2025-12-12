@@ -121,11 +121,35 @@ function RegisterForm() {
 
     try {
       // Use safe wrapper functions that ensure Firebase is initialized
-      const { createUserWithEmailAndPassword, updateProfile, getDbInstance } = await import("@/lib/firebase");
+      const { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, getDbInstance } = await import("@/lib/firebase");
       const db = await getDbInstance();
       
-      // Create Firebase user
-      const userCredential = await createUserWithEmailAndPassword(email, password);
+      // Try to create Firebase user, but if account exists, try to sign in instead
+      let userCredential;
+      try {
+        userCredential = await createUserWithEmailAndPassword(email, password);
+      } catch (createErr: any) {
+        // If account already exists, try to sign in
+        if (createErr.code === "auth/email-already-in-use" || createErr.code === "auth/email-already-exists") {
+          console.log("[Register] Account already exists, attempting to sign in...");
+          try {
+            userCredential = await signInWithEmailAndPassword(email, password);
+            // If sign in successful, continue with the flow
+          } catch (signInErr: any) {
+            // If sign in fails (wrong password), show error
+            if (signInErr.code === "auth/wrong-password" || signInErr.code === "auth/invalid-credential") {
+              setError("An account with this email already exists. Please log in instead.");
+            } else {
+              setError(signInErr.message || "Account exists but sign in failed. Please try logging in.");
+            }
+            setLoading(false);
+            return;
+          }
+        } else {
+          // Other errors - rethrow
+          throw createErr;
+        }
+      }
       
       // Update profile with display name
       await updateProfile(userCredential.user, {
