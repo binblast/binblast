@@ -248,6 +248,23 @@ function DashboardPageContent() {
           if (!mounted) return;
           setUserId(firebaseUser.uid);
 
+          // Check if user is a partner and redirect accordingly (unless admin)
+          try {
+            const { getDashboardUrl } = await import("@/lib/partner-auth");
+            const dashboardUrl = await getDashboardUrl(firebaseUser.uid);
+            
+            // If user is a partner and not on admin email, redirect to partner dashboard
+            if (dashboardUrl !== "/dashboard" && firebaseUser.email !== ADMIN_EMAIL) {
+              if (mounted) {
+                router.push(dashboardUrl);
+              }
+              return;
+            }
+          } catch (partnerCheckErr) {
+            console.warn("[Dashboard] Error checking partner status:", partnerCheckErr);
+            // Continue with regular dashboard if partner check fails
+          }
+
           try {
             const userDocRef = doc(db, "users", firebaseUser.uid);
             const userDoc = await getDoc(userDocRef);

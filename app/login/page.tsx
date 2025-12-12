@@ -28,14 +28,28 @@ function LoginForm() {
 
     try {
       // Use safe wrapper function that ensures Firebase is initialized
-      const { signInWithEmailAndPassword } = await import("@/lib/firebase");
+      const { signInWithEmailAndPassword, getAuthInstance } = await import("@/lib/firebase");
       
       // Sign in with Firebase
       await signInWithEmailAndPassword(email, password);
       
-      // Success - redirect to dashboard
-      const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
-      router.push(callbackUrl);
+      // Get the authenticated user to check partner status
+      const auth = await getAuthInstance();
+      const user = auth?.currentUser;
+      
+      if (user) {
+        // Check if user is a partner and redirect accordingly
+        const { getDashboardUrl } = await import("@/lib/partner-auth");
+        const dashboardUrl = await getDashboardUrl(user.uid);
+        
+        // Use callbackUrl if provided, otherwise use partner-aware dashboard URL
+        const callbackUrl = searchParams.get("callbackUrl") || dashboardUrl;
+        router.push(callbackUrl);
+      } else {
+        // Fallback to regular dashboard if user not found
+        const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+        router.push(callbackUrl);
+      }
     } catch (err: any) {
       console.error("Login error:", err);
       

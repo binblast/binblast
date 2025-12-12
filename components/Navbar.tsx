@@ -10,11 +10,12 @@ import { useFirebase } from "@/lib/firebase-context";
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [accountUrl, setAccountUrl] = useState("/dashboard");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
   const isHomePage = pathname === "/";
-  const isDashboard = pathname === "/dashboard";
+  const isDashboard = pathname === "/dashboard" || pathname === "/partners/dashboard";
   const showTextLogo = isHomePage || isDashboard;
   const { isReady: firebaseReady } = useFirebase();
 
@@ -38,23 +39,50 @@ export function Navbar() {
         
         if (!mounted) return;
         
-        // Only proceed if auth is available and valid
-        if (auth && typeof auth === "object" && "currentUser" in auth) {
-          // Check current user immediately
-          if (auth.currentUser && mounted) {
-            setIsLoggedIn(true);
-            setLoading(false);
-            console.log("[Navbar] User is logged in:", auth.currentUser.email);
-          } else if (mounted) {
-            setIsLoggedIn(false);
-            setLoading(false);
-            console.log("[Navbar] No user logged in");
-          }
+          // Only proceed if auth is available and valid
+          if (auth && typeof auth === "object" && "currentUser" in auth) {
+            // Check current user immediately
+            if (auth.currentUser && mounted) {
+              setIsLoggedIn(true);
+              
+              // Update account URL based on partner status
+              try {
+                const { getDashboardUrl } = await import("@/lib/partner-auth");
+                const dashboardUrl = await getDashboardUrl(auth.currentUser.uid);
+                setAccountUrl(dashboardUrl);
+              } catch (err) {
+                console.error("[Navbar] Error getting dashboard URL:", err);
+                setAccountUrl("/dashboard");
+              }
+              
+              setLoading(false);
+              console.log("[Navbar] User is logged in:", auth.currentUser.email);
+            } else if (mounted) {
+              setIsLoggedIn(false);
+              setAccountUrl("/dashboard");
+              setLoading(false);
+              console.log("[Navbar] No user logged in");
+            }
           
           // Use safe wrapper function to listen for changes
-          unsubscribe = await onAuthStateChanged((user) => {
+          unsubscribe = await onAuthStateChanged(async (user) => {
             if (mounted) {
               setIsLoggedIn(!!user);
+              
+              // Update account URL based on partner status
+              if (user) {
+                try {
+                  const { getDashboardUrl } = await import("@/lib/partner-auth");
+                  const dashboardUrl = await getDashboardUrl(user.uid);
+                  setAccountUrl(dashboardUrl);
+                } catch (err) {
+                  console.error("[Navbar] Error getting dashboard URL:", err);
+                  setAccountUrl("/dashboard");
+                }
+              } else {
+                setAccountUrl("/dashboard");
+              }
+              
               setLoading(false);
               console.log("[Navbar] Auth state changed:", user ? user.email : "logged out");
             }
@@ -204,7 +232,7 @@ export function Navbar() {
           </li>
           <li>
             {isLoggedIn ? (
-              <Link href="/dashboard">Account</Link>
+              <Link href={accountUrl}>Account</Link>
             ) : (
               <Link href="#account">Account</Link>
             )}
