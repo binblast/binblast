@@ -604,15 +604,22 @@ function DashboardPageContent() {
   };
 
   const nextCleaning = getNextCleaning();
-  const upcomingCleanings = scheduledCleanings.filter(c => {
+  
+  const filteredUpcoming = scheduledCleanings.filter(c => {
     const date = new Date(c.scheduledDate);
     return date >= new Date() && c.status !== "cancelled";
-  }).sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime());
+  });
+  const upcomingCleanings = filteredUpcoming.sort((a, b) => {
+    return new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime();
+  });
 
-  const pastCleanings = scheduledCleanings.filter(c => {
+  const filteredPast = scheduledCleanings.filter(c => {
     const date = new Date(c.scheduledDate);
     return date < new Date() || c.status === "completed" || c.status === "cancelled";
-  }).sort((a, b) => new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime());
+  });
+  const pastCleanings = filteredPast.sort((a, b) => {
+    return new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime();
+  });
 
   if (loading) {
     return (
