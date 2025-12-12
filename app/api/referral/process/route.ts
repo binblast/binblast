@@ -12,7 +12,10 @@ export async function POST(req: NextRequest) {
     const { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, increment, serverTimestamp } = await import("firebase/firestore");
     
     const body = await req.json();
-    const { referralCode, newUserId, newUserEmail } = body;
+    let { referralCode, newUserId, newUserEmail } = body;
+
+    // Normalize referral code to uppercase and trim whitespace
+    referralCode = referralCode?.trim().toUpperCase();
 
     if (!referralCode || !newUserId || !newUserEmail) {
       return NextResponse.json(
@@ -29,6 +32,8 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log("[Referral Process] Looking up referral code:", referralCode);
 
     // Find the user with this referral code
     const usersQuery = query(
@@ -61,9 +66,15 @@ export async function POST(req: NextRequest) {
     const newUserDoc = await getDoc(newUserDocRef);
     
     // Check if this user was already referred (prevent duplicate referrals)
+    // Users can only use ONE referral code total
     if (newUserDoc.exists() && newUserDoc.data().referredBy) {
+      console.warn("[Referral Process] User already has a referral:", {
+        userId: newUserId,
+        existingReferrer: newUserDoc.data().referredBy,
+        attemptedCode: referralCode,
+      });
       return NextResponse.json(
-        { error: "User already has a referral" },
+        { error: "You have already used a referral code. Each user can only use one referral code." },
         { status: 400 }
       );
     }
@@ -76,8 +87,12 @@ export async function POST(req: NextRequest) {
     const existingReferrals = await getDocs(referralsQuery);
     
     if (!existingReferrals.empty) {
+      console.warn("[Referral Process] Referral already exists for this user:", {
+        userId: newUserId,
+        existingReferrals: existingReferrals.docs.map(d => d.id),
+      });
       return NextResponse.json(
-        { error: "Referral already exists for this user" },
+        { error: "Referral already exists for this user. Each user can only use one referral code." },
         { status: 400 }
       );
     }
@@ -90,14 +105,24 @@ export async function POST(req: NextRequest) {
       referredUserEmail: newUserEmail,
       referralCode,
       status: "PENDING",
+      active: true, // Mark as active - will be marked inactive after credits are awarded
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
     // Store referral information in the new user's document
+    // Mark that this user has used a referral code (prevents future use)
     await updateDoc(newUserDocRef, {
       referredBy: referrerId,
       referredByCode: referralCode,
+      referralCodeUsed: true, // Mark that user has used a referral code
+      updatedAt: serverTimestamp(),
+    });
+
+    // Increment referrer's referral count
+    const referrerDocRef = doc(db, "users", referrerId);
+    await updateDoc(referrerDocRef, {
+      referralCount: increment(1),
       updatedAt: serverTimestamp(),
     });
 

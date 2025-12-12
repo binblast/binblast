@@ -149,28 +149,36 @@ function RegisterForm() {
         });
 
         // Process referral if referral code was provided
-        if (referralCode && db && userCredential.user) {
+        // Normalize referral code to uppercase and trim whitespace
+        const normalizedReferralCode = referralCode?.trim().toUpperCase();
+        if (normalizedReferralCode && db && userCredential.user) {
           try {
+            console.log("[Register] Processing referral code:", normalizedReferralCode);
             const response = await fetch("/api/referral/process", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                referralCode,
+                referralCode: normalizedReferralCode,
                 newUserId: userCredential.user.uid,
                 newUserEmail: email,
               }),
             });
 
+            const responseData = await response.json();
             if (!response.ok) {
-              console.warn("Failed to process referral:", await response.text());
+              console.warn("[Register] Failed to process referral:", responseData.error || responseData);
               // Don't block registration if referral processing fails
+            } else {
+              console.log("[Register] Referral processed successfully:", responseData);
             }
           } catch (err) {
-            console.error("Error processing referral:", err);
+            console.error("[Register] Error processing referral:", err);
             // Don't block registration if referral processing fails
           }
+        } else if (normalizedReferralCode) {
+          console.warn("[Register] Referral code provided but db or user not available:", { normalizedReferralCode, hasDb: !!db, hasUser: !!userCredential.user });
         }
       }
       

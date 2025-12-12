@@ -45,7 +45,13 @@ export function Navbar() {
         
         // Only proceed if auth is available and valid
         if (auth && typeof auth === "object" && "currentUser" in auth) {
-          // Use safe wrapper function
+          // Check current user immediately
+          if (auth.currentUser && mounted) {
+            setIsLoggedIn(true);
+            setLoading(false);
+          }
+          
+          // Use safe wrapper function to listen for changes
           unsubscribe = await onAuthStateChanged((user) => {
             if (mounted) {
               setIsLoggedIn(!!user);

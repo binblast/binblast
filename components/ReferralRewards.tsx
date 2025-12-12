@@ -46,7 +46,7 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
           const count = userData.referralCount || 0;
 
           // Generate referral code if it doesn't exist
-          if (!code) {
+          if (!code || code.trim() === "") {
             // Create a unique code based on user ID (first 8 chars) + random 4 chars
             const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
             code = userId.substring(0, 8).toUpperCase() + randomChars;
@@ -56,9 +56,11 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
               referralCode: code,
               updatedAt: serverTimestamp(),
             });
+            
+            console.log("[ReferralRewards] Generated new referral code:", code);
           }
 
-          setReferralCode(code);
+          setReferralCode(code || "");
           setReferralCount(count);
 
           // Load unused credits

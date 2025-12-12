@@ -90,7 +90,7 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
               historyEntries.push({
                 id: `referral-${doc.id}`,
                 type: "referral_made",
-                description: `Referred ${data.referredUserEmail || "a friend"} → completed signup → earned $10 credit`,
+                description: `Referred ${data.referredUserEmail || "a friend"} → completed first purchase → earned $10 credit`,
                 date: createdAt,
                 referredUserName: data.referredUserEmail,
               });
@@ -98,12 +98,14 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
               historyEntries.push({
                 id: `referral-pending-${doc.id}`,
                 type: "referral_made",
-                description: `Referred ${data.referredUserEmail || "a friend"} → pending first purchase`,
+                description: `Referred ${data.referredUserEmail || "a friend"} → pending first purchase (credit will be awarded after purchase)`,
                 date: createdAt,
                 referredUserName: data.referredUserEmail,
               });
             }
           });
+          
+          console.log("[ReferralHistory] Loaded", referralsSnapshot.size, "referrals for referrerId:", currentUserId);
         } catch (referralError: any) {
           console.error("[ReferralHistory] Error loading referrals:", referralError);
           if (referralError.code === 'permission-denied') {
