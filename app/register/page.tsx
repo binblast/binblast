@@ -164,6 +164,7 @@ function RegisterForm() {
           paymentStatus: stripeData ? "paid" : "pending",
           referralCode: generatedCode, // Generate unique code on registration
           referralCount: 0, // Initialize referral count
+          role: "customer", // Default role - can be "customer" | "partner" | "admin"
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });

@@ -173,12 +173,13 @@ body {
 }
 
 .hero-headline {
-    font-size: 3.5rem;
+    font-size: clamp(1.75rem, 8vw, 3.5rem);
     font-weight: 800;
-    margin-bottom: 1.5rem;
+    margin-bottom: clamp(1rem, 3vw, 1.5rem);
     line-height: 1.2;
     letter-spacing: -0.02em;
     animation: fadeInUp 0.8s ease-out;
+    padding: 0 clamp(0.5rem, 2vw, 1rem);
 }
 
 @keyframes fadeInUp {
@@ -193,20 +194,22 @@ body {
 }
 
 .hero-subheadline {
-    font-size: 1.25rem;
-    margin-bottom: 3rem;
+    font-size: clamp(1rem, 4vw, 1.25rem);
+    margin-bottom: clamp(2rem, 6vw, 3rem);
     max-width: 700px;
     margin-left: auto;
     margin-right: auto;
     opacity: 0.95;
     line-height: 1.7;
+    padding: 0 clamp(0.5rem, 2vw, 1rem);
 }
 
 .hero-buttons {
     display: flex;
-    gap: 1rem;
+    gap: clamp(0.75rem, 2vw, 1rem);
     justify-content: center;
     flex-wrap: wrap;
+    padding: 0 clamp(0.5rem, 2vw, 1rem);
 }
 
 /* Button Styles */
@@ -1104,10 +1107,38 @@ section {
     opacity: 0.7;
 }
 
+/* Mobile-First Enhancements */
+/* Touch-friendly minimum sizes */
+button, .btn, a.btn, input[type="submit"], input[type="button"] {
+    min-height: 44px; /* iOS recommended touch target */
+    min-width: 44px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+textarea,
+select {
+    min-height: 44px; /* Touch-friendly form inputs */
+    font-size: 16px; /* Prevents zoom on iOS */
+}
+
+/* Prevent text size adjustment on iOS */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .container {
-        padding: 0 20px;
+        padding: 0 clamp(1rem, 4vw, 1.25rem);
     }
 
     .nav-links {
@@ -1178,36 +1209,54 @@ section {
     }
 
     .hero-headline {
-        font-size: 2.5rem;
+        font-size: clamp(1.75rem, 8vw, 2.5rem);
+        line-height: 1.2;
+        padding: 0 0.5rem;
     }
 
     .hero-subheadline {
-        font-size: 1.125rem;
-        margin-bottom: 2.5rem;
+        font-size: clamp(1rem, 4vw, 1.125rem);
+        margin-bottom: clamp(2rem, 6vw, 2.5rem);
+        padding: 0 0.5rem;
+        line-height: 1.6;
     }
 
     .hero-buttons {
         gap: 1rem;
+        padding: 0 0.5rem;
+    }
+
+    .hero-buttons .btn {
+        width: 100%;
+        max-width: 400px;
     }
 
     section {
-        padding: 4rem 0;
+        padding: clamp(3rem, 8vw, 4rem) 0;
     }
 
     .section-title {
-        font-size: 2rem;
-        margin-bottom: 3rem;
+        font-size: clamp(1.5rem, 6vw, 2rem);
+        margin-bottom: clamp(2rem, 6vw, 3rem);
+        padding: 0 1rem;
+        line-height: 1.3;
+    }
+
+    .section-subtitle {
+        font-size: clamp(0.9rem, 3vw, 1rem);
+        padding: 0 1rem;
     }
 
     .steps-grid,
     .benefits-grid {
         grid-template-columns: 1fr;
-        gap: 2rem;
+        gap: clamp(1.5rem, 4vw, 2rem);
+        padding: 0 1rem;
     }
 
     .step-card,
     .benefit-card {
-        padding: 2rem 1.5rem;
+        padding: clamp(1.5rem, 4vw, 2rem) clamp(1.25rem, 3vw, 1.5rem);
     }
 
 
@@ -1219,34 +1268,45 @@ section {
         max-width: 100%;
     }
 
+    .pricing-grid {
+        padding: 0 1rem;
+    }
+
     .pricing-card.card-link,
     .account-card.card-link {
         max-width: 100%;
+        padding: clamp(1.5rem, 4vw, 2rem) clamp(1.25rem, 3vw, 1.5rem);
     }
 
     .price-big {
-        font-size: 2.3rem;
+        font-size: clamp(2rem, 8vw, 2.3rem);
     }
 
-    .section-title {
-        font-size: 1.7rem;
+    .cta-box {
+        padding: clamp(2rem, 6vw, 3.75rem) clamp(1.5rem, 4vw, 2.5rem);
+        margin: clamp(2rem, 5vw, 2.5rem) clamp(1rem, 3vw, 1.5rem);
+        border-radius: clamp(16px, 4vw, 30px);
     }
 
     .cta-title {
-        font-size: 1.65rem;
+        font-size: clamp(1.5rem, 6vw, 1.65rem);
+        margin-bottom: clamp(1rem, 3vw, 1.25rem);
     }
 
     .cta-sub {
-        font-size: 1rem;
+        font-size: clamp(0.95rem, 3vw, 1rem);
+        margin-bottom: clamp(1.25rem, 4vw, 1.5rem);
     }
 
     .cta-detail {
-        font-size: 1rem;
+        font-size: clamp(0.9rem, 3vw, 1rem);
+        margin: clamp(0.5rem, 2vw, 0.75rem) 0;
     }
 
     .cta-btn {
-        font-size: 1rem;
-        padding: 0.85rem 2rem;
+        font-size: clamp(0.95rem, 3vw, 1rem);
+        padding: clamp(0.85rem, 3vw, 1.125rem) clamp(1.5rem, 5vw, 2rem);
+        margin-top: clamp(1.5rem, 4vw, 1.875rem);
     }
 
     .footer-content {
@@ -1257,6 +1317,22 @@ section {
     .footer-info {
         grid-template-columns: 1fr;
         gap: 2rem;
+    }
+}
+
+/* Tablet optimizations */
+@media (min-width: 481px) and (max-width: 768px) {
+    .hero-headline {
+        font-size: clamp(2rem, 7vw, 2.75rem);
+    }
+
+    .pricing-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    .steps-grid,
+    .benefits-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     }
 }
 
@@ -1274,12 +1350,12 @@ section {
     }
     
     .container {
-        padding: 0 16px;
+        padding: 0 clamp(1rem, 4vw, 1.25rem);
     }
 
     .hero {
         min-height: 85vh;
-        padding: 1.5rem 0;
+        padding: clamp(1.5rem, 4vw, 2rem) 0;
     }
 
     /* Hero logo responsive sizing for mobile */
@@ -1291,82 +1367,136 @@ section {
     }
 
     .hero-headline {
-        font-size: 2rem;
-        margin-bottom: 1.25rem;
+        font-size: clamp(1.5rem, 7vw, 2rem);
+        margin-bottom: clamp(1rem, 3vw, 1.25rem);
+        line-height: 1.2;
     }
 
     .hero-subheadline {
-        font-size: 1rem;
-        margin-bottom: 2rem;
+        font-size: clamp(0.95rem, 4vw, 1rem);
+        margin-bottom: clamp(1.5rem, 5vw, 2rem);
+        line-height: 1.6;
     }
 
     .hero-buttons {
         flex-direction: column;
-        gap: 0.875rem;
+        gap: clamp(0.75rem, 2vw, 0.875rem);
+        width: 100%;
+        padding: 0 0.5rem;
     }
 
     .btn {
         width: 100%;
-        padding: 1rem 2rem;
+        padding: clamp(0.875rem, 3vw, 1rem) clamp(1.5rem, 5vw, 2rem);
+        font-size: clamp(0.95rem, 3vw, 1rem);
     }
 
     .btn-large {
-        padding: 1.125rem 2rem;
-        font-size: 1rem;
+        padding: clamp(1rem, 3vw, 1.125rem) clamp(1.5rem, 5vw, 2rem);
+        font-size: clamp(0.95rem, 3vw, 1rem);
     }
 
     section {
-        padding: 3.5rem 0;
+        padding: clamp(2.5rem, 7vw, 3.5rem) 0;
     }
 
     .section-title {
-        font-size: 1.75rem;
-        margin-bottom: 2.5rem;
+        font-size: clamp(1.5rem, 6vw, 1.75rem);
+        margin-bottom: clamp(2rem, 5vw, 2.5rem);
+        line-height: 1.3;
     }
 
     .step-card,
     .benefit-card {
-        padding: 1.75rem 1.25rem;
+        padding: clamp(1.5rem, 4vw, 1.75rem) clamp(1rem, 3vw, 1.25rem);
     }
 
     .step-number {
-        width: 60px;
-        height: 60px;
-        font-size: 1.5rem;
+        width: clamp(50px, 12vw, 60px);
+        height: clamp(50px, 12vw, 60px);
+        font-size: clamp(1.25rem, 5vw, 1.5rem);
     }
 
     .pricing-card {
-        padding: 2rem 1.5rem;
+        padding: clamp(1.5rem, 4vw, 2rem) clamp(1.25rem, 3vw, 1.5rem);
     }
 
     .price-amount {
-        font-size: 2.5rem;
+        font-size: clamp(2rem, 8vw, 2.5rem);
+    }
+
+    .plan-name {
+        font-size: clamp(1rem, 4vw, 1.1rem);
+    }
+
+    .price-sub,
+    .price-extra {
+        font-size: clamp(0.8rem, 3vw, 0.9rem);
     }
 
     .faq-question {
-        padding: 1.25rem;
-        font-size: 1rem;
+        padding: clamp(1rem, 3vw, 1.25rem);
+        font-size: clamp(0.95rem, 3vw, 1rem);
     }
 
     .faq-answer p {
-        padding: 0 1.25rem 1.25rem;
+        padding: 0 clamp(1rem, 3vw, 1.25rem) clamp(1rem, 3vw, 1.25rem);
+        font-size: clamp(0.9rem, 3vw, 0.95rem);
     }
 
     .cta-title {
-        font-size: 1.5rem;
+        font-size: clamp(1.25rem, 5vw, 1.5rem);
     }
 
     .cta-sub {
-        font-size: 0.95rem;
+        font-size: clamp(0.9rem, 3vw, 0.95rem);
     }
 
     .cta-detail {
-        font-size: 0.9rem;
+        font-size: clamp(0.85rem, 3vw, 0.9rem);
     }
 
     .cta-btn {
-        padding: 0.8rem 1.75rem;
-        font-size: 0.95rem;
+        padding: clamp(0.75rem, 3vw, 0.8rem) clamp(1.25rem, 4vw, 1.75rem);
+        font-size: clamp(0.9rem, 3vw, 0.95rem);
+    }
+
+    /* Mobile form optimizations */
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="password"],
+    textarea,
+    select {
+        font-size: 16px; /* Prevents iOS zoom */
+        padding: clamp(0.75rem, 3vw, 0.875rem) clamp(1rem, 3vw, 1.25rem);
+    }
+
+    /* Mobile table optimizations */
+    table {
+        font-size: clamp(0.85rem, 3vw, 0.9rem);
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Mobile card optimizations */
+    .benefit-card,
+    .service-card,
+    .testimonial-card {
+        margin: 0 auto;
+        max-width: 100%;
+    }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+    .hero {
+        min-height: 100vh;
+    }
+
+    .hero-headline {
+        font-size: clamp(1.75rem, 6vw, 2.25rem);
     }
 }
 

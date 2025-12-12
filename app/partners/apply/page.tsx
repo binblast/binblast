@@ -24,9 +24,15 @@ export default function PartnerApplyPage() {
     ownerName: "",
     email: "",
     phone: "",
+    websiteOrInstagram: "",
     serviceAreas: "",
     businessType: "",
+    hasInsurance: false,
+    promotionMethod: "",
+    heardAboutUs: "",
   });
+  const [agreementChecked, setAgreementChecked] = useState(false);
+  const [emailConsentChecked, setEmailConsentChecked] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
@@ -45,10 +51,8 @@ export default function PartnerApplyPage() {
             setUserId(user.uid);
             setUserEmail(user.email || "");
             setFormData(prev => ({ ...prev, email: user.email || "" }));
-          } else {
-            // Redirect to login if not authenticated
-            router.push("/login?redirect=/partners/apply");
           }
+          // Don't require login - allow anyone to apply
           setLoading(false);
         });
         
@@ -69,9 +73,15 @@ export default function PartnerApplyPage() {
     setError(null);
     setSubmitting(true);
 
-    if (!userId) {
-      setError("Please log in to apply");
+    if (!agreementChecked || !emailConsentChecked) {
+      setError("Please accept both agreement checkboxes to continue");
       setSubmitting(false);
+      return;
+    }
+
+    // If not logged in, redirect to signup/login
+    if (!userId) {
+      router.push(`/signup?redirect=/partners/apply&email=${encodeURIComponent(formData.email)}`);
       return;
     }
 
@@ -125,10 +135,10 @@ export default function PartnerApplyPage() {
                 Application Submitted!
               </h1>
               <p style={{ fontSize: "1.125rem", color: "var(--text-light)", marginBottom: "2rem" }}>
-                Thank you for applying to become a Bin Blast Co. partner. We'll review your application and get back to you within 24-48 hours.
+                Thanks, {formData.ownerName}! We've received your application. We'll review it within 1–2 business days and email you with next steps.
               </p>
               <button
-                onClick={() => router.push("/partners/dashboard")}
+                onClick={() => router.push("/")}
                 className="btn btn-primary"
                 style={{
                   padding: "0.75rem 2rem",
@@ -136,7 +146,7 @@ export default function PartnerApplyPage() {
                   fontWeight: "600"
                 }}
               >
-                View Dashboard
+                Return to Homepage
               </button>
             </div>
           </div>
@@ -148,31 +158,54 @@ export default function PartnerApplyPage() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+      <main style={{ 
+        minHeight: "calc(100vh - 80px)", 
+        padding: "clamp(2rem, 5vw, 4rem) 0", 
+        background: "var(--bg-white)" 
+      }}>
         <div className="container">
-          <div style={{ maxWidth: "700px", margin: "0 auto" }}>
-            <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
+          <div style={{ 
+            maxWidth: "700px", 
+            margin: "0 auto",
+            padding: "0 1rem"
+          }}>
+            <h1 className="section-title" style={{ 
+              textAlign: "center", 
+              marginBottom: "1rem",
+              fontSize: "clamp(1.75rem, 5vw, 2.25rem)"
+            }}>
               Partner Application
             </h1>
             <p style={{ 
-              fontSize: "1rem", 
+              fontSize: "clamp(0.9rem, 3vw, 1rem)", 
               color: "var(--text-light)", 
               textAlign: "center",
-              marginBottom: "2rem"
+              marginBottom: "clamp(1.5rem, 4vw, 2rem)",
+              lineHeight: "1.6"
             }}>
               Fill out the form below to apply for our Business Partner Program
             </p>
 
             <div style={{
               background: "#ffffff",
-              borderRadius: "20px",
-              padding: "2.5rem",
+              borderRadius: "clamp(12px, 3vw, 20px)",
+              padding: "clamp(1.5rem, 4vw, 2.5rem)",
               boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
               border: "1px solid #e5e7eb"
             }}>
-              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              <form onSubmit={handleSubmit} style={{ 
+                display: "flex", 
+                flexDirection: "column", 
+                gap: "clamp(1.25rem, 3vw, 1.5rem)" 
+              }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                  <label style={{ 
+                    display: "block", 
+                    fontSize: "clamp(0.875rem, 2.5vw, 0.9rem)", 
+                    fontWeight: "500", 
+                    marginBottom: "0.5rem", 
+                    color: "var(--text-dark)" 
+                  }}>
                     Business Name *
                   </label>
                   <input
@@ -182,10 +215,13 @@ export default function PartnerApplyPage() {
                     onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
                     style={{
                       width: "100%",
-                      padding: "0.75rem 1rem",
+                      padding: "clamp(0.875rem, 2.5vw, 0.75rem) clamp(1rem, 3vw, 1rem)",
                       border: "1px solid #e5e7eb",
                       borderRadius: "8px",
-                      fontSize: "0.95rem"
+                      fontSize: "clamp(16px, 4vw, 0.95rem)",
+                      minHeight: "44px", // Touch-friendly minimum height
+                      WebkitAppearance: "none",
+                      appearance: "none"
                     }}
                   />
                 </div>
@@ -276,6 +312,25 @@ export default function PartnerApplyPage() {
 
                 <div>
                   <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                    Website / Instagram
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.websiteOrInstagram}
+                    onChange={(e) => setFormData({ ...formData, websiteOrInstagram: e.target.value })}
+                    placeholder="https://yourwebsite.com or @yourinstagram"
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem 1rem",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "8px",
+                      fontSize: "0.95rem"
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
                     Service Areas *
                   </label>
                   <input
@@ -295,6 +350,109 @@ export default function PartnerApplyPage() {
                   <p style={{ fontSize: "0.75rem", color: "var(--text-light)", marginTop: "0.25rem" }}>
                     List cities or zip codes where you operate (comma-separated)
                   </p>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                    Do you have general liability insurance? *
+                  </label>
+                  <div style={{ display: "flex", gap: "1rem" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+                      <input
+                        type="radio"
+                        name="hasInsurance"
+                        checked={formData.hasInsurance === true}
+                        onChange={() => setFormData({ ...formData, hasInsurance: true })}
+                        required
+                        style={{ cursor: "pointer" }}
+                      />
+                      <span>Yes</span>
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+                      <input
+                        type="radio"
+                        name="hasInsurance"
+                        checked={formData.hasInsurance === false}
+                        onChange={() => setFormData({ ...formData, hasInsurance: false })}
+                        required
+                        style={{ cursor: "pointer" }}
+                      />
+                      <span>No</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                    How will you promote Bin Blast Co.? *
+                  </label>
+                  <textarea
+                    required
+                    value={formData.promotionMethod}
+                    onChange={(e) => setFormData({ ...formData, promotionMethod: e.target.value })}
+                    placeholder="e.g., add to my service packages, email my customer list, SMS to customers, add to my website, social media posts"
+                    rows={4}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem 1rem",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "8px",
+                      fontSize: "0.95rem",
+                      fontFamily: "inherit",
+                      resize: "vertical"
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                    How did you hear about the partner program?
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.heardAboutUs}
+                    onChange={(e) => setFormData({ ...formData, heardAboutUs: e.target.value })}
+                    placeholder="Optional"
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem 1rem",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "8px",
+                      fontSize: "0.95rem"
+                    }}
+                  />
+                </div>
+
+                <div style={{
+                  padding: "1rem",
+                  background: "#f9fafb",
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", cursor: "pointer", marginBottom: "1rem" }}>
+                    <input
+                      type="checkbox"
+                      checked={agreementChecked}
+                      onChange={(e) => setAgreementChecked(e.target.checked)}
+                      required
+                      style={{ marginTop: "0.25rem", cursor: "pointer" }}
+                    />
+                    <span style={{ fontSize: "0.875rem", color: "var(--text-dark)" }}>
+                      I understand this is an application only and does not guarantee partnership. *
+                    </span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={emailConsentChecked}
+                      onChange={(e) => setEmailConsentChecked(e.target.checked)}
+                      required
+                      style={{ marginTop: "0.25rem", cursor: "pointer" }}
+                    />
+                    <span style={{ fontSize: "0.875rem", color: "var(--text-dark)" }}>
+                      I agree to receive emails about my application and the partner program. *
+                    </span>
+                  </label>
                 </div>
 
                 {error && (

@@ -300,10 +300,11 @@ export async function POST(req: NextRequest) {
         const db = await getDbInstance();
         if (db) {
           const normalizedPartnerCode = partnerCode.trim().toUpperCase();
+          // Try referralCode first (new format), then partnerCode (legacy)
           const partnersQuery = query(
             collection(db, "partners"),
-            where("partnerCode", "==", normalizedPartnerCode),
-            where("partnerStatus", "==", "approved")
+            where("referralCode", "==", normalizedPartnerCode),
+            where("status", "==", "active")
           );
           const partnersSnapshot = await getDocs(partnersQuery);
           
@@ -313,8 +314,23 @@ export async function POST(req: NextRequest) {
             partnerCodeToProcess = normalizedPartnerCode;
             console.log("[Checkout] Valid partner code provided:", partnerCodeToProcess);
           } else {
-            console.warn("[Checkout] Invalid or unapproved partner code:", partnerCode);
-            // Don't block checkout if partner code is invalid, just log it
+            // Try legacy partnerCode field
+            const legacyQuery = query(
+              collection(db, "partners"),
+              where("partnerCode", "==", normalizedPartnerCode),
+              where("status", "==", "active")
+            );
+            const legacySnapshot = await getDocs(legacyQuery);
+            
+            if (!legacySnapshot.empty) {
+              const partnerDoc = legacySnapshot.docs[0];
+              partnerId = partnerDoc.id;
+              partnerCodeToProcess = normalizedPartnerCode;
+              console.log("[Checkout] Valid partner code provided (legacy):", partnerCodeToProcess);
+            } else {
+              console.warn("[Checkout] Invalid or inactive partner code:", partnerCode);
+              // Don't block checkout if partner code is invalid, just log it
+            }
           }
         }
       } catch (partnerError) {

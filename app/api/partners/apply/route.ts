@@ -7,127 +7,98 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, businessName, ownerName, email, phone, serviceAreas, businessType } = body;
+    const { 
+      userId, 
+      businessName, 
+      ownerName, 
+      email, 
+      phone, 
+      websiteOrInstagram,
+      serviceAreas, 
+      businessType,
+      hasInsurance,
+      promotionMethod,
+      heardAboutUs
+    } = body;
 
-    if (!userId || !businessName || !ownerName || !email || !phone || !serviceAreas || !businessType) {
+    if (!userId || !businessName || !ownerName || !email || !phone || !serviceAreas || !businessType || hasInsurance === undefined || !promotionMethod) {
       return NextResponse.json(
-        { error: "All fields are required" },
+        { error: "All required fields must be filled" },
         { status: 400 }
       );
     }
 
-    // Dynamically import Firebase
+    // Dynamically import Firebase (same pattern as webhook route)
     const { getDbInstance } = await import("@/lib/firebase");
-    const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-    const firestore = await safeImportFirestore();
-    const { collection, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp } = firestore;
-
+    const { collection, doc, setDoc, getDoc, query, where, getDocs, serverTimestamp } = await import("firebase/firestore");
+    
     const db = await getDbInstance();
     if (!db) {
+      console.error("[Partner Apply] Firebase Firestore not available. Environment check:", {
+        hasApiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        hasProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        hasAppId: !!process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      });
       return NextResponse.json(
-        { error: "Firebase is not configured" },
+        { error: "Firebase is not configured. Please check server logs." },
         { status: 500 }
       );
     }
-
-    // Generate unique partner code and slug helper functions
-    const generatePartnerCode = (): string => {
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Exclude confusing chars
-      let code = "";
-      for (let i = 0; i < 8; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return code;
-    };
-
-    const generatePartnerSlug = (businessName: string): string => {
-      return businessName
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .substring(0, 50) || `partner-${Date.now()}`;
-    };
 
     // Check if user already has a partner application
-    const partnersQuery = query(
-      collection(db, "partners"),
+    const applicationsQuery = query(
+      collection(db, "partnerApplications"),
       where("userId", "==", userId)
     );
-    const existingPartners = await getDocs(partnersQuery);
+    const existingApplications = await getDocs(applicationsQuery);
 
-    let partnerId: string;
-    let partnerCode: string;
-    let partnerSlug: string;
-
-    if (!existingPartners.empty) {
-      // Update existing partner application
-      const existingPartner = existingPartners.docs[0];
-      partnerId = existingPartner.id;
-      const existingData = existingPartner.data();
-      partnerCode = existingData.partnerCode || generatePartnerCode();
-      partnerSlug = existingData.partnerSlug || generatePartnerSlug(businessName);
+    let applicationId: string;
+    if (!existingApplications.empty) {
+      // Update existing application
+      applicationId = existingApplications.docs[0].id;
     } else {
-      // Create new partner application
-      partnerCode = generatePartnerCode();
-      partnerSlug = generatePartnerSlug(businessName);
-      partnerId = doc(collection(db, "partners")).id;
+      // Create new application
+      applicationId = doc(collection(db, "partnerApplications")).id;
     }
 
-    // Ensure partner code is unique
-    let isCodeUnique = false;
-    let attempts = 0;
-    while (!isCodeUnique && attempts < 10) {
-      const codeCheckQuery = query(
-        collection(db, "partners"),
-        where("partnerCode", "==", partnerCode)
-      );
-      const codeCheck = await getDocs(codeCheckQuery);
-      
-      if (codeCheck.empty) {
-        isCodeUnique = true;
-      } else {
-        partnerCode = generatePartnerCode();
-        attempts++;
-      }
-    }
-
-    if (!isCodeUnique) {
-      return NextResponse.json(
-        { error: "Failed to generate unique partner code. Please try again." },
-        { status: 500 }
-      );
-    }
-
-    // Create or update partner document
-    const partnerRef = doc(db, "partners", partnerId);
-    const partnerData = {
+    // Create or update partner application document
+    const applicationRef = doc(db, "partnerApplications", applicationId);
+    const applicationData = {
       userId,
       businessName,
       ownerName,
       email,
       phone,
-      serviceAreas: Array.isArray(serviceAreas) ? serviceAreas : serviceAreas.split(",").map((s: string) => s.trim()).filter((s: string) => s),
-      businessType,
-      partnerStatus: existingPartners.empty ? "pending" : existingPartners.docs[0].data().partnerStatus, // Keep existing status if updating
-      revenueSharePartner: 0.6, // Default 60% to partner
-      revenueSharePlatform: 0.4, // Default 40% to platform
-      partnerCode,
-      partnerSlug,
-      createdAt: existingPartners.empty ? serverTimestamp() : existingPartners.docs[0].data().createdAt,
+      websiteOrInstagram: websiteOrInstagram || null,
+      serviceType: businessType,
+      serviceArea: Array.isArray(serviceAreas) ? serviceAreas.join(", ") : serviceAreas,
+      hasInsurance: hasInsurance === true,
+      promotionMethod,
+      heardAboutUs: heardAboutUs || null,
+      status: existingApplications.empty ? "pending" : existingApplications.docs[0].data().status, // Keep existing status if updating
+      linkedPartnerId: null, // Will be set when approved
+      createdAt: existingApplications.empty ? serverTimestamp() : existingApplications.docs[0].data().createdAt,
       updatedAt: serverTimestamp(),
     };
 
-    await setDoc(partnerRef, partnerData, { merge: true });
+    await setDoc(applicationRef, applicationData, { merge: true });
+
+    // TODO: Send confirmation email to applicant
+    // For now, just log it
+    console.log("[Partner Application] Application submitted:", {
+      applicationId,
+      email,
+      businessName,
+    });
 
     return NextResponse.json({
       success: true,
-      partnerId,
-      partnerCode,
-      partnerSlug,
+      applicationId,
       message: "Application submitted successfully",
     });
   } catch (err: any) {
-    console.error("Partner application error:", err);
+    console.error("[Partner Apply] Partner application error:", err);
+    console.error("[Partner Apply] Error stack:", err.stack);
     return NextResponse.json(
       { error: err.message || "Failed to submit application" },
       { status: 500 }

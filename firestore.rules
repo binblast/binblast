@@ -148,22 +148,43 @@ service cloud.firestore {
       allow delete: if false;
     }
     
-    // Partners collection - business partners
+    // PartnerApplications collection - partner applications before approval
+    match /partnerApplications/{applicationId} {
+      // Users can read their own application
+      allow read: if isAuthenticated() 
+        && resource.data.userId == request.auth.uid
+        || request.auth == null; // Allow server-side reads (for admin)
+      
+      // Users can create their own application
+      allow create: if isAuthenticated() 
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == "pending";
+      
+      // Users can update their own application only if status is pending
+      // Server-side can update any field (for admin approvals, etc.)
+      allow update: if (
+        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == "pending")
+        || request.auth == null // Server-side updates (admin actions)
+      );
+      
+      // No deletions allowed
+      allow delete: if false;
+    }
+    
+    // Partners collection - approved business partners
     match /partners/{partnerId} {
       // Partners can read their own partner record
       allow read: if isAuthenticated() 
         && resource.data.userId == request.auth.uid
         || request.auth == null; // Allow server-side reads (for admin, checkout, etc.)
       
-      // Partners can create their own application (with status "pending")
-      allow create: if isAuthenticated() 
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.partnerStatus == "pending";
+      // Only server-side can create partners (after approval)
+      allow create: if request.auth == null;
       
-      // Partners can update their own record only if status is pending (for application edits)
-      // Server-side can update any field (for admin approvals, etc.)
+      // Partners can update limited fields (if needed)
+      // Server-side can update any field (for admin actions, agreement acceptance, etc.)
       allow update: if (
-        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.partnerStatus == "pending")
+        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == "active")
         || request.auth == null // Server-side updates (admin actions)
       );
       
@@ -171,14 +192,46 @@ service cloud.firestore {
       allow delete: if false;
     }
     
-    // Bookings collection - tracks all orders/bookings with partner info
+    // PartnerBookings collection - tracks bookings tied to partners
+    match /partnerBookings/{bookingId} {
+      // Partners can read their own bookings
+      // Server-side can read all (for admin, calculations, etc.)
+      allow read: if (
+        (isAuthenticated() && resource.data.partnerId != null)
+        || request.auth == null
+      );
+      
+      // Only server-side API routes can create/update bookings (from Stripe webhooks)
+      allow create, update: if request.auth == null;
+      
+      // No deletions allowed
+      allow delete: if false;
+    }
+    
+    // PartnerPayouts collection - tracks partner payouts
+    match /partnerPayouts/{payoutId} {
+      // Partners can read their own payouts
+      // Server-side can read all (for admin)
+      allow read: if (
+        (isAuthenticated() && resource.data.partnerId != null)
+        || request.auth == null
+      );
+      
+      // Only server-side API routes can create/update payouts
+      allow create, update: if request.auth == null;
+      
+      // No deletions allowed
+      allow delete: if false;
+    }
+    
+    // Bookings collection - tracks all orders/bookings with partner info (existing)
     match /bookings/{bookingId} {
       // Users can read bookings linked to them as customer
       // Partners can read bookings linked to them as partner
       // Server-side can read all (for admin, calculations, etc.)
       allow read: if (
         (isAuthenticated() && resource.data.userId == request.auth.uid)
-        || (isAuthenticated() && resource.data.partnerId == request.auth.uid)
+        || (isAuthenticated() && resource.data.partnerId != null)
         || request.auth == null
       );
       

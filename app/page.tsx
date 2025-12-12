@@ -47,107 +47,108 @@ export default function HomePage() {
         </section>
 
         {/* Why Bin Blast Co. Is Different Section */}
-        <section id="why-different" className="benefits" style={{ padding: "5rem 0", background: "#f9fafb" }}>
+        <section id="why-different" className="benefits" style={{ padding: "clamp(3rem, 8vw, 5rem) 0", background: "#f9fafb" }}>
           <div className="container">
             <h2 className="section-title">The Bin Blast Co. Advantage</h2>
-            <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem", color: "var(--text-light)", fontSize: "1.125rem" }}>
+            <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "clamp(2rem, 5vw, 3rem)", color: "var(--text-light)", fontSize: "clamp(0.95rem, 3vw, 1.125rem)" }}>
               More than a cleaning truck. We give customers a modern experience and partners a simple way to add recurring revenue.
             </p>
             <div style={{ 
               display: "flex", 
               flexWrap: "wrap",
-              gap: "1.5rem",
+              gap: "clamp(1rem, 3vw, 1.5rem)",
               justifyContent: "center",
               maxWidth: "1200px",
-              margin: "0 auto"
+              margin: "0 auto",
+              padding: "0 clamp(1rem, 3vw, 1.5rem)"
             }}>
               <div className="benefit-card" style={{ 
                 background: "#ffffff", 
-                borderRadius: "16px", 
-                padding: "2rem", 
+                borderRadius: "clamp(12px, 3vw, 16px)", 
+                padding: "clamp(1.5rem, 4vw, 2rem)", 
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
                 transition: "transform 0.2s, box-shadow 0.2s",
                 flex: "0 1 calc(33.333% - 1rem)",
-                minWidth: "280px",
+                minWidth: "min(280px, 100%)",
                 maxWidth: "350px"
               }}>
-                <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                <h3 className="benefit-title" style={{ fontSize: "clamp(1.125rem, 4vw, 1.25rem)", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
                   Personalized Customer Dashboard
                 </h3>
-                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
+                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6", fontSize: "clamp(0.9rem, 3vw, 0.95rem)" }}>
                   Customers can manage their plan, track upcoming cleanings, view payments, and update details from a clean, easy-to-use dashboard.
                 </p>
               </div>
               <div className="benefit-card" style={{ 
                 background: "#ffffff", 
-                borderRadius: "16px", 
-                padding: "2rem", 
+                borderRadius: "clamp(12px, 3vw, 16px)", 
+                padding: "clamp(1.5rem, 4vw, 2rem)", 
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
                 transition: "transform 0.2s, box-shadow 0.2s",
                 flex: "0 1 calc(33.333% - 1rem)",
-                minWidth: "280px",
+                minWidth: "min(280px, 100%)",
                 maxWidth: "350px"
               }}>
-                <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                <h3 className="benefit-title" style={{ fontSize: "clamp(1.125rem, 4vw, 1.25rem)", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
                   Smart Scheduling
                 </h3>
-                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
+                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6", fontSize: "clamp(0.9rem, 3vw, 0.95rem)" }}>
                   Pick your trash day, add special instructions, and let our system handle the rest so you never forget a cleaning.
                 </p>
               </div>
               <div className="benefit-card" style={{ 
                 background: "#ffffff", 
-                borderRadius: "16px", 
-                padding: "2rem", 
+                borderRadius: "clamp(12px, 3vw, 16px)", 
+                padding: "clamp(1.5rem, 4vw, 2rem)", 
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
                 transition: "transform 0.2s, box-shadow 0.2s",
                 flex: "0 1 calc(33.333% - 1rem)",
-                minWidth: "280px",
+                minWidth: "min(280px, 100%)",
                 maxWidth: "350px"
               }}>
-                <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                <h3 className="benefit-title" style={{ fontSize: "clamp(1.125rem, 4vw, 1.25rem)", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
                   Loyalty Rewards
                 </h3>
-                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
+                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6", fontSize: "clamp(0.9rem, 3vw, 0.95rem)" }}>
                   Earn loyalty levels as your bins are cleaned. Unlock perks, track your progress, and get rewarded for staying fresh.
                 </p>
               </div>
               <div className="benefit-card" style={{ 
                 background: "#ffffff", 
-                borderRadius: "16px", 
-                padding: "2rem", 
+                borderRadius: "clamp(12px, 3vw, 16px)", 
+                padding: "clamp(1.5rem, 4vw, 2rem)", 
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
                 transition: "transform 0.2s, box-shadow 0.2s",
                 flex: "0 1 calc(33.333% - 1rem)",
-                minWidth: "280px",
+                minWidth: "min(280px, 100%)",
                 maxWidth: "350px"
               }}>
-                <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                <h3 className="benefit-title" style={{ fontSize: "clamp(1.125rem, 4vw, 1.25rem)", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
                   Referral Program
                 </h3>
-                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
+                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6", fontSize: "clamp(0.9rem, 3vw, 0.95rem)" }}>
                   Share your link with friends and neighbors. When they sign up, both of you receive credits toward your next cleaning.
                 </p>
               </div>
               <div className="benefit-card" style={{ 
                 background: "#ffffff", 
-                borderRadius: "16px", 
-                padding: "2rem", 
+                borderRadius: "clamp(12px, 3vw, 16px)", 
+                padding: "clamp(1.5rem, 4vw, 2rem)", 
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
                 transition: "transform 0.2s, box-shadow 0.2s",
                 flex: "0 1 calc(33.333% - 1rem)",
-                minWidth: "280px",
+                minWidth: "min(280px, 100%)",
                 maxWidth: "350px"
               }}>
-                <h3 className="benefit-title" style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                <h3 className="benefit-title" style={{ fontSize: "clamp(1.125rem, 4vw, 1.25rem)", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
                   Built-In AI Assistant
                 </h3>
-                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
+                <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6", fontSize: "clamp(0.9rem, 3vw, 0.95rem)" }}>
                   Get instant answers about pricing, scheduling, our process, and the partner program through the chat assistant built into the site.
                 </p>
               </div>
@@ -185,52 +186,53 @@ export default function HomePage() {
         </Suspense>
 
         {/* Business Partner Program Section */}
-        <section id="partners" style={{ padding: "5rem 0", background: "#f0f9ff", borderTop: "2px solid #bae6fd" }}>
+        <section id="partners" style={{ padding: "clamp(3rem, 8vw, 5rem) 0", background: "#f0f9ff", borderTop: "2px solid #bae6fd" }}>
           <div className="container">
             <h2 className="section-title" style={{ textAlign: "center" }}>Partner With Bin Blast Co.</h2>
-            <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem", color: "var(--text-light)", fontSize: "1.125rem" }}>
+            <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "clamp(2rem, 5vw, 3rem)", color: "var(--text-light)", fontSize: "clamp(0.95rem, 3vw, 1.125rem)" }}>
               Service businesses plug into our system to offer bin cleaning without buying trucks, software, or building a brand from scratch.
             </p>
             <div style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "2rem",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
+              gap: "clamp(1.5rem, 4vw, 2rem)",
               maxWidth: "1200px",
               margin: "0 auto",
-              marginBottom: "3rem"
+              marginBottom: "clamp(2rem, 5vw, 3rem)",
+              padding: "0 clamp(1rem, 3vw, 1.5rem)"
             }}>
               <div style={{
                 background: "#ffffff",
-                borderRadius: "20px",
-                padding: "2.5rem",
+                borderRadius: "clamp(16px, 4vw, 20px)",
+                padding: "clamp(1.5rem, 4vw, 2.5rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb"
               }}>
-                <h3 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
+                <h3 style={{ fontSize: "clamp(1.25rem, 5vw, 1.5rem)", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
                   60% Revenue Share
                 </h3>
-                <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem" }}>
+                <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem", fontSize: "clamp(0.9rem, 3vw, 0.95rem)" }}>
                   Earn 60% of every booking that comes through your unique partner link. No upfront costs, no monthly fees, no contracts. Example: $35 booking = $21 to you.
                 </p>
               </div>
               <div style={{
                 background: "#ffffff",
-                borderRadius: "20px",
-                padding: "2.5rem",
+                borderRadius: "clamp(16px, 4vw, 20px)",
+                padding: "clamp(1.5rem, 4vw, 2.5rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb"
               }}>
-                <h3 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
+                <h3 style={{ fontSize: "clamp(1.25rem, 5vw, 1.5rem)", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
                   Your Own Booking Link
                 </h3>
-                <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem" }}>
+                <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem", fontSize: "clamp(0.9rem, 3vw, 0.95rem)" }}>
                   Get a unique booking link branded with Bin Blast Co. and tied to your account. Share it by text, email, social media, or from your website.
                 </p>
               </div>
               <div style={{
                 background: "#ffffff",
-                borderRadius: "20px",
-                padding: "2.5rem",
+                borderRadius: "clamp(16px, 4vw, 20px)",
+                padding: "clamp(1.5rem, 4vw, 2.5rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb"
               }}>
@@ -254,23 +256,24 @@ export default function HomePage() {
               <h3 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
                 Perfect For Service Businesses
               </h3>
-              <p style={{ fontSize: "1.125rem", color: "#0c4a6e", marginBottom: "2rem", lineHeight: "1.6" }}>
+              <p style={{ fontSize: "clamp(1rem, 3vw, 1.125rem)", color: "#0c4a6e", marginBottom: "clamp(1.5rem, 4vw, 2rem)", lineHeight: "1.6", padding: "0 clamp(1rem, 3vw, 1.5rem)" }}>
                 Car detailers, pressure washers, landscapers, property managers, HVAC companies, and other service pros can easily add curbside bin cleaning as an upsell or standalone service.
               </p>
               <div style={{
                 display: "flex",
                 flexWrap: "wrap",
-                gap: "1rem",
+                gap: "clamp(0.75rem, 2vw, 1rem)",
                 justifyContent: "center",
-                marginBottom: "2rem"
+                marginBottom: "clamp(1.5rem, 4vw, 2rem)",
+                padding: "0 clamp(1rem, 3vw, 1.5rem)"
               }}>
                 {["Car Detailers", "Pressure Washers", "Landscapers", "Property Managers", "HVAC Companies", "Other Service Businesses"].map((business) => (
                   <span key={business} style={{
-                    padding: "0.5rem 1rem",
+                    padding: "clamp(0.5rem, 2vw, 0.625rem) clamp(0.875rem, 3vw, 1rem)",
                     background: "#f0f9ff",
                     borderRadius: "8px",
                     color: "#0369a1",
-                    fontSize: "0.875rem",
+                    fontSize: "clamp(0.8rem, 2.5vw, 0.875rem)",
                     fontWeight: "600"
                   }}>
                     {business}
@@ -282,9 +285,10 @@ export default function HomePage() {
                 className="btn btn-primary"
                 style={{
                   display: "inline-block",
-                  padding: "0.75rem 2rem",
-                  fontSize: "1rem",
-                  fontWeight: "600"
+                  padding: "clamp(0.75rem, 3vw, 0.875rem) clamp(1.5rem, 5vw, 2rem)",
+                  fontSize: "clamp(0.95rem, 3vw, 1rem)",
+                  fontWeight: "600",
+                  minHeight: "44px"
                 }}
               >
                 Apply to Become a Partner
@@ -493,7 +497,7 @@ export default function HomePage() {
               </Link>
               <Link href="/partners/apply" className="btn btn-secondary btn-large" style={{ background: "transparent", border: "2px solid #ffffff", color: "#ffffff" }}>
                 Apply to Become a Partner
-              </Link>
+            </Link>
             </div>
           </div>
         </section>

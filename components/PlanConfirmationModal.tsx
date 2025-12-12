@@ -233,98 +233,99 @@ export function PlanConfirmationModal({
           </p>
         </div>
 
-        {/* Referral Code Input */}
-        {!userId && (
-          <div
+        {/* Referral Code Input - Always show for all users */}
+        <div
+          style={{
+            padding: "1rem",
+            background: "#f0f9ff",
+            borderRadius: "12px",
+            marginBottom: "1.5rem",
+            border: "1px solid #bae6fd",
+          }}
+        >
+          <label
+            htmlFor="referral-code"
             style={{
-              padding: "1rem",
-              background: "#f0f9ff",
-              borderRadius: "12px",
-              marginBottom: "1.5rem",
-              border: "1px solid #bae6fd",
+              display: "block",
+              fontSize: "0.875rem",
+              fontWeight: "600",
+              color: "#0369a1",
+              marginBottom: "0.5rem",
             }}
           >
-            <label
-              htmlFor="referral-code"
+            Have a Referral Code?
+          </label>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <input
+              type="text"
+              id="referral-code"
+              value={referralCode}
+              onChange={(e) => {
+                setReferralCode(e.target.value.toUpperCase());
+                setReferralCodeValid(null);
+                setReferralDiscount(0);
+                setReferralError(null);
+              }}
+              placeholder="Enter referral code"
               style={{
-                display: "block",
+                flex: 1,
+                padding: "0.75rem",
+                fontSize: "0.875rem",
+                border: `1px solid ${referralCodeValid === false ? "#ef4444" : referralCodeValid === true ? "#16a34a" : "#bae6fd"}`,
+                borderRadius: "8px",
+                outline: "none",
+                textTransform: "uppercase",
+                minHeight: "44px", // Touch-friendly
+              }}
+              onKeyPress={(e) => {
+                if (e.key === "Enter") {
+                  handleValidateReferralCode();
+                }
+              }}
+            />
+            <button
+              onClick={handleValidateReferralCode}
+              disabled={validatingCode || !referralCode.trim()}
+              style={{
+                padding: "0.75rem 1.5rem",
                 fontSize: "0.875rem",
                 fontWeight: "600",
-                color: "#0369a1",
-                marginBottom: "0.5rem",
+                color: "#ffffff",
+                background: validatingCode || !referralCode.trim() ? "#9ca3af" : "#16a34a",
+                border: "none",
+                borderRadius: "8px",
+                cursor: validatingCode || !referralCode.trim() ? "not-allowed" : "pointer",
+                minHeight: "44px", // Touch-friendly
+                whiteSpace: "nowrap",
               }}
             >
-              Have a Referral Code?
-            </label>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <input
-                type="text"
-                id="referral-code"
-                value={referralCode}
-                onChange={(e) => {
-                  setReferralCode(e.target.value.toUpperCase());
-                  setReferralCodeValid(null);
-                  setReferralDiscount(0);
-                  setReferralError(null);
-                }}
-                placeholder="Enter referral code"
-                style={{
-                  flex: 1,
-                  padding: "0.75rem",
-                  fontSize: "0.875rem",
-                  border: `1px solid ${referralCodeValid === false ? "#ef4444" : referralCodeValid === true ? "#16a34a" : "#bae6fd"}`,
-                  borderRadius: "8px",
-                  outline: "none",
-                  textTransform: "uppercase",
-                }}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") {
-                    handleValidateReferralCode();
-                  }
-                }}
-              />
-              <button
-                onClick={handleValidateReferralCode}
-                disabled={validatingCode || !referralCode.trim()}
-                style={{
-                  padding: "0.75rem 1.5rem",
-                  fontSize: "0.875rem",
-                  fontWeight: "600",
-                  color: "#ffffff",
-                  background: validatingCode || !referralCode.trim() ? "#9ca3af" : "#16a34a",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: validatingCode || !referralCode.trim() ? "not-allowed" : "pointer",
-                }}
-              >
-                {validatingCode ? "Checking..." : "Apply"}
-              </button>
-            </div>
-            {referralCodeValid === true && (
-              <div
-                style={{
-                  marginTop: "0.5rem",
-                  fontSize: "0.8125rem",
-                  color: "#16a34a",
-                  fontWeight: "600",
-                }}
-              >
-                ✓ Referral code applied! You'll get ${referralDiscount.toFixed(2)} off.
-              </div>
-            )}
-            {referralError && (
-              <div
-                style={{
-                  marginTop: "0.5rem",
-                  fontSize: "0.8125rem",
-                  color: "#ef4444",
-                }}
-              >
-                {referralError}
-              </div>
-            )}
+              {validatingCode ? "Checking..." : "Apply"}
+            </button>
           </div>
-        )}
+          {referralCodeValid === true && (
+            <div
+              style={{
+                marginTop: "0.5rem",
+                fontSize: "0.8125rem",
+                color: "#16a34a",
+                fontWeight: "600",
+              }}
+            >
+              ✓ Referral code applied! You'll get ${referralDiscount.toFixed(2)} off.
+            </div>
+          )}
+          {referralError && (
+            <div
+              style={{
+                marginTop: "0.5rem",
+                fontSize: "0.8125rem",
+                color: "#ef4444",
+              }}
+            >
+              {referralError}
+            </div>
+          )}
+        </div>
 
         {/* Referral Credit Option (for logged-in users) */}
         {userId && availableCredit > 0 && (

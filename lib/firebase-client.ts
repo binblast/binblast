@@ -257,28 +257,39 @@ export async function getDbInstance(): Promise<any> {
   
   // CRITICAL: Lazy-load firebase/firestore only when actually needed
   // This prevents webpack from code-splitting it into page chunks
-  if (!db && typeof window !== 'undefined') {
+  if (!db) {
     if (!firebaseFirestoreModule) {
-      // Verify Firebase is ready before importing
+      // On client side, verify Firebase is ready before importing
+      if (typeof window !== 'undefined') {
       if (!(window as any).__firebaseAppInitialized) {
         throw new Error("Firebase app not initialized - cannot import firebase/firestore");
+        }
       }
       
       // Now safe to import - app is guaranteed to exist
       firebaseFirestoreModule = await import("firebase/firestore");
+    }
       
-      // Get Firestore instance
+    // Get Firestore instance (works for both client and server)
       const app = await getFirebaseApp();
-      if (app) {
+    if (!app) {
+      const errorMsg = typeof window !== 'undefined' 
+        ? "Firebase app not available (client-side)"
+        : "Firebase app not available (server-side). Check NEXT_PUBLIC_FIREBASE_* environment variables.";
+      console.error("[Firebase Client]", errorMsg);
+      return null;
+    }
+    
+    try {
         db = firebaseFirestoreModule.getFirestore(app);
+      if (typeof window !== 'undefined') {
         console.log("[Firebase Client] Firestore initialized (lazy-loaded)");
+      } else {
+        console.log("[Firebase Client] Firestore initialized (server-side)");
       }
-    } else if (!db) {
-      // Module already loaded, just get db instance
-      const app = await getFirebaseApp();
-      if (app) {
-        db = firebaseFirestoreModule.getFirestore(app);
-      }
+    } catch (error: any) {
+      console.error("[Firebase Client] Failed to initialize Firestore:", error.message);
+      return null;
     }
   }
   

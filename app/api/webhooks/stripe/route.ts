@@ -185,7 +185,7 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Handle partner revenue share and create booking record
+          // Handle partner revenue share and create PartnerBooking record
           if (session.payment_status === 'paid' && session.metadata?.partnerId) {
             try {
               const partnerId = session.metadata.partnerId;
@@ -198,20 +198,53 @@ export async function POST(req: NextRequest) {
               if (partnerDoc.exists()) {
                 const partnerData = partnerDoc.data();
                 
-                // Only process if partner is approved
-                if (partnerData.partnerStatus === "approved") {
+                // Only process if partner is active
+                if (partnerData.status === "active") {
                   // Get amount paid (in cents from Stripe)
                   const amountTotal = session.amount_total || 0; // Stripe amount is in cents
-                  const grossAmount = amountTotal / 100; // Convert to dollars
+                  const bookingAmountCents = amountTotal; // Keep in cents for PartnerBooking
+                  const grossAmount = amountTotal / 100; // Convert to dollars for display
                   
-                  // Calculate revenue share
+                  // Calculate revenue share (in cents)
                   const revenueSharePartner = partnerData.revenueSharePartner || 0.6; // Default 60%
                   const revenueSharePlatform = partnerData.revenueSharePlatform || 0.4; // Default 40%
                   
-                  const partnerShareAmount = grossAmount * revenueSharePartner;
-                  const platformShareAmount = grossAmount * revenueSharePlatform;
+                  const partnerShareAmountCents = Math.round(bookingAmountCents * revenueSharePartner);
+                  const platformShareAmountCents = Math.round(bookingAmountCents * revenueSharePlatform);
                   
-                  // Create booking record
+                  // Get plan name from planId
+                  let planName = session.metadata?.planId || "Unknown Plan";
+                  try {
+                    const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
+                    const planConfig = PLAN_CONFIGS[planName as any];
+                    if (planConfig) {
+                      planName = planConfig.name;
+                    }
+                  } catch (planError) {
+                    console.warn("[Webhook] Could not load plan config:", planError);
+                  }
+                  
+                  // Create PartnerBooking record
+                  const partnerBookingRef = doc(collection(db, "partnerBookings"));
+                  await setDoc(partnerBookingRef, {
+                    partnerId: partnerId,
+                    customerName: null, // Can be populated later if needed
+                    customerEmail: customerEmail,
+                    planId: session.metadata?.planId || null,
+                    planName: planName,
+                    bookingAmount: bookingAmountCents, // Store in cents
+                    partnerShareAmount: partnerShareAmountCents, // Store in cents
+                    stripeCustomerId: customerId,
+                    stripeSubscriptionId: subscriptionId,
+                    stripeSessionId: session.id,
+                    status: subscriptionId ? "active" : "trial", // "active" | "cancelled" | "refunded" | "trial"
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                    nextServiceDate: null, // Can be calculated from subscription if needed
+                    firstServiceDate: null,
+                  });
+                  
+                  // Also create/update general booking record for compatibility
                   const bookingRef = doc(collection(db, "bookings"));
                   await setDoc(bookingRef, {
                     userId: userId || null,
@@ -223,8 +256,8 @@ export async function POST(req: NextRequest) {
                     stripeSessionId: session.id,
                     planId: session.metadata?.planId || null,
                     grossAmount: grossAmount,
-                    partnerShareAmount: partnerShareAmount,
-                    platformShareAmount: platformShareAmount,
+                    partnerShareAmount: partnerShareAmountCents / 100, // Convert to dollars
+                    platformShareAmount: platformShareAmountCents / 100, // Convert to dollars
                     revenueShareApplied: true,
                     source: "partner_link",
                     paymentStatus: "paid",
@@ -234,17 +267,18 @@ export async function POST(req: NextRequest) {
                   });
                   
                   console.log("[Webhook] Partner booking created:", {
+                    partnerBookingId: partnerBookingRef.id,
                     bookingId: bookingRef.id,
                     partnerId,
                     partnerCode,
-                    grossAmount,
-                    partnerShareAmount,
-                    platformShareAmount,
+                    bookingAmountCents,
+                    partnerShareAmountCents,
+                    platformShareAmountCents,
                   });
                 } else {
-                  console.warn("[Webhook] Partner not approved, skipping revenue share calculation:", {
+                  console.warn("[Webhook] Partner not active, skipping revenue share calculation:", {
                     partnerId,
-                    status: partnerData.partnerStatus,
+                    status: partnerData.status,
                   });
                 }
               }
