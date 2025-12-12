@@ -14,6 +14,9 @@ export async function POST(req: NextRequest) {
   const { getDbInstance } = await import("@/lib/firebase");
   const { doc, updateDoc, getDoc, collection, query, where, getDocs, setDoc, serverTimestamp, increment } = await import("firebase/firestore");
   
+  // Import Stripe for transfers
+  const { stripe } = await import("@/lib/stripe");
+  
   const body = await req.text();
   const signature = req.headers.get("stripe-signature");
 

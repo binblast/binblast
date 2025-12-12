@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const { getDbInstance } = await import("@/lib/firebase");
     const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
     const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } = firestore;
+    const { collection, query, where, getDocs, doc, updateDoc, setDoc, serverTimestamp } = firestore;
 
     const db = await getDbInstance();
     if (!db) {
@@ -112,6 +112,7 @@ export async function POST(req: NextRequest) {
             commissionIds: commissionIds,
             payoutDate: serverTimestamp(),
             createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
           });
 
           results.push({
