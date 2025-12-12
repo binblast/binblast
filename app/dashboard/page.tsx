@@ -381,7 +381,9 @@ function DashboardPageContent() {
 
   // Load admin data
   useEffect(() => {
-    if (!isAdmin || !userId) return;
+    if (!isAdmin || !userId) {
+      return;
+    }
     
     let mounted = true;
     async function loadAdminData() {
@@ -572,7 +574,7 @@ function DashboardPageContent() {
   // Compute filtered customers for admin view
   const filteredCustomers = useMemo(() => {
     if (!isAdmin) return [];
-    return allCustomers.filter(customer => {
+    return allCustomers.filter((customer: any) => {
       if (customerFilter.search) {
         const search = customerFilter.search.toLowerCase();
         const name = `${customer.firstName || ""} ${customer.lastName || ""}`.toLowerCase();
@@ -583,7 +585,7 @@ function DashboardPageContent() {
       if (customerFilter.source && customer.source !== customerFilter.source) return false;
       return true;
     });
-  }, [isAdmin, allCustomers, customerFilter]);
+  }, [isAdmin, allCustomers, customerFilter.search, customerFilter.plan, customerFilter.source]);
 
   // Get next cleaning
   const getNextCleaning = () => {
@@ -642,10 +644,12 @@ function DashboardPageContent() {
     );
   }
 
-  const shouldShowSubscriptionManager = user.selectedPlan && 
+  const shouldShowSubscriptionManager = Boolean(
+    user.selectedPlan && 
     (user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && 
     ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan) && 
-    userId && firebaseReady;
+    userId && firebaseReady
+  );
 
   return (
     <>
