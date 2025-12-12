@@ -363,7 +363,8 @@ export async function POST(req: NextRequest) {
           if (!db) break;
 
           // Get subscription to find billing period
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const subscriptionResponse = await stripe.subscriptions.retrieve(subscriptionId);
+          const subscription = subscriptionResponse as Stripe.Subscription;
           const billingPeriodStart = new Date(subscription.current_period_start * 1000);
           const billingPeriodEnd = new Date(subscription.current_period_end * 1000);
 
