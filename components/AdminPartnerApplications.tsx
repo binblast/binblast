@@ -60,7 +60,17 @@ export function AdminPartnerApplications() {
       const data = await response.json();
       
       if (data.success) {
-        alert(`Partner approved! They can now sign up at /partner\nSignup Link: ${data.signupLink}`);
+        // Show signup link in a more user-friendly way
+        const signupMessage = `Partner approved!\n\nSignup Link:\n${data.signupLink}\n\nCopy this link and send it to the partner. They will need to:\n1. Register/Login with their email\n2. Visit this link to complete partner signup`;
+        alert(signupMessage);
+        
+        // Also copy to clipboard if possible
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(data.signupLink).catch(() => {
+            // Ignore clipboard errors
+          });
+        }
+        
         loadApplications();
       } else {
         alert(`Error: ${data.error}`);

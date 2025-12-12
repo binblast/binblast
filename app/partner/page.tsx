@@ -54,7 +54,34 @@ function PartnerSignupPageContent() {
           setUserId(uid);
           await loadPartnerInfo(partnerId, uid);
         } else {
-          setLoading(false);
+          // User not logged in - check partner record and redirect to register with email pre-filled
+          try {
+            const { getDbInstance } = await import("@/lib/firebase");
+            const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+            const firestore = await safeImportFirestore();
+            const { doc, getDoc } = firestore;
+            const db = await getDbInstance();
+            
+            if (db && partnerId) {
+              const partnerRef = doc(db, "partners", partnerId);
+              const partnerDoc = await getDoc(partnerRef);
+              
+              if (partnerDoc.exists()) {
+                const partnerData = partnerDoc.data();
+                if (partnerData.status === "pending_agreement") {
+                  // Redirect to register with email pre-filled
+                  const email = partnerData.email || "";
+                  router.push(`/register?redirect=/partner${partnerId ? `?partnerId=${partnerId}` : ""}&email=${encodeURIComponent(email)}`);
+                  return;
+                }
+              }
+            }
+          } catch (err) {
+            console.warn("[Partner Signup] Error checking partner:", err);
+          }
+          
+          // Fallback: redirect to login
+          router.push(`/login?redirect=/partner${partnerId ? `?partnerId=${partnerId}` : ""}`);
         }
         
         const unsubscribe = await onAuthStateChanged(async (user) => {
@@ -65,6 +92,7 @@ function PartnerSignupPageContent() {
               await loadPartnerInfo(partnerId, uid);
             }
           } else {
+            // User logged out - redirect to login
             router.push(`/login?redirect=/partner${partnerId ? `?partnerId=${partnerId}` : ""}`);
           }
         });

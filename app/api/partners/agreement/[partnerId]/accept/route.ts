@@ -55,12 +55,21 @@ export async function POST(
 
     const partnerData = partnerDoc.data();
 
-    // Verify userId matches
-    if (partnerData.userId !== userId) {
+    // Verify userId matches OR link userId if it's null (partner approved before registration)
+    if (partnerData.userId && partnerData.userId !== userId) {
       return NextResponse.json(
         { error: "Unauthorized: This partner account does not belong to you" },
         { status: 403 }
       );
+    }
+
+    // If userId is null, link it now
+    if (!partnerData.userId) {
+      await updateDoc(partnerRef, {
+        userId: userId,
+        updatedAt: serverTimestamp(),
+      });
+      console.log("[Partner Agreement] Linked userId to partner:", userId);
     }
 
     // Check if already accepted
