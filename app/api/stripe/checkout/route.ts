@@ -38,8 +38,16 @@ export async function POST(req: NextRequest) {
     }
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
-    const successUrl = `${origin}/register?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`;
-    const cancelUrl = `${origin}/#pricing`;
+    // Preserve referral code in success URL if present
+    const successUrlParams = new URLSearchParams({
+      session_id: "{CHECKOUT_SESSION_ID}",
+      plan: planId,
+    });
+    if (referralCode) {
+      successUrlParams.set("ref", referralCode);
+    }
+    const successUrl = `${origin}/register?${successUrlParams.toString()}`;
+    const cancelUrl = referralCode ? `${origin}/register?ref=${referralCode}` : `${origin}/#pricing`;
 
     // Create Stripe Checkout Session
     const sessionParams: Stripe.Checkout.SessionCreateParams = {

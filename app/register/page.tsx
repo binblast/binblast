@@ -44,6 +44,50 @@ function RegisterForm() {
     customerEmail: string | null;
   } | null>(null);
 
+  // Redirect to checkout if referral code is present and user hasn't paid yet
+  useEffect(() => {
+    async function redirectToCheckoutIfReferral() {
+      // If there's a referral code and no session_id (user hasn't paid yet), redirect to checkout
+      if (referralCode && !sessionId && typeof window !== 'undefined') {
+        const normalizedCode = referralCode.trim().toUpperCase();
+        const defaultPlanId = "twice-month"; // Default to most popular plan
+        
+        try {
+          console.log("[Register] Referral code detected, redirecting to checkout:", normalizedCode);
+          
+          // Create checkout session with referral code
+          const checkoutResponse = await fetch("/api/stripe/checkout", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              planId: defaultPlanId,
+              referralCode: normalizedCode,
+            }),
+          });
+
+          const checkoutData = await checkoutResponse.json();
+          
+          if (checkoutResponse.ok && checkoutData.url) {
+            // Redirect directly to Stripe checkout
+            console.log("[Register] Redirecting to checkout with referral code");
+            window.location.href = checkoutData.url;
+          } else {
+            console.error("[Register] Failed to create checkout:", checkoutData.error);
+            // Show error but don't redirect - let user see the error
+            setError(checkoutData.error || "Failed to start checkout. Please try again.");
+          }
+        } catch (checkoutError) {
+          console.error("[Register] Error creating checkout:", checkoutError);
+          setError("Failed to start checkout. Please try again.");
+        }
+      }
+    }
+
+    redirectToCheckoutIfReferral();
+  }, [referralCode, sessionId]);
+
   // Verify Stripe session on mount if session_id is present
   useEffect(() => {
     async function verifyStripeSession() {
