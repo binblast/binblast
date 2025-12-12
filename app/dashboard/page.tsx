@@ -1,7 +1,7 @@
 // app/dashboard/page.tsx
 "use client";
 
-import { useEffect, useState, Component, ErrorInfo, ReactNode, Suspense, useRef } from "react";
+import { useEffect, useState, Component, ErrorInfo, ReactNode, Suspense, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
@@ -83,6 +83,7 @@ interface UserData {
   stripeSubscriptionId?: string | null;
   subscriptionStatus?: string;
   paymentStatus?: string;
+  role?: string; // "admin" | "customer" | "partner"
   createdAt?: any;
 }
 
@@ -298,7 +299,8 @@ function DashboardPageContent() {
             if (userDoc.exists()) {
               const userData = userDoc.data() as UserData;
               setUser(userData);
-              setIsAdmin(userData.email === ADMIN_EMAIL);
+              // Check for admin role OR admin email (backward compatibility)
+              setIsAdmin((userData.role === "admin") || (userData.email === ADMIN_EMAIL));
             } else {
               const userEmail = firebaseUser.email || "";
               setUser({
@@ -446,11 +448,37 @@ function DashboardPageContent() {
           }
         });
 
-        // Enhance customers with source info
+        // Load completed cleanings count for each customer (for loyalty levels)
+        const customerCompletedCounts: Record<string, number> = {};
+        const completedCleaningsQuery = query(
+          collection(db, "scheduledCleanings"),
+          where("status", "==", "completed")
+        );
+        const completedCleaningsSnapshot = await getDocs(completedCleaningsQuery);
+        completedCleaningsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.userId) {
+            customerCompletedCounts[data.userId] = (customerCompletedCounts[data.userId] || 0) + 1;
+          }
+        });
+
+        // Determine loyalty level based on completed cleanings
+        const getLoyaltyLevel = (completedCount: number): string => {
+          if (completedCount >= 50) return "Bin Royalty";
+          if (completedCount >= 30) return "Sanitation Superstar";
+          if (completedCount >= 15) return "Sparkle Specialist";
+          if (completedCount >= 5) return "Bin Boss";
+          if (completedCount >= 1) return "Clean Freak";
+          return "Getting Started";
+        };
+
+        // Enhance customers with source info and loyalty level
         const enhancedCustomers = customers.map(customer => ({
           ...customer,
           source: partnerCustomerEmails.has(customer.email) ? "partner" : "direct",
           partnerName: null, // Could be enhanced later
+          completedCleanings: customerCompletedCounts[customer.id] || 0,
+          loyaltyLevel: getLoyaltyLevel(customerCompletedCounts[customer.id] || 0),
         }));
 
         // Filter commercial customers
@@ -540,6 +568,22 @@ function DashboardPageContent() {
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  // Compute filtered customers for admin view
+  const filteredCustomers = useMemo(() => {
+    if (!isAdmin) return [];
+    return allCustomers.filter(customer => {
+      if (customerFilter.search) {
+        const search = customerFilter.search.toLowerCase();
+        const name = `${customer.firstName || ""} ${customer.lastName || ""}`.toLowerCase();
+        const email = (customer.email || "").toLowerCase();
+        if (!name.includes(search) && !email.includes(search)) return false;
+      }
+      if (customerFilter.plan && customer.selectedPlan !== customerFilter.plan) return false;
+      if (customerFilter.source && customer.source !== customerFilter.source) return false;
+      return true;
+    });
+  }, [isAdmin, allCustomers, customerFilter]);
 
   // Get next cleaning
   const getNextCleaning = () => {
@@ -822,7 +866,8 @@ function DashboardPageContent() {
                 </div>
               )}
 
-              {/* Status Summary Card */}
+              {/* Status Summary Card - Hidden for admin */}
+            {!isAdmin && (
             <div style={{
               background: "#ffffff",
                 borderRadius: "16px",
@@ -905,9 +950,14 @@ function DashboardPageContent() {
                   </div>
                 </div>
               </div>
+            )}
             </div>
 
-            {/* (B) Quick Action Buttons Row */}
+            {/* (A) Hero Welcome + Status Summary - Closing div */}
+            </div>
+
+            {/* (B) Quick Action Buttons Row - Hidden for admin */}
+            {!isAdmin && (
             <div style={{ marginBottom: "2rem" }}>
               <div style={{
                 display: "grid",
@@ -1023,6 +1073,7 @@ function DashboardPageContent() {
                 </button>
               </div>
             </div>
+            )}
 
             {/* Admin: Customers & Tiers Section */}
             {isAdmin && (
@@ -1103,23 +1154,18 @@ function DashboardPageContent() {
                           <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Plan</th>
                           <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Source</th>
                           <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Status</th>
+                          <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Ranking/Loyalty</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {allCustomers
-                          .filter(customer => {
-                            if (customerFilter.search) {
-                              const search = customerFilter.search.toLowerCase();
-                              const name = `${customer.firstName || ""} ${customer.lastName || ""}`.toLowerCase();
-                              const email = (customer.email || "").toLowerCase();
-                              if (!name.includes(search) && !email.includes(search)) return false;
-                            }
-                            if (customerFilter.plan && customer.selectedPlan !== customerFilter.plan) return false;
-                            if (customerFilter.source && customer.source !== customerFilter.source) return false;
-                            return true;
-                          })
-                          .slice(0, 50)
-                          .map((customer) => (
+                        {filteredCustomers.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
+                              No customers found matching your filters.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredCustomers.slice(0, 50).map((customer: any) => (
                             <tr key={customer.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
                               <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)" }}>
                                 {customer.firstName} {customer.lastName}
@@ -1154,25 +1200,19 @@ function DashboardPageContent() {
                                   {customer.subscriptionStatus === "active" ? "Active" : customer.subscriptionStatus || "Inactive"}
                                 </span>
                               </td>
+                              <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                                <div style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
+                                  {customer.loyaltyLevel || "Getting Started"}
+                                </div>
+                                <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>
+                                  {customer.completedCleanings || 0} cleanings
+                                </div>
+                              </td>
                             </tr>
-                          ))}
+                          ))
+                        )}
                       </tbody>
                     </table>
-                    {allCustomers.filter(customer => {
-                      if (customerFilter.search) {
-                        const search = customerFilter.search.toLowerCase();
-                        const name = `${customer.firstName || ""} ${customer.lastName || ""}`.toLowerCase();
-                        const email = (customer.email || "").toLowerCase();
-                        if (!name.includes(search) && !email.includes(search)) return false;
-                      }
-                      if (customerFilter.plan && customer.selectedPlan !== customerFilter.plan) return false;
-                      if (customerFilter.source && customer.source !== customerFilter.source) return false;
-                      return true;
-                    }).length === 0 && (
-                      <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
-                        No customers found matching your filters.
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1263,7 +1303,8 @@ function DashboardPageContent() {
               </div>
             )}
 
-            {/* (C) Schedule a Cleaning */}
+            {/* (C) Schedule a Cleaning - Hidden for admin */}
+            {!isAdmin && (
             <div ref={scheduleSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
               <div style={{
                 background: "#ffffff",
@@ -1299,9 +1340,10 @@ function DashboardPageContent() {
                 </p>
               </div>
             </div>
+            )}
 
-            {/* (D) Subscription & Plan Card */}
-            {user.selectedPlan && (
+            {/* (D) Subscription & Plan Card - Hidden for admin */}
+            {!isAdmin && user.selectedPlan && (
               <div ref={planSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
                 <div style={{
                   background: "#ffffff",
@@ -1410,8 +1452,8 @@ function DashboardPageContent() {
               </div>
             )}
 
-            {/* Next Steps (if no plan) */}
-            {!user.selectedPlan && (
+            {/* Next Steps (if no plan) - Hidden for admin */}
+            {!isAdmin && !user.selectedPlan && (
               <div style={{
                 background: "#eff6ff",
                 borderRadius: "20px",
@@ -1431,15 +1473,15 @@ function DashboardPageContent() {
               </div>
             )}
 
-            {/* (E) Loyalty Badges */}
-            {userId && (
+            {/* (E) Loyalty Badges - Hidden for admin */}
+            {!isAdmin && userId && (
               <div ref={rewardsSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
                 <LoyaltyBadges userId={userId} />
               </div>
             )}
 
-            {/* (F) Referral Rewards */}
-            {userId && (
+            {/* (F) Referral Rewards - Hidden for admin */}
+            {!isAdmin && userId && (
               <div style={{ marginBottom: "2rem" }}>
                 <ReferralRewards userId={userId} />
                 <ReferralHistory userId={userId} />
@@ -1587,7 +1629,7 @@ function DashboardPageContent() {
                 border: "1px solid #e5e7eb"
             }}>
                 <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1.5rem" }}>
-                  {isAdmin ? "All Cleanings" : "Your Cleanings"}
+                  {isAdmin ? "All Cleanings / Route Schedule" : "Your Cleanings"}
               </h2>
               
                 {/* Upcoming */}
@@ -1626,7 +1668,12 @@ function DashboardPageContent() {
                         cleaningDate.setHours(0, 0, 0, 0);
                         return cleaningDate.getTime() === today.getTime() && c.status !== "cancelled";
                       }).slice(0, 20) : upcomingCleanings).map((cleaning) => {
-                    const cleaningDate = new Date(cleaning.scheduledDate);
+                    const cleaningDate = cleaning.scheduledDate?.toDate?.() || new Date(cleaning.scheduledDate);
+                    // Find customer info for admin view
+                    const customer = isAdmin && cleaning.userId 
+                      ? allCustomers.find(c => c.id === cleaning.userId)
+                      : null;
+                    
                     return (
                       <div
                         key={cleaning.id}
@@ -1638,7 +1685,12 @@ function DashboardPageContent() {
                         }}
                       >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "0.75rem" }}>
-                          <div>
+                          <div style={{ flex: 1 }}>
+                            {isAdmin && customer && (
+                              <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.5rem" }}>
+                                {customer.firstName} {customer.lastName}
+                              </div>
+                            )}
                             <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
                               {cleaningDate.toLocaleDateString("en-US", { 
                                 weekday: "long", 
@@ -1648,7 +1700,7 @@ function DashboardPageContent() {
                               })}
                             </div>
                                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                              {cleaning.scheduledTime}
+                              {cleaning.scheduledTime || "TBD"}
                             </div>
                           </div>
                           <span style={{
@@ -1660,7 +1712,7 @@ function DashboardPageContent() {
                                 color: "#3b82f6",
                             textTransform: "capitalize"
                           }}>
-                                Scheduled
+                                {cleaning.status || "Scheduled"}
                           </span>
                         </div>
                             <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
@@ -1669,14 +1721,28 @@ function DashboardPageContent() {
                           <br />
                           {cleaning.city}, {cleaning.state} {cleaning.zipCode}
                         </div>
-                        {cleaning.trashDay && (
-                              <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                            <strong>Trash Day:</strong> {cleaning.trashDay}
+                        {isAdmin && customer && (
+                          <div style={{ display: "flex", gap: "1rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
+                            <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                              <strong>Plan:</strong> {customer.selectedPlan ? (PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan) : "N/A"}
+                            </div>
+                            <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                              <strong>Source:</strong> <span style={{
+                                padding: "0.125rem 0.5rem",
+                                borderRadius: "4px",
+                                fontSize: "0.75rem",
+                                fontWeight: "600",
+                                background: customer.source === "partner" ? "#dbeafe" : "#f3f4f6",
+                                color: customer.source === "partner" ? "#1e40af" : "#6b7280"
+                              }}>
+                                {customer.source === "partner" ? "Partner" : "Direct"}
+                              </span>
+                            </div>
                           </div>
                         )}
-                        {isAdmin && cleaning.userId && (
-                          <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.5rem" }}>
-                            <strong>Customer ID:</strong> {cleaning.userId.substring(0, 8)}...
+                        {cleaning.trashDay && (
+                              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.5rem" }}>
+                            <strong>Trash Day:</strong> {cleaning.trashDay}
                           </div>
                         )}
                       </div>
@@ -1728,6 +1794,7 @@ function DashboardPageContent() {
                           .slice(0, 30)
                           .map((cleaning) => {
                             const cleaningDate = cleaning.scheduledDate?.toDate?.() || new Date(cleaning.scheduledDate);
+                            const customer = cleaning.userId ? allCustomers.find(c => c.id === cleaning.userId) : null;
                             return (
                               <div
                                 key={cleaning.id}
@@ -1741,13 +1808,23 @@ function DashboardPageContent() {
                                   alignItems: "center"
                                 }}
                               >
-                                <div>
+                                <div style={{ flex: 1 }}>
+                                  {customer && (
+                                    <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
+                                      {customer.firstName} {customer.lastName}
+                                    </div>
+                                  )}
                                   <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
                                     {cleaningDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                                   </div>
                                   <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
                                     {cleaning.addressLine1}, {cleaning.city}
                                   </div>
+                                  {customer && (
+                                    <div style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: "0.25rem" }}>
+                                      {customer.selectedPlan ? (PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan) : "No plan"} • {customer.source === "partner" ? "Partner" : "Direct"}
+                                    </div>
+                                  )}
                                 </div>
                                 <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
                                   {cleaning.scheduledTime || "TBD"}
