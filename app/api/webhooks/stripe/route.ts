@@ -246,55 +246,23 @@ export async function POST(req: NextRequest) {
                           expiresAt: null,
                         });
 
-                        // Apply recurring $10/month discount to referrer's subscription if they have one
+                        // Update referrer's completed referral count and track for billing period discount
                         const referrerDocRef = doc(db, "users", referrerId);
                         const referrerDoc = await getDoc(referrerDocRef);
                         if (referrerDoc.exists()) {
                           const referrerData = referrerDoc.data();
                           const referrerStripeSubscriptionId = referrerData.stripeSubscriptionId;
                           
-                          // Apply recurring discount to referrer's subscription
-                          if (referrerStripeSubscriptionId) {
-                            try {
-                              const { getReferralRecurringCouponId } = await import("@/lib/stripe-coupons");
-                              const recurringCouponId = await getReferralRecurringCouponId();
-                              
-                              if (recurringCouponId) {
-                                // Check if discount is already applied
-                                const subscription = await stripe.subscriptions.retrieve(referrerStripeSubscriptionId);
-                                
-                                // Check if discount already exists
-                                const hasDiscount = subscription.discount && 
-                                  subscription.discount.coupon.id === recurringCouponId;
-                                
-                                if (!hasDiscount) {
-                                  // Apply the recurring discount coupon to the subscription
-                                  await stripe.subscriptions.update(referrerStripeSubscriptionId, {
-                                    coupon: recurringCouponId,
-                                  });
-                                  
-                                  console.log("[Webhook] Applied recurring $10/month discount to referrer subscription:", {
-                                    referrerId,
-                                    subscriptionId: referrerStripeSubscriptionId,
-                                    couponId: recurringCouponId,
-                                  });
-                                } else {
-                                  console.log("[Webhook] Recurring discount already applied to referrer subscription:", referrerStripeSubscriptionId);
-                                }
-                              }
-                            } catch (discountError: any) {
-                              console.error("[Webhook] Error applying recurring discount to referrer:", discountError);
-                              // Don't fail the webhook if discount application fails
-                            }
-                          } else {
-                            console.log("[Webhook] Referrer has no active subscription, discount will be applied when they subscribe");
-                          }
-                          
-                          // Update referrer's completed referral count (idempotent)
+                          // Update referral count
                           const currentCount = referrerData.referralCount || 0;
                           await updateDoc(referrerDocRef, {
                             referralCount: increment(1),
                             updatedAt: serverTimestamp(),
+                          });
+                          
+                          console.log("[Webhook] Referral completed - discount will be applied on next invoice:", {
+                            referrerId,
+                            subscriptionId: referrerStripeSubscriptionId,
                           });
                         }
 
@@ -369,6 +337,80 @@ export async function POST(req: NextRequest) {
             subscriptionId: subscription.id,
             customerId,
           });
+        }
+        break;
+      }
+
+      case "invoice.upcoming": {
+        // Handle invoice before it's finalized - apply referral discounts based on referrals in billing period
+        const invoice = event.data.object as Stripe.Invoice;
+        const subscriptionId = typeof invoice.subscription === 'string'
+          ? invoice.subscription
+          : invoice.subscription?.id;
+        const customerId = typeof invoice.customer === 'string'
+          ? invoice.customer
+          : invoice.customer?.id;
+        const invoiceId = invoice.id;
+
+        if (!subscriptionId || !customerId || !invoiceId) {
+          break;
+        }
+
+        try {
+          const db = await getDbInstance();
+          if (!db) break;
+
+          // Get subscription to find billing period
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const billingPeriodStart = new Date(subscription.current_period_start * 1000);
+          const billingPeriodEnd = new Date(subscription.current_period_end * 1000);
+
+          // Find user by Stripe customer ID
+          const usersQuery = query(
+            collection(db, "users"),
+            where("stripeCustomerId", "==", customerId)
+          );
+          const usersSnapshot = await getDocs(usersQuery);
+
+          if (!usersSnapshot.empty) {
+            const userDoc = usersSnapshot.docs[0];
+            const referrerId = userDoc.id;
+
+            // Count referrals completed in this billing period
+            const referralsQuery = query(
+              collection(db, "referrals"),
+              where("referrerId", "==", referrerId),
+              where("status", "==", "COMPLETED")
+            );
+            const referralsSnapshot = await getDocs(referralsQuery);
+
+            let referralsInPeriod = 0;
+            referralsSnapshot.forEach((refDoc) => {
+              const refData = refDoc.data();
+              const completedAt = refData.completedAt?.toDate?.() || new Date(refData.completedAt);
+              
+              // Check if referral was completed in this billing period
+              if (completedAt >= billingPeriodStart && completedAt < billingPeriodEnd) {
+                referralsInPeriod++;
+              }
+            });
+
+            console.log("[Webhook] Invoice upcoming - calculating referral discount:", {
+              invoiceId,
+              subscriptionId,
+              referrerId,
+              billingPeriodStart: billingPeriodStart.toISOString(),
+              billingPeriodEnd: billingPeriodEnd.toISOString(),
+              referralsInPeriod,
+            });
+
+            // Apply discount to upcoming invoice based on referrals in this period ($10 per referral)
+            const { applyReferralDiscountToUpcomingInvoice } = await import("@/lib/stripe-coupons");
+            await applyReferralDiscountToUpcomingInvoice(invoiceId, subscriptionId, referralsInPeriod);
+          }
+        } catch (invoiceError: any) {
+          console.error("[Webhook] Error processing invoice.upcoming:", invoiceError);
+          // Don't fail the webhook
         }
         break;
       }

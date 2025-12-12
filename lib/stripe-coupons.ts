@@ -59,55 +59,95 @@ export async function getReferralCouponId(): Promise<string | null> {
 }
 
 /**
- * Get or create a recurring referral discount coupon for referrers
- * This coupon gives $10 off every month for the referrer's subscription
+ * Apply referral discount to an upcoming invoice based on referrals in billing period
+ * This gives $10 off per referral per month
+ * Uses invoice items so discount is recalculated each billing cycle
  */
-const REFERRAL_RECURRING_COUPON_ID = "REFERRAL_10_OFF_RECURRING";
-let recurringCouponCache: string | null = null;
-
-export async function getReferralRecurringCouponId(): Promise<string | null> {
-  // Return cached coupon ID if available
-  if (recurringCouponCache) {
-    return recurringCouponCache;
-  }
-
+export async function applyReferralDiscountToUpcomingInvoice(
+  invoiceId: string,
+  subscriptionId: string,
+  referralCount: number
+): Promise<void> {
   try {
-    // Try to retrieve existing coupon
-    try {
-      const coupon = await stripe.coupons.retrieve(REFERRAL_RECURRING_COUPON_ID);
-      if (coupon && !coupon.deleted) {
-        recurringCouponCache = coupon.id;
-        return coupon.id;
+    const discountAmount = referralCount * 1000; // $10 per referral in cents
+    
+    if (discountAmount > 0) {
+      // Get invoice to add discount line item
+      const invoice = await stripe.invoices.retrieve(invoiceId);
+      const customerId = typeof invoice.customer === 'string' 
+        ? invoice.customer 
+        : invoice.customer?.id;
+      
+      if (!customerId) {
+        throw new Error("Customer ID not found on invoice");
       }
-    } catch (retrieveError: any) {
-      // Coupon doesn't exist, create it
-      if (retrieveError.code === "resource_missing") {
-        console.log("[Stripe Coupons] Creating recurring referral coupon...");
+      
+      // Check if discount invoice item already exists
+      const existingDiscountItem = invoice.lines.data.find(
+        (item) => item.metadata?.type === "referral_period_discount"
+      );
+      
+      if (existingDiscountItem) {
+        // Update existing discount item
+        await stripe.invoiceItems.update(existingDiscountItem.id, {
+          amount: -discountAmount,
+          description: `Referral Discount (${referralCount} referral${referralCount > 1 ? 's' : ''})`,
+          metadata: {
+            type: "referral_period_discount",
+            referralCount: referralCount.toString(),
+          },
+        });
+        
+        console.log("[Stripe Coupons] Updated referral discount on invoice:", {
+          invoiceId,
+          subscriptionId,
+          referralCount,
+          discountAmount: discountAmount / 100,
+        });
       } else {
-        throw retrieveError;
+        // Create new discount invoice item
+        await stripe.invoiceItems.create({
+          customer: customerId,
+          invoice: invoiceId,
+          amount: -discountAmount, // Negative amount = discount
+          currency: "usd",
+          description: `Referral Discount (${referralCount} referral${referralCount > 1 ? 's' : ''})`,
+          metadata: {
+            type: "referral_period_discount",
+            referralCount: referralCount.toString(),
+            subscriptionId,
+          },
+        });
+        
+        console.log("[Stripe Coupons] Added referral discount to invoice:", {
+          invoiceId,
+          subscriptionId,
+          referralCount,
+          discountAmount: discountAmount / 100,
+        });
+      }
+    } else {
+      // No referrals - remove any existing discount items from invoice
+      const invoice = await stripe.invoices.retrieve(invoiceId);
+      const discountItems = invoice.lines.data.filter(
+        (item) => item.metadata?.type === "referral_period_discount"
+      );
+      
+      for (const item of discountItems) {
+        await stripe.invoiceItems.del(item.id);
+      }
+      
+      if (discountItems.length > 0) {
+        console.log("[Stripe Coupons] Removed referral discount items (no referrals this period):", {
+          invoiceId,
+          subscriptionId,
+          removedItems: discountItems.length,
+        });
       }
     }
-
-    // Create the recurring coupon if it doesn't exist
-    const coupon = await stripe.coupons.create({
-      id: REFERRAL_RECURRING_COUPON_ID, // Use fixed ID for reusability
-      amount_off: 1000, // $10.00 in cents
-      currency: "usd",
-      duration: "forever", // Recurring discount that applies to every billing cycle
-      name: "Referral Recurring Discount",
-      metadata: {
-        type: "referral_recurring_discount",
-        reusable: "true",
-      },
-    });
-
-    recurringCouponCache = coupon.id;
-    console.log("[Stripe Coupons] Created recurring referral coupon:", coupon.id);
-    return coupon.id;
   } catch (error: any) {
-    console.error("[Stripe Coupons] Error getting recurring referral coupon:", error);
-    // Return null if coupon creation fails
-    return null;
+    console.error("[Stripe Coupons] Error applying referral discount to invoice:", error);
+    throw error;
   }
 }
 
@@ -116,6 +156,5 @@ export async function getReferralRecurringCouponId(): Promise<string | null> {
  */
 export function clearCouponCache(): void {
   couponCache = null;
-  recurringCouponCache = null;
 }
 
