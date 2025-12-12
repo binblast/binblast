@@ -215,10 +215,11 @@ export async function POST(req: NextRequest) {
                   // Get plan name from planId
                   let planName = session.metadata?.planId || "Unknown Plan";
                   try {
-                    const { PLAN_CONFIGS, PlanId } = await import("@/lib/stripe-config");
-                    const planId = session.metadata?.planId as PlanId | undefined;
+                    const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
+                    const planId = session.metadata?.planId;
+                    // Type guard: check if planId exists in PLAN_CONFIGS
                     if (planId && planId in PLAN_CONFIGS) {
-                      const planConfig = PLAN_CONFIGS[planId];
+                      const planConfig = PLAN_CONFIGS[planId as keyof typeof PLAN_CONFIGS];
                       if (planConfig) {
                         planName = planConfig.name;
                       }
