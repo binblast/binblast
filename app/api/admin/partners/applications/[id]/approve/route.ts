@@ -133,19 +133,19 @@ export async function POST(
       updatedAt: serverTimestamp(),
     });
 
-    // Update user role to "partner" if user exists
+    // IMPORTANT: Partners should NOT have user documents
+    // Delete user document if it exists (partners are only in "partners" collection)
     try {
+      const { deleteDoc } = firestore;
       const userRef = doc(db, "users", applicationData.userId);
       const userDoc = await getDoc(userRef);
       if (userDoc.exists()) {
-        await updateDoc(userRef, {
-          role: "partner",
-          updatedAt: serverTimestamp(),
-        });
+        await deleteDoc(userRef);
+        console.log("[Admin] Deleted user document for partner:", applicationData.userId);
       }
-    } catch (userUpdateError) {
-      console.warn("[Admin] Could not update user role:", userUpdateError);
-      // Don't fail the approval if user update fails
+    } catch (userDeleteError) {
+      console.warn("[Admin] Could not delete user document (may not exist):", userDeleteError);
+      // Don't fail the approval if user deletion fails - partner document is the source of truth
     }
 
     // TODO: Send email to partner with signup link

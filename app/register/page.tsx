@@ -138,36 +138,50 @@ function RegisterForm() {
       const { collection, doc, setDoc, serverTimestamp } = firestore;
       
       if (db && userCredential.user) {
-        const userDocRef = doc(collection(db, "users"), userCredential.user.uid);
+        // IMPORTANT: Check if user is already a partner - partners should NOT have user documents
+        const { query, where, getDocs, collection: firestoreCollection } = firestore;
+        const partnersQuery = query(
+          firestoreCollection(db, "partners"),
+          where("userId", "==", userCredential.user.uid)
+        );
+        const partnersSnapshot = await getDocs(partnersQuery);
         
-        // Determine subscription status based on Stripe data
-        let subscriptionStatus = "none";
-        if (stripeData?.subscriptionId) {
-          subscriptionStatus = "active";
-        } else if (stripeData?.customerId && !stripeData?.subscriptionId) {
-          subscriptionStatus = "one_time_paid";
+        if (!partnersSnapshot.empty) {
+          // User is a partner - do NOT create user document
+          console.log("[Register] User is a partner, skipping user document creation:", userCredential.user.uid);
+        } else {
+          // User is not a partner - create user document
+          const userDocRef = doc(collection(db, "users"), userCredential.user.uid);
+          
+          // Determine subscription status based on Stripe data
+          let subscriptionStatus = "none";
+          if (stripeData?.subscriptionId) {
+            subscriptionStatus = "active";
+          } else if (stripeData?.customerId && !stripeData?.subscriptionId) {
+            subscriptionStatus = "one_time_paid";
+          }
+
+          // Generate unique referral code
+          const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
+          const generatedCode = userCredential.user.uid.substring(0, 8).toUpperCase() + randomChars;
+
+          await setDoc(userDocRef, {
+            firstName,
+            lastName,
+            email,
+            phone: phone || null,
+            selectedPlan: selectedPlanId || null,
+            stripeCustomerId: stripeData?.customerId || null,
+            stripeSubscriptionId: stripeData?.subscriptionId || null,
+            subscriptionStatus,
+            paymentStatus: stripeData ? "paid" : "pending",
+            referralCode: generatedCode, // Generate unique code on registration
+            referralCount: 0, // Initialize referral count
+            role: "customer", // Default role - can be "customer" | "partner" | "admin"
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
         }
-
-        // Generate unique referral code
-        const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
-        const generatedCode = userCredential.user.uid.substring(0, 8).toUpperCase() + randomChars;
-
-        await setDoc(userDocRef, {
-          firstName,
-          lastName,
-          email,
-          phone: phone || null,
-          selectedPlan: selectedPlanId || null,
-          stripeCustomerId: stripeData?.customerId || null,
-          stripeSubscriptionId: stripeData?.subscriptionId || null,
-          subscriptionStatus,
-          paymentStatus: stripeData ? "paid" : "pending",
-          referralCode: generatedCode, // Generate unique code on registration
-          referralCount: 0, // Initialize referral count
-          role: "customer", // Default role - can be "customer" | "partner" | "admin"
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
 
         // Process referral if referral code was provided
         if (normalizedReferralCode && db && userCredential.user) {

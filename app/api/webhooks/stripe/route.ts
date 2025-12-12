@@ -164,12 +164,24 @@ export async function POST(req: NextRequest) {
                       updatedAt: serverTimestamp(),
                     });
                     
-                    // Update user document with referral info
-                    await updateDoc(doc(db, "users", userId), {
-                      referredBy: referrerId,
-                      referredByCode: session.metadata.referralCode,
-                      updatedAt: serverTimestamp(),
-                    });
+                    // Update user document with referral info (only if user is not a partner)
+                    // Partners should NOT have user documents
+                    const partnersQuery = query(
+                      collection(db, "partners"),
+                      where("userId", "==", userId)
+                    );
+                    const partnersSnapshot = await getDocs(partnersQuery);
+                    
+                    if (partnersSnapshot.empty) {
+                      // User is not a partner - safe to update user document
+                      await updateDoc(doc(db, "users", userId), {
+                        referredBy: referrerId,
+                        referredByCode: session.metadata.referralCode,
+                        updatedAt: serverTimestamp(),
+                      });
+                    } else {
+                      console.log("[Webhook] User is a partner, skipping user document update:", userId);
+                    }
                     
                     console.log("[Webhook] Referral code processed from checkout:", {
                       referralId: referralRef.id,
