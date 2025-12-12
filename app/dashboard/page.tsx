@@ -13,6 +13,13 @@ import { AdminPartnerApplications } from "@/components/AdminPartnerApplications"
 import { AdminPartnerManagement } from "@/components/AdminPartnerManagement";
 import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
+import { BusinessOverview } from "@/components/OwnerDashboard/BusinessOverview";
+import { CustomerManagement } from "@/components/OwnerDashboard/CustomerManagement";
+import { CleaningScheduleBoard } from "@/components/OwnerDashboard/CleaningScheduleBoard";
+import { CommercialAccounts } from "@/components/OwnerDashboard/CommercialAccounts";
+import { PartnerProgramManagement } from "@/components/OwnerDashboard/PartnerProgramManagement";
+import { FinancialAnalytics } from "@/components/OwnerDashboard/FinancialAnalytics";
+import { SystemControls } from "@/components/OwnerDashboard/SystemControls";
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
@@ -133,6 +140,7 @@ function DashboardPageContent() {
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [accountInfoExpanded, setAccountInfoExpanded] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   
   // Admin state
   const [adminStats, setAdminStats] = useState({
@@ -308,6 +316,7 @@ function DashboardPageContent() {
                 lastName: firebaseUser.displayName?.split(" ")[1] || "",
                 email: userEmail,
               });
+              setIsOwner(false);
               setIsAdmin(userEmail === ADMIN_EMAIL);
             }
 
@@ -689,7 +698,7 @@ function DashboardPageContent() {
                 color: "#6b7280", 
                 marginBottom: "1.5rem"
               }}>
-                {isAdmin ? "Admin Dashboard - Manage your business operations" : "Here's a quick look at your bin cleaning status."}
+                {isOwner ? "Owner Dashboard - Complete business control center" : isAdmin ? "Admin Dashboard - Manage your business operations" : "Here's a quick look at your bin cleaning status."}
               </p>
 
               {/* Admin Navigation */}
@@ -767,8 +776,21 @@ function DashboardPageContent() {
                 </div>
               )}
 
+              {/* Owner Dashboard - Complete Business Control Center */}
+              {isOwner && userId && (
+                <div style={{ marginBottom: "3rem" }}>
+                  <BusinessOverview userId={userId} />
+                  <CustomerManagement userId={userId} />
+                  <CleaningScheduleBoard userId={userId} />
+                  <CommercialAccounts userId={userId} />
+                  <PartnerProgramManagement userId={userId} />
+                  <FinancialAnalytics userId={userId} />
+                  <SystemControls userId={userId} />
+                </div>
+              )}
+
               {/* Admin Overview Cards */}
-              {isAdmin && (
+              {isAdmin && !isOwner && (
                 <div ref={overviewSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
                   <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1rem" }}>
                     Overview
