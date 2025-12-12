@@ -117,8 +117,6 @@ export async function POST(req: NextRequest) {
       }
 
       case "transfer.created":
-      case "transfer.paid":
-      case "transfer.failed":
       case "transfer.updated": {
         const transfer = event.data.object as Stripe.Transfer;
         
@@ -128,11 +126,15 @@ export async function POST(req: NextRequest) {
           const bookingDoc = await getDoc(bookingRef);
           
           if (bookingDoc.exists()) {
+            // Determine status based on transfer status property
+            // Stripe transfer statuses: 'pending', 'paid', 'failed', 'canceled', 'reversed'
             let commissionStatus = 'held';
-            if (event.type === "transfer.paid") {
+            if (transfer.status === 'paid') {
               commissionStatus = 'paid';
-            } else if (event.type === "transfer.failed") {
+            } else if (transfer.status === 'failed' || transfer.status === 'canceled' || transfer.status === 'reversed') {
               commissionStatus = 'failed';
+            } else if (transfer.status === 'pending') {
+              commissionStatus = 'held';
             }
             
             await updateDoc(bookingRef, {
@@ -144,7 +146,8 @@ export async function POST(req: NextRequest) {
             console.log("[Connected Account Webhook] Updated commission status:", {
               bookingId: transfer.metadata.partnerBookingId,
               transferId: transfer.id,
-              status: commissionStatus,
+              transferStatus: transfer.status,
+              commissionStatus,
               payloadStyle: webhookSecret === snapshotSecret ? 'snapshot' : 'thin',
             });
           }
