@@ -157,6 +157,7 @@ export default function PartnerDashboardPage() {
         }
       }
 
+      // If still empty after checking by email, check for pending agreement
       if (partnersSnapshot.empty) {
         // Check if they have a pending application or pending agreement
         let allPartnersQuery = query(
@@ -204,17 +205,24 @@ export default function PartnerDashboardPage() {
           }
         }
         
-        // Not a partner, redirect to apply
-        router.push("/partners/apply");
+        // Not a partner - set loading to false and let component show "not found" message
+        setLoading(false);
         return;
       }
 
       const partnerDoc = partnersSnapshot.docs[0];
       const data = partnerDoc.data();
-      setPartnerData({
-        id: partnerDoc.id,
-        ...data,
-      } as PartnerData);
+      
+      // Ensure we have the data before setting it
+      if (data && partnerDoc.id) {
+        setPartnerData({
+          id: partnerDoc.id,
+          ...data,
+        } as PartnerData);
+      } else {
+        setLoading(false);
+        return;
+      }
 
       // Load partner bookings for this partner
       const bookingsQuery = query(
