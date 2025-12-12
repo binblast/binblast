@@ -178,28 +178,39 @@ export async function POST(req: NextRequest) {
       // Note: account.application.deauthorized may not be available in newer Stripe versions
       // Use account.updated to detect deauthorization by checking account status
       case "account.application.deauthorized": {
-        const account = event.data.object as Stripe.Account;
+        const application = event.data.object as Stripe.Application;
         
-        // Find and update partner
-        const { collection, query, where, getDocs } = await import("firebase/firestore");
-        const partnersQuery = query(
-          collection(db, "partners"),
-          where("stripeConnectedAccountId", "==", account.id)
-        );
-        const partnersSnapshot = await getDocs(partnersQuery);
+        // The application object contains the account ID in the connected_account_id field
+        // For deauthorization, we need to find the connected account ID
+        // The application.deauthorized event may include account info in metadata or we need to query differently
+        const connectedAccountId = (application as any).connected_account_id || (application as any).account;
         
-        if (!partnersSnapshot.empty) {
-          const partnerDoc = partnersSnapshot.docs[0];
+        if (connectedAccountId) {
+          // Find and update partner
+          const { collection, query, where, getDocs } = await import("firebase/firestore");
+          const partnersQuery = query(
+            collection(db, "partners"),
+            where("stripeConnectedAccountId", "==", connectedAccountId)
+          );
+          const partnersSnapshot = await getDocs(partnersQuery);
           
-          await updateDoc(partnerDoc.ref, {
-            stripeConnectStatus: 'disconnected',
-            updatedAt: serverTimestamp(),
-          });
-          
-          console.log("[Connected Account Webhook] Partner disconnected Stripe account:", {
-            partnerId: partnerDoc.id,
-            accountId: account.id,
-            payloadStyle: webhookSecret === snapshotSecret ? 'snapshot' : 'thin',
+          if (!partnersSnapshot.empty) {
+            const partnerDoc = partnersSnapshot.docs[0];
+            
+            await updateDoc(partnerDoc.ref, {
+              stripeConnectStatus: 'disconnected',
+              updatedAt: serverTimestamp(),
+            });
+            
+            console.log("[Connected Account Webhook] Partner disconnected Stripe account:", {
+              partnerId: partnerDoc.id,
+              accountId: connectedAccountId,
+              payloadStyle: webhookSecret === snapshotSecret ? 'snapshot' : 'thin',
+            });
+          }
+        } else {
+          console.log("[Connected Account Webhook] account.application.deauthorized received but no account ID found:", {
+            applicationId: application.id,
           });
         }
         break;
