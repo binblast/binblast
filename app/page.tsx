@@ -35,23 +35,141 @@ export default function HomePage() {
         {/* Hero Section with Background Image */}
         <section id="home" className="hero">
           <div className="container">
-            <h1 className="hero-headline">Sparkling Clean Bins, Every Time</h1>
+            <h1 className="hero-headline">Business Partner Program</h1>
             <p className="hero-subheadline">
-              Professional curbside trash bin cleaning that eliminates odors, kills bacteria, and keeps your home fresh. Plus, manage everything through your own online dashboard.
+              Grow your service business by offering Bin Blast Co. bin cleaning services to your customers. Earn 60% revenue share on every booking with zero upfront costs.
             </p>
             <div className="hero-buttons">
-              <Link href="#pricing" className="btn btn-primary btn-large">Book Now</Link>
-              <Link href="#why-different" className="btn btn-secondary btn-large">Explore Features</Link>
+              <Link href="/partners" className="btn btn-primary btn-large">Become a Partner</Link>
+              <Link href="/partners/apply" className="btn btn-secondary btn-large">Apply Now</Link>
             </div>
           </div>
         </section>
 
-        {/* Why Bin Blast Co. Is Different Section */}
+        {/* Business Partner Program Section - Moved to top for prominence */}
+        <section id="partners" style={{ padding: "5rem 0", background: "#f0f9ff", borderTop: "2px solid #bae6fd" }}>
+          <div className="container">
+            <h2 className="section-title" style={{ textAlign: "center" }}>How the Partner Program Works</h2>
+            <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem", color: "var(--text-light)", fontSize: "1.125rem" }}>
+              Simple, transparent, and profitable partnership model designed for service businesses
+            </p>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "2rem",
+              maxWidth: "1200px",
+              margin: "0 auto",
+              marginBottom: "3rem"
+            }}>
+              <div style={{
+                background: "#ffffff",
+                borderRadius: "20px",
+                padding: "2.5rem",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb"
+              }}>
+                <h3 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
+                  60% Revenue Share
+                </h3>
+                <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem" }}>
+                  Earn 60% of every booking that comes through your unique partner link. No upfront costs, no monthly fees, no commitments.
+                </p>
+                <div style={{ fontSize: "0.875rem", color: "#047857", fontWeight: "600" }}>
+                  Example: $35 booking = $21 to you
+                </div>
+              </div>
+              <div style={{
+                background: "#ffffff",
+                borderRadius: "20px",
+                padding: "2.5rem",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb"
+              }}>
+                <h3 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
+                  Your Own Booking Link
+                </h3>
+                <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem" }}>
+                  Get a unique partner link you can share with customers. All bookings are automatically tracked and attributed to you in real-time.
+                </p>
+                <div style={{ fontSize: "0.875rem", color: "#047857", fontWeight: "600" }}>
+                  Share via email, social media, or website
+                </div>
+              </div>
+              <div style={{
+                background: "#ffffff",
+                borderRadius: "20px",
+                padding: "2.5rem",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb"
+              }}>
+                <h3 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
+                  Partner Dashboard
+                </h3>
+                <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem" }}>
+                  Track all your bookings, view earnings, and monitor performance through your dedicated partner dashboard.
+                </p>
+                <div style={{ fontSize: "0.875rem", color: "#047857", fontWeight: "600" }}>
+                  Real-time updates and detailed reports
+                </div>
+              </div>
+            </div>
+            <div style={{
+              background: "#ffffff",
+              borderRadius: "20px",
+              padding: "3rem",
+              border: "2px solid #bae6fd",
+              maxWidth: "900px",
+              margin: "0 auto",
+              textAlign: "center"
+            }}>
+              <h3 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
+                Perfect For Service Businesses
+              </h3>
+              <p style={{ fontSize: "1.125rem", color: "#0c4a6e", marginBottom: "2rem", lineHeight: "1.6" }}>
+                Car detailers, pressure washers, landscapers, property managers, HVAC companies, and other service businesses can easily add bin cleaning to their service offerings and earn additional revenue.
+              </p>
+              <div style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "1rem",
+                justifyContent: "center",
+                marginBottom: "2rem"
+              }}>
+                {["Car Detailers", "Pressure Washers", "Landscapers", "Property Managers", "HVAC Companies", "Other Service Businesses"].map((business) => (
+                  <span key={business} style={{
+                    padding: "0.5rem 1rem",
+                    background: "#f0f9ff",
+                    borderRadius: "8px",
+                    color: "#0369a1",
+                    fontSize: "0.875rem",
+                    fontWeight: "600"
+                  }}>
+                    {business}
+                  </span>
+                ))}
+              </div>
+              <Link 
+                href="/partners/apply" 
+                className="btn btn-primary"
+                style={{
+                  display: "inline-block",
+                  padding: "0.75rem 2rem",
+                  fontSize: "1rem",
+                  fontWeight: "600"
+                }}
+              >
+                Apply to Become a Partner
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Why Partner With Bin Blast Co. Section */}
         <section id="why-different" className="benefits" style={{ padding: "5rem 0", background: "#f9fafb" }}>
           <div className="container">
-            <h2 className="section-title">Why Bin Blast Co. Is Different</h2>
+            <h2 className="section-title">Why Partner With Bin Blast Co.</h2>
             <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem", color: "var(--text-light)", fontSize: "1.125rem" }}>
-              More than a cleaning service. Your bins stay fresh, and you get a modern customer experience to match.
+              A proven business model with transparent revenue sharing and comprehensive support for service businesses.
             </p>
             <div style={{ 
               display: "flex", 
@@ -368,80 +486,18 @@ export default function HomePage() {
 
         <FAQSection />
 
-        {/* Business Partner Program Section */}
-        <section id="partners" style={{ padding: "5rem 0", background: "#ffffff" }}>
-          <div className="container">
-            <h2 className="section-title" style={{ textAlign: "center" }}>Business Partner Program</h2>
-            <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem", color: "var(--text-light)", fontSize: "1.125rem" }}>
-              Grow your business by offering Bin Blast Co. services to your customers
-            </p>
-            <div style={{
-              background: "#f0f9ff",
-              borderRadius: "20px",
-              padding: "3rem",
-              border: "2px solid #bae6fd",
-              maxWidth: "900px",
-              margin: "0 auto",
-              textAlign: "center"
-            }}>
-              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🤝</div>
-              <h3 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
-                Earn 60% Revenue Share
-              </h3>
-              <p style={{ fontSize: "1.125rem", color: "#0c4a6e", marginBottom: "2rem", lineHeight: "1.6" }}>
-                Are you a car detailer, pressure washer, landscaper, or other service business? Partner with Bin Blast Co. and earn revenue by offering our bin cleaning services to your customers.
-              </p>
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "1.5rem",
-                marginBottom: "2rem",
-                textAlign: "left"
-              }}>
-                <div>
-                  <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>💰</div>
-                  <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>60% Revenue Share</div>
-                  <div style={{ fontSize: "0.875rem", color: "var(--text-light)" }}>Earn on every booking</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>🔗</div>
-                  <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>Your Own Link</div>
-                  <div style={{ fontSize: "0.875rem", color: "var(--text-light)" }}>Track all bookings</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>📊</div>
-                  <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>Partner Dashboard</div>
-                  <div style={{ fontSize: "0.875rem", color: "var(--text-light)" }}>View earnings & jobs</div>
-                </div>
-              </div>
-              <Link 
-                href="/partners" 
-                className="btn btn-primary"
-                style={{
-                  display: "inline-block",
-                  padding: "0.75rem 2rem",
-                  fontSize: "1rem",
-                  fontWeight: "600"
-                }}
-              >
-                Learn More & Apply
-              </Link>
-            </div>
-          </div>
-        </section>
-
         {/* CTA Box Section */}
         <section className="cta-box">
           <div className="cta-content">
-            <h2 className="cta-title">Ready for Fresh, Odor-Free Bins Every Month?</h2>
+            <h2 className="cta-title">Ready to Grow Your Business?</h2>
             <p className="cta-sub">
-              Join one of our recurring plans and let us handle the dirty work. You get professionally cleaned bins on a regular schedule plus full access to your Bin Blast Co. customer dashboard.
+              Join the Bin Blast Co. Business Partner Program and start earning 60% revenue share on every booking. No upfront costs, no monthly fees, and full support from our team.
             </p>
-            <p className="cta-detail">Only $65 / month — up to 2 bins</p>
-            <p className="cta-detail">Additional bins: +$10 each</p>
-            <p className="cta-detail">Cancel anytime, no long-term contracts</p>
-            <Link href="#pricing" className="cta-btn">
-              Get My Plan
+            <p className="cta-detail">60% revenue share on every booking</p>
+            <p className="cta-detail">Your own unique booking link</p>
+            <p className="cta-detail">Complete partner dashboard with real-time tracking</p>
+            <Link href="/partners/apply" className="cta-btn">
+              Apply to Become a Partner
             </Link>
           </div>
         </section>
@@ -452,9 +508,9 @@ export default function HomePage() {
             <div className="footer-content">
               <div className="footer-cta">
                 <div className="footer-logo">BIN BLAST CO.</div>
-                <h2 className="footer-title">Ready to Get Started?</h2>
-                <p className="footer-description">Book your bin cleaning service today and experience the difference of professionally cleaned bins!</p>
-                <Link href="#pricing" className="btn btn-primary btn-large">Book Your Cleaning Now</Link>
+                <h2 className="footer-title">Ready to Become a Partner?</h2>
+                <p className="footer-description">Join our Business Partner Program and start earning revenue by offering bin cleaning services to your customers!</p>
+                <Link href="/partners/apply" className="btn btn-primary btn-large">Apply to Become a Partner</Link>
               </div>
               <div className="footer-info">
                 <div className="footer-section">

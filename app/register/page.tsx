@@ -267,15 +267,14 @@ function RegisterForm() {
               }}>
                 <p style={{ margin: 0, fontSize: "0.95rem", color: stripeData ? "#047857" : "#92400e", fontWeight: "600" }}>
                   <strong>Selected Plan:</strong> {PLAN_NAMES[selectedPlanId]}
-                  {stripeData && " ✓ Payment Verified"}
+                  {stripeData && " Payment Verified"}
                 </p>
               </div>
             )}
 
             {success ? (
               <div style={{ textAlign: "center", padding: "3rem 0" }}>
-                <div style={{ fontSize: "4rem", color: "#16a34a", marginBottom: "1rem" }}>✓</div>
-                <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "0.5rem", color: "#16a34a" }}>
                   Account Created!
                 </h2>
                 <p style={{ color: "var(--text-light)" }}>Redirecting to your dashboard...</p>

@@ -695,7 +695,7 @@ function DashboardPageContent() {
                       background: user.paymentStatus === "paid" ? "#16a34a" : "#f59e0b",
                       color: "#ffffff"
                     }}>
-                      {user.paymentStatus === "paid" ? "✓ Paid" : "Pending Payment"}
+                      {user.paymentStatus === "paid" ? "Paid" : "Pending Payment"}
                     </div>
                   </div>
 

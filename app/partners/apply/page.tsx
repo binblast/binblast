@@ -121,8 +121,7 @@ export default function PartnerApplyPage() {
         <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
           <div className="container">
             <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
-              <div style={{ fontSize: "4rem", color: "#16a34a", marginBottom: "1rem" }}>✓</div>
-              <h1 style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
+              <h1 style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "1rem", color: "#16a34a" }}>
                 Application Submitted!
               </h1>
               <p style={{ fontSize: "1.125rem", color: "var(--text-light)", marginBottom: "2rem" }}>

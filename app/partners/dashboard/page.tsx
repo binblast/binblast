@@ -199,13 +199,12 @@ export default function PartnerDashboardPage() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
-          <div className="container">
-            <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
-              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
-              <h1 style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                Application Pending
-              </h1>
+      <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+        <div className="container">
+          <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
+            <h1 style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
+              Application Pending
+            </h1>
               <p style={{ fontSize: "1.125rem", color: "var(--text-light)", marginBottom: "2rem" }}>
                 Your partner application is under review. We'll notify you once it's been approved.
               </p>
@@ -231,13 +230,12 @@ export default function PartnerDashboardPage() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
-          <div className="container">
-            <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
-              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
-              <h1 style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                Account Suspended
-              </h1>
+      <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+        <div className="container">
+          <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
+            <h1 style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
+              Account Suspended
+            </h1>
               <p style={{ fontSize: "1.125rem", color: "var(--text-light)", marginBottom: "2rem" }}>
                 Your partner account has been suspended. Please contact support for more information.
               </p>
@@ -368,7 +366,7 @@ export default function PartnerDashboardPage() {
                     whiteSpace: "nowrap"
                   }}
                 >
-                  {copied ? "✓ Copied!" : "Copy Link"}
+                  {copied ? "Copied!" : "Copy Link"}
                 </button>
               </div>
               <p style={{ fontSize: "0.875rem", color: "#0c4a6e", marginTop: "1rem", margin: 0 }}>

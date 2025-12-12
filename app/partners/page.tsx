@@ -87,7 +87,6 @@ export default function PartnersPage() {
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb"
               }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>💰</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
                   Earn Revenue Share
                 </h3>
@@ -103,7 +102,6 @@ export default function PartnersPage() {
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb"
               }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>🔗</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
                   Your Own Booking Link
                 </h3>
@@ -119,7 +117,6 @@ export default function PartnersPage() {
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb"
               }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📊</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
                   Track Everything
                 </h3>
