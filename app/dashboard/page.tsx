@@ -655,6 +655,7 @@ function DashboardPageContent() {
     );
   }
 
+  // Main dashboard render
   return (
     <>
       <Navbar />
