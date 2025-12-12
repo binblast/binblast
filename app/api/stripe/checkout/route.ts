@@ -1,7 +1,8 @@
 // app/api/stripe/checkout/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { stripe, PLAN_CONFIGS, PlanId, isCustomQuote } from "@/lib/stripe-config";
+import { PLAN_CONFIGS, PlanId, isCustomQuote } from "@/lib/stripe-config";
+import { stripe } from "@/lib/stripe";
 import { getReferralCouponId } from "@/lib/stripe-coupons";
 import type Stripe from "stripe";
 

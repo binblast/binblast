@@ -1,7 +1,8 @@
 // lib/stripe-coupons.ts
 // Utility for managing reusable Stripe coupons for referral credits
+// Server-side only - imports Stripe instance directly
 
-import { stripe } from "./stripe-config";
+import { stripe } from "./stripe";
 
 const REFERRAL_COUPON_ID = "REFERRAL_10_OFF";
 

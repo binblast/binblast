@@ -1,8 +1,8 @@
 // lib/stripe-config.ts
 // Plan configuration and utilities
-// Stripe instance is now imported from lib/stripe.ts
-
-export { stripe } from "./stripe";
+// NOTE: This file is used by both client and server code
+// DO NOT import or export the Stripe instance here - it's server-only
+// Server-side code should import stripe directly from lib/stripe.ts
 
 export type PlanId = "one-time" | "twice-month" | "bi-monthly" | "quarterly" | "commercial";
 

@@ -1,7 +1,8 @@
 // app/api/stripe/change-subscription/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { stripe, PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
+import { PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
+import { stripe } from "@/lib/stripe";
 import { getMonthlyPriceForPlan } from "@/lib/subscription-utils";
 import type Stripe from "stripe";
 

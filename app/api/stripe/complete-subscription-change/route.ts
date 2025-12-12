@@ -2,7 +2,8 @@
 // This endpoint completes the subscription change after payment is confirmed
 
 import { NextRequest, NextResponse } from "next/server";
-import { stripe, PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
+import { PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
+import { stripe } from "@/lib/stripe";
 import type Stripe from "stripe";
 
 export const dynamic = 'force-dynamic';

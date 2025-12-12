@@ -1,7 +1,7 @@
 // app/api/stripe/verify-session/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe-config";
+import { stripe } from "@/lib/stripe";
 
 export const dynamic = 'force-dynamic';
 
