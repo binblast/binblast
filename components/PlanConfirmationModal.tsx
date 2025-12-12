@@ -10,7 +10,7 @@ interface PlanConfirmationModalProps {
   planId: PlanId;
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (applyCredit: boolean) => void;
+  onConfirm: (applyCredit: boolean, referralCode?: string) => void;
   userId: string | null;
   availableCredit: number;
   loading?: boolean;
@@ -26,27 +26,82 @@ export function PlanConfirmationModal({
   loading = false,
 }: PlanConfirmationModalProps) {
   const [applyCredit, setApplyCredit] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [referralCodeValid, setReferralCodeValid] = useState<boolean | null>(null);
+  const [referralDiscount, setReferralDiscount] = useState(0);
+  const [validatingCode, setValidatingCode] = useState(false);
+  const [referralError, setReferralError] = useState<string | null>(null);
 
   const plan = PLAN_CONFIGS[planId];
   if (!plan) return null;
 
-  // Reset applyCredit when modal opens/closes or credit changes
+  // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen) {
       // Default to applying credit if user has credit available
       setApplyCredit(availableCredit > 0);
+      setReferralCode("");
+      setReferralCodeValid(null);
+      setReferralDiscount(0);
+      setReferralError(null);
     } else {
       setApplyCredit(false);
+      setReferralCode("");
+      setReferralCodeValid(null);
+      setReferralDiscount(0);
+      setReferralError(null);
     }
   }, [isOpen, availableCredit]);
+
+  // Validate referral code when user enters it
+  const handleValidateReferralCode = async () => {
+    if (!referralCode.trim()) {
+      setReferralCodeValid(null);
+      setReferralDiscount(0);
+      setReferralError(null);
+      return;
+    }
+
+    setValidatingCode(true);
+    setReferralError(null);
+
+    try {
+      const response = await fetch("/api/referral/validate-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ referralCode: referralCode.trim().toUpperCase() }),
+      });
+
+      const data = await response.json();
+
+      if (data.valid) {
+        setReferralCodeValid(true);
+        setReferralDiscount(data.discountAmount || 10.00);
+        setReferralError(null);
+      } else {
+        setReferralCodeValid(false);
+        setReferralDiscount(0);
+        setReferralError(data.error || "Invalid referral code");
+      }
+    } catch (err: any) {
+      setReferralCodeValid(false);
+      setReferralDiscount(0);
+      setReferralError("Failed to validate code. Please try again.");
+    } finally {
+      setValidatingCode(false);
+    }
+  };
 
   if (!isOpen) return null;
 
   const planPrice = plan.price;
-  const discountAmount = applyCredit && availableCredit > 0 
+  const creditDiscount = applyCredit && availableCredit > 0 
     ? Math.min(availableCredit, planPrice) // Cap discount at plan price
     : 0;
-  const finalPrice = Math.max(0, planPrice - discountAmount);
+  const totalDiscount = creditDiscount + referralDiscount;
+  const finalPrice = Math.max(0, planPrice - totalDiscount);
 
   return (
     <div
@@ -125,7 +180,100 @@ export function PlanConfirmationModal({
           </p>
         </div>
 
-        {/* Referral Credit Option */}
+        {/* Referral Code Input */}
+        {!userId && (
+          <div
+            style={{
+              padding: "1rem",
+              background: "#f0f9ff",
+              borderRadius: "12px",
+              marginBottom: "1.5rem",
+              border: "1px solid #bae6fd",
+            }}
+          >
+            <label
+              htmlFor="referral-code"
+              style={{
+                display: "block",
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                color: "#0369a1",
+                marginBottom: "0.5rem",
+              }}
+            >
+              Have a Referral Code?
+            </label>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <input
+                type="text"
+                id="referral-code"
+                value={referralCode}
+                onChange={(e) => {
+                  setReferralCode(e.target.value.toUpperCase());
+                  setReferralCodeValid(null);
+                  setReferralDiscount(0);
+                  setReferralError(null);
+                }}
+                placeholder="Enter referral code"
+                style={{
+                  flex: 1,
+                  padding: "0.75rem",
+                  fontSize: "0.875rem",
+                  border: `1px solid ${referralCodeValid === false ? "#ef4444" : referralCodeValid === true ? "#16a34a" : "#bae6fd"}`,
+                  borderRadius: "8px",
+                  outline: "none",
+                  textTransform: "uppercase",
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    handleValidateReferralCode();
+                  }
+                }}
+              />
+              <button
+                onClick={handleValidateReferralCode}
+                disabled={validatingCode || !referralCode.trim()}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  color: "#ffffff",
+                  background: validatingCode || !referralCode.trim() ? "#9ca3af" : "#16a34a",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: validatingCode || !referralCode.trim() ? "not-allowed" : "pointer",
+                }}
+              >
+                {validatingCode ? "Checking..." : "Apply"}
+              </button>
+            </div>
+            {referralCodeValid === true && (
+              <div
+                style={{
+                  marginTop: "0.5rem",
+                  fontSize: "0.8125rem",
+                  color: "#16a34a",
+                  fontWeight: "600",
+                }}
+              >
+                ✓ Referral code applied! You'll get ${referralDiscount.toFixed(2)} off.
+              </div>
+            )}
+            {referralError && (
+              <div
+                style={{
+                  marginTop: "0.5rem",
+                  fontSize: "0.8125rem",
+                  color: "#ef4444",
+                }}
+              >
+                {referralError}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Referral Credit Option (for logged-in users) */}
         {userId && availableCredit > 0 && (
           <div
             style={{
@@ -179,7 +327,7 @@ export function PlanConfirmationModal({
                   }}
                 >
                   You have ${availableCredit.toFixed(2)} in referral credit available. 
-                  Apply ${discountAmount > 0 ? `$${discountAmount.toFixed(2)}` : "up to $10"} off this checkout.
+                  Apply ${creditDiscount > 0 ? `$${creditDiscount.toFixed(2)}` : "up to $10"} off this checkout.
                 </div>
               </label>
             </div>
@@ -235,7 +383,7 @@ export function PlanConfirmationModal({
             </span>
           </div>
 
-          {applyCredit && discountAmount > 0 && (
+          {creditDiscount > 0 && (
             <div
               style={{
                 display: "flex",
@@ -262,7 +410,38 @@ export function PlanConfirmationModal({
                   color: "#16a34a",
                 }}
               >
-                -${discountAmount.toFixed(2)}
+                -${creditDiscount.toFixed(2)}
+              </span>
+            </div>
+          )}
+          {referralDiscount > 0 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "0.75rem",
+                paddingTop: creditDiscount > 0 ? "0" : "0.75rem",
+                borderTop: creditDiscount > 0 ? "none" : "1px solid #e5e7eb",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.875rem",
+                  color: "#16a34a",
+                  fontWeight: "600",
+                }}
+              >
+                Referral Code Discount
+              </span>
+              <span
+                style={{
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  color: "#16a34a",
+                }}
+              >
+                -${referralDiscount.toFixed(2)}
               </span>
             </div>
           )}
@@ -336,7 +515,7 @@ export function PlanConfirmationModal({
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(applyCredit)}
+            onClick={() => onConfirm(applyCredit, referralCodeValid ? referralCode.trim().toUpperCase() : undefined)}
             disabled={loading}
             style={{
               flex: 1,

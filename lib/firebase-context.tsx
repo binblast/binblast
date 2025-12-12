@@ -19,11 +19,12 @@ const FirebaseContext = createContext<FirebaseContextType>({
 
 export function FirebaseProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true); // Start as true since we're checking
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     let mounted = true;
+    setIsInitializing(true);
 
     // Check Firebase readiness in background - don't block rendering
     async function checkFirebaseReady() {

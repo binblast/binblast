@@ -127,6 +127,64 @@ export async function POST(req: NextRequest) {
             }
           }
 
+          // Process referral code from checkout session (for non-logged-in users who used a code)
+          if (session.metadata?.referralCode && session.payment_status === 'paid' && customerEmail) {
+            try {
+              // Find the referrer by referral code
+              const referrersQuery = query(
+                collection(db, "users"),
+                where("referralCode", "==", session.metadata.referralCode)
+              );
+              const referrersSnapshot = await getDocs(referrersQuery);
+              
+              if (!referrersSnapshot.empty && userId) {
+                const referrerDoc = referrersSnapshot.docs[0];
+                const referrerId = referrerDoc.id;
+                
+                // Prevent self-referral
+                if (referrerId !== userId) {
+                  // Check if referral already exists
+                  const existingReferralsQuery = query(
+                    collection(db, "referrals"),
+                    where("referredUserId", "==", userId),
+                    where("referralCode", "==", session.metadata.referralCode)
+                  );
+                  const existingReferrals = await getDocs(existingReferralsQuery);
+                  
+                  if (existingReferrals.empty) {
+                    // Create PENDING referral record
+                    const referralRef = doc(collection(db, "referrals"));
+                    await setDoc(referralRef, {
+                      referrerId,
+                      referredUserId: userId,
+                      referredUserEmail: customerEmail,
+                      referralCode: session.metadata.referralCode,
+                      status: "PENDING",
+                      createdAt: serverTimestamp(),
+                      updatedAt: serverTimestamp(),
+                    });
+                    
+                    // Update user document with referral info
+                    await updateDoc(doc(db, "users", userId), {
+                      referredBy: referrerId,
+                      referredByCode: session.metadata.referralCode,
+                      updatedAt: serverTimestamp(),
+                    });
+                    
+                    console.log("[Webhook] Referral code processed from checkout:", {
+                      referralId: referralRef.id,
+                      referrerId,
+                      userId,
+                      referralCode: session.metadata.referralCode,
+                    });
+                  }
+                }
+              }
+            } catch (referralCodeError) {
+              console.error("[Webhook] Error processing referral code from checkout:", referralCodeError);
+            }
+          }
+
           // Award referral credits if user was found and this is their first paid service
           if (userId) {
             try {

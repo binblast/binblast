@@ -197,14 +197,14 @@ export function PricingSection() {
     setSelectedPlanId(planId);
   };
 
-  const handleConfirmCheckout = async (applyCredit: boolean) => {
+  const handleConfirmCheckout = async (applyCredit: boolean, referralCode?: string) => {
     if (!selectedPlanId) return;
 
     setLoadingPlanId(selectedPlanId);
     setLoadingCredit(true);
 
     try {
-      // Create Stripe checkout session with userId and applyCredit flag
+      // Create Stripe checkout session with userId, applyCredit flag, and referral code
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: {
@@ -214,6 +214,7 @@ export function PricingSection() {
           planId: selectedPlanId,
           userId: userId || undefined,
           applyCredit: applyCredit && availableCredit > 0, // Only apply if user selected it and has credit
+          referralCode: referralCode || undefined, // Pass referral code if provided
         }),
       });
 

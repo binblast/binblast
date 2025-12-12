@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { planId, userId, applyCredit } = body; // applyCredit: boolean flag from user
+    const { planId, userId, applyCredit, referralCode } = body; // applyCredit: boolean flag from user, referralCode: string code
 
     if (!planId) {
       return NextResponse.json(
@@ -52,6 +52,45 @@ export async function POST(req: NextRequest) {
       },
       line_items: [],
     };
+
+    // Handle referral code discount (for non-logged-in users)
+    let referralCodeDiscount = 0;
+    let referralCodeToProcess: string | null = null;
+    
+    if (referralCode && !userId) {
+      // Validate referral code for non-logged-in users
+      try {
+        const { getDbInstance } = await import("@/lib/firebase");
+        const { collection, query, where, getDocs } = await import("firebase/firestore");
+        
+        const db = await getDbInstance();
+        if (db) {
+          const usersQuery = query(
+            collection(db, "users"),
+            where("referralCode", "==", referralCode.trim().toUpperCase())
+          );
+          const usersSnapshot = await getDocs(usersQuery);
+          
+          if (!usersSnapshot.empty) {
+            referralCodeDiscount = 10.00; // $10 discount
+            referralCodeToProcess = referralCode.trim().toUpperCase();
+            console.log("[Checkout] Valid referral code provided:", referralCodeToProcess);
+          } else {
+            console.warn("[Checkout] Invalid referral code:", referralCode);
+            return NextResponse.json(
+              { error: "Invalid referral code" },
+              { status: 400 }
+            );
+          }
+        }
+      } catch (referralError) {
+        console.error("[Checkout] Error validating referral code:", referralError);
+        return NextResponse.json(
+          { error: "Failed to validate referral code. Please try again." },
+          { status: 500 }
+        );
+      }
+    }
 
     // Check for unused referral credits and calculate discount (only if user wants to apply credit)
     let discountAmount = 0;
@@ -115,10 +154,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Calculate final price after discount (for response, Stripe will calculate actual final price)
-    const finalPrice = Math.max(0, (plan.price * 100) - discountAmount);
+    // Combine both referral credit discount and referral code discount
+    const totalDiscountAmount = discountAmount + (referralCodeDiscount * 100); // Convert referral code discount to cents
+    const finalPrice = Math.max(0, (plan.price * 100) - totalDiscountAmount);
 
-    // Apply discount using reusable Stripe coupon (only if user selected to apply credit)
-    if (discountAmount > 0 && discountAmount >= 100 && applyCredit === true) {
+    // Apply discount using reusable Stripe coupon
+    // Apply if user has referral credits OR if they provided a valid referral code
+    if ((discountAmount > 0 && discountAmount >= 100 && applyCredit === true) || referralCodeDiscount > 0) {
       try {
         // Get or create the reusable referral coupon
         const couponId = await getReferralCouponId();
@@ -218,19 +260,20 @@ export async function POST(req: NextRequest) {
       ];
     }
 
-    // Store credit information in metadata (will be used to mark credits as used after payment)
+    // Store credit information and referral code in metadata (will be used after payment)
+    sessionParams.metadata = {
+      ...sessionParams.metadata,
+      userId: userId || "",
+    };
+    
     if (discountAmount > 0 && creditsToUse.length > 0) {
-      sessionParams.metadata = {
-        ...sessionParams.metadata,
-        userId: userId || "",
-        creditApplied: (discountAmount / 100).toFixed(2),
-        creditsToUse: creditsToUse.join(','),
-      };
-    } else if (userId) {
-      sessionParams.metadata = {
-        ...sessionParams.metadata,
-        userId: userId,
-      };
+      sessionParams.metadata.creditApplied = (discountAmount / 100).toFixed(2);
+      sessionParams.metadata.creditsToUse = creditsToUse.join(',');
+    }
+    
+    if (referralCodeToProcess) {
+      sessionParams.metadata.referralCode = referralCodeToProcess;
+      sessionParams.metadata.referralCodeDiscount = referralCodeDiscount.toFixed(2);
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
@@ -239,6 +282,7 @@ export async function POST(req: NextRequest) {
       sessionId: session.id,
       url: session.url,
       creditApplied: discountAmount > 0 ? (discountAmount / 100).toFixed(2) : 0,
+      referralCodeDiscount: referralCodeDiscount > 0 ? referralCodeDiscount.toFixed(2) : 0,
       finalPrice: (finalPrice / 100).toFixed(2),
     });
   } catch (err: any) {
