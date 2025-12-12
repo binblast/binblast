@@ -36,18 +36,17 @@ service cloud.firestore {
         // Note: Server-side requests have request.auth == null
         (request.auth == null && 
          request.resource.data.email == resource.data.email && // Can't change email
-         request.resource.data.userId == resource.data.userId && // Can't change userId
          // Allow updates to subscription-related fields only
          (request.resource.data.firstName == resource.data.firstName &&
           request.resource.data.lastName == resource.data.lastName &&
           request.resource.data.phone == resource.data.phone)
          ||
-         // Allow updates to referral-related fields (referralCount, referredBy, referredByCode)
+         // Allow updates to referral-related fields (referralCount, referredBy, referredByCode, referralCodeUsed)
          // These can be updated by the referral API
          (request.resource.data.firstName == resource.data.firstName &&
           request.resource.data.lastName == resource.data.lastName &&
           request.resource.data.phone == resource.data.phone &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'referredBy', 'referredByCode', 'updatedAt']))
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'referredBy', 'referredByCode', 'referralCodeUsed', 'updatedAt']))
         )
       );
       
@@ -121,8 +120,10 @@ service cloud.firestore {
     match /referrals/{referralId} {
       // Users can read referrals where they are the referrer or referred user
       // This allows both individual reads and list queries
+      // Also allow server-side API routes to read (for get-credits, etc.)
       allow read: if isAuthenticated() 
-        && (resource.data.referrerId == request.auth.uid || resource.data.referredUserId == request.auth.uid);
+        && (resource.data.referrerId == request.auth.uid || resource.data.referredUserId == request.auth.uid)
+        || request.auth == null; // Allow server-side reads
       
       // Only server-side API routes can create/update referrals
       allow create, update: if request.auth == null;
@@ -135,8 +136,10 @@ service cloud.firestore {
     match /credits/{creditId} {
       // Users can read their own credits
       // This allows both individual reads and list queries
-      allow read: if isAuthenticated() 
-        && resource.data.userId == request.auth.uid;
+      // Also allow server-side API routes to read (for get-credits endpoint)
+      allow read: if (isAuthenticated() 
+        && resource.data.userId == request.auth.uid)
+        || request.auth == null; // Allow server-side reads
       
       // Only server-side API routes can create/update credits
       allow create, update: if request.auth == null;
