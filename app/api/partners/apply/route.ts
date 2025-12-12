@@ -99,8 +99,19 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     console.error("[Partner Apply] Partner application error:", err);
     console.error("[Partner Apply] Error stack:", err.stack);
+    
+    // Check for Firestore permission errors
+    const errorMessage = err.message || "Failed to submit application";
+    if (errorMessage.includes("Missing or insufficient permissions") || errorMessage.includes("permission-denied")) {
+      console.error("[Partner Apply] Firestore permission error - check security rules");
+      return NextResponse.json(
+        { error: "Permission error. Please ensure you are logged in and try again." },
+        { status: 403 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: err.message || "Failed to submit application" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

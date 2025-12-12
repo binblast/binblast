@@ -151,20 +151,24 @@ service cloud.firestore {
     // PartnerApplications collection - partner applications before approval
     match /partnerApplications/{applicationId} {
       // Users can read their own application
+      // Server-side can read all (for admin, API routes)
+      allow read)
       allow read: if isAuthenticated() 
         && resource.data.userId == request.auth.uid
         || request.auth == null; // Allow server-side reads (for admin)
       
-      // Users can create their own application
-      allow create: if isAuthenticated() 
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == "pending";
+      // Users can create their own application (client-side)
+      // Server-side can also create (API routes)
+      allow create: if (
+        (isAuthenticated() && request.resource.data.userId == request.auth.uid && request.resource.data.status == "pending")
+        || request.auth == null // Server-side creates (API routes)
+      );
       
       // Users can update their own application only if status is pending
       // Server-side can update any field (for admin approvals, etc.)
       allow update: if (
         (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == "pending")
-        || request.auth == null // Server-side updates (admin actions)
+        || request.auth == null // Server-side updates (admin actions, API routes)
       );
       
       // No deletions allowed
