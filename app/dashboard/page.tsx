@@ -133,11 +133,35 @@ function DashboardPageContent() {
   const [accountInfoExpanded, setAccountInfoExpanded] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   
+  // Admin state
+  const [adminStats, setAdminStats] = useState({
+    totalCustomers: 0,
+    customersByPlan: {} as Record<string, number>,
+    activePartners: 0,
+    upcomingCleanings: 0,
+    estimatedMonthlyRevenue: 0,
+  });
+  const [allCustomers, setAllCustomers] = useState<any[]>([]);
+  const [commercialCustomers, setCommercialCustomers] = useState<any[]>([]);
+  const [allCleanings, setAllCleanings] = useState<any[]>([]);
+  const [referralStats, setReferralStats] = useState({
+    totalReferrals: 0,
+    creditsGranted: 0,
+    creditsRedeemed: 0,
+    topReferrers: [] as Array<{ name: string; email: string; count: number }>,
+    loyaltyLevels: {} as Record<string, number>,
+  });
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [customerFilter, setCustomerFilter] = useState<{ plan?: string; source?: string; search?: string }>({});
+  
   // Refs for scroll targets
   const scheduleSectionRef = useRef<HTMLDivElement>(null);
   const planSectionRef = useRef<HTMLDivElement>(null);
   const rewardsSectionRef = useRef<HTMLDivElement>(null);
   const accountSectionRef = useRef<HTMLDivElement>(null);
+  const overviewSectionRef = useRef<HTMLDivElement>(null);
+  const customersSectionRef = useRef<HTMLDivElement>(null);
+  const commercialSectionRef = useRef<HTMLDivElement>(null);
 
   // Handle Stripe Checkout callback
   useEffect(() => {
@@ -353,6 +377,165 @@ function DashboardPageContent() {
     };
   }, [router]);
 
+  // Load admin data
+  useEffect(() => {
+    if (!isAdmin || !userId) return;
+    
+    let mounted = true;
+    async function loadAdminData() {
+      setAdminLoading(true);
+      try {
+        const { getDbInstance } = await import("@/lib/firebase");
+        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+        const firestore = await safeImportFirestore();
+        const { collection, query, getDocs, where, orderBy } = firestore;
+        
+        const db = await getDbInstance();
+        if (!db) return;
+
+        // Load all users (customers)
+        const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc"));
+        const usersSnapshot = await getDocs(usersQuery);
+        const customers: any[] = [];
+        const planCounts: Record<string, number> = {};
+        
+        usersSnapshot.forEach((doc) => {
+          const data = doc.data();
+          customers.push({ id: doc.id, ...data });
+          if (data.selectedPlan) {
+            planCounts[data.selectedPlan] = (planCounts[data.selectedPlan] || 0) + 1;
+          }
+        });
+
+        // Load partners
+        const partnersQuery = query(
+          collection(db, "partners"),
+          where("status", "==", "active")
+        );
+        const partnersSnapshot = await getDocs(partnersQuery);
+        const activePartners = partnersSnapshot.size;
+
+        // Load upcoming cleanings (next 7 days)
+        const sevenDaysFromNow = new Date();
+        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+        const cleaningsQuery = query(
+          collection(db, "scheduledCleanings"),
+          orderBy("scheduledDate", "asc")
+        );
+        const cleaningsSnapshot = await getDocs(cleaningsQuery);
+        const allCleaningsList: any[] = [];
+        let upcomingCount = 0;
+        
+        cleaningsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          const cleaningDate = data.scheduledDate?.toDate?.() || new Date(data.scheduledDate);
+          if (cleaningDate >= new Date() && cleaningDate <= sevenDaysFromNow && data.status !== "cancelled") {
+            upcomingCount++;
+          }
+          allCleaningsList.push({ id: doc.id, ...data });
+        });
+
+        // Load partner bookings to determine customer source
+        const partnerBookingsQuery = query(collection(db, "partnerBookings"));
+        const partnerBookingsSnapshot = await getDocs(partnerBookingsQuery);
+        const partnerCustomerEmails = new Set<string>();
+        partnerBookingsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.customerEmail) {
+            partnerCustomerEmails.add(data.customerEmail);
+          }
+        });
+
+        // Enhance customers with source info
+        const enhancedCustomers = customers.map(customer => ({
+          ...customer,
+          source: partnerCustomerEmails.has(customer.email) ? "partner" : "direct",
+          partnerName: null, // Could be enhanced later
+        }));
+
+        // Filter commercial customers
+        const commercial = enhancedCustomers.filter(c => 
+          c.selectedPlan === "commercial" || c.selectedPlan?.includes("commercial") || c.selectedPlan?.includes("HOA")
+        );
+
+        // Calculate estimated monthly revenue (simplified)
+        const planPrices: Record<string, number> = {
+          "one-time": 25,
+          "twice-month": 45,
+          "bi-monthly": 20,
+          "quarterly": 15,
+          "commercial": 100, // Estimate
+        };
+        let estimatedRevenue = 0;
+        enhancedCustomers.forEach(customer => {
+          if (customer.subscriptionStatus === "active" && customer.selectedPlan) {
+            const price = planPrices[customer.selectedPlan] || 25;
+            const multiplier = customer.selectedPlan === "twice-month" ? 2 : customer.selectedPlan === "bi-monthly" ? 0.5 : customer.selectedPlan === "quarterly" ? 0.25 : 1;
+            estimatedRevenue += price * multiplier;
+          }
+        });
+
+        // Load referral stats
+        let totalReferrals = 0;
+        let creditsGranted = 0;
+        let creditsRedeemed = 0;
+        const referrerCounts: Record<string, { name: string; email: string; count: number }> = {};
+        const loyaltyLevels: Record<string, number> = {};
+
+        customers.forEach(customer => {
+          if (customer.referralCount) {
+            totalReferrals += customer.referralCount;
+            const key = customer.referralCode || customer.email;
+            if (!referrerCounts[key]) {
+              referrerCounts[key] = {
+                name: `${customer.firstName} ${customer.lastName}`,
+                email: customer.email,
+                count: 0,
+              };
+            }
+            referrerCounts[key].count += customer.referralCount;
+          }
+          // Simple loyalty level based on referral count
+          const level = customer.referralCount >= 10 ? "Level 3" : customer.referralCount >= 5 ? "Level 2" : customer.referralCount >= 1 ? "Level 1" : "Level 0";
+          loyaltyLevels[level] = (loyaltyLevels[level] || 0) + 1;
+        });
+
+        const topReferrers = Object.values(referrerCounts)
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
+
+        if (mounted) {
+          setAdminStats({
+            totalCustomers: customers.length,
+            customersByPlan: planCounts,
+            activePartners,
+            upcomingCleanings: upcomingCount,
+            estimatedMonthlyRevenue: Math.round(estimatedRevenue),
+          });
+          setAllCustomers(enhancedCustomers);
+          setCommercialCustomers(commercial);
+          setAllCleanings(allCleaningsList);
+          setReferralStats({
+            totalReferrals,
+            creditsGranted: totalReferrals * 10, // Assume 10 credits per referral
+            creditsRedeemed: 0, // Would need to track this separately
+            topReferrers,
+            loyaltyLevels,
+          });
+          setAdminLoading(false);
+        }
+      } catch (err: any) {
+        console.error("[Dashboard] Error loading admin data:", err);
+        if (mounted) {
+          setAdminLoading(false);
+        }
+      }
+    }
+
+    loadAdminData();
+    return () => { mounted = false; };
+  }, [isAdmin, userId]);
+
   // Helper functions
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -442,15 +625,201 @@ function DashboardPageContent() {
                 color: "#6b7280", 
                 marginBottom: "1.5rem"
               }}>
-                Here&apos;s a quick look at your bin cleaning status.
+                {isAdmin ? "Admin Dashboard - Manage your business operations" : "Here's a quick look at your bin cleaning status."}
               </p>
 
-              {/* Admin Partner Applications Section */}
+              {/* Admin Navigation */}
               {isAdmin && (
-                <>
+                <div style={{
+                  marginBottom: "2rem",
+                  padding: "1rem",
+                  background: "#ffffff",
+                  borderRadius: "12px",
+                  border: "1px solid #e5e7eb",
+                  display: "flex",
+                  gap: "0.75rem",
+                  flexWrap: "wrap"
+                }}>
+                  <button
+                    onClick={() => scrollToSection(overviewSectionRef)}
+                    style={{
+                      fontSize: "0.875rem",
+                      padding: "0.5rem 1rem",
+                      background: "transparent",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      color: "#374151",
+                      fontWeight: "500"
+                    }}
+                  >
+                    Overview
+                  </button>
+                  <button
+                    onClick={() => scrollToSection(customersSectionRef)}
+                    style={{
+                      fontSize: "0.875rem",
+                      padding: "0.5rem 1rem",
+                      background: "transparent",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      color: "#374151",
+                      fontWeight: "500"
+                    }}
+                  >
+                    Customers
+                  </button>
+                  <button
+                    onClick={() => scrollToSection(commercialSectionRef)}
+                    style={{
+                      fontSize: "0.875rem",
+                      padding: "0.5rem 1rem",
+                      background: "transparent",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      color: "#374151",
+                      fontWeight: "500"
+                    }}
+                  >
+                    Commercial Accounts
+                  </button>
+                  <button
+                    onClick={() => scrollToSection(scheduleSectionRef)}
+                    style={{
+                      fontSize: "0.875rem",
+                      padding: "0.5rem 1rem",
+                      background: "transparent",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      color: "#374151",
+                      fontWeight: "500"
+                    }}
+                  >
+                    Schedule
+                  </button>
+                </div>
+              )}
+
+              {/* Admin Overview Cards */}
+              {isAdmin && (
+                <div ref={overviewSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
+                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                    Overview
+                  </h2>
+                  {adminLoading ? (
+                    <p style={{ color: "#6b7280" }}>Loading admin statistics...</p>
+                  ) : (
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                      gap: "1rem",
+                      marginBottom: "2rem"
+                    }}>
+                      {/* Total Active Customers */}
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                      }}>
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          Total Active Customers
+                        </div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                          {adminStats.totalCustomers}
+                        </div>
+                      </div>
+
+                      {/* Active Partners */}
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                      }}>
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          Active Partners
+                        </div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                          {adminStats.activePartners}
+                        </div>
+                      </div>
+
+                      {/* Upcoming Cleanings */}
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                      }}>
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          Upcoming Cleanings (7 days)
+                        </div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                          {adminStats.upcomingCleanings}
+                        </div>
+                      </div>
+
+                      {/* Estimated Monthly Revenue */}
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                      }}>
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          Est. Monthly Revenue
+                        </div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
+                          ${adminStats.estimatedMonthlyRevenue.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Customers by Plan */}
+                  {Object.keys(adminStats.customersByPlan).length > 0 && (
+                    <div style={{
+                      background: "#ffffff",
+                      borderRadius: "12px",
+                      padding: "1.5rem",
+                      border: "1px solid #e5e7eb",
+                      marginBottom: "2rem"
+                    }}>
+                      <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                        Customers by Plan
+                      </h3>
+                      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                        {Object.entries(adminStats.customersByPlan).map(([plan, count]) => (
+                          <div key={plan} style={{
+                            padding: "0.75rem 1rem",
+                            background: "#f9fafb",
+                            borderRadius: "8px",
+                            border: "1px solid #e5e7eb"
+                          }}>
+                            <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
+                              {PLAN_NAMES[plan] || plan}
+                            </div>
+                            <div style={{ fontSize: "1.25rem", fontWeight: "600", color: "var(--text-dark)" }}>
+                              {count}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Admin Partner Applications Section */}
                   <AdminPartnerApplications />
                   <AdminPartnerManagement />
-                </>
+                </div>
               )}
 
               {/* Status Summary Card */}
@@ -655,6 +1024,245 @@ function DashboardPageContent() {
               </div>
             </div>
 
+            {/* Admin: Customers & Tiers Section */}
+            {isAdmin && (
+              <div ref={customersSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
+                <div style={{
+                  background: "#ffffff",
+                  borderRadius: "20px",
+                  padding: "2.5rem",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1.5rem" }}>
+                    Customers
+                  </h2>
+
+                  {/* Filters */}
+                  <div style={{
+                    display: "flex",
+                    gap: "1rem",
+                    marginBottom: "1.5rem",
+                    flexWrap: "wrap",
+                    alignItems: "center"
+                  }}>
+                    <input
+                      type="text"
+                      placeholder="Search by name or email..."
+                      value={customerFilter.search || ""}
+                      onChange={(e) => setCustomerFilter({ ...customerFilter, search: e.target.value })}
+                      style={{
+                        flex: "1",
+                        minWidth: "200px",
+                        padding: "0.5rem 1rem",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem"
+                      }}
+                    />
+                    <select
+                      value={customerFilter.plan || ""}
+                      onChange={(e) => setCustomerFilter({ ...customerFilter, plan: e.target.value || undefined })}
+                      style={{
+                        padding: "0.5rem 1rem",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                        background: "#ffffff"
+                      }}
+                    >
+                      <option value="">All Plans</option>
+                      {Object.entries(PLAN_NAMES).map(([id, name]) => (
+                        <option key={id} value={id}>{name}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={customerFilter.source || ""}
+                      onChange={(e) => setCustomerFilter({ ...customerFilter, source: e.target.value || undefined })}
+                      style={{
+                        padding: "0.5rem 1rem",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                        background: "#ffffff"
+                      }}
+                    >
+                      <option value="">All Sources</option>
+                      <option value="direct">Direct</option>
+                      <option value="partner">Partner</option>
+                    </select>
+                  </div>
+
+                  {/* Customers Table */}
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                          <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Name</th>
+                          <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Email</th>
+                          <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Plan</th>
+                          <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Source</th>
+                          <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allCustomers
+                          .filter(customer => {
+                            if (customerFilter.search) {
+                              const search = customerFilter.search.toLowerCase();
+                              const name = `${customer.firstName || ""} ${customer.lastName || ""}`.toLowerCase();
+                              const email = (customer.email || "").toLowerCase();
+                              if (!name.includes(search) && !email.includes(search)) return false;
+                            }
+                            if (customerFilter.plan && customer.selectedPlan !== customerFilter.plan) return false;
+                            if (customerFilter.source && customer.source !== customerFilter.source) return false;
+                            return true;
+                          })
+                          .slice(0, 50)
+                          .map((customer) => (
+                            <tr key={customer.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                              <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)" }}>
+                                {customer.firstName} {customer.lastName}
+                              </td>
+                              <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                                {customer.email}
+                              </td>
+                              <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                                {customer.selectedPlan ? (PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan) : "No plan"}
+                              </td>
+                              <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                                <span style={{
+                                  padding: "0.25rem 0.5rem",
+                                  borderRadius: "4px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: "600",
+                                  background: customer.source === "partner" ? "#dbeafe" : "#f3f4f6",
+                                  color: customer.source === "partner" ? "#1e40af" : "#6b7280"
+                                }}>
+                                  {customer.source === "partner" ? "Partner" : "Direct"}
+                                </span>
+                              </td>
+                              <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
+                                <span style={{
+                                  padding: "0.25rem 0.5rem",
+                                  borderRadius: "4px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: "600",
+                                  background: customer.subscriptionStatus === "active" ? "#d1fae5" : "#fef3c7",
+                                  color: customer.subscriptionStatus === "active" ? "#065f46" : "#92400e"
+                                }}>
+                                  {customer.subscriptionStatus === "active" ? "Active" : customer.subscriptionStatus || "Inactive"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    {allCustomers.filter(customer => {
+                      if (customerFilter.search) {
+                        const search = customerFilter.search.toLowerCase();
+                        const name = `${customer.firstName || ""} ${customer.lastName || ""}`.toLowerCase();
+                        const email = (customer.email || "").toLowerCase();
+                        if (!name.includes(search) && !email.includes(search)) return false;
+                      }
+                      if (customerFilter.plan && customer.selectedPlan !== customerFilter.plan) return false;
+                      if (customerFilter.source && customer.source !== customerFilter.source) return false;
+                      return true;
+                    }).length === 0 && (
+                      <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
+                        No customers found matching your filters.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Admin: Commercial Accounts Section */}
+            {isAdmin && (
+              <div ref={commercialSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
+                <div style={{
+                  background: "#ffffff",
+                  borderRadius: "20px",
+                  padding: "2.5rem",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1.5rem" }}>
+                    Commercial Accounts
+                  </h2>
+                  {commercialCustomers.length === 0 ? (
+                    <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
+                      No commercial accounts found.
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                      {commercialCustomers.map((customer) => (
+                        <div
+                          key={customer.id}
+                          style={{
+                            padding: "1.5rem",
+                            background: "#f9fafb",
+                            borderRadius: "12px",
+                            border: "1px solid #e5e7eb"
+                          }}
+                        >
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
+                            <div>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                Business Name
+                              </div>
+                              <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)" }}>
+                                {customer.firstName} {customer.lastName}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                Contact Email
+                              </div>
+                              <div style={{ fontSize: "1rem", color: "var(--text-dark)" }}>
+                                {customer.email}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                Plan Type
+                              </div>
+                              <div style={{ fontSize: "1rem", color: "var(--text-dark)" }}>
+                                {PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan || "N/A"}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                Status
+                              </div>
+                              <div>
+                                <span style={{
+                                  padding: "0.25rem 0.5rem",
+                                  borderRadius: "4px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: "600",
+                                  background: customer.subscriptionStatus === "active" ? "#d1fae5" : "#fef3c7",
+                                  color: customer.subscriptionStatus === "active" ? "#065f46" : "#92400e"
+                                }}>
+                                  {customer.subscriptionStatus === "active" ? "Active" : "Inactive"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          {customer.phone && (
+                            <div style={{ marginTop: "1rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                              <strong>Phone:</strong> {customer.phone}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* (C) Schedule a Cleaning */}
             <div ref={scheduleSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
               <div style={{
@@ -838,6 +1446,137 @@ function DashboardPageContent() {
             </div>
             )}
 
+            {/* Admin: Referral & Loyalty Snapshot */}
+            {isAdmin && (
+              <div style={{ marginBottom: "2rem" }}>
+                <div style={{
+                  background: "#ffffff",
+                  borderRadius: "20px",
+                  padding: "2.5rem",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1.5rem" }}>
+                    Referral & Loyalty Overview
+                  </h2>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+                    <div style={{
+                      padding: "1.5rem",
+                      background: "#f9fafb",
+                      borderRadius: "12px",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                        Total Referrals
+                      </div>
+                      <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                        {referralStats.totalReferrals}
+                      </div>
+                    </div>
+                    <div style={{
+                      padding: "1.5rem",
+                      background: "#f9fafb",
+                      borderRadius: "12px",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                        Credits Granted
+                      </div>
+                      <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
+                        {referralStats.creditsGranted}
+                      </div>
+                    </div>
+                    <div style={{
+                      padding: "1.5rem",
+                      background: "#f9fafb",
+                      borderRadius: "12px",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                        Credits Redeemed
+                      </div>
+                      <div style={{ fontSize: "2rem", fontWeight: "700", color: "#dc2626" }}>
+                        {referralStats.creditsRedeemed}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Referrers */}
+                  {referralStats.topReferrers.length > 0 && (
+                    <div style={{ marginBottom: "2rem" }}>
+                      <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                        Top Referrers
+                      </h3>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                        {referralStats.topReferrers.map((referrer, index) => (
+                          <div
+                            key={index}
+                            style={{
+                              padding: "1rem",
+                              background: "#f9fafb",
+                              borderRadius: "8px",
+                              border: "1px solid #e5e7eb",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center"
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
+                                {referrer.name}
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                                {referrer.email}
+                              </div>
+                            </div>
+                            <div style={{
+                              padding: "0.25rem 0.75rem",
+                              borderRadius: "999px",
+                              fontSize: "0.875rem",
+                              fontWeight: "600",
+                              background: "#dbeafe",
+                              color: "#1e40af"
+                            }}>
+                              {referrer.count} referrals
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Loyalty Levels */}
+                  {Object.keys(referralStats.loyaltyLevels).length > 0 && (
+                    <div>
+                      <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                        Customers by Loyalty Level
+                      </h3>
+                      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                        {Object.entries(referralStats.loyaltyLevels).map(([level, count]) => (
+                          <div
+                            key={level}
+                            style={{
+                              padding: "1rem 1.5rem",
+                              background: "#f9fafb",
+                              borderRadius: "8px",
+                              border: "1px solid #e5e7eb"
+                            }}
+                          >
+                            <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
+                              {level}
+                            </div>
+                            <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                              {count}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* (G) Upcoming & Past Cleanings */}
             <div style={{ marginBottom: "2rem" }}>
             <div style={{
@@ -848,17 +1587,24 @@ function DashboardPageContent() {
                 border: "1px solid #e5e7eb"
             }}>
                 <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1.5rem" }}>
-                  Your Cleanings
+                  {isAdmin ? "All Cleanings" : "Your Cleanings"}
               </h2>
               
                 {/* Upcoming */}
                 <div style={{ marginBottom: "2rem" }}>
                   <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
-                    Upcoming
+                    {isAdmin ? "Today's Cleanings" : "Upcoming"}
                   </h3>
               {cleaningsLoading ? (
                     <p style={{ color: "#6b7280" }}>Loading scheduled cleanings...</p>
-                  ) : upcomingCleanings.length === 0 ? (
+                  ) : (isAdmin ? allCleanings.filter(c => {
+                    const date = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const cleaningDate = new Date(date);
+                    cleaningDate.setHours(0, 0, 0, 0);
+                    return cleaningDate.getTime() === today.getTime() && c.status !== "cancelled";
+                  }) : upcomingCleanings).length === 0 ? (
                     <div style={{
                       padding: "2rem",
                       background: "#f9fafb",
@@ -867,12 +1613,19 @@ function DashboardPageContent() {
                       border: "1px dashed #d1d5db"
                     }}>
                       <p style={{ color: "#6b7280", margin: 0 }}>
-                        No cleanings scheduled yet. Use the Schedule button above to book your first cleaning.
+                        {isAdmin ? "No cleanings scheduled for today." : "No cleanings scheduled yet. Use the Schedule button above to book your first cleaning."}
                       </p>
                     </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                      {upcomingCleanings.map((cleaning) => {
+                      {(isAdmin ? allCleanings.filter(c => {
+                        const date = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const cleaningDate = new Date(date);
+                        cleaningDate.setHours(0, 0, 0, 0);
+                        return cleaningDate.getTime() === today.getTime() && c.status !== "cancelled";
+                      }).slice(0, 20) : upcomingCleanings).map((cleaning) => {
                     const cleaningDate = new Date(cleaning.scheduledDate);
                     return (
                       <div
@@ -921,12 +1674,91 @@ function DashboardPageContent() {
                             <strong>Trash Day:</strong> {cleaning.trashDay}
                           </div>
                         )}
+                        {isAdmin && cleaning.userId && (
+                          <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.5rem" }}>
+                            <strong>Customer ID:</strong> {cleaning.userId.substring(0, 8)}...
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               )}
             </div>
+
+                {/* Admin: Next 7 Days */}
+                {isAdmin && (
+                  <div style={{ marginBottom: "2rem" }}>
+                    <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                      Next 7 Days
+                    </h3>
+                    {allCleanings.filter(c => {
+                      const date = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
+                      const today = new Date();
+                      const sevenDaysFromNow = new Date();
+                      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+                      return date >= today && date <= sevenDaysFromNow && c.status !== "cancelled";
+                    }).length === 0 ? (
+                      <div style={{
+                        padding: "2rem",
+                        background: "#f9fafb",
+                        borderRadius: "12px",
+                        textAlign: "center",
+                        border: "1px dashed #d1d5db"
+                      }}>
+                        <p style={{ color: "#6b7280", margin: 0 }}>
+                          No cleanings scheduled for the next 7 days.
+                        </p>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                        {allCleanings
+                          .filter(c => {
+                            const date = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
+                            const today = new Date();
+                            const sevenDaysFromNow = new Date();
+                            sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+                            return date >= today && date <= sevenDaysFromNow && c.status !== "cancelled";
+                          })
+                          .sort((a, b) => {
+                            const dateA = a.scheduledDate?.toDate?.() || new Date(a.scheduledDate);
+                            const dateB = b.scheduledDate?.toDate?.() || new Date(b.scheduledDate);
+                            return dateA.getTime() - dateB.getTime();
+                          })
+                          .slice(0, 30)
+                          .map((cleaning) => {
+                            const cleaningDate = cleaning.scheduledDate?.toDate?.() || new Date(cleaning.scheduledDate);
+                            return (
+                              <div
+                                key={cleaning.id}
+                                style={{
+                                  padding: "1rem",
+                                  background: "#f0f9ff",
+                                  borderRadius: "8px",
+                                  border: "1px solid #bae6fd",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center"
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
+                                    {cleaningDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                                  </div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                                    {cleaning.addressLine1}, {cleaning.city}
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                                  {cleaning.scheduledTime || "TBD"}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* History */}
                 {pastCleanings.length > 0 && (
