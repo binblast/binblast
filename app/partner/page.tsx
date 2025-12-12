@@ -1,7 +1,7 @@
 // app/partner/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 
@@ -21,7 +21,7 @@ interface PartnerInfo {
   referralCode: string;
 }
 
-export default function PartnerSignupPage() {
+function PartnerSignupPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const partnerId = searchParams.get("partnerId");
@@ -370,5 +370,24 @@ export default function PartnerSignupPage() {
         </div>
       </main>
     </>
+  );
+}
+
+export default function PartnerSignupPage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Navbar />
+        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "#f9fafb" }}>
+          <div className="container">
+            <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
+              <p style={{ color: "#6b7280" }}>Loading...</p>
+            </div>
+          </div>
+        </main>
+      </>
+    }>
+      <PartnerSignupPageContent />
+    </Suspense>
   );
 }
