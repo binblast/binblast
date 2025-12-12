@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
                           expiresAt: null,
                         });
 
-                        // Award $10 credit to the referrer
+                        // Award $10 credit to the referrer (for one-time use)
                         const referrerCreditRef = doc(collection(db, "credits"));
                         await setDoc(referrerCreditRef, {
                           userId: referrerId,
@@ -246,24 +246,64 @@ export async function POST(req: NextRequest) {
                           expiresAt: null,
                         });
 
+                        // Apply recurring $10/month discount to referrer's subscription if they have one
+                        const referrerDocRef = doc(db, "users", referrerId);
+                        const referrerDoc = await getDoc(referrerDocRef);
+                        if (referrerDoc.exists()) {
+                          const referrerData = referrerDoc.data();
+                          const referrerStripeSubscriptionId = referrerData.stripeSubscriptionId;
+                          
+                          // Apply recurring discount to referrer's subscription
+                          if (referrerStripeSubscriptionId) {
+                            try {
+                              const { getReferralRecurringCouponId } = await import("@/lib/stripe-coupons");
+                              const recurringCouponId = await getReferralRecurringCouponId();
+                              
+                              if (recurringCouponId) {
+                                // Check if discount is already applied
+                                const subscription = await stripe.subscriptions.retrieve(referrerStripeSubscriptionId);
+                                
+                                // Check if discount already exists
+                                const hasDiscount = subscription.discount && 
+                                  subscription.discount.coupon.id === recurringCouponId;
+                                
+                                if (!hasDiscount) {
+                                  // Apply the recurring discount coupon to the subscription
+                                  await stripe.subscriptions.update(referrerStripeSubscriptionId, {
+                                    coupon: recurringCouponId,
+                                  });
+                                  
+                                  console.log("[Webhook] Applied recurring $10/month discount to referrer subscription:", {
+                                    referrerId,
+                                    subscriptionId: referrerStripeSubscriptionId,
+                                    couponId: recurringCouponId,
+                                  });
+                                } else {
+                                  console.log("[Webhook] Recurring discount already applied to referrer subscription:", referrerStripeSubscriptionId);
+                                }
+                              }
+                            } catch (discountError: any) {
+                              console.error("[Webhook] Error applying recurring discount to referrer:", discountError);
+                              // Don't fail the webhook if discount application fails
+                            }
+                          } else {
+                            console.log("[Webhook] Referrer has no active subscription, discount will be applied when they subscribe");
+                          }
+                          
+                          // Update referrer's completed referral count (idempotent)
+                          const currentCount = referrerData.referralCount || 0;
+                          await updateDoc(referrerDocRef, {
+                            referralCount: increment(1),
+                            updatedAt: serverTimestamp(),
+                          });
+                        }
+
                         // Mark referral as COMPLETED
                         await updateDoc(doc(db, "referrals", referralDoc.id), {
                           status: "COMPLETED",
                           completedAt: serverTimestamp(),
                           updatedAt: serverTimestamp(),
                         });
-
-                        // Update referrer's completed referral count (idempotent)
-                        const referrerDocRef = doc(db, "users", referrerId);
-                        const referrerDoc = await getDoc(referrerDocRef);
-                        if (referrerDoc.exists()) {
-                          const currentCount = referrerDoc.data().referralCount || 0;
-                          // Only increment if not already incremented (check if referral was just completed)
-                          await updateDoc(referrerDocRef, {
-                            referralCount: increment(1),
-                            updatedAt: serverTimestamp(),
-                          });
-                        }
 
                         console.log("[Webhook] Referral credits awarded:", {
                           referralId: referralDoc.id,

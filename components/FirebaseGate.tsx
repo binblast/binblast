@@ -17,7 +17,7 @@ export function FirebaseGate({ children }: { children: React.ReactNode }) {
       console.error("[FirebaseGate] Failed to initialize Firebase:", error);
     });
   }, []);
-  
+
   return <FirebaseProvider>{children}</FirebaseProvider>;
 }
 

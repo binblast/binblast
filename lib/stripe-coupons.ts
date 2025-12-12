@@ -59,9 +59,63 @@ export async function getReferralCouponId(): Promise<string | null> {
 }
 
 /**
+ * Get or create a recurring referral discount coupon for referrers
+ * This coupon gives $10 off every month for the referrer's subscription
+ */
+const REFERRAL_RECURRING_COUPON_ID = "REFERRAL_10_OFF_RECURRING";
+let recurringCouponCache: string | null = null;
+
+export async function getReferralRecurringCouponId(): Promise<string | null> {
+  // Return cached coupon ID if available
+  if (recurringCouponCache) {
+    return recurringCouponCache;
+  }
+
+  try {
+    // Try to retrieve existing coupon
+    try {
+      const coupon = await stripe.coupons.retrieve(REFERRAL_RECURRING_COUPON_ID);
+      if (coupon && !coupon.deleted) {
+        recurringCouponCache = coupon.id;
+        return coupon.id;
+      }
+    } catch (retrieveError: any) {
+      // Coupon doesn't exist, create it
+      if (retrieveError.code === "resource_missing") {
+        console.log("[Stripe Coupons] Creating recurring referral coupon...");
+      } else {
+        throw retrieveError;
+      }
+    }
+
+    // Create the recurring coupon if it doesn't exist
+    const coupon = await stripe.coupons.create({
+      id: REFERRAL_RECURRING_COUPON_ID, // Use fixed ID for reusability
+      amount_off: 1000, // $10.00 in cents
+      currency: "usd",
+      duration: "forever", // Recurring discount that applies to every billing cycle
+      name: "Referral Recurring Discount",
+      metadata: {
+        type: "referral_recurring_discount",
+        reusable: "true",
+      },
+    });
+
+    recurringCouponCache = coupon.id;
+    console.log("[Stripe Coupons] Created recurring referral coupon:", coupon.id);
+    return coupon.id;
+  } catch (error: any) {
+    console.error("[Stripe Coupons] Error getting recurring referral coupon:", error);
+    // Return null if coupon creation fails
+    return null;
+  }
+}
+
+/**
  * Clear the coupon cache (useful for testing or if coupon is deleted)
  */
 export function clearCouponCache(): void {
   couponCache = null;
+  recurringCouponCache = null;
 }
 

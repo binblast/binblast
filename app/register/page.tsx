@@ -184,10 +184,48 @@ function RegisterForm() {
       
       setSuccess(true);
       
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 2000);
+      // If user signed up with a referral code and hasn't paid yet, redirect to checkout
+      if (normalizedReferralCode && !stripeData) {
+        // Default to "twice-month" plan (most popular) and redirect to checkout
+        // The referral code will be preserved in the URL and applied during checkout
+        const defaultPlanId = "twice-month";
+        setTimeout(async () => {
+          try {
+            // Create checkout session with default plan and referral code
+            const checkoutResponse = await fetch("/api/stripe/checkout", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                planId: defaultPlanId,
+                userId: userCredential.user.uid,
+                referralCode: normalizedReferralCode,
+              }),
+            });
+
+            const checkoutData = await checkoutResponse.json();
+            
+            if (checkoutResponse.ok && checkoutData.url) {
+              // Redirect directly to Stripe checkout
+              window.location.href = checkoutData.url;
+            } else {
+              // Fallback to pricing page if checkout creation fails
+              console.error("[Register] Failed to create checkout:", checkoutData.error);
+              router.push(`/#pricing?ref=${normalizedReferralCode}`);
+            }
+          } catch (checkoutError) {
+            console.error("[Register] Error creating checkout:", checkoutError);
+            // Fallback to pricing page
+            router.push(`/#pricing?ref=${normalizedReferralCode}`);
+          }
+        }, 1500);
+      } else {
+        // Normal redirect to dashboard
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 2000);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to create account. Please try again.");
       setLoading(false);

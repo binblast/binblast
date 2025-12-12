@@ -55,7 +55,7 @@ export async function safeImportFirestore() {
   if (!app) {
     throw new Error("Firebase app is not initialized");
   }
-
+  
   // Verify app has valid config and surface stack for debugging
   const options = (app as any).options || {};
   const missing: string[] = [];
@@ -129,7 +129,7 @@ export async function safeImportAuth() {
   if (!app) {
     throw new Error("Firebase app is not initialized");
   }
-
+  
   // Verify app has valid config and surface stack for debugging
   const options = (app as any).options || {};
   const missing: string[] = [];

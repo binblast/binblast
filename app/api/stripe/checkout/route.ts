@@ -53,27 +53,46 @@ export async function POST(req: NextRequest) {
       line_items: [],
     };
 
-    // Handle referral code discount (for non-logged-in users)
+    // Handle referral code discount (for both logged-in and non-logged-in users)
     let referralCodeDiscount = 0;
     let referralCodeToProcess: string | null = null;
     
-    if (referralCode && !userId) {
-      // Validate referral code for non-logged-in users
+    if (referralCode) {
+      // Validate referral code for both logged-in and non-logged-in users
       try {
         const { getDbInstance } = await import("@/lib/firebase");
-        const { collection, query, where, getDocs } = await import("firebase/firestore");
+        const { collection, query, where, getDocs, getDoc, doc } = await import("firebase/firestore");
         
         const db = await getDbInstance();
         if (db) {
+          const normalizedCode = referralCode.trim().toUpperCase();
           const usersQuery = query(
             collection(db, "users"),
-            where("referralCode", "==", referralCode.trim().toUpperCase())
+            where("referralCode", "==", normalizedCode)
           );
           const usersSnapshot = await getDocs(usersQuery);
           
           if (!usersSnapshot.empty) {
+            // Check if logged-in user has already used a referral code
+            if (userId) {
+              const userDocRef = doc(db, "users", userId);
+              const userDoc = await getDoc(userDocRef);
+              
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+                // If user already has a referral code used, don't allow another one
+                if (userData.referredBy && userData.referredByCode !== normalizedCode) {
+                  console.warn("[Checkout] User already used a different referral code");
+                  return NextResponse.json(
+                    { error: "You have already used a referral code" },
+                    { status: 400 }
+                  );
+                }
+              }
+            }
+            
             referralCodeDiscount = 10.00; // $10 discount
-            referralCodeToProcess = referralCode.trim().toUpperCase();
+            referralCodeToProcess = normalizedCode;
             console.log("[Checkout] Valid referral code provided:", referralCodeToProcess);
           } else {
             console.warn("[Checkout] Invalid referral code:", referralCode);
