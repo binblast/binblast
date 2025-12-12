@@ -39,15 +39,16 @@ export async function POST(req: NextRequest) {
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
     // Preserve referral code in success URL if present
-    const successUrlParams = new URLSearchParams({
-      session_id: "{CHECKOUT_SESSION_ID}",
-      plan: planId,
-    });
+    // Note: {CHECKOUT_SESSION_ID} is a Stripe placeholder that gets replaced automatically
+    // We need to construct the URL manually to avoid URL-encoding the placeholder
+    const successUrlParams: string[] = [];
+    successUrlParams.push(`session_id={CHECKOUT_SESSION_ID}`);
+    successUrlParams.push(`plan=${encodeURIComponent(planId)}`);
     if (referralCode) {
-      successUrlParams.set("ref", referralCode);
+      successUrlParams.push(`ref=${encodeURIComponent(referralCode)}`);
     }
-    const successUrl = `${origin}/register?${successUrlParams.toString()}`;
-    const cancelUrl = referralCode ? `${origin}/register?ref=${referralCode}` : `${origin}/#pricing`;
+    const successUrl = `${origin}/register?${successUrlParams.join('&')}`;
+    const cancelUrl = referralCode ? `${origin}/register?ref=${encodeURIComponent(referralCode)}` : `${origin}/#pricing`;
 
     // Create Stripe Checkout Session
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
