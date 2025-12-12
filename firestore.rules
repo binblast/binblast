@@ -150,25 +150,34 @@ service cloud.firestore {
     
     // PartnerApplications collection - partner applications before approval
     match /partnerApplications/{applicationId} {
-      // Users can read their own application
+      // Users can read their own application (by userId or email)
       // Server-side can read all (for admin, API routes)
-      allow read)
-      allow read: if isAuthenticated() 
-        && resource.data.userId == request.auth.uid
-        || request.auth == null; // Allow server-side reads (for admin)
+      allow read: if (
+        (isAuthenticated() && (
+          resource.data.userId == request.auth.uid ||
+          resource.data.email == request.auth.token.email
+        ))
+        || request.auth == null // Allow server-side reads (for admin)
+      );
       
-      // Users can create their own application (client-side)
+      // Users can create their own application (client-side) - userId is optional
       // Server-side can also create (API routes)
       allow create: if (
-        (isAuthenticated() && request.resource.data.userId == request.auth.uid && request.resource.data.status == "pending")
+        (isAuthenticated() && (
+          (request.resource.data.userId == request.auth.uid && request.resource.data.status == "pending") ||
+          (request.resource.data.email == request.auth.token.email && request.resource.data.status == "pending")
+        ))
         || request.auth == null // Server-side creates (API routes)
       );
       
       // Users can update their own application only if status is pending
-      // Server-side can update any field (for admin approvals, etc.)
+      // Server-side can update any field (for admin actions, linking userId, etc.)
       allow update: if (
-        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == "pending")
-        || request.auth == null // Server-side updates (admin actions, API routes)
+        (isAuthenticated() && (
+          (resource.data.userId == request.auth.uid && resource.data.status == "pending") ||
+          (resource.data.email == request.auth.token.email && resource.data.status == "pending")
+        ))
+        || request.auth == null // Server-side updates (admin actions, API routes, userId linking)
       );
       
       // No deletions allowed
