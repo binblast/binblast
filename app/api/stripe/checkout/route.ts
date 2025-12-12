@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, PLAN_CONFIGS, PlanId, isCustomQuote } from "@/lib/stripe-config";
 import { getReferralCouponId } from "@/lib/stripe-coupons";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 
 export const dynamic = 'force-dynamic';
 

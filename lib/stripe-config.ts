@@ -1,11 +1,8 @@
 // lib/stripe-config.ts
+// Plan configuration and utilities
+// Stripe instance is now imported from lib/stripe.ts
 
-import Stripe from "stripe";
-
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-11-17.clover",
-  typescript: true,
-});
+export { stripe } from "./stripe";
 
 export type PlanId = "one-time" | "twice-month" | "bi-monthly" | "quarterly" | "commercial";
 
