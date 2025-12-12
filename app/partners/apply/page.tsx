@@ -79,9 +79,10 @@ export default function PartnerApplyPage() {
       return;
     }
 
-    // If not logged in, redirect to signup/login
+    // If not logged in, redirect to register/login
+    // Use /register instead of /signup to avoid the plan selection wizard
     if (!userId) {
-      router.push(`/signup?redirect=/partners/apply&email=${encodeURIComponent(formData.email)}`);
+      router.push(`/register?redirect=/partners/apply&email=${encodeURIComponent(formData.email)}`);
       return;
     }
 

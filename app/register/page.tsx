@@ -216,12 +216,22 @@ function RegisterForm() {
       
       setSuccess(true);
       
+      // Check for redirect parameter (e.g., from partner application)
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectParam = urlParams.get("redirect");
+      
       // Redirect logic:
-      // 1. If user has already paid (has stripeData) -> go to dashboard
-      // 2. If user has referral code -> go to pricing page to choose plan (with referral code preserved)
-      // 3. If user has selected a plan -> go to pricing page to complete checkout
-      // 4. Otherwise -> go to pricing page to choose plan
-      if (stripeData) {
+      // 1. If redirect parameter exists -> use it (e.g., /partners/apply)
+      // 2. If user has already paid (has stripeData) -> go to dashboard
+      // 3. If user has referral code -> go to pricing page to choose plan (with referral code preserved)
+      // 4. If user has selected a plan -> go to pricing page to complete checkout
+      // 5. Otherwise -> go to pricing page to choose plan
+      if (redirectParam) {
+        // Redirect to the specified page (e.g., partner application)
+        setTimeout(() => {
+          router.push(redirectParam);
+        }, 2000);
+      } else if (stripeData) {
         // User has already paid - redirect to dashboard
         setTimeout(() => {
           router.push("/dashboard");
