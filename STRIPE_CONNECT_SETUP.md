@@ -62,23 +62,37 @@ Add these to your Vercel environment variables:
   - `transfer.paid`
   - `transfer.failed`
 
-#### Connected Account Webhook (Optional)
-- **URL**: `https://yourdomain.com/api/webhooks/stripe/connected-accounts`
+#### Connected Account Webhook - Snapshot Payload (Required)
+- **URL**: `https://binblast.vercel.app/api/webhooks/stripe/connected-accounts`
+- **Payload style**: **Snapshot** (required for account.updated and legacy transfers)
 - **Events to listen for**:
-  - `account.updated`
-  - `account.application.deauthorized`
-  - `transfer.created`
-  - `transfer.paid`
-  - `transfer.failed`
+  - `account.updated` (required - tracks account status changes)
+  - `transfer.created` (if available - when transfer is initiated)
+  - `transfer.updated` (if available - when transfer metadata changes)
+  - `transfer.paid` (if available - legacy transfers)
+  - `transfer.failed` (if available - legacy transfers)
+
+#### Connected Account Webhook - Thin Payload (Required)
+- **URL**: `https://binblast.vercel.app/api/webhooks/stripe/connected-accounts` (same URL, different destination)
+- **Payload style**: **Thin** (required for v2 money management events)
+- **Events to listen for**:
+  - `v2.money_management.outbound_transfer.created`
+  - `v2.money_management.outbound_transfer.posted` (indicates successful transfer)
+  - `v2.money_management.outbound_transfer.failed` (indicates failed transfer)
+
+**Important**: Stripe requires separate webhook destinations for Snapshot and Thin payload styles. Both webhooks point to the same URL (`/api/webhooks/stripe/connected-accounts`), but the webhook handler automatically detects which secret to use based on signature verification.
 
 ### 3. Get Webhook Secrets
 
-After creating webhook endpoints:
+After creating both webhook endpoints:
 1. Click on each webhook endpoint
-2. Copy the "Signing secret"
+2. Copy the "Signing secret" from each
 3. Add to Vercel environment variables:
    - `STRIPE_WEBHOOK_SECRET` (main account)
-   - `STRIPE_WEBHOOK_SECRET_CONNECTED_ACCOUNTS` (connected accounts)
+   - `STRIPE_WEBHOOK_SECRET_CONNECTED_ACCOUNTS_SNAPSHOT` (Snapshot webhook secret)
+   - `STRIPE_WEBHOOK_SECRET_CONNECTED_ACCOUNTS_THIN` (Thin webhook secret)
+   
+   **Note**: You can also use `STRIPE_WEBHOOK_SECRET_CONNECTED_ACCOUNTS` as a fallback (will try Snapshot first), but it's recommended to set both explicitly.
 
 ## How It Works
 
