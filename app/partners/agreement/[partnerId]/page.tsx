@@ -31,6 +31,9 @@ export default function PartnerAgreementPage() {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+    let mounted = true;
+
     async function loadPartner() {
       if (!partnerId) {
         setError("Invalid partner ID");
@@ -43,12 +46,14 @@ export default function PartnerAgreementPage() {
         const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
         
-        if (auth?.currentUser) {
+        if (auth?.currentUser && mounted) {
           setUserId(auth.currentUser.uid);
         }
         
         // Listen for auth changes
-        const unsubscribe = await onAuthStateChanged((user) => {
+        unsubscribe = await onAuthStateChanged((user) => {
+          if (!mounted) return;
+          
           if (user) {
             setUserId(user.uid);
           } else {
@@ -63,8 +68,10 @@ export default function PartnerAgreementPage() {
 
         const db = await getDbInstance();
         if (!db) {
-          setError("Database not available");
-          setLoading(false);
+          if (mounted) {
+            setError("Database not available");
+            setLoading(false);
+          }
           return;
         }
 
@@ -72,12 +79,17 @@ export default function PartnerAgreementPage() {
         const partnerDoc = await getDoc(partnerRef);
 
         if (!partnerDoc.exists()) {
-          setError("Partner not found");
-          setLoading(false);
+          if (mounted) {
+            setError("Partner not found");
+            setLoading(false);
+          }
           return;
         }
 
         const data = partnerDoc.data();
+        
+        if (!mounted) return;
+        
         setPartnerData({
           id: partnerDoc.id,
           ...data,
@@ -90,18 +102,23 @@ export default function PartnerAgreementPage() {
         }
 
         setLoading(false);
-        
-        return () => {
-          if (unsubscribe) unsubscribe();
-        };
       } catch (err) {
         console.error("Error loading partner:", err);
-        setError("Failed to load partner information");
-        setLoading(false);
+        if (mounted) {
+          setError("Failed to load partner information");
+          setLoading(false);
+        }
       }
     }
 
     loadPartner();
+    
+    return () => {
+      mounted = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [partnerId, router]);
 
   const handleAccept = async () => {

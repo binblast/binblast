@@ -13,28 +13,23 @@ export async function POST(
   try {
     const partnerId = params.partnerId;
     
-    // Parse request body - handle empty body gracefully
-    let body;
-    let userId;
-    try {
-      body = await req.json();
-      userId = body?.userId;
-    } catch (parseErr) {
-      // If body is empty or invalid JSON, try to get userId from query params or headers
-      const url = new URL(req.url);
-      userId = url.searchParams.get("userId");
-      
-      if (!userId) {
-        return NextResponse.json(
-          { error: "User ID is required" },
-          { status: 400 }
-        );
-      }
-    }
-
     if (!partnerId) {
       return NextResponse.json(
         { error: "Partner ID is required" },
+        { status: 400 }
+      );
+    }
+    
+    // Parse request body - handle empty body gracefully
+    let userId: string | null = null;
+    try {
+      const body = await req.json();
+      userId = body?.userId || null;
+    } catch (parseErr: any) {
+      // If body is empty or invalid JSON, return error
+      console.error("[Partner Agreement] Error parsing request body:", parseErr);
+      return NextResponse.json(
+        { error: "Invalid request body. User ID is required." },
         { status: 400 }
       );
     }
