@@ -19,14 +19,6 @@ export function Navbar() {
   const { isReady: firebaseReady } = useFirebase();
 
   useEffect(() => {
-    // Only check Firebase auth state when Firebase is ready
-    if (!firebaseReady) {
-      // Firebase not ready yet - show logged out state
-      setIsLoggedIn(false);
-      setLoading(false);
-      return;
-    }
-
     // Check Firebase auth state - only on client side
     if (typeof window === "undefined") {
       setLoading(false);
@@ -35,6 +27,9 @@ export function Navbar() {
 
     let unsubscribe: (() => void) | null = null;
     let mounted = true;
+    let retryCount = 0;
+    const maxRetries = 5;
+    const retryDelay = 500; // 500ms between retries
 
     async function checkAuthState() {
       try {
@@ -49,6 +44,11 @@ export function Navbar() {
           if (auth.currentUser && mounted) {
             setIsLoggedIn(true);
             setLoading(false);
+            console.log("[Navbar] User is logged in:", auth.currentUser.email);
+          } else if (mounted) {
+            setIsLoggedIn(false);
+            setLoading(false);
+            console.log("[Navbar] No user logged in");
           }
           
           // Use safe wrapper function to listen for changes
@@ -56,25 +56,42 @@ export function Navbar() {
             if (mounted) {
               setIsLoggedIn(!!user);
               setLoading(false);
+              console.log("[Navbar] Auth state changed:", user ? user.email : "logged out");
             }
           });
         } else {
-          // Firebase not available or not configured - just show logged out state
+          // Auth not available yet - retry if we haven't exceeded max retries
+          if (retryCount < maxRetries && mounted) {
+            retryCount++;
+            console.log(`[Navbar] Auth not ready, retrying (${retryCount}/${maxRetries})...`);
+            setTimeout(checkAuthState, retryDelay);
+          } else {
+            // Firebase not available or not configured - just show logged out state
+            if (mounted) {
+              setIsLoggedIn(false);
+              setLoading(false);
+              console.log("[Navbar] Auth check failed after retries");
+            }
+          }
+        }
+      } catch (err: any) {
+        // Retry on error if we haven't exceeded max retries
+        if (retryCount < maxRetries && mounted) {
+          retryCount++;
+          console.log(`[Navbar] Auth check error, retrying (${retryCount}/${maxRetries}):`, err?.message || err);
+          setTimeout(checkAuthState, retryDelay);
+        } else {
+          // Silently handle errors - don't crash the page
+          console.warn("[Navbar] Firebase auth check failed after retries:", err?.message || err);
           if (mounted) {
             setIsLoggedIn(false);
             setLoading(false);
           }
         }
-      } catch (err: any) {
-        // Silently handle errors - don't crash the page
-        console.warn("[Navbar] Firebase auth check failed:", err?.message || err);
-        if (mounted) {
-          setIsLoggedIn(false);
-          setLoading(false);
-        }
       }
     }
 
+    // Start checking auth state (don't wait for firebaseReady since Firebase is clearly initializing)
     checkAuthState();
 
     return () => {
@@ -83,7 +100,7 @@ export function Navbar() {
         unsubscribe();
       }
     };
-  }, [firebaseReady]);
+  }, []); // Remove firebaseReady dependency - check auth state regardless
 
   useEffect(() => {
     // Smooth scrolling for anchor links

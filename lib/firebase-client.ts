@@ -287,11 +287,13 @@ export async function getDbInstance(): Promise<any> {
 
 /**
  * Check if Firebase is initialized and ready
+ * Returns true if the Firebase app is initialized (auth/db can be lazy-loaded)
  */
 export async function isFirebaseReady(): Promise<boolean> {
   try {
     await initializeFirebase();
-    return !!(app && (auth || db));
+    // Check if app exists - auth and db are lazy-loaded so they might not exist yet
+    return !!app;
   } catch {
     return false;
   }
