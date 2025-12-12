@@ -648,9 +648,11 @@ function DashboardPageContent() {
     );
   }
 
-  const hasValidPlan = user.selectedPlan && ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan);
+  // Compute subscription manager visibility
+  const validPlans = ["one-time", "twice-month", "bi-monthly", "quarterly"];
+  const hasValidPlan = user.selectedPlan && validPlans.includes(user.selectedPlan);
   const hasValidSubscription = user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId);
-  const shouldShowSubscriptionManager = Boolean(hasValidPlan && hasValidSubscription && userId && firebaseReady);
+  const shouldShowSubscriptionManager = !!(hasValidPlan && hasValidSubscription && userId && firebaseReady);
 
   return (
     <>
