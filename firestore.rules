@@ -24,8 +24,8 @@ service cloud.firestore {
     
     // Users collection - users can only read/write their own data
     match /users/{userId} {
-      // Users can read their own document
-      allow read: if isOwner(userId);
+      // Users can read their own document, admins can read all, server-side can read all
+      allow read: if isOwner(userId) || isAdmin() || request.auth == null;
       
       // Users can create their own document (during registration)
       allow create: if isOwner(userId) 
@@ -59,9 +59,6 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'referredBy', 'referredByCode', 'referralCodeUsed', 'updatedAt']))
         )
       );
-      
-      // Allow server-side reads for API routes (needed for change-subscription API)
-      allow read: if isOwner(userId) || request.auth == null;
       
       // Users cannot delete their own document (admin only)
       allow delete: if false;
@@ -159,14 +156,14 @@ service cloud.firestore {
     
     // PartnerApplications collection - partner applications before approval
     match /partnerApplications/{applicationId} {
-      // Users can read their own application (by userId or email)
-      // Server-side can read all (for admin, API routes)
+      // Users can read their own application (by userId or email), admins can read all
       allow read: if (
         (isAuthenticated() && (
           resource.data.userId == request.auth.uid ||
           resource.data.email == request.auth.token.email
         ))
-        || request.auth == null // Allow server-side reads (for admin)
+        || isAdmin() // Allow admin to read all applications
+        || request.auth == null // Allow server-side reads (for API routes)
       );
       
       // Users can create their own application (client-side) - userId is optional
