@@ -69,11 +69,21 @@ export default function PartnerDashboardPage() {
     totalCustomers: 0,
     activeSubscriptions: 0,
     nextPayoutDate: "Payouts processed on the 25th of each month",
+    totalCommissionsPaid: 0,
+    pendingCommissions: 0,
+    heldCommissions: 0,
   });
   const [copied, setCopied] = useState(false);
   const [copiedSignupLink, setCopiedSignupLink] = useState(false);
   const [showPlaybookScripts, setShowPlaybookScripts] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [stripeConnectStatus, setStripeConnectStatus] = useState<{
+    connected: boolean;
+    status: string;
+    chargesEnabled?: boolean;
+    payoutsEnabled?: boolean;
+  } | null>(null);
+  const [connectingStripe, setConnectingStripe] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
@@ -199,6 +209,9 @@ export default function PartnerDashboardPage() {
       const customerMap = new Map<string, Customer>();
       let thisMonthEarningsCents = 0;
       let activeSubscriptionsCount = 0;
+      let totalCommissionsPaidCents = 0;
+      let pendingCommissionsCents = 0;
+      let heldCommissionsCents = 0;
 
       const now = new Date();
       const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -239,9 +252,20 @@ export default function PartnerDashboardPage() {
           }
         }
 
+        const commissionAmount = bookingData.partnerShareAmount || 0;
         const bookingDate = bookingData.createdAt?.toDate?.() || new Date(bookingData.createdAt?.seconds * 1000 || Date.now());
         if (bookingDate >= currentMonthStart && bookingData.status !== "refunded") {
-          thisMonthEarningsCents += bookingData.partnerShareAmount || 0;
+          thisMonthEarningsCents += commissionAmount;
+        }
+        
+        // Track commission status
+        const commissionStatus = bookingData.commissionStatus || 'pending';
+        if (commissionStatus === 'paid') {
+          totalCommissionsPaidCents += commissionAmount;
+        } else if (commissionStatus === 'pending') {
+          pendingCommissionsCents += commissionAmount;
+        } else if (commissionStatus === 'held') {
+          heldCommissionsCents += commissionAmount;
         }
       });
 
@@ -280,7 +304,27 @@ export default function PartnerDashboardPage() {
         totalCustomers: customerMap.size,
         activeSubscriptions: activeSubscriptionsCount,
         nextPayoutDate: "Payouts processed on the 25th of each month",
+        totalCommissionsPaid: totalCommissionsPaidCents,
+        pendingCommissions: pendingCommissionsCents,
+        heldCommissions: heldCommissionsCents,
       });
+
+      // Check Stripe Connect status
+      if (partnerDoc.id) {
+        try {
+          const statusResponse = await fetch("/api/partners/stripe-connect/check-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ partnerId: partnerDoc.id }),
+          });
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            setStripeConnectStatus(statusData);
+          }
+        } catch (err) {
+          console.error("Error checking Stripe Connect status:", err);
+        }
+      }
 
       setLoading(false);
     } catch (err) {
@@ -325,6 +369,33 @@ export default function PartnerDashboardPage() {
     if (!partnerLink) return;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(partnerLink)}`;
     setQrCodeUrl(qrUrl);
+  };
+
+  const handleConnectStripe = async () => {
+    if (!partnerData) return;
+    
+    setConnectingStripe(true);
+    try {
+      const response = await fetch("/api/partners/stripe-connect/create-account-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partnerId: partnerData.id }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Redirect to Stripe onboarding
+        window.location.href = data.url;
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to create Stripe Connect account");
+      }
+    } catch (err) {
+      console.error("Error connecting Stripe:", err);
+      alert("Failed to connect Stripe account");
+    } finally {
+      setConnectingStripe(false);
+    }
   };
 
   // Calculate next payout date
@@ -556,6 +627,54 @@ export default function PartnerDashboardPage() {
                   {daysUntilPayout} days
                 </div>
                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>{nextPayoutDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+              </div>
+            </div>
+
+            {/* Commission Breakdown */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "1rem",
+              marginBottom: "2rem"
+            }}>
+              <div style={{
+                background: "#dbeafe",
+                borderRadius: "16px",
+                padding: "1.5rem",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+                border: "2px solid #93c5fd"
+              }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: "600", color: "#1e40af", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Commissions Paid</div>
+                <div style={{ fontSize: "1.75rem", fontWeight: "700", color: "#1e40af", marginBottom: "0.25rem" }}>
+                  ${(stats.totalCommissionsPaid / 100).toFixed(2)}
+                </div>
+                <div style={{ fontSize: "0.875rem", color: "#475569" }}>Total paid out</div>
+              </div>
+              <div style={{
+                background: "#fef3c7",
+                borderRadius: "16px",
+                padding: "1.5rem",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+                border: "2px solid #fcd34d"
+              }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: "600", color: "#92400e", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Held Commissions</div>
+                <div style={{ fontSize: "1.75rem", fontWeight: "700", color: "#92400e", marginBottom: "0.25rem" }}>
+                  ${(stats.heldCommissions / 100).toFixed(2)}
+                </div>
+                <div style={{ fontSize: "0.875rem", color: "#78350f" }}>Awaiting payout</div>
+              </div>
+              <div style={{
+                background: "#fee2e2",
+                borderRadius: "16px",
+                padding: "1.5rem",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+                border: "2px solid #fca5a5"
+              }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: "600", color: "#991b1b", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Pending</div>
+                <div style={{ fontSize: "1.75rem", fontWeight: "700", color: "#991b1b", marginBottom: "0.25rem" }}>
+                  ${(stats.pendingCommissions / 100).toFixed(2)}
+                </div>
+                <div style={{ fontSize: "0.875rem", color: "#7f1d1d" }}>Connect Stripe to receive</div>
               </div>
             </div>
 
@@ -1007,6 +1126,107 @@ export default function PartnerDashboardPage() {
                 </div>
               </div>
             )}
+
+            {/* Stripe Connect Payout Section */}
+            <div style={{
+              background: "#ffffff",
+              borderRadius: "20px",
+              padding: "1.5rem",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+              border: "1px solid #e5e7eb",
+              marginBottom: "2rem"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "1rem" }}>
+                <div>
+                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", color: "#111827", marginBottom: "0.5rem" }}>Automatic Payouts</h2>
+                  <p style={{ color: "#6b7280" }}>Connect your Stripe account to receive weekly commission payouts automatically</p>
+                </div>
+                {stripeConnectStatus?.connected && stripeConnectStatus?.status === 'active' ? (
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.5rem 1rem",
+                    background: "#dcfce7",
+                    borderRadius: "8px"
+                  }}>
+                    <svg style={{ width: "20px", height: "20px", color: "#16a34a" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span style={{ fontWeight: "600", color: "#166534" }}>Connected</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleConnectStripe}
+                    disabled={connectingStripe}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      background: connectingStripe ? "#9ca3af" : "#2563eb",
+                      color: "#ffffff",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      cursor: connectingStripe ? "not-allowed" : "pointer",
+                      border: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      transition: "all 0.2s ease"
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!connectingStripe) e.currentTarget.style.background = "#1d4ed8";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!connectingStripe) e.currentTarget.style.background = "#2563eb";
+                    }}
+                  >
+                    {connectingStripe ? "Connecting..." : "Connect Stripe Account"}
+                  </button>
+                )}
+              </div>
+              {stripeConnectStatus?.connected && stripeConnectStatus?.status === 'active' ? (
+                <div style={{
+                  padding: "1rem",
+                  background: "#f0fdf4",
+                  borderRadius: "8px",
+                  border: "1px solid #86efac"
+                }}>
+                  <p style={{ fontSize: "0.875rem", color: "#166534", marginBottom: "0.5rem" }}>
+                    ✓ Your Stripe account is connected and ready to receive payouts.
+                  </p>
+                  <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                    Commissions are held for 7 days, then automatically transferred to your account weekly.
+                  </p>
+                </div>
+              ) : stripeConnectStatus?.connected && stripeConnectStatus?.status === 'pending' ? (
+                <div style={{
+                  padding: "1rem",
+                  background: "#fef3c7",
+                  borderRadius: "8px",
+                  border: "1px solid #fcd34d"
+                }}>
+                  <p style={{ fontSize: "0.875rem", color: "#92400e" }}>
+                    Your Stripe account is being verified. You'll receive payouts once verification is complete.
+                  </p>
+                </div>
+              ) : (
+                <div style={{
+                  padding: "1rem",
+                  background: "#f9fafb",
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+                    Connect your Stripe account to enable automatic weekly payouts of your commissions.
+                  </p>
+                  <ul style={{ fontSize: "0.875rem", color: "#6b7280", paddingLeft: "1.5rem", marginTop: "0.5rem" }}>
+                    <li>Commissions are held for 7 days</li>
+                    <li>Weekly automatic transfers to your bank account</li>
+                    <li>Secure payment processing via Stripe</li>
+                  </ul>
+                </div>
+              )}
+            </div>
 
             {/* Team Management Section */}
             <div style={{

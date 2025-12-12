@@ -41,6 +41,9 @@ interface PartnerStats {
   activeSubscriptions: number;
   totalCustomers: number;
   thisMonthEarnings: number;
+  totalCommissionsPaid: number;
+  pendingCommissions: number;
+  heldCommissions: number;
 }
 
 export function AdminPartnerManagement() {
@@ -116,6 +119,9 @@ export function AdminPartnerManagement() {
       let totalEarningsCents = 0;
       let activeSubscriptionsCount = 0;
       let thisMonthEarningsCents = 0;
+      let totalCommissionsPaidCents = 0;
+      let pendingCommissionsCents = 0;
+      let heldCommissionsCents = 0;
 
       const now = new Date();
       const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -137,11 +143,22 @@ export function AdminPartnerManagement() {
           activeSubscriptionsCount++;
         }
 
-        totalEarningsCents += bookingData.partnerShareAmount || 0;
+        const commissionAmount = bookingData.partnerShareAmount || 0;
+        totalEarningsCents += commissionAmount;
+
+        // Track commission status
+        const commissionStatus = bookingData.commissionStatus || 'pending';
+        if (commissionStatus === 'paid') {
+          totalCommissionsPaidCents += commissionAmount;
+        } else if (commissionStatus === 'pending') {
+          pendingCommissionsCents += commissionAmount;
+        } else if (commissionStatus === 'held') {
+          heldCommissionsCents += commissionAmount;
+        }
 
         const bookingDate = bookingData.createdAt?.toDate?.() || new Date(bookingData.createdAt?.seconds * 1000 || Date.now());
         if (bookingDate >= currentMonthStart && bookingData.status !== "refunded") {
-          thisMonthEarningsCents += bookingData.partnerShareAmount || 0;
+          thisMonthEarningsCents += commissionAmount;
         }
       });
 
@@ -158,6 +175,9 @@ export function AdminPartnerManagement() {
         activeSubscriptions: activeSubscriptionsCount,
         totalCustomers: customerEmails.size,
         thisMonthEarnings: thisMonthEarningsCents,
+        totalCommissionsPaid: totalCommissionsPaidCents,
+        pendingCommissions: pendingCommissionsCents,
+        heldCommissions: heldCommissionsCents,
       });
 
       setLoadingDetails(false);
@@ -329,6 +349,39 @@ export function AdminPartnerManagement() {
                       <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem" }}>Active Subs</div>
                       <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)" }}>
                         {stats.activeSubscriptions}
+                      </div>
+                    </div>
+                    <div style={{
+                      background: "#dbeafe",
+                      borderRadius: "12px",
+                      padding: "1rem",
+                      border: "1px solid #93c5fd"
+                    }}>
+                      <div style={{ fontSize: "0.75rem", color: "#1e40af", marginBottom: "0.25rem" }}>Commissions Paid</div>
+                      <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#1e40af" }}>
+                        ${(stats.totalCommissionsPaid / 100).toFixed(2)}
+                      </div>
+                    </div>
+                    <div style={{
+                      background: "#fef3c7",
+                      borderRadius: "12px",
+                      padding: "1rem",
+                      border: "1px solid #fcd34d"
+                    }}>
+                      <div style={{ fontSize: "0.75rem", color: "#92400e", marginBottom: "0.25rem" }}>Held Commissions</div>
+                      <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#92400e" }}>
+                        ${(stats.heldCommissions / 100).toFixed(2)}
+                      </div>
+                    </div>
+                    <div style={{
+                      background: "#fee2e2",
+                      borderRadius: "12px",
+                      padding: "1rem",
+                      border: "1px solid #fca5a5"
+                    }}>
+                      <div style={{ fontSize: "0.75rem", color: "#991b1b", marginBottom: "0.25rem" }}>Pending</div>
+                      <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#991b1b" }}>
+                        ${(stats.pendingCommissions / 100).toFixed(2)}
                       </div>
                     </div>
                   </div>

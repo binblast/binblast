@@ -242,6 +242,45 @@ export async function POST(req: NextRequest) {
                   
                   // Create PartnerBooking record
                   const partnerBookingRef = doc(collection(db, "partnerBookings"));
+                  const partnerBookingId = partnerBookingRef.id;
+                  
+                  // Check if partner has Stripe Connect account for automatic payouts
+                  const stripeConnectedAccountId = partnerData.stripeConnectedAccountId;
+                  let transferId: string | null = null;
+                  let commissionStatus = 'pending'; // 'pending' | 'held' | 'paid' | 'failed'
+                  
+                  // If partner has connected account, create a transfer hold (we'll release weekly)
+                  if (stripeConnectedAccountId) {
+                    try {
+                      // Create a transfer to the connected account (this holds the funds)
+                      // We'll use application_fee_amount to keep platform share on main account
+                      const transfer = await stripe.transfers.create({
+                        amount: partnerShareAmountCents,
+                        currency: 'usd',
+                        destination: stripeConnectedAccountId,
+                        metadata: {
+                          partnerId: partnerId,
+                          partnerBookingId: partnerBookingId,
+                          bookingAmount: bookingAmountCents.toString(),
+                          platformShare: platformShareAmountCents.toString(),
+                        },
+                      });
+                      
+                      transferId = transfer.id;
+                      commissionStatus = 'held'; // Funds are held, will be released weekly
+                      
+                      console.log("[Webhook] Transfer created for partner commission:", {
+                        transferId: transfer.id,
+                        partnerId,
+                        amount: partnerShareAmountCents,
+                      });
+                    } catch (transferError: any) {
+                      console.error("[Webhook] Error creating transfer to connected account:", transferError);
+                      // Continue without transfer - commission will be tracked but not paid out automatically
+                      commissionStatus = 'pending';
+                    }
+                  }
+                  
                   await setDoc(partnerBookingRef, {
                     partnerId: partnerId,
                     customerName: null, // Can be populated later if needed
@@ -250,9 +289,12 @@ export async function POST(req: NextRequest) {
                     planName: planName,
                     bookingAmount: bookingAmountCents, // Store in cents
                     partnerShareAmount: partnerShareAmountCents, // Store in cents
+                    platformShareAmount: platformShareAmountCents, // Store in cents
                     stripeCustomerId: customerId,
                     stripeSubscriptionId: subscriptionId,
                     stripeSessionId: session.id,
+                    stripeTransferId: transferId,
+                    commissionStatus: commissionStatus,
                     status: subscriptionId ? "active" : "trial", // "active" | "cancelled" | "refunded" | "trial"
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),
@@ -290,6 +332,8 @@ export async function POST(req: NextRequest) {
                     bookingAmountCents,
                     partnerShareAmountCents,
                     platformShareAmountCents,
+                    transferId,
+                    commissionStatus,
                   });
                 } else {
                   console.warn("[Webhook] Partner not active, skipping revenue share calculation:", {
