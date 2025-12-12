@@ -49,7 +49,7 @@ export default function HomePage() {
         {/* Why Bin Blast Co. Is Different Section */}
         <section id="why-different" className="benefits" style={{ padding: "5rem 0", background: "#f9fafb" }}>
           <div className="container">
-            <h2 className="section-title">Why Homeowners and Partners Choose Bin Blast Co.</h2>
+            <h2 className="section-title">The Bin Blast Co. Advantage</h2>
             <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem", color: "var(--text-light)", fontSize: "1.125rem" }}>
               More than a cleaning truck. We give customers a modern experience and partners a simple way to add recurring revenue.
             </p>
