@@ -135,13 +135,12 @@ function RegisterForm() {
       // CRITICAL: Use safe import wrapper to ensure Firebase app exists
       const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
       const firestore = await safeImportFirestore();
-      const { collection, doc, setDoc, serverTimestamp } = firestore;
+      const { collection, doc, setDoc, serverTimestamp, query, where, getDocs } = firestore;
       
       if (db && userCredential.user) {
         // IMPORTANT: Check if user is already a partner - partners should NOT have user documents
-        const { query, where, getDocs, collection: firestoreCollection } = firestore;
         const partnersQuery = query(
-          firestoreCollection(db, "partners"),
+          collection(db, "partners"),
           where("userId", "==", userCredential.user.uid)
         );
         const partnersSnapshot = await getDocs(partnersQuery);
