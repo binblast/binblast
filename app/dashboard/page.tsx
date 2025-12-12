@@ -574,15 +574,19 @@ function DashboardPageContent() {
   // Compute filtered customers for admin view
   const filteredCustomers = useMemo(() => {
     if (!isAdmin) return [];
+    const searchTerm = customerFilter.search || "";
+    const planFilter = customerFilter.plan || "";
+    const sourceFilter = customerFilter.source || "";
+    
     return allCustomers.filter((customer: any) => {
-      if (customerFilter.search) {
-        const search = customerFilter.search.toLowerCase();
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
         const name = `${customer.firstName || ""} ${customer.lastName || ""}`.toLowerCase();
         const email = (customer.email || "").toLowerCase();
         if (!name.includes(search) && !email.includes(search)) return false;
       }
-      if (customerFilter.plan && customer.selectedPlan !== customerFilter.plan) return false;
-      if (customerFilter.source && customer.source !== customerFilter.source) return false;
+      if (planFilter && customer.selectedPlan !== planFilter) return false;
+      if (sourceFilter && customer.source !== sourceFilter) return false;
       return true;
     });
   }, [isAdmin, allCustomers, customerFilter.search, customerFilter.plan, customerFilter.source]);
@@ -644,12 +648,9 @@ function DashboardPageContent() {
     );
   }
 
-  const shouldShowSubscriptionManager = Boolean(
-    user.selectedPlan && 
-    (user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId)) && 
-    ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan) && 
-    userId && firebaseReady
-  );
+  const hasValidPlan = user.selectedPlan && ["one-time", "twice-month", "bi-monthly", "quarterly"].includes(user.selectedPlan);
+  const hasValidSubscription = user.stripeSubscriptionId || (user.paymentStatus === "paid" && user.stripeCustomerId);
+  const shouldShowSubscriptionManager = Boolean(hasValidPlan && hasValidSubscription && userId && firebaseReady);
 
   return (
     <>
