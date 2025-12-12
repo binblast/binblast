@@ -273,14 +273,24 @@ export function PricingSection() {
       <div className="container">
 
         <h2 className="section-title">Plans & Pricing</h2>
+        
+        <div style={{ textAlign: "center", marginBottom: "0.5rem" }}>
+          <span style={{ 
+            fontSize: "0.875rem", 
+            fontWeight: "600", 
+            color: "#0369a1", 
+            textTransform: "uppercase",
+            letterSpacing: "0.05em"
+          }}>
+            FOR HOMEOWNERS & PROPERTY MANAGERS
+          </span>
+        </div>
 
         <p className="section-subtitle">
 
           Bin Blast Co. keeps bins fresh and routes profitable with clear,
 
-          subscription-based pricing designed to grow from Peachtree City to a
-
-          statewide franchise.
+          subscription-based pricing designed to grow from your first street to a full route.
 
         </p>
 

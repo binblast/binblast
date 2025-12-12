@@ -35,12 +35,12 @@ export default function HomePage() {
         {/* Hero Section with Background Image */}
         <section id="home" className="hero">
           <div className="container">
-            <h1 className="hero-headline">Sparkling Clean Bins, Every Time</h1>
+            <h1 className="hero-headline">Sparkling Clean Bins. Simple for You. Profitable for Partners.</h1>
             <p className="hero-subheadline">
-              Professional curbside trash bin cleaning that eliminates odors, kills bacteria, and keeps your home fresh. Plus, manage everything through your own online dashboard.
+              Homeowners get fresh, odor-free bins on autopilot. Local service businesses plug into our system to add bin cleaning as a new, done-for-you revenue stream.
             </p>
             <div className="hero-buttons">
-              <Link href="#pricing" className="btn btn-primary btn-large">Book Now</Link>
+              <Link href="#pricing" className="btn btn-primary btn-large">Book a Cleaning</Link>
               <Link href="#why-different" className="btn btn-secondary btn-large">Explore Features</Link>
             </div>
           </div>
@@ -49,9 +49,9 @@ export default function HomePage() {
         {/* Why Bin Blast Co. Is Different Section */}
         <section id="why-different" className="benefits" style={{ padding: "5rem 0", background: "#f9fafb" }}>
           <div className="container">
-            <h2 className="section-title">Why Bin Blast Co. Is Different</h2>
+            <h2 className="section-title">Why Homeowners and Partners Choose Bin Blast Co.</h2>
             <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem", color: "var(--text-light)", fontSize: "1.125rem" }}>
-              More than a cleaning service. Your bins stay fresh, and you get a modern customer experience to match.
+              More than a cleaning truck. We give customers a modern experience and partners a simple way to add recurring revenue.
             </p>
             <div style={{ 
               display: "flex", 
@@ -76,7 +76,7 @@ export default function HomePage() {
                   Personalized Customer Dashboard
                 </h3>
                 <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
-                  Manage your plan, view your payment status, and update your details from a clean, easy-to-use dashboard.
+                  Customers can manage their plan, track upcoming cleanings, view payments, and update details from a clean, easy-to-use dashboard.
                 </p>
               </div>
               <div className="benefit-card" style={{ 
@@ -112,7 +112,7 @@ export default function HomePage() {
                   Loyalty Rewards
                 </h3>
                 <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
-                  Earn loyalty levels as you complete cleanings. Unlock perks and track your progress over time.
+                  Earn loyalty levels as your bins are cleaned. Unlock perks, track your progress, and get rewarded for staying fresh.
                 </p>
               </div>
               <div className="benefit-card" style={{ 
@@ -130,7 +130,7 @@ export default function HomePage() {
                   Referral Program
                 </h3>
                 <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
-                  Share your unique link. When friends sign up, both of you receive discounts on your next cleaning.
+                  Share your link with friends and neighbors. When they sign up, both of you receive credits toward your next cleaning.
                 </p>
               </div>
               <div className="benefit-card" style={{ 
@@ -148,7 +148,7 @@ export default function HomePage() {
                   Built-In AI Assistant
                 </h3>
                 <p className="benefit-description" style={{ color: "var(--text-light)", lineHeight: "1.6" }}>
-                  Get instant answers about pricing, scheduling, and our process through a chat assistant available right on the site.
+                  Get instant answers about pricing, scheduling, our process, and the partner program through the chat assistant built into the site.
                 </p>
               </div>
             </div>
@@ -163,17 +163,17 @@ export default function HomePage() {
               <div className="step-card">
                 <div className="step-number">1</div>
                 <h3 className="step-title">Book Your Service</h3>
-                <p className="step-description">Schedule your bin cleaning appointment online. Choose a plan and trash day that works for you.</p>
+                <p className="step-description">Choose a plan, pick your trash day, and schedule online in under two minutes.</p>
               </div>
               <div className="step-card">
                 <div className="step-number">2</div>
                 <h3 className="step-title">We Clean Your Bins</h3>
-                <p className="step-description">Our professional team arrives with specialized equipment to thoroughly clean, sanitize, and deodorize your bins.</p>
+                <p className="step-description">Our professional team arrives with specialized equipment to deep clean, sanitize, and deodorize your bins curbside.</p>
               </div>
               <div className="step-card">
                 <div className="step-number">3</div>
                 <h3 className="step-title">Enjoy Clean Bins</h3>
-                <p className="step-description">Your bins are left fresh, odor-free, and ready to use. For subscribers, we return automatically on your schedule.</p>
+                <p className="step-description">Your bins stay fresh, odor-free, and ready to use. For subscribers, we return automatically on your schedule.</p>
               </div>
             </div>
           </div>
@@ -187,9 +187,9 @@ export default function HomePage() {
         {/* Business Partner Program Section */}
         <section id="partners" style={{ padding: "5rem 0", background: "#f0f9ff", borderTop: "2px solid #bae6fd" }}>
           <div className="container">
-            <h2 className="section-title" style={{ textAlign: "center" }}>How the Partner Program Works</h2>
+            <h2 className="section-title" style={{ textAlign: "center" }}>Partner With Bin Blast Co.</h2>
             <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem", color: "var(--text-light)", fontSize: "1.125rem" }}>
-              Simple, transparent, and profitable partnership model designed for service businesses
+              Service businesses plug into our system to offer bin cleaning without buying trucks, software, or building a brand from scratch.
             </p>
             <div style={{
               display: "grid",
@@ -210,11 +210,8 @@ export default function HomePage() {
                   60% Revenue Share
                 </h3>
                 <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem" }}>
-                  Earn 60% of every booking that comes through your unique partner link. No upfront costs, no monthly fees, no commitments.
+                  Earn 60% of every booking that comes through your unique partner link. No upfront costs, no monthly fees, no contracts. Example: $35 booking = $21 to you.
                 </p>
-                <div style={{ fontSize: "0.875rem", color: "#047857", fontWeight: "600" }}>
-                  Example: $35 booking = $21 to you
-                </div>
               </div>
               <div style={{
                 background: "#ffffff",
@@ -227,11 +224,8 @@ export default function HomePage() {
                   Your Own Booking Link
                 </h3>
                 <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem" }}>
-                  Get a unique partner link you can share with customers. All bookings are automatically tracked and attributed to you in real-time.
+                  Get a unique booking link branded with Bin Blast Co. and tied to your account. Share it by text, email, social media, or from your website.
                 </p>
-                <div style={{ fontSize: "0.875rem", color: "#047857", fontWeight: "600" }}>
-                  Share via email, social media, or website
-                </div>
               </div>
               <div style={{
                 background: "#ffffff",
@@ -244,11 +238,8 @@ export default function HomePage() {
                   Partner Dashboard
                 </h3>
                 <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem" }}>
-                  Track all your bookings, view earnings, and monitor performance through your dedicated partner dashboard.
+                  Track bookings, view earnings, and monitor performance in a dedicated partner dashboard with real-time reporting.
                 </p>
-                <div style={{ fontSize: "0.875rem", color: "#047857", fontWeight: "600" }}>
-                  Real-time updates and detailed reports
-                </div>
               </div>
             </div>
             <div style={{
@@ -264,7 +255,7 @@ export default function HomePage() {
                 Perfect For Service Businesses
               </h3>
               <p style={{ fontSize: "1.125rem", color: "#0c4a6e", marginBottom: "2rem", lineHeight: "1.6" }}>
-                Car detailers, pressure washers, landscapers, property managers, HVAC companies, and other service businesses can easily add bin cleaning to their service offerings and earn additional revenue.
+                Car detailers, pressure washers, landscapers, property managers, HVAC companies, and other service pros can easily add curbside bin cleaning as an upsell or standalone service.
               </p>
               <div style={{
                 display: "flex",
@@ -298,6 +289,9 @@ export default function HomePage() {
               >
                 Apply to Become a Partner
               </Link>
+              <p style={{ fontSize: "0.875rem", color: "#0c4a6e", marginTop: "1rem", margin: 0 }}>
+                We'll review your application and help you plug into our system step by step.
+              </p>
             </div>
           </div>
         </section>
@@ -305,9 +299,9 @@ export default function HomePage() {
         {/* Your Bin Blast Dashboard Section */}
         <section id="dashboard" className="account-section" style={{ padding: "5rem 0", background: "#f9fafb" }}>
           <div className="container">
-            <h2 className="section-title" style={{ textAlign: "center" }}>Your Bin Blast Dashboard</h2>
+            <h2 className="section-title" style={{ textAlign: "center" }}>Your Bin Blast Dashboards</h2>
             <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem" }}>
-              When you sign up, you get access to a modern online dashboard that makes managing your service simple.
+              Every account includes access to a modern online dashboard. Customers manage cleanings and referrals. Partners track bookings and payouts.
             </p>
             <div style={{ 
               display: "grid", 
@@ -380,7 +374,7 @@ export default function HomePage() {
                   Referral Rewards
                 </h3>
                 <p style={{ color: "var(--text-light)", fontSize: "0.95rem", lineHeight: "1.6", margin: 0 }}>
-                  Access your referral link, see how many referrals you have, and view upcoming credits.
+                  Access your referral link, see how many sign-ups you've driven, and view upcoming credits.
                 </p>
               </div>
 
@@ -414,7 +408,7 @@ export default function HomePage() {
                   24/7 AI Chat Support
                 </h3>
                 <p style={{ color: "var(--text-light)", fontSize: "0.95rem", lineHeight: "1.6", margin: 0 }}>
-                  Ask questions, get help with booking, and learn more about our services directly from the assistant.
+                  Ask questions, get help with booking, and learn more about customer or partner features directly from the assistant.
                 </p>
               </div>
             </div>
@@ -489,16 +483,18 @@ export default function HomePage() {
         {/* CTA Box Section */}
         <section className="cta-box">
           <div className="cta-content">
-            <h2 className="cta-title">Ready for Fresh, Odor-Free Bins Every Month?</h2>
+            <h2 className="cta-title">Ready for Fresh Bins or a New Revenue Stream?</h2>
             <p className="cta-sub">
-              Join one of our recurring plans and let us handle the dirty work. You get professionally cleaned bins on a regular schedule plus full access to your Bin Blast Co. customer dashboard.
+              Homeowners can join a recurring plan and let us handle the dirty work. Service businesses can plug into our partner program to add bin cleaning to their offerings with no extra overhead.
             </p>
-            <p className="cta-detail">Only $65 / month — up to 2 bins</p>
-            <p className="cta-detail">Additional bins: +$10 each</p>
-            <p className="cta-detail">Cancel anytime, no long-term contracts</p>
-            <Link href="#pricing" className="cta-btn">
-              Get My Plan
-            </Link>
+            <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginTop: "2rem" }}>
+              <Link href="#pricing" className="btn btn-primary btn-large">
+                Get My Cleaning Plan
+              </Link>
+              <Link href="/partners/apply" className="btn btn-secondary btn-large" style={{ background: "transparent", border: "2px solid #ffffff", color: "#ffffff" }}>
+                Apply to Become a Partner
+              </Link>
+            </div>
           </div>
         </section>
 
