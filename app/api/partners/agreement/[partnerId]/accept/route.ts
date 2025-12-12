@@ -12,8 +12,25 @@ export async function POST(
 ) {
   try {
     const partnerId = params.partnerId;
-    const body = await req.json();
-    const { userId } = body;
+    
+    // Parse request body - handle empty body gracefully
+    let body;
+    let userId;
+    try {
+      body = await req.json();
+      userId = body?.userId;
+    } catch (parseErr) {
+      // If body is empty or invalid JSON, try to get userId from query params or headers
+      const url = new URL(req.url);
+      userId = url.searchParams.get("userId");
+      
+      if (!userId) {
+        return NextResponse.json(
+          { error: "User ID is required" },
+          { status: 400 }
+        );
+      }
+    }
 
     if (!partnerId) {
       return NextResponse.json(

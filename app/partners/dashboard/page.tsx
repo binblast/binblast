@@ -140,18 +140,9 @@ export default function PartnerDashboardPage() {
           const partnersByEmailSnapshot = await getDocs(partnersByEmailQuery);
           
           if (!partnersByEmailSnapshot.empty) {
-            // Found by email - link userId now
-            const partnerDoc = partnersByEmailSnapshot.docs[0];
-            const { updateDoc, serverTimestamp } = firestore;
-            try {
-              await updateDoc(partnerDoc.ref, {
-                userId: uid,
-                updatedAt: serverTimestamp(),
-              });
-              console.log("[Partner Dashboard] Linked userId to partner:", uid);
-            } catch (linkErr) {
-              console.warn("[Partner Dashboard] Error linking userId:", linkErr);
-            }
+            // Found by email - use this snapshot
+            // Note: Don't try to update userId client-side - let the API handle it when agreement is accepted
+            // This avoids Firestore permission errors
             partnersSnapshot = partnersByEmailSnapshot;
           }
         }
@@ -179,20 +170,9 @@ export default function PartnerDashboardPage() {
             );
             allPartnersSnapshot = await getDocs(allPartnersQuery);
             
-            // Link userId if found by email
-            if (!allPartnersSnapshot.empty) {
-              const partnerDoc = allPartnersSnapshot.docs[0];
-              const { updateDoc, serverTimestamp } = firestore;
-              try {
-                await updateDoc(partnerDoc.ref, {
-                  userId: uid,
-                  updatedAt: serverTimestamp(),
-                });
-                console.log("[Partner Dashboard] Linked userId to partner:", uid);
-              } catch (linkErr) {
-                console.warn("[Partner Dashboard] Error linking userId:", linkErr);
-              }
-            }
+            // Found by email - use this snapshot
+            // Note: Don't try to update userId client-side - let the API handle it when agreement is accepted
+            // This avoids Firestore permission errors
           }
         }
         

@@ -28,6 +28,7 @@ export default function PartnerAgreementPage() {
   const [error, setError] = useState<string | null>(null);
   const [partnerData, setPartnerData] = useState<PartnerData | null>(null);
   const [agreementAccepted, setAgreementAccepted] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadPartner() {
@@ -38,6 +39,23 @@ export default function PartnerAgreementPage() {
       }
 
       try {
+        // Get current user
+        const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
+        const auth = await getAuthInstance();
+        
+        if (auth?.currentUser) {
+          setUserId(auth.currentUser.uid);
+        }
+        
+        // Listen for auth changes
+        const unsubscribe = await onAuthStateChanged((user) => {
+          if (user) {
+            setUserId(user.uid);
+          } else {
+            router.push(`/login?redirect=/partners/agreement/${partnerId}`);
+          }
+        });
+
         const { getDbInstance } = await import("@/lib/firebase");
         const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
         const firestore = await safeImportFirestore();
@@ -72,6 +90,10 @@ export default function PartnerAgreementPage() {
         }
 
         setLoading(false);
+        
+        return () => {
+          if (unsubscribe) unsubscribe();
+        };
       } catch (err) {
         console.error("Error loading partner:", err);
         setError("Failed to load partner information");
@@ -88,6 +110,12 @@ export default function PartnerAgreementPage() {
       return;
     }
 
+    if (!userId) {
+      setError("You must be logged in to accept the agreement");
+      router.push(`/login?redirect=/partners/agreement/${partnerId}`);
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -97,17 +125,33 @@ export default function PartnerAgreementPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          userId: userId,
+        }),
       });
+
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || "Failed to accept agreement" };
+        }
+        throw new Error(errorData.error || "Failed to accept agreement");
+      }
 
       const data = await response.json();
 
-      if (!response.ok) {
+      if (data.success) {
+        // Redirect to dashboard with full page reload to ensure fresh state
+        window.location.href = "/partners/dashboard";
+      } else {
         throw new Error(data.error || "Failed to accept agreement");
       }
-
-      // Redirect to dashboard
-      router.push("/partners/dashboard");
     } catch (err: any) {
+      console.error("Error accepting agreement:", err);
       setError(err.message || "Failed to accept agreement. Please try again.");
       setSubmitting(false);
     }
