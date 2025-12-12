@@ -842,7 +842,7 @@ function DashboardPageContent() {
                           Est. Monthly Revenue
                         </div>
                         <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
-                          ${adminStats.estimatedMonthlyRevenue.toLocaleString()}
+                          {"$" + adminStats.estimatedMonthlyRevenue.toLocaleString()}
                         </div>
                       </div>
                     </div>
