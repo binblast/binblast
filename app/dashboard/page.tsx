@@ -667,7 +667,6 @@ function DashboardPageContent() {
   const isFirebaseReady = firebaseReady ? true : false;
   const shouldShowSubscriptionManager = hasValidPlan && hasValidSubscription && hasUserId && isFirebaseReady;
 
-  // Render main dashboard content
   return (
     <>
       <Navbar />
