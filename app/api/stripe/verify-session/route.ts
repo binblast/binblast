@@ -17,6 +17,19 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Validate session ID format (Stripe session IDs start with 'cs_' or 'cs_test_')
+    // Reject placeholder strings like {CHECKOUT_SESSION_ID}
+    if (
+      sessionId.includes("{") || 
+      sessionId.includes("}") || 
+      (!sessionId.startsWith("cs_") && !sessionId.startsWith("cs_test_"))
+    ) {
+      return NextResponse.json(
+        { error: "Invalid session ID format" },
+        { status: 400 }
+      );
+    }
+
     // Retrieve the Stripe session
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['customer', 'subscription'],

@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { planId, userId, applyCredit, referralCode } = body; // applyCredit: boolean flag from user, referralCode: string code
+    const { planId, userId, applyCredit, referralCode, partnerCode } = body; // applyCredit: boolean flag from user, referralCode: string code, partnerCode: partner's unique code
 
     if (!planId) {
       return NextResponse.json(
@@ -288,7 +288,42 @@ export async function POST(req: NextRequest) {
       ];
     }
 
-    // Store credit information and referral code in metadata (will be used after payment)
+    // Handle partner code validation and metadata
+    let partnerId: string | null = null;
+    let partnerCodeToProcess: string | null = null;
+    
+    if (partnerCode) {
+      try {
+        const { getDbInstance } = await import("@/lib/firebase");
+        const { collection, query, where, getDocs } = await import("firebase/firestore");
+        
+        const db = await getDbInstance();
+        if (db) {
+          const normalizedPartnerCode = partnerCode.trim().toUpperCase();
+          const partnersQuery = query(
+            collection(db, "partners"),
+            where("partnerCode", "==", normalizedPartnerCode),
+            where("partnerStatus", "==", "approved")
+          );
+          const partnersSnapshot = await getDocs(partnersQuery);
+          
+          if (!partnersSnapshot.empty) {
+            const partnerDoc = partnersSnapshot.docs[0];
+            partnerId = partnerDoc.id;
+            partnerCodeToProcess = normalizedPartnerCode;
+            console.log("[Checkout] Valid partner code provided:", partnerCodeToProcess);
+          } else {
+            console.warn("[Checkout] Invalid or unapproved partner code:", partnerCode);
+            // Don't block checkout if partner code is invalid, just log it
+          }
+        }
+      } catch (partnerError) {
+        console.error("[Checkout] Error validating partner code:", partnerError);
+        // Don't block checkout if partner validation fails
+      }
+    }
+
+    // Store credit information, referral code, and partner info in metadata (will be used after payment)
     sessionParams.metadata = {
       ...sessionParams.metadata,
       userId: userId || "",
@@ -302,6 +337,14 @@ export async function POST(req: NextRequest) {
     if (referralCodeToProcess) {
       sessionParams.metadata.referralCode = referralCodeToProcess;
       sessionParams.metadata.referralCodeDiscount = referralCodeDiscount.toFixed(2);
+    }
+    
+    if (partnerId && partnerCodeToProcess) {
+      sessionParams.metadata.partnerId = partnerId;
+      sessionParams.metadata.partnerCode = partnerCodeToProcess;
+      sessionParams.metadata.source = "partner_link";
+    } else {
+      sessionParams.metadata.source = "direct";
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);

@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PlanConfirmationModal } from "./PlanConfirmationModal";
 import { useFirebase } from "@/lib/firebase-context";
 
@@ -101,12 +101,17 @@ const ADDITIONAL_PLANS: PricingPlan[] = [
 
 export function PricingSection() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showMoreServices, setShowMoreServices] = useState(false);
   const [loadingPlanId, setLoadingPlanId] = useState<PlanId | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null);
   const [availableCredit, setAvailableCredit] = useState<number>(0);
   const [loadingCredit, setLoadingCredit] = useState(false);
+  
+  // Get referral code and partner code from URL
+  const referralCodeFromUrl = searchParams.get("ref") || "";
+  const partnerCodeFromUrl = searchParams.get("partner") || "";
 
   const { isReady: firebaseReady } = useFirebase();
 
@@ -207,7 +212,7 @@ export function PricingSection() {
     setLoadingCredit(true);
 
     try {
-      // Create Stripe checkout session with userId, applyCredit flag, and referral code
+      // Create Stripe checkout session with userId, applyCredit flag, referral code, and partner code
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: {
@@ -217,7 +222,8 @@ export function PricingSection() {
           planId: selectedPlanId,
           userId: userId || undefined,
           applyCredit: applyCredit && availableCredit > 0, // Only apply if user selected it and has credit
-          referralCode: referralCode || undefined, // Pass referral code if provided
+          referralCode: referralCode || referralCodeFromUrl || undefined, // Pass referral code if provided
+          partnerCode: partnerCodeFromUrl || undefined, // Pass partner code from URL if present
         }),
       });
 
@@ -259,6 +265,7 @@ export function PricingSection() {
           userId={userId}
           availableCredit={availableCredit}
           loading={loadingCredit}
+          initialReferralCode={referralCodeFromUrl}
         />
       )}
       <section id="pricing" className="pricing-section">

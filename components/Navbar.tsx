@@ -65,11 +65,11 @@ export function Navbar() {
             retryCount++;
             console.log(`[Navbar] Auth not ready, retrying (${retryCount}/${maxRetries})...`);
             setTimeout(checkAuthState, retryDelay);
-          } else {
-            // Firebase not available or not configured - just show logged out state
-            if (mounted) {
-              setIsLoggedIn(false);
-              setLoading(false);
+        } else {
+          // Firebase not available or not configured - just show logged out state
+          if (mounted) {
+            setIsLoggedIn(false);
+            setLoading(false);
               console.log("[Navbar] Auth check failed after retries");
             }
           }
@@ -81,11 +81,11 @@ export function Navbar() {
           console.log(`[Navbar] Auth check error, retrying (${retryCount}/${maxRetries}):`, err?.message || err);
           setTimeout(checkAuthState, retryDelay);
         } else {
-          // Silently handle errors - don't crash the page
+        // Silently handle errors - don't crash the page
           console.warn("[Navbar] Firebase auth check failed after retries:", err?.message || err);
-          if (mounted) {
-            setIsLoggedIn(false);
-            setLoading(false);
+        if (mounted) {
+          setIsLoggedIn(false);
+          setLoading(false);
           }
         }
       }
@@ -208,6 +208,9 @@ export function Navbar() {
             ) : (
               <Link href="#account">Account</Link>
             )}
+          </li>
+          <li>
+            <Link href="/partners">Partners</Link>
           </li>
           {!loading && (
             <li>

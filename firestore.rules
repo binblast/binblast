@@ -148,6 +148,47 @@ service cloud.firestore {
       allow delete: if false;
     }
     
+    // Partners collection - business partners
+    match /partners/{partnerId} {
+      // Partners can read their own partner record
+      allow read: if isAuthenticated() 
+        && resource.data.userId == request.auth.uid
+        || request.auth == null; // Allow server-side reads (for admin, checkout, etc.)
+      
+      // Partners can create their own application (with status "pending")
+      allow create: if isAuthenticated() 
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.partnerStatus == "pending";
+      
+      // Partners can update their own record only if status is pending (for application edits)
+      // Server-side can update any field (for admin approvals, etc.)
+      allow update: if (
+        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.partnerStatus == "pending")
+        || request.auth == null // Server-side updates (admin actions)
+      );
+      
+      // No deletions allowed (admin only via server-side)
+      allow delete: if false;
+    }
+    
+    // Bookings collection - tracks all orders/bookings with partner info
+    match /bookings/{bookingId} {
+      // Users can read bookings linked to them as customer
+      // Partners can read bookings linked to them as partner
+      // Server-side can read all (for admin, calculations, etc.)
+      allow read: if (
+        (isAuthenticated() && resource.data.userId == request.auth.uid)
+        || (isAuthenticated() && resource.data.partnerId == request.auth.uid)
+        || request.auth == null
+      );
+      
+      // Only server-side API routes can create/update bookings (from Stripe webhooks)
+      allow create, update: if request.auth == null;
+      
+      // No deletions allowed
+      allow delete: if false;
+    }
+    
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

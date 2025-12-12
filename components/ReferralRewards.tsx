@@ -36,28 +36,19 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
         // CRITICAL: Use safe import wrapper to ensure Firebase app exists
         const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
         const firestore = await safeImportFirestore();
-        const { doc, getDoc, updateDoc, serverTimestamp } = firestore;
+        const { doc, getDoc } = firestore;
         const userDocRef = doc(db, "users", userId);
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          let code = userData.referralCode;
+          const code = userData.referralCode;
           const count = userData.referralCount || 0;
 
-          // Generate referral code if it doesn't exist
+          // Referral codes are only generated during initial registration
+          // If a user doesn't have a referral code, they should contact support
           if (!code || code.trim() === "") {
-            // Create a unique code based on user ID (first 8 chars) + random 4 chars
-            const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
-            code = userId.substring(0, 8).toUpperCase() + randomChars;
-            
-            // Save to Firestore
-            await updateDoc(userDocRef, {
-              referralCode: code,
-              updatedAt: serverTimestamp(),
-            });
-            
-            console.log("[ReferralRewards] Generated new referral code:", code);
+            console.warn("[ReferralRewards] User does not have a referral code. Referral codes are only generated during initial registration.");
           }
 
           setReferralCode(code || "");
@@ -162,6 +153,25 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
       }}>
         Share your link and both you and your friend get $10 off your next service.
       </p>
+      {!referralCode && (
+        <div style={{
+          padding: "1rem",
+          background: "#fef3c7",
+          borderRadius: "12px",
+          marginBottom: "1rem",
+          border: "1px solid #f59e0b"
+        }}>
+          <p style={{ 
+            fontSize: "0.875rem", 
+            color: "#92400e", 
+            margin: 0,
+            fontWeight: "600"
+          }}>
+            ⚠️ No referral code found. Referral codes are generated when you first sign up for an account. 
+            If you believe this is an error, please contact support.
+          </p>
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1.5rem" }}>
         <div style={{
           padding: "0.75rem 1rem",
@@ -191,127 +201,129 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
         )}
       </div>
 
-      <div style={{
-        background: "#f0f9ff",
-        borderRadius: "12px",
-        padding: "1.5rem",
-        border: "2px solid #bae6fd",
-        marginBottom: "1rem"
-      }}>
-        
-        <div style={{ marginBottom: "1rem" }}>
-          <label style={{ 
-            fontSize: "0.875rem", 
-            color: "#0c4a6e", 
-            fontWeight: "600",
-            display: "block",
-            marginBottom: "0.5rem"
-          }}>
-            Your Referral Code:
-          </label>
-          <div style={{
-            display: "flex",
-            gap: "0.5rem",
-            alignItems: "center",
-            flexWrap: "wrap"
-          }}>
-            <code style={{
-              padding: "0.75rem 1rem",
-              background: "#ffffff",
-              borderRadius: "8px",
-              border: "1px solid #bae6fd",
-              fontSize: "1rem",
-              fontWeight: "700",
-              color: "#0369a1",
-              letterSpacing: "0.05em",
-              fontFamily: "monospace",
-              flex: "1",
-              minWidth: "200px"
+      {referralCode && (
+        <div style={{
+          background: "#f0f9ff",
+          borderRadius: "12px",
+          padding: "1.5rem",
+          border: "2px solid #bae6fd",
+          marginBottom: "1rem"
+        }}>
+          
+          <div style={{ marginBottom: "1rem" }}>
+            <label style={{ 
+              fontSize: "0.875rem", 
+              color: "#0c4a6e", 
+              fontWeight: "600",
+              display: "block",
+              marginBottom: "0.5rem"
             }}>
-              {referralCode}
-            </code>
-          </div>
-        </div>
-
-        <div style={{ marginBottom: "1rem" }}>
-          <label style={{ 
-            fontSize: "0.875rem", 
-            color: "#0c4a6e", 
-            fontWeight: "600",
-            display: "block",
-            marginBottom: "0.5rem"
-          }}>
-            Your Referral Link:
-          </label>
-          <div style={{
-            display: "flex",
-            gap: "0.5rem",
-            alignItems: "center",
-            flexWrap: "wrap"
-          }}>
-            <input
-              type="text"
-              readOnly
-              value={referralUrl}
-              style={{
-                flex: "1",
+              Your Referral Code:
+            </label>
+            <div style={{
+              display: "flex",
+              gap: "0.5rem",
+              alignItems: "center",
+              flexWrap: "wrap"
+            }}>
+              <code style={{
                 padding: "0.75rem 1rem",
                 background: "#ffffff",
                 borderRadius: "8px",
                 border: "1px solid #bae6fd",
-                fontSize: "0.875rem",
+                fontSize: "1rem",
+                fontWeight: "700",
                 color: "#0369a1",
-                minWidth: "200px",
-                fontFamily: "monospace"
-              }}
-            />
-            <button
-              onClick={handleCopy}
-              style={{
-                padding: "0.75rem 1.5rem",
-                background: copied ? "#16a34a" : "#0369a1",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "background 0.2s",
-                whiteSpace: "nowrap"
-              }}
-              onMouseEnter={(e) => {
-                if (!copied) {
-                  e.currentTarget.style.background = "#075985";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!copied) {
-                  e.currentTarget.style.background = "#0369a1";
-                }
-              }}
-            >
-              {copied ? "✓ Copied!" : "Copy Link"}
-            </button>
+                letterSpacing: "0.05em",
+                fontFamily: "monospace",
+                flex: "1",
+                minWidth: "200px"
+              }}>
+                {referralCode}
+              </code>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "1rem" }}>
+            <label style={{ 
+              fontSize: "0.875rem", 
+              color: "#0c4a6e", 
+              fontWeight: "600",
+              display: "block",
+              marginBottom: "0.5rem"
+            }}>
+              Your Referral Link:
+            </label>
+            <div style={{
+              display: "flex",
+              gap: "0.5rem",
+              alignItems: "center",
+              flexWrap: "wrap"
+            }}>
+              <input
+                type="text"
+                readOnly
+                value={referralUrl}
+                style={{
+                  flex: "1",
+                  padding: "0.75rem 1rem",
+                  background: "#ffffff",
+                  borderRadius: "8px",
+                  border: "1px solid #bae6fd",
+                  fontSize: "0.875rem",
+                  color: "#0369a1",
+                  minWidth: "200px",
+                  fontFamily: "monospace"
+                }}
+              />
+              <button
+                onClick={handleCopy}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  background: copied ? "#16a34a" : "#0369a1",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  transition: "background 0.2s",
+                  whiteSpace: "nowrap"
+                }}
+                onMouseEnter={(e) => {
+                  if (!copied) {
+                    e.currentTarget.style.background = "#075985";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!copied) {
+                    e.currentTarget.style.background = "#0369a1";
+                  }
+                }}
+              >
+                {copied ? "✓ Copied!" : "Copy Link"}
+              </button>
+            </div>
+          </div>
+
+          <div style={{
+            padding: "1rem",
+            background: "#ffffff",
+            borderRadius: "8px",
+            border: "1px solid #bae6fd"
+          }}>
+            <p style={{ 
+              fontSize: "0.875rem", 
+              color: "#0c4a6e", 
+              margin: 0,
+              lineHeight: "1.6"
+            }}>
+              <strong>How it works:</strong> Share your referral link with friends. When they sign up using your link, 
+              both you and your friend will receive $10 off your next service!
+            </p>
           </div>
         </div>
-
-        <div style={{
-          padding: "1rem",
-          background: "#ffffff",
-          borderRadius: "8px",
-          border: "1px solid #bae6fd"
-        }}>
-          <p style={{ 
-            fontSize: "0.875rem", 
-            color: "#0c4a6e", 
-            margin: 0,
-            lineHeight: "1.6"
-          }}>
-            <strong>How it works:</strong> Share your referral link with friends. When they sign up using your link, 
-            both you and your friend will receive $10 off your next service!
-          </p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

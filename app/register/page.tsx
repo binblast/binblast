@@ -44,62 +44,22 @@ function RegisterForm() {
     customerEmail: string | null;
   } | null>(null);
 
-  // Redirect to checkout IMMEDIATELY if referral code is present in URL
-  // This happens before registration - user goes straight to checkout
+  // If referral code is present in URL, redirect to pricing page to choose plan
+  // User will register first, then go to checkout with their chosen plan
   useEffect(() => {
-    async function redirectToCheckoutIfReferral() {
-      // If there's a referral code in URL and no session_id (user hasn't paid yet), redirect to checkout immediately
-      if (referralCode && !sessionId && typeof window !== 'undefined') {
-        const normalizedCode = referralCode.trim().toUpperCase();
-        
-        // Don't redirect if code is empty
-        if (!normalizedCode || normalizedCode.length === 0) {
-          console.log("[Register] Empty referral code, not redirecting");
-          return;
-        }
-        
-        const defaultPlanId = "twice-month"; // Default to most popular plan
-        
-        try {
-          console.log("[Register] Referral code detected in URL, redirecting to checkout immediately:", normalizedCode);
-          
-          // Create checkout session with referral code (no userId since user isn't registered yet)
-          const checkoutResponse = await fetch("/api/stripe/checkout", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              planId: defaultPlanId,
-              referralCode: normalizedCode,
-              // No userId - user isn't registered yet
-            }),
-          });
-
-          const checkoutData = await checkoutResponse.json();
-          
-          if (checkoutResponse.ok && checkoutData.url) {
-            // Redirect directly to Stripe checkout - user will register after payment
-            console.log("[Register] ✅ Redirecting to checkout with referral code:", checkoutData.url);
-            window.location.href = checkoutData.url;
-            return; // Exit early to prevent form from showing
-          } else {
-            console.error("[Register] ❌ Failed to create checkout:", checkoutData.error);
-            // Show error message but don't block - let them register if checkout fails
-            setError(checkoutData.error || "Invalid referral code. You can still register, but the discount may not apply.");
-          }
-        } catch (checkoutError: any) {
-          console.error("[Register] ❌ Error creating checkout:", checkoutError);
-          setError("Failed to start checkout. You can still register normally.");
-        }
+    if (referralCode && !sessionId && typeof window !== 'undefined') {
+      const normalizedCode = referralCode.trim().toUpperCase();
+      
+      // Don't redirect if code is empty
+      if (!normalizedCode || normalizedCode.length === 0) {
+        return;
       }
+      
+      // Redirect to pricing page with referral code so user can choose their plan
+      console.log("[Register] Referral code detected, redirecting to pricing page to choose plan:", normalizedCode);
+      router.push(`/#pricing?ref=${normalizedCode}`);
     }
-
-    // Only redirect if we have a valid referral code
-    if (referralCode && referralCode.trim().length > 0) {
-      redirectToCheckoutIfReferral();
-    }
-  }, [referralCode, sessionId]);
+  }, [referralCode, sessionId, router]);
 
   // Verify Stripe session on mount if session_id is present
   useEffect(() => {
@@ -242,57 +202,30 @@ function RegisterForm() {
       
       setSuccess(true);
       
-      // If user hasn't paid yet (no stripeData), redirect to checkout
-      // This handles both referral code users and regular users
-      if (!stripeData) {
-        const defaultPlanId = selectedPlanId || "twice-month"; // Use selected plan or default
-        const codeToUse = normalizedReferralCode || ""; // Use referral code if provided
-        
-        setTimeout(async () => {
-          try {
-            console.log("[Register] User registered but hasn't paid, redirecting to checkout:", {
-              planId: defaultPlanId,
-              referralCode: codeToUse,
-              userId: userCredential.user.uid,
-            });
-            
-            // Create checkout session
-            const checkoutResponse = await fetch("/api/stripe/checkout", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                planId: defaultPlanId,
-                userId: userCredential.user.uid,
-                referralCode: codeToUse || undefined,
-              }),
-            });
-
-            const checkoutData = await checkoutResponse.json();
-            
-            if (checkoutResponse.ok && checkoutData.url) {
-              // Redirect directly to Stripe checkout
-              console.log("[Register] Redirecting to checkout");
-              window.location.href = checkoutData.url;
-            } else {
-              // Fallback to pricing page if checkout creation fails
-              console.error("[Register] Failed to create checkout:", checkoutData.error);
-              const redirectUrl = codeToUse ? `/#pricing?ref=${codeToUse}` : "/#pricing";
-              router.push(redirectUrl);
-            }
-          } catch (checkoutError) {
-            console.error("[Register] Error creating checkout:", checkoutError);
-            // Fallback to pricing page
-            const redirectUrl = codeToUse ? `/#pricing?ref=${codeToUse}` : "/#pricing";
-            router.push(redirectUrl);
-          }
-        }, 1500);
-      } else {
+      // Redirect logic:
+      // 1. If user has already paid (has stripeData) -> go to dashboard
+      // 2. If user has referral code -> go to pricing page to choose plan (with referral code preserved)
+      // 3. If user has selected a plan -> go to pricing page to complete checkout
+      // 4. Otherwise -> go to pricing page to choose plan
+      if (stripeData) {
         // User has already paid - redirect to dashboard
         setTimeout(() => {
           router.push("/dashboard");
         }, 2000);
+      } else {
+        // User hasn't paid yet - redirect to pricing page
+        // Preserve referral code if present, so discount can be applied
+        const redirectUrl = normalizedReferralCode 
+          ? `/#pricing?ref=${normalizedReferralCode}`
+          : "/#pricing";
+        
+        setTimeout(() => {
+          console.log("[Register] User registered, redirecting to pricing page to choose plan:", {
+            hasReferralCode: !!normalizedReferralCode,
+            redirectUrl,
+          });
+          router.push(redirectUrl);
+        }, 1500);
       }
     } catch (err: any) {
       setError(err.message || "Failed to create account. Please try again.");

@@ -185,6 +185,109 @@ export async function POST(req: NextRequest) {
             }
           }
 
+          // Handle partner revenue share and create booking record
+          if (session.payment_status === 'paid' && session.metadata?.partnerId) {
+            try {
+              const partnerId = session.metadata.partnerId;
+              const partnerCode = session.metadata.partnerCode || "";
+              
+              // Get partner record to retrieve revenue share percentages
+              const partnerDocRef = doc(db, "partners", partnerId);
+              const partnerDoc = await getDoc(partnerDocRef);
+              
+              if (partnerDoc.exists()) {
+                const partnerData = partnerDoc.data();
+                
+                // Only process if partner is approved
+                if (partnerData.partnerStatus === "approved") {
+                  // Get amount paid (in cents from Stripe)
+                  const amountTotal = session.amount_total || 0; // Stripe amount is in cents
+                  const grossAmount = amountTotal / 100; // Convert to dollars
+                  
+                  // Calculate revenue share
+                  const revenueSharePartner = partnerData.revenueSharePartner || 0.6; // Default 60%
+                  const revenueSharePlatform = partnerData.revenueSharePlatform || 0.4; // Default 40%
+                  
+                  const partnerShareAmount = grossAmount * revenueSharePartner;
+                  const platformShareAmount = grossAmount * revenueSharePlatform;
+                  
+                  // Create booking record
+                  const bookingRef = doc(collection(db, "bookings"));
+                  await setDoc(bookingRef, {
+                    userId: userId || null,
+                    partnerId: partnerId,
+                    partnerCode: partnerCode,
+                    customerEmail: customerEmail,
+                    stripeCustomerId: customerId,
+                    stripeSubscriptionId: subscriptionId,
+                    stripeSessionId: session.id,
+                    planId: session.metadata?.planId || null,
+                    grossAmount: grossAmount,
+                    partnerShareAmount: partnerShareAmount,
+                    platformShareAmount: platformShareAmount,
+                    revenueShareApplied: true,
+                    source: "partner_link",
+                    paymentStatus: "paid",
+                    status: "completed",
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                  });
+                  
+                  console.log("[Webhook] Partner booking created:", {
+                    bookingId: bookingRef.id,
+                    partnerId,
+                    partnerCode,
+                    grossAmount,
+                    partnerShareAmount,
+                    platformShareAmount,
+                  });
+                } else {
+                  console.warn("[Webhook] Partner not approved, skipping revenue share calculation:", {
+                    partnerId,
+                    status: partnerData.partnerStatus,
+                  });
+                }
+              }
+            } catch (partnerError) {
+              console.error("[Webhook] Error processing partner revenue share:", partnerError);
+              // Don't fail the webhook if partner processing fails
+            }
+          } else if (session.payment_status === 'paid') {
+            // Create booking record for direct (non-partner) bookings
+            try {
+              const amountTotal = session.amount_total || 0;
+              const grossAmount = amountTotal / 100;
+              
+              const bookingRef = doc(collection(db, "bookings"));
+              await setDoc(bookingRef, {
+                userId: userId || null,
+                partnerId: null,
+                partnerCode: null,
+                customerEmail: customerEmail,
+                stripeCustomerId: customerId,
+                stripeSubscriptionId: subscriptionId,
+                stripeSessionId: session.id,
+                planId: session.metadata?.planId || null,
+                grossAmount: grossAmount,
+                partnerShareAmount: 0,
+                platformShareAmount: grossAmount,
+                revenueShareApplied: false,
+                source: "direct",
+                paymentStatus: "paid",
+                status: "completed",
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              });
+              
+              console.log("[Webhook] Direct booking created:", {
+                bookingId: bookingRef.id,
+                grossAmount,
+              });
+            } catch (bookingError) {
+              console.error("[Webhook] Error creating direct booking:", bookingError);
+            }
+          }
+
           // Award referral credits if user was found and this is their first paid service
           if (userId) {
             try {

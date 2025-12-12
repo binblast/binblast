@@ -1,6 +1,7 @@
 // app/page.tsx
 
 import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import Link from "next/link";
 
 // CRITICAL: Dynamically import all components that use Firebase to prevent import-time errors
@@ -179,7 +180,9 @@ export default function HomePage() {
         </section>
 
         {/* Plans & Pricing Section */}
-        <PricingSection />
+        <Suspense fallback={<div style={{ minHeight: "400px", padding: "4rem 0" }} />}>
+          <PricingSection />
+        </Suspense>
 
         {/* Your Bin Blast Dashboard Section */}
         <section id="dashboard" className="account-section" style={{ padding: "5rem 0", background: "#f9fafb" }}>
@@ -365,6 +368,68 @@ export default function HomePage() {
 
         <FAQSection />
 
+        {/* Business Partner Program Section */}
+        <section id="partners" style={{ padding: "5rem 0", background: "#ffffff" }}>
+          <div className="container">
+            <h2 className="section-title" style={{ textAlign: "center" }}>Business Partner Program</h2>
+            <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem", color: "var(--text-light)", fontSize: "1.125rem" }}>
+              Grow your business by offering Bin Blast Co. services to your customers
+            </p>
+            <div style={{
+              background: "#f0f9ff",
+              borderRadius: "20px",
+              padding: "3rem",
+              border: "2px solid #bae6fd",
+              maxWidth: "900px",
+              margin: "0 auto",
+              textAlign: "center"
+            }}>
+              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🤝</div>
+              <h3 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
+                Earn 60% Revenue Share
+              </h3>
+              <p style={{ fontSize: "1.125rem", color: "#0c4a6e", marginBottom: "2rem", lineHeight: "1.6" }}>
+                Are you a car detailer, pressure washer, landscaper, or other service business? Partner with Bin Blast Co. and earn revenue by offering our bin cleaning services to your customers.
+              </p>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: "1.5rem",
+                marginBottom: "2rem",
+                textAlign: "left"
+              }}>
+                <div>
+                  <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>💰</div>
+                  <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>60% Revenue Share</div>
+                  <div style={{ fontSize: "0.875rem", color: "var(--text-light)" }}>Earn on every booking</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>🔗</div>
+                  <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>Your Own Link</div>
+                  <div style={{ fontSize: "0.875rem", color: "var(--text-light)" }}>Track all bookings</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>📊</div>
+                  <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>Partner Dashboard</div>
+                  <div style={{ fontSize: "0.875rem", color: "var(--text-light)" }}>View earnings & jobs</div>
+                </div>
+              </div>
+              <Link 
+                href="/partners" 
+                className="btn btn-primary"
+                style={{
+                  display: "inline-block",
+                  padding: "0.75rem 2rem",
+                  fontSize: "1rem",
+                  fontWeight: "600"
+                }}
+              >
+                Learn More & Apply
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* CTA Box Section */}
         <section className="cta-box">
           <div className="cta-content">
@@ -402,6 +467,11 @@ export default function HomePage() {
                   <p>Monday - Friday: 8am - 6pm</p>
                   <p>Saturday: 9am - 4pm</p>
                   <p>Sunday: Closed</p>
+                </div>
+                <div className="footer-section">
+                  <h3 className="footer-heading">For Businesses</h3>
+                  <p><Link href="/partners" style={{ color: "inherit", textDecoration: "none" }}>Partner Program</Link></p>
+                  <p><Link href="/partners/apply" style={{ color: "inherit", textDecoration: "none" }}>Apply to Partner</Link></p>
                 </div>
               </div>
             </div>

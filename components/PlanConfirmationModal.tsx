@@ -14,6 +14,7 @@ interface PlanConfirmationModalProps {
   userId: string | null;
   availableCredit: number;
   loading?: boolean;
+  initialReferralCode?: string; // Referral code from URL
 }
 
 export function PlanConfirmationModal({
@@ -24,6 +25,7 @@ export function PlanConfirmationModal({
   userId,
   availableCredit,
   loading = false,
+  initialReferralCode = "",
 }: PlanConfirmationModalProps) {
   const [applyCredit, setApplyCredit] = useState(false);
   const [referralCode, setReferralCode] = useState("");
@@ -40,15 +42,56 @@ export function PlanConfirmationModal({
     return null;
   }
 
-  // Reset state when modal opens/closes
+  // Reset state when modal opens/closes and auto-validate referral code from URL
   useEffect(() => {
     if (isOpen) {
       // Default to applying credit if user has credit available
       setApplyCredit(availableCredit > 0);
-      setReferralCode("");
-      setReferralCodeValid(null);
-      setReferralDiscount(0);
-      setReferralError(null);
+      
+      // If there's a referral code from URL, populate and validate it automatically
+      if (initialReferralCode && initialReferralCode.trim()) {
+        const normalizedCode = initialReferralCode.trim().toUpperCase();
+        setReferralCode(normalizedCode);
+        
+        // Auto-validate the referral code
+        (async () => {
+          setValidatingCode(true);
+          setReferralError(null);
+
+          try {
+            const response = await fetch("/api/referral/validate-code", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ referralCode: normalizedCode }),
+            });
+
+            const data = await response.json();
+
+            if (data.valid) {
+              setReferralCodeValid(true);
+              setReferralDiscount(data.discountAmount || 10.00);
+              setReferralError(null);
+            } else {
+              setReferralCodeValid(false);
+              setReferralDiscount(0);
+              setReferralError(data.error || "Invalid referral code");
+            }
+          } catch (err: any) {
+            setReferralCodeValid(false);
+            setReferralDiscount(0);
+            setReferralError("Failed to validate code. Please try again.");
+          } finally {
+            setValidatingCode(false);
+          }
+        })();
+      } else {
+        setReferralCode("");
+        setReferralCodeValid(null);
+        setReferralDiscount(0);
+        setReferralError(null);
+      }
     } else {
       setApplyCredit(false);
       setReferralCode("");
@@ -56,7 +99,7 @@ export function PlanConfirmationModal({
       setReferralDiscount(0);
       setReferralError(null);
     }
-  }, [isOpen, availableCredit]);
+  }, [isOpen, availableCredit, initialReferralCode]);
 
   // Validate referral code when user enters it
   const handleValidateReferralCode = async () => {
