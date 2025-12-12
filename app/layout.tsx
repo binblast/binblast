@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   title: "Bin Blast Co. - Professional Trash Bin Cleaning Service",
   description: "Professional trash bin cleaning service that keeps your bins fresh, sanitized, and odor-free.",
   viewport: "width=device-width, initial-scale=1, maximum-scale=5",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
@@ -22,6 +26,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+        <link rel="icon" href="/logo.png" type="image/png" />
       </head>
       <body>
         {/* Error boundary to catch Firebase errors and allow site to render */}

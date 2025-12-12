@@ -215,10 +215,13 @@ export async function POST(req: NextRequest) {
                   // Get plan name from planId
                   let planName = session.metadata?.planId || "Unknown Plan";
                   try {
-                    const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
-                    const planConfig = PLAN_CONFIGS[planName as any];
-                    if (planConfig) {
-                      planName = planConfig.name;
+                    const { PLAN_CONFIGS, PlanId } = await import("@/lib/stripe-config");
+                    const planId = session.metadata?.planId as PlanId | undefined;
+                    if (planId && planId in PLAN_CONFIGS) {
+                      const planConfig = PLAN_CONFIGS[planId];
+                      if (planConfig) {
+                        planName = planConfig.name;
+                      }
                     }
                   } catch (planError) {
                     console.warn("[Webhook] Could not load plan config:", planError);
