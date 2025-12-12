@@ -174,100 +174,6 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      // Handle v2 money management events (Thin payloads)
-      case "v2.money_management.outbound_transfer.failed":
-      case "v2.money_management.outbound_transfer.posted":
-      case "v2.money_management.outbound_transfer.created": {
-        const outboundTransfer = event.data.object as any;
-        
-        // For Thin payloads, we may need to fetch the full object to get metadata
-        // But Stripe usually includes essential fields even in Thin payloads
-        let transferId = outboundTransfer.id;
-        let metadata = outboundTransfer.metadata || {};
-        
-        // If metadata is missing (Thin payload), try to fetch the full transfer
-        if (!metadata.partnerBookingId && transferId) {
-          try {
-            // Try to retrieve the transfer - note: v2 transfers might use different API
-            // Check if this is a transfer ID or outbound transfer ID
-            const fullTransfer = await stripe.transfers.retrieve(transferId).catch(() => null);
-            if (fullTransfer) {
-              metadata = fullTransfer.metadata || {};
-            } else {
-              // If not a regular transfer, it might be an outbound transfer
-              // Try to find related transfer by checking metadata in partnerBookings
-              console.log("[Connected Account Webhook] v2 outbound transfer - checking for related booking:", transferId);
-            }
-          } catch (fetchErr) {
-            console.warn("[Connected Account Webhook] Could not fetch full transfer:", fetchErr);
-          }
-        }
-        
-        // Update partner booking commission status if transfer is related
-        // For v2 events, we'll need to match by transfer ID stored in partnerBookings
-        if (metadata.partnerBookingId) {
-          const bookingRef = doc(db, "partnerBookings", metadata.partnerBookingId);
-          const bookingDoc = await getDoc(bookingRef);
-          
-          if (bookingDoc.exists()) {
-            let commissionStatus = 'held';
-            if (event.type === "v2.money_management.outbound_transfer.posted") {
-              commissionStatus = 'paid';
-            } else if (event.type === "v2.money_management.outbound_transfer.failed") {
-              commissionStatus = 'failed';
-            }
-            
-            await updateDoc(bookingRef, {
-              commissionStatus,
-              stripeTransferId: transferId,
-              updatedAt: serverTimestamp(),
-            });
-            
-            console.log("[Connected Account Webhook] Updated commission status (v2):", {
-              bookingId: metadata.partnerBookingId,
-              transferId: transferId,
-              status: commissionStatus,
-              payloadStyle: 'thin',
-            });
-          }
-        } else {
-          // If no metadata, try to find booking by transfer ID
-          const { collection, query, where, getDocs } = await import("firebase/firestore");
-          const bookingsQuery = query(
-            collection(db, "partnerBookings"),
-            where("stripeTransferId", "==", transferId)
-          );
-          const bookingsSnapshot = await getDocs(bookingsQuery);
-          
-          if (!bookingsSnapshot.empty) {
-            const bookingDoc = bookingsSnapshot.docs[0];
-            let commissionStatus = 'held';
-            if (event.type === "v2.money_management.outbound_transfer.posted") {
-              commissionStatus = 'paid';
-            } else if (event.type === "v2.money_management.outbound_transfer.failed") {
-              commissionStatus = 'failed';
-            }
-            
-            await updateDoc(bookingDoc.ref, {
-              commissionStatus,
-              updatedAt: serverTimestamp(),
-            });
-            
-            console.log("[Connected Account Webhook] Updated commission status (v2, matched by transfer ID):", {
-              bookingId: bookingDoc.id,
-              transferId: transferId,
-              status: commissionStatus,
-              payloadStyle: 'thin',
-            });
-          } else {
-            console.log("[Connected Account Webhook] v2 transfer event received but no matching booking found:", {
-              transferId: transferId,
-              eventType: event.type,
-            });
-          }
-        }
-        break;
-      }
 
       // Note: account.application.deauthorized may not be available in newer Stripe versions
       // Use account.updated to detect deauthorization by checking account status
@@ -304,6 +210,103 @@ export async function POST(req: NextRequest) {
           payloadStyle: webhookSecret === snapshotSecret ? 'snapshot' : 'thin',
         });
         // Log the event for debugging - you can add handlers for other events as needed
+    }
+
+    // Handle v2 money management events (Thin payloads) - these aren't in Stripe's TypeScript types yet
+    const eventType = event.type as string;
+    if (
+      eventType === "v2.money_management.outbound_transfer.failed" ||
+      eventType === "v2.money_management.outbound_transfer.posted" ||
+      eventType === "v2.money_management.outbound_transfer.created"
+    ) {
+      const outboundTransfer = event.data.object as any;
+      
+      // For Thin payloads, we may need to fetch the full object to get metadata
+      // But Stripe usually includes essential fields even in Thin payloads
+      let transferId = outboundTransfer.id;
+      let metadata = outboundTransfer.metadata || {};
+      
+      // If metadata is missing (Thin payload), try to fetch the full transfer
+      if (!metadata.partnerBookingId && transferId) {
+        try {
+          // Try to retrieve the transfer - note: v2 transfers might use different API
+          // Check if this is a transfer ID or outbound transfer ID
+          const fullTransfer = await stripe.transfers.retrieve(transferId).catch(() => null);
+          if (fullTransfer) {
+            metadata = fullTransfer.metadata || {};
+          } else {
+            // If not a regular transfer, it might be an outbound transfer
+            // Try to find related transfer by checking metadata in partnerBookings
+            console.log("[Connected Account Webhook] v2 outbound transfer - checking for related booking:", transferId);
+          }
+        } catch (fetchErr) {
+          console.warn("[Connected Account Webhook] Could not fetch full transfer:", fetchErr);
+        }
+      }
+      
+      // Update partner booking commission status if transfer is related
+      // For v2 events, we'll need to match by transfer ID stored in partnerBookings
+      if (metadata.partnerBookingId) {
+        const bookingRef = doc(db, "partnerBookings", metadata.partnerBookingId);
+        const bookingDoc = await getDoc(bookingRef);
+        
+        if (bookingDoc.exists()) {
+          let commissionStatus = 'held';
+          if (eventType === "v2.money_management.outbound_transfer.posted") {
+            commissionStatus = 'paid';
+          } else if (eventType === "v2.money_management.outbound_transfer.failed") {
+            commissionStatus = 'failed';
+          }
+          
+          await updateDoc(bookingRef, {
+            commissionStatus,
+            stripeTransferId: transferId,
+            updatedAt: serverTimestamp(),
+          });
+          
+          console.log("[Connected Account Webhook] Updated commission status (v2):", {
+            bookingId: metadata.partnerBookingId,
+            transferId: transferId,
+            status: commissionStatus,
+            payloadStyle: 'thin',
+          });
+        }
+      } else {
+        // If no metadata, try to find booking by transfer ID
+        const { collection, query, where, getDocs } = await import("firebase/firestore");
+        const bookingsQuery = query(
+          collection(db, "partnerBookings"),
+          where("stripeTransferId", "==", transferId)
+        );
+        const bookingsSnapshot = await getDocs(bookingsQuery);
+        
+        if (!bookingsSnapshot.empty) {
+          const bookingDoc = bookingsSnapshot.docs[0];
+          let commissionStatus = 'held';
+          if (eventType === "v2.money_management.outbound_transfer.posted") {
+            commissionStatus = 'paid';
+          } else if (eventType === "v2.money_management.outbound_transfer.failed") {
+            commissionStatus = 'failed';
+          }
+          
+          await updateDoc(bookingDoc.ref, {
+            commissionStatus,
+            updatedAt: serverTimestamp(),
+          });
+          
+          console.log("[Connected Account Webhook] Updated commission status (v2, matched by transfer ID):", {
+            bookingId: bookingDoc.id,
+            transferId: transferId,
+            status: commissionStatus,
+            payloadStyle: 'thin',
+          });
+        } else {
+          console.log("[Connected Account Webhook] v2 transfer event received but no matching booking found:", {
+            transferId: transferId,
+            eventType: eventType,
+          });
+        }
+      }
     }
 
     return NextResponse.json({ received: true });

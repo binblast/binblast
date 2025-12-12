@@ -461,7 +461,7 @@ export default function PartnerDashboardPage() {
           <div className="container" style={{ position: "relative", zIndex: 10 }}>
             <div style={{ maxWidth: "900px" }}>
               <h1 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: "700", marginBottom: "1rem", letterSpacing: "-0.02em" }}>
-                Welcome back, {partnerData.businessName}
+                Welcome Back, {partnerData.businessName}
               </h1>
               <p style={{ fontSize: "1.25rem", color: "#bfdbfe", marginBottom: "1.5rem" }}>
                 Here's how your Bin Blast Co. partnership is performing.
