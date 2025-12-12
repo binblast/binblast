@@ -659,13 +659,13 @@ function DashboardPageContent() {
 
   // Compute subscription manager visibility
   const validPlans = ["one-time", "twice-month", "bi-monthly", "quarterly"];
-  const hasValidPlan = user.selectedPlan ? validPlans.includes(user.selectedPlan) : false;
-  const hasStripeSubscription = user.stripeSubscriptionId ? true : false;
-  const hasPaidStatus = user.paymentStatus === "paid" && user.stripeCustomerId ? true : false;
-  const hasValidSubscription = hasStripeSubscription || hasPaidStatus;
-  const hasUserId = userId ? true : false;
-  const isFirebaseReady = firebaseReady ? true : false;
-  const shouldShowSubscriptionManager = hasValidPlan && hasValidSubscription && hasUserId && isFirebaseReady;
+  const hasValidPlan = Boolean(user.selectedPlan && validPlans.includes(user.selectedPlan));
+  const hasStripeSubscription = Boolean(user.stripeSubscriptionId);
+  const hasPaidStatus = Boolean(user.paymentStatus === "paid" && user.stripeCustomerId);
+  const hasValidSubscription = Boolean(hasStripeSubscription || hasPaidStatus);
+  const hasUserId = Boolean(userId);
+  const isFirebaseReady = Boolean(firebaseReady);
+  const shouldShowSubscriptionManager = Boolean(hasValidPlan && hasValidSubscription && hasUserId && isFirebaseReady);
 
   return (
     <>
