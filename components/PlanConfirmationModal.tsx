@@ -32,8 +32,13 @@ export function PlanConfirmationModal({
   const [validatingCode, setValidatingCode] = useState(false);
   const [referralError, setReferralError] = useState<string | null>(null);
 
+  console.log("[PlanConfirmationModal] Render:", { planId, isOpen, planExists: !!PLAN_CONFIGS[planId] });
+
   const plan = PLAN_CONFIGS[planId];
-  if (!plan) return null;
+  if (!plan) {
+    console.warn("[PlanConfirmationModal] Plan not found in PLAN_CONFIGS:", planId);
+    return null;
+  }
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -94,7 +99,12 @@ export function PlanConfirmationModal({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log("[PlanConfirmationModal] Modal not open, returning null");
+    return null;
+  }
+  
+  console.log("[PlanConfirmationModal] Modal is open, rendering");
 
   const planPrice = plan.price;
   const creditDiscount = applyCredit && availableCredit > 0 

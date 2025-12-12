@@ -180,6 +180,8 @@ export function PricingSection() {
   }, [userId]);
 
   const handlePlanClick = (planId: PlanId) => {
+    console.log("[PricingSection] Plan clicked:", planId);
+    
     if (planId === "commercial") {
       // For commercial plans, scroll to contact or handle differently
       const contactSection = document.getElementById("contact") || document.getElementById("faq");
@@ -194,6 +196,7 @@ export function PricingSection() {
     }
 
     // Show confirmation modal instead of immediately redirecting
+    console.log("[PricingSection] Setting selectedPlanId to:", planId);
     setSelectedPlanId(planId);
   };
 
@@ -247,15 +250,17 @@ export function PricingSection() {
 
   return (
     <>
-      <PlanConfirmationModal
-        planId={selectedPlanId!}
-        isOpen={selectedPlanId !== null && selectedPlanId !== "commercial"}
-        onClose={handleCloseModal}
-        onConfirm={handleConfirmCheckout}
-        userId={userId}
-        availableCredit={availableCredit}
-        loading={loadingCredit}
-      />
+      {selectedPlanId && selectedPlanId !== "commercial" && (
+        <PlanConfirmationModal
+          planId={selectedPlanId}
+          isOpen={true}
+          onClose={handleCloseModal}
+          onConfirm={handleConfirmCheckout}
+          userId={userId}
+          availableCredit={availableCredit}
+          loading={loadingCredit}
+        />
+      )}
       <section id="pricing" className="pricing-section">
 
       <div className="container">
