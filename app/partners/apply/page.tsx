@@ -79,13 +79,7 @@ export default function PartnerApplyPage() {
       return;
     }
 
-    // If not logged in, redirect to register/login
-    // Use /register instead of /signup to avoid the plan selection wizard
-    if (!userId) {
-      router.push(`/register?redirect=/partners/apply&email=${encodeURIComponent(formData.email)}`);
-      return;
-    }
-
+    // Submit application - userId is optional, can submit with just email
     try {
       const response = await fetch("/api/partners/apply", {
         method: "POST",
@@ -93,7 +87,7 @@ export default function PartnerApplyPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId,
+          userId: userId || null, // Can be null if not logged in
           ...formData,
           serviceAreas: formData.serviceAreas.split(",").map(s => s.trim()).filter(s => s),
         }),
@@ -105,7 +99,9 @@ export default function PartnerApplyPage() {
         throw new Error(data.error || "Failed to submit application");
       }
 
+      // Application submitted successfully - show confirmation
       setSuccess(true);
+      setSubmitting(false);
     } catch (err: any) {
       setError(err.message || "Failed to submit application. Please try again.");
       setSubmitting(false);

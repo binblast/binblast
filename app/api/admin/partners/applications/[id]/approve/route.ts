@@ -103,9 +103,11 @@ export async function POST(
     }
 
     // Create Partner record
+    // Note: userId might be null if application was submitted before user registered
+    // In that case, userId will be linked when user registers and signs up
     const partnerRef = doc(collection(db, "partners"));
     const partnerData = {
-      userId: applicationData.userId,
+      userId: applicationData.userId || null, // Can be null if user hasn't registered yet
       businessName: applicationData.businessName,
       ownerName: applicationData.ownerName,
       email: applicationData.email,

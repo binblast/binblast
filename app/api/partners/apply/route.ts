@@ -21,7 +21,9 @@ export async function POST(req: NextRequest) {
       heardAboutUs
     } = body;
 
-    if (!userId || !businessName || !ownerName || !email || !phone || !serviceAreas || !businessType || hasInsurance === undefined || !promotionMethod) {
+    // userId is optional - applications can be submitted with just email
+    // userId will be linked later when user registers
+    if (!businessName || !ownerName || !email || !phone || !serviceAreas || !businessType || hasInsurance === undefined || !promotionMethod) {
       return NextResponse.json(
         { error: "All required fields must be filled" },
         { status: 400 }
@@ -65,8 +67,10 @@ export async function POST(req: NextRequest) {
 
     // Create or update partner application document
     const applicationRef = doc(db, "partnerApplications", applicationId);
+    const existingData = existingApplications.empty ? null : existingApplications.docs[0].data();
+    
     const applicationData = {
-      userId,
+      userId: userId || null, // Can be null if user hasn't registered yet
       businessName,
       ownerName,
       email,
@@ -77,9 +81,9 @@ export async function POST(req: NextRequest) {
       hasInsurance: hasInsurance === true,
       promotionMethod,
       heardAboutUs: heardAboutUs || null,
-      status: existingApplications.empty ? "pending" : existingApplications.docs[0].data().status, // Keep existing status if updating
-      linkedPartnerId: null, // Will be set when approved
-      createdAt: existingApplications.empty ? serverTimestamp() : existingApplications.docs[0].data().createdAt,
+      status: existingData?.status || "pending", // Keep existing status if updating, otherwise "pending"
+      linkedPartnerId: existingData?.linkedPartnerId || null, // Will be set when approved
+      createdAt: existingData?.createdAt || serverTimestamp(), // Keep original creation time if updating
       updatedAt: serverTimestamp(),
     };
 

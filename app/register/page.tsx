@@ -146,7 +146,57 @@ function RegisterForm() {
         );
         const partnersSnapshot = await getDocs(partnersQuery);
         
-        if (!partnersSnapshot.empty) {
+        // Also check if there's a partner application or partner record by email
+        // (in case application was submitted before registration)
+        const partnersByEmailQuery = query(
+          collection(db, "partners"),
+          where("email", "==", email)
+        );
+        const partnersByEmailSnapshot = await getDocs(partnersByEmailQuery);
+        
+        // Check for partner applications by email that need userId linking
+        const applicationsByEmailQuery = query(
+          collection(db, "partnerApplications"),
+          where("email", "==", email),
+          where("userId", "==", null)
+        );
+        const applicationsByEmailSnapshot = await getDocs(applicationsByEmailQuery);
+        
+        // Link userId to any applications that were submitted before registration
+        if (!applicationsByEmailSnapshot.empty) {
+          const { updateDoc, doc: firestoreDoc } = firestore;
+          for (const appDoc of applicationsByEmailSnapshot.docs) {
+            try {
+              await updateDoc(firestoreDoc(db, "partnerApplications", appDoc.id), {
+                userId: userCredential.user.uid,
+                updatedAt: serverTimestamp(),
+              });
+              console.log("[Register] Linked userId to partner application:", appDoc.id);
+            } catch (linkErr) {
+              console.warn("[Register] Error linking userId to application:", linkErr);
+            }
+          }
+        }
+        
+        // Link userId to partner record if it exists by email but doesn't have userId
+        if (!partnersByEmailSnapshot.empty) {
+          const partnerDoc = partnersByEmailSnapshot.docs[0];
+          const partnerData = partnerDoc.data();
+          if (!partnerData.userId) {
+            const { updateDoc, doc: firestoreDoc } = firestore;
+            try {
+              await updateDoc(firestoreDoc(db, "partners", partnerDoc.id), {
+                userId: userCredential.user.uid,
+                updatedAt: serverTimestamp(),
+              });
+              console.log("[Register] Linked userId to partner record:", partnerDoc.id);
+            } catch (linkErr) {
+              console.warn("[Register] Error linking userId to partner:", linkErr);
+            }
+          }
+        }
+        
+        if (!partnersSnapshot.empty || !partnersByEmailSnapshot.empty) {
           // User is a partner - do NOT create user document
           console.log("[Register] User is a partner, skipping user document creation:", userCredential.user.uid);
         } else {
