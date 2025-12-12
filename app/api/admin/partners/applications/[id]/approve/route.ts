@@ -148,16 +148,16 @@ export async function POST(
       // Don't fail the approval if user update fails
     }
 
-    // TODO: Send email to partner with agreement link
-    const agreementLink = `${req.headers.get("origin") || "http://localhost:3000"}/partners/agreement/${partnerRef.id}`;
-    console.log("[Admin] Partner approved. Agreement link:", agreementLink);
+    // TODO: Send email to partner with signup link
+    const signupLink = `${req.headers.get("origin") || "http://localhost:3000"}/partner?partnerId=${partnerRef.id}`;
+    console.log("[Admin] Partner approved. Signup link:", signupLink);
 
     return NextResponse.json({
       success: true,
       partnerId: partnerRef.id,
       referralCode,
-      agreementLink,
-      message: "Application approved and partner created",
+      signupLink,
+      message: "Application approved. Partner can now sign up at /partner",
     });
   } catch (err: any) {
     console.error("Error approving partner application:", err);

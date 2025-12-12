@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = 'force-dynamic';
 
 const ALLOWED_ADMIN_EMAILS = [
-  "you@example.com", // Update with your admin email
+  "binblastcompany@gmail.com",
 ];
 
 // Helper to check admin access

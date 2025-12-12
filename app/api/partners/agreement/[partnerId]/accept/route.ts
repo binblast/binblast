@@ -12,10 +12,19 @@ export async function POST(
 ) {
   try {
     const partnerId = params.partnerId;
+    const body = await req.json();
+    const { userId } = body;
 
     if (!partnerId) {
       return NextResponse.json(
         { error: "Partner ID is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required" },
         { status: 400 }
       );
     }
@@ -45,6 +54,14 @@ export async function POST(
     }
 
     const partnerData = partnerDoc.data();
+
+    // Verify userId matches
+    if (partnerData.userId !== userId) {
+      return NextResponse.json(
+        { error: "Unauthorized: This partner account does not belong to you" },
+        { status: 403 }
+      );
+    }
 
     // Check if already accepted
     if (partnerData.status === "active" && partnerData.agreementAcceptedAt) {

@@ -9,6 +9,8 @@ import { SubscriptionManagerWrapper } from "@/components/SubscriptionManagerWrap
 import { ReferralRewards } from "@/components/ReferralRewards";
 import { ReferralHistory } from "@/components/ReferralHistory";
 import { LoyaltyBadges } from "@/components/LoyaltyBadges";
+import { AdminPartnerApplications } from "@/components/AdminPartnerApplications";
+import { AdminPartnerManagement } from "@/components/AdminPartnerManagement";
 import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
 
@@ -115,6 +117,8 @@ interface ScheduledCleaning {
   createdAt: any;
 }
 
+const ADMIN_EMAIL = "binblastcompany@gmail.com";
+
 function DashboardPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -127,6 +131,7 @@ function DashboardPageContent() {
   const [billingPeriodEnd, setBillingPeriodEnd] = useState<Date | undefined>();
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [accountInfoExpanded, setAccountInfoExpanded] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Refs for scroll targets
   const scheduleSectionRef = useRef<HTMLDivElement>(null);
@@ -252,12 +257,15 @@ function DashboardPageContent() {
             if (userDoc.exists()) {
               const userData = userDoc.data() as UserData;
               setUser(userData);
+              setIsAdmin(userData.email === ADMIN_EMAIL);
             } else {
+              const userEmail = firebaseUser.email || "";
               setUser({
                 firstName: firebaseUser.displayName?.split(" ")[0] || "User",
                 lastName: firebaseUser.displayName?.split(" ")[1] || "",
-                email: firebaseUser.email || "",
+                email: userEmail,
               });
+              setIsAdmin(userEmail === ADMIN_EMAIL);
             }
 
             // Load scheduled cleanings
@@ -418,7 +426,15 @@ function DashboardPageContent() {
                 marginBottom: "1.5rem"
               }}>
                 Here&apos;s a quick look at your bin cleaning status.
-            </p>
+              </p>
+
+              {/* Admin Partner Applications Section */}
+              {isAdmin && (
+                <>
+                  <AdminPartnerApplications />
+                  <AdminPartnerManagement />
+                </>
+              )}
 
               {/* Status Summary Card */}
             <div style={{
