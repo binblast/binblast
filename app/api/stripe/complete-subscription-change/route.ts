@@ -87,8 +87,8 @@ export async function POST(req: NextRequest) {
           // Get subscription to find billing period
           const subscriptionResponse = await stripe.subscriptions.retrieve(session.metadata.subscriptionId);
           const subscription = subscriptionResponse as Stripe.Subscription;
-          const billingPeriodStart = new Date(subscription.current_period_start * 1000);
-          const billingPeriodEnd = new Date(subscription.current_period_end * 1000);
+          const billingPeriodStart = new Date((subscription as any).current_period_start * 1000);
+          const billingPeriodEnd = new Date((subscription as any).current_period_end * 1000);
           
           // Count cleanings used
           const cleaningsQuery = query(
