@@ -246,10 +246,6 @@ export async function POST(req: NextRequest) {
 
     // Calculate cleaning credits rollover
     // Count cleanings used in current billing period
-    const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-    const firestore = await safeImportFirestore();
-    const { query, where, getDocs } = firestore;
-    
     let cleaningsUsed = 0;
     if (db) {
       const cleaningsQuery = query(
