@@ -22,6 +22,7 @@ import { PartnerProgramManagement } from "@/components/OwnerDashboard/PartnerPro
 import { FinancialAnalytics } from "@/components/OwnerDashboard/FinancialAnalytics";
 import { SystemControls } from "@/components/OwnerDashboard/SystemControls";
 import { EmployeeStatus } from "@/components/OperatorDashboard/EmployeeStatus";
+import { LineChart, BarChart, PieChart } from "@/components/AdminDashboard/ChartComponents";
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
@@ -153,6 +154,23 @@ function DashboardPageContent() {
     activePartners: 0,
     upcomingCleanings: 0,
     estimatedMonthlyRevenue: 0,
+    activeSubscriptions: 0,
+    monthlyRecurringRevenue: 0,
+    completedCleaningsThisMonth: 0,
+    completedCleaningsThisWeek: 0,
+    activeEmployees: 0,
+    customerGrowthRate: 0,
+    averageRevenuePerCustomer: 0,
+    customerRetentionRate: 0,
+    revenueBySource: { direct: 0, partner: 0 },
+    cleaningsStatus: { completed: 0, pending: 0, cancelled: 0 },
+  });
+  const [chartData, setChartData] = useState({
+    revenueTrend: [] as Array<{ label: string; value: number }>,
+    customerGrowth: [] as Array<{ label: string; value: number }>,
+    weeklyCleanings: [] as Array<{ label: string; value: number }>,
+    planDistribution: [] as Array<{ label: string; value: number }>,
+    revenueByPlan: [] as Array<{ label: string; value: number }>,
   });
   const [allCustomers, setAllCustomers] = useState<any[]>([]);
   const [commercialCustomers, setCommercialCustomers] = useState<any[]>([]);
@@ -191,6 +209,7 @@ function DashboardPageContent() {
   const [operatorCityFilter, setOperatorCityFilter] = useState<string>("");
   const [operatorTypeFilter, setOperatorTypeFilter] = useState<string>("");
   const [operatorActiveTab, setOperatorActiveTab] = useState<"overview" | "employees" | "customers" | "schedule">("overview");
+  const [adminActiveTab, setAdminActiveTab] = useState<"overview" | "customers" | "operations" | "financial" | "partners" | "analytics">("overview");
   
   // Refs for scroll targets
   const scheduleSectionRef = useRef<HTMLDivElement>(null);
@@ -557,6 +576,21 @@ function DashboardPageContent() {
         );
         const partnersSnapshot = await getDocs(partnersQuery);
         const activePartners = partnersSnapshot.size;
+        const partners: any[] = [];
+        partnersSnapshot.forEach((doc) => {
+          partners.push({ id: doc.id, ...doc.data() });
+        });
+
+        // Load employees
+        const employeesQuery = query(
+          collection(db, "users"),
+          where("role", "==", "employee")
+        );
+        const employeesSnapshot = await getDocs(employeesQuery);
+        const employees: any[] = [];
+        employeesSnapshot.forEach((doc) => {
+          employees.push({ id: doc.id, ...doc.data() });
+        });
 
         // Load upcoming cleanings (next 7 days)
         const sevenDaysFromNow = new Date();
@@ -675,13 +709,46 @@ function DashboardPageContent() {
           .sort((a, b) => b.count - a.count)
           .slice(0, 5);
 
+        // Calculate enhanced metrics using admin-utils
+        const {
+          aggregateMetrics,
+          calculateRevenueTrend,
+          calculateCustomerGrowth,
+          calculateWeeklyCleanings,
+          calculatePlanDistribution,
+          calculateRevenueByPlan,
+        } = await import("@/lib/admin-utils");
+        const enhancedMetrics = aggregateMetrics(
+          enhancedCustomers,
+          allCleaningsList,
+          employees,
+          partners
+        );
+
+        // Calculate chart data
+        const revenueTrend = calculateRevenueTrend(allCleaningsList, 30);
+        const customerGrowth = calculateCustomerGrowth(enhancedCustomers, 6);
+        const weeklyCleanings = calculateWeeklyCleanings(allCleaningsList, 8);
+        const planDistribution = calculatePlanDistribution(enhancedMetrics.customersByPlan, PLAN_NAMES);
+        const revenueByPlan = calculateRevenueByPlan(enhancedCustomers, PLAN_NAMES);
+
         if (mounted) {
           setAdminStats({
-            totalCustomers: customers.length,
-            customersByPlan: planCounts,
-            activePartners,
-            upcomingCleanings: upcomingCount,
-            estimatedMonthlyRevenue: Math.round(estimatedRevenue),
+            totalCustomers: enhancedMetrics.totalCustomers,
+            customersByPlan: enhancedMetrics.customersByPlan,
+            activePartners: enhancedMetrics.activePartners,
+            upcomingCleanings: enhancedMetrics.upcomingCleanings,
+            estimatedMonthlyRevenue: Math.round(enhancedMetrics.monthlyRecurringRevenue),
+            activeSubscriptions: enhancedMetrics.activeSubscriptions,
+            monthlyRecurringRevenue: enhancedMetrics.monthlyRecurringRevenue,
+            completedCleaningsThisMonth: enhancedMetrics.completedCleaningsThisMonth,
+            completedCleaningsThisWeek: enhancedMetrics.completedCleaningsThisWeek,
+            activeEmployees: enhancedMetrics.activeEmployees,
+            customerGrowthRate: enhancedMetrics.customerGrowthRate,
+            averageRevenuePerCustomer: enhancedMetrics.averageRevenuePerCustomer,
+            customerRetentionRate: enhancedMetrics.customerRetentionRate,
+            revenueBySource: enhancedMetrics.revenueBySource,
+            cleaningsStatus: enhancedMetrics.cleaningsStatus,
           });
           setAllCustomers(enhancedCustomers);
           setCommercialCustomers(commercial);
@@ -692,6 +759,13 @@ function DashboardPageContent() {
             creditsRedeemed: 0, // Would need to track this separately
             topReferrers,
             loyaltyLevels,
+          });
+          setChartData({
+            revenueTrend,
+            customerGrowth,
+            weeklyCleanings,
+            planDistribution,
+            revenueByPlan,
           });
           setAdminLoading(false);
         }
@@ -704,7 +778,74 @@ function DashboardPageContent() {
     }
 
     loadAdminData();
-    return () => { mounted = false; };
+
+    // Set up auto-refresh every 30 seconds
+    const refreshInterval = setInterval(() => {
+      if (mounted && isAdmin && userId) {
+        loadAdminData();
+      }
+    }, 30000);
+
+    // Set up real-time listeners for key collections
+    let unsubscribeUsers: (() => void) | undefined;
+    let unsubscribeCleanings: (() => void) | undefined;
+    let unsubscribeClockIns: (() => void) | undefined;
+
+    async function setupRealtimeListeners() {
+      if (!isAdmin || !userId || !mounted) return;
+
+      try {
+        const { getDbInstance } = await import("@/lib/firebase");
+        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+        const firestore = await safeImportFirestore();
+        const { collection, query, onSnapshot, orderBy } = firestore;
+
+        const db = await getDbInstance();
+        if (!db) return;
+
+        // Listen to users collection for new customers
+        const usersQuery = query(collection(db, "users"), orderBy("createdAt", "desc"));
+        unsubscribeUsers = onSnapshot(usersQuery, () => {
+          if (mounted) {
+            loadAdminData();
+          }
+        }, (error) => {
+          console.error("[Dashboard] Error listening to users:", error);
+        });
+
+        // Listen to scheduledCleanings for new/completed cleanings
+        const cleaningsQuery = query(collection(db, "scheduledCleanings"), orderBy("scheduledDate", "asc"));
+        unsubscribeCleanings = onSnapshot(cleaningsQuery, () => {
+          if (mounted) {
+            loadAdminData();
+          }
+        }, (error) => {
+          console.error("[Dashboard] Error listening to cleanings:", error);
+        });
+
+        // Listen to clockIns for employee activity
+        const clockInsQuery = query(collection(db, "clockIns"), orderBy("clockInTime", "desc"));
+        unsubscribeClockIns = onSnapshot(clockInsQuery, () => {
+          if (mounted) {
+            loadAdminData();
+          }
+        }, (error) => {
+          console.error("[Dashboard] Error listening to clockIns:", error);
+        });
+      } catch (error) {
+        console.error("[Dashboard] Error setting up real-time listeners:", error);
+      }
+    }
+
+    setupRealtimeListeners();
+
+    return () => {
+      mounted = false;
+      clearInterval(refreshInterval);
+      if (unsubscribeUsers) unsubscribeUsers();
+      if (unsubscribeCleanings) unsubscribeCleanings();
+      if (unsubscribeClockIns) unsubscribeClockIns();
+    };
   }, [isAdmin, userId]);
 
   // Load operator data
@@ -1884,124 +2025,185 @@ function DashboardPageContent() {
                 {isOwner ? "Owner Dashboard - Complete business control center" : isAdmin ? "Admin Dashboard - Manage your business operations" : "Here's a quick look at your bin cleaning status."}
               </p>
 
-              {/* Admin Navigation */}
-              {isAdmin && (
-                <div style={{
-                  marginBottom: "2rem",
-                  padding: "1rem",
-                  background: "#ffffff",
-                  borderRadius: "12px",
-                  border: "1px solid #e5e7eb",
-                  display: "flex",
-                  gap: "0.75rem",
-                  flexWrap: "wrap"
-                }}>
-                  <button
-                    onClick={() => scrollToSection(overviewSectionRef)}
-                    style={{
-                      fontSize: "0.875rem",
-                      padding: "0.5rem 1rem",
-                      background: "transparent",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      color: "#374151",
-                      fontWeight: "500"
-                    }}
-                  >
-                    Overview
-                  </button>
-                  <button
-                    onClick={() => scrollToSection(customersSectionRef)}
-                    style={{
-                      fontSize: "0.875rem",
-                      padding: "0.5rem 1rem",
-                      background: "transparent",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      color: "#374151",
-                      fontWeight: "500"
-                    }}
-                  >
-                    Customers
-                  </button>
-                  <button
-                    onClick={() => scrollToSection(commercialSectionRef)}
-                    style={{
-                      fontSize: "0.875rem",
-                      padding: "0.5rem 1rem",
-                      background: "transparent",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      color: "#374151",
-                      fontWeight: "500"
-                    }}
-                  >
-                    Commercial Accounts
-                  </button>
-                  <button
-                    onClick={() => scrollToSection(scheduleSectionRef)}
-                    style={{
-                      fontSize: "0.875rem",
-                      padding: "0.5rem 1rem",
-                      background: "transparent",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      color: "#374151",
-                      fontWeight: "500"
-                    }}
-                  >
-                    Schedule
-                  </button>
-                  <a
-                    href="/employee/register"
-                    style={{
-                      fontSize: "0.875rem",
-                      padding: "0.5rem 1rem",
-                      background: "#16a34a",
-                      color: "#ffffff",
-                      borderRadius: "6px",
-                      textDecoration: "none",
-                      fontWeight: "600",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      transition: "background 0.2s",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#15803d";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "#16a34a";
-                    }}
-                  >
-                    + Register Employee
-                  </a>
-                </div>
-              )}
-
-              {/* Owner Dashboard - Complete Business Control Center */}
-              {isOwner && userId && (
-                <div style={{ marginBottom: "3rem" }}>
-                  <BusinessOverview userId={userId} />
-                  <CustomerManagement userId={userId} />
-                  <CleaningScheduleBoard userId={userId} />
-                  <CommercialAccounts userId={userId} />
-                  <PartnerProgramManagement userId={userId} />
-                  <FinancialAnalytics userId={userId} />
-                  <SystemControls userId={userId} />
-                </div>
-              )}
-
-              {/* Admin Overview Cards */}
+              {/* Admin Tab Navigation */}
               {isAdmin && !isOwner && (
-                <div ref={overviewSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
-                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1rem" }}>
-                    Overview
-                  </h2>
+                <>
+                  {/* Sticky Tab Navigation */}
+                  <div style={{
+                    position: "sticky",
+                    top: "80px",
+                    background: "#ffffff",
+                    borderRadius: "12px",
+                    padding: "0.5rem",
+                    marginBottom: "1.5rem",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                    border: "1px solid #e5e7eb",
+                    zIndex: 100,
+                    display: "flex",
+                    gap: "0.5rem",
+                    flexWrap: "wrap"
+                  }}>
+                    <button
+                      onClick={() => setAdminActiveTab("overview")}
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        padding: "0.75rem 1.5rem",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        background: adminActiveTab === "overview" ? "#16a34a" : "transparent",
+                        color: adminActiveTab === "overview" ? "#ffffff" : "#6b7280",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Overview
+                    </button>
+                    <button
+                      onClick={() => setAdminActiveTab("customers")}
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        padding: "0.75rem 1.5rem",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        background: adminActiveTab === "customers" ? "#16a34a" : "transparent",
+                        color: adminActiveTab === "customers" ? "#ffffff" : "#6b7280",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Customers
+                    </button>
+                    <button
+                      onClick={() => setAdminActiveTab("operations")}
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        padding: "0.75rem 1.5rem",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        background: adminActiveTab === "operations" ? "#16a34a" : "transparent",
+                        color: adminActiveTab === "operations" ? "#ffffff" : "#6b7280",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Operations
+                    </button>
+                    <button
+                      onClick={() => setAdminActiveTab("financial")}
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        padding: "0.75rem 1.5rem",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        background: adminActiveTab === "financial" ? "#16a34a" : "transparent",
+                        color: adminActiveTab === "financial" ? "#ffffff" : "#6b7280",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Financial
+                    </button>
+                    <button
+                      onClick={() => setAdminActiveTab("partners")}
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        padding: "0.75rem 1.5rem",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        background: adminActiveTab === "partners" ? "#16a34a" : "transparent",
+                        color: adminActiveTab === "partners" ? "#ffffff" : "#6b7280",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Partners
+                    </button>
+                    <button
+                      onClick={() => setAdminActiveTab("analytics")}
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        padding: "0.75rem 1.5rem",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        background: adminActiveTab === "analytics" ? "#16a34a" : "transparent",
+                        color: adminActiveTab === "analytics" ? "#ffffff" : "#6b7280",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Analytics
+                    </button>
+                    <a
+                      href="/employee/register"
+                      style={{
+                        padding: "0.75rem 1.5rem",
+                        background: "#16a34a",
+                        color: "#ffffff",
+                        borderRadius: "8px",
+                        textDecoration: "none",
+                        fontWeight: "600",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        transition: "background 0.2s",
+                        fontSize: "0.95rem",
+                        whiteSpace: "nowrap"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "#15803d";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "#16a34a";
+                      }}
+                    >
+                      + Register Employee
+                    </a>
+                  </div>
+
+                  {/* Unified Card Container */}
+                  <div style={{
+                    background: "#ffffff",
+                    borderRadius: "20px",
+                    padding: "2rem",
+                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                    border: "1px solid #e5e7eb"
+                  }}>
+                    {/* TAB: Overview */}
+                    {adminActiveTab === "overview" && (
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+                          <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0 }}>
+                            Business Overview
+                          </h2>
+                          <div style={{ fontSize: "0.75rem", color: "#6b7280", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <div style={{
+                              width: "8px",
+                              height: "8px",
+                              borderRadius: "50%",
+                              background: "#16a34a",
+                              animation: "pulse 2s infinite"
+                            }} />
+                            <span>Live updates enabled</span>
+                          </div>
+                        </div>
                   {adminLoading ? (
                     <p style={{ color: "#6b7280" }}>Loading admin statistics...</p>
                   ) : (
@@ -2059,7 +2261,7 @@ function DashboardPageContent() {
                         </div>
                       </div>
 
-                      {/* Estimated Monthly Revenue */}
+                      {/* Monthly Recurring Revenue */}
                       <div style={{
                         background: "#ffffff",
                         borderRadius: "12px",
@@ -2068,16 +2270,295 @@ function DashboardPageContent() {
                         boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
                       }}>
                         <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          Est. Monthly Revenue
+                          Monthly Recurring Revenue
                         </div>
                         <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
-                          {"$" + adminStats.estimatedMonthlyRevenue.toLocaleString()}
+                          {"$" + Math.round(adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue).toLocaleString()}
+                        </div>
+                      </div>
+
+                      {/* Active Subscriptions */}
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                      }}>
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          Active Subscriptions
+                        </div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                          {adminStats.activeSubscriptions || 0}
+                        </div>
+                      </div>
+
+                      {/* Completed Cleanings This Month */}
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                      }}>
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          Completed This Month
+                        </div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
+                          {adminStats.completedCleaningsThisMonth || 0}
+                        </div>
+                      </div>
+
+                      {/* Completed Cleanings This Week */}
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                      }}>
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          Completed This Week
+                        </div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
+                          {adminStats.completedCleaningsThisWeek || 0}
+                        </div>
+                      </div>
+
+                      {/* Active Employees */}
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                      }}>
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          Active Employees
+                        </div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                          {adminStats.activeEmployees || 0}
+                        </div>
+                      </div>
+
+                      {/* Average Revenue Per Customer */}
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                      }}>
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          Avg Revenue Per Customer
+                        </div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
+                          {"$" + Math.round(adminStats.averageRevenuePerCustomer || 0).toLocaleString()}
+                        </div>
+                      </div>
+
+                      {/* Customer Growth Rate */}
+                      {adminStats.customerGrowthRate !== 0 && (
+                        <div style={{
+                          background: "#ffffff",
+                          borderRadius: "12px",
+                          padding: "1.5rem",
+                          border: "1px solid #e5e7eb",
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                        }}>
+                          <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            Customer Growth Rate
+                          </div>
+                          <div style={{ fontSize: "2rem", fontWeight: "700", color: adminStats.customerGrowthRate >= 0 ? "#16a34a" : "#dc2626" }}>
+                            {adminStats.customerGrowthRate >= 0 ? "+" : ""}{adminStats.customerGrowthRate.toFixed(1)}%
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Customer Retention Rate */}
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                      }}>
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          Customer Retention Rate
+                        </div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: adminStats.customerRetentionRate >= 80 ? "#16a34a" : adminStats.customerRetentionRate >= 60 ? "#f59e0b" : "#dc2626" }}>
+                          {adminStats.customerRetentionRate.toFixed(1)}%
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Customers by Plan */}
+                  {/* Quick Stats Grid */}
+                  {!adminLoading && (
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                      gap: "1rem",
+                      marginBottom: "2rem"
+                    }}>
+                      {/* Revenue by Source */}
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                      }}>
+                        <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                          Revenue by Source
+                        </h3>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>Direct</span>
+                            <span style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)" }}>
+                              ${Math.round(adminStats.revenueBySource?.direct || 0).toLocaleString()}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>Partner</span>
+                            <span style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)" }}>
+                              ${Math.round(adminStats.revenueBySource?.partner || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Cleanings Status */}
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                      }}>
+                        <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                          Cleanings Status
+                        </h3>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>Completed</span>
+                            <span style={{ fontSize: "1rem", fontWeight: "600", color: "#16a34a" }}>
+                              {adminStats.cleaningsStatus?.completed || 0}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>Pending</span>
+                            <span style={{ fontSize: "1rem", fontWeight: "600", color: "#f59e0b" }}>
+                              {adminStats.cleaningsStatus?.pending || 0}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>Cancelled</span>
+                            <span style={{ fontSize: "1rem", fontWeight: "600", color: "#dc2626" }}>
+                              {adminStats.cleaningsStatus?.cancelled || 0}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Charts Section */}
+                  {!adminLoading && (
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                      gap: "1.5rem",
+                      marginBottom: "2rem"
+                    }}>
+                      {/* Revenue Trend Chart */}
+                      {chartData.revenueTrend.length > 0 && (
+                        <div style={{
+                          background: "#ffffff",
+                          borderRadius: "12px",
+                          padding: "1.5rem",
+                          border: "1px solid #e5e7eb",
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                        }}>
+                          <LineChart
+                            data={chartData.revenueTrend}
+                            height={200}
+                            title="Revenue Trend (Last 30 Days)"
+                          />
+                        </div>
+                      )}
+
+                      {/* Customer Growth Chart */}
+                      {chartData.customerGrowth.length > 0 && (
+                        <div style={{
+                          background: "#ffffff",
+                          borderRadius: "12px",
+                          padding: "1.5rem",
+                          border: "1px solid #e5e7eb",
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                        }}>
+                          <LineChart
+                            data={chartData.customerGrowth}
+                            height={200}
+                            title="Customer Growth (Last 6 Months)"
+                          />
+                        </div>
+                      )}
+
+                      {/* Weekly Cleanings Chart */}
+                      {chartData.weeklyCleanings.length > 0 && (
+                        <div style={{
+                          background: "#ffffff",
+                          borderRadius: "12px",
+                          padding: "1.5rem",
+                          border: "1px solid #e5e7eb",
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                        }}>
+                          <BarChart
+                            data={chartData.weeklyCleanings}
+                            height={200}
+                            title="Cleanings Completed (Weekly)"
+                          />
+                        </div>
+                      )}
+
+                      {/* Plan Distribution Chart */}
+                      {chartData.planDistribution.length > 0 && (
+                        <div style={{
+                          background: "#ffffff",
+                          borderRadius: "12px",
+                          padding: "1.5rem",
+                          border: "1px solid #e5e7eb",
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                        }}>
+                          <PieChart
+                            data={chartData.planDistribution}
+                            size={200}
+                            title="Customers by Plan"
+                          />
+                        </div>
+                      )}
+
+                      {/* Revenue by Plan Chart */}
+                      {chartData.revenueByPlan.length > 0 && (
+                        <div style={{
+                          background: "#ffffff",
+                          borderRadius: "12px",
+                          padding: "1.5rem",
+                          border: "1px solid #e5e7eb",
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                        }}>
+                          <BarChart
+                            data={chartData.revenueByPlan.map(p => ({ ...p, color: "#16a34a" }))}
+                            height={200}
+                            title="Revenue by Plan Type"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Customers by Plan (Legacy View) */}
                   {Object.keys(adminStats.customersByPlan).length > 0 && (
                     <div style={{
                       background: "#ffffff",
@@ -2109,236 +2590,156 @@ function DashboardPageContent() {
                     </div>
                   )}
 
-                  {/* Admin Partner Applications Section */}
-                  <AdminPartnerApplications />
-                  <AdminPartnerManagement />
-                </div>
-              )}
-
-              {/* Status Summary Card - Hidden for admin */}
-            {!isAdmin && (
-            <div style={{
-              background: "#ffffff",
-                borderRadius: "16px",
-                padding: "1.5rem",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-              border: "1px solid #e5e7eb",
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "1.5rem"
-            }}>
-                {/* Next Cleaning */}
-                <div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Next Cleaning
-                  </div>
-                  {nextCleaning ? (
-                    <div style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                      {new Date(nextCleaning.scheduledDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: "1.125rem", fontWeight: "600", color: "#6b7280", marginBottom: "0.5rem" }}>
-                      No cleaning scheduled
-                    </div>
-                  )}
-                  {!nextCleaning && (
-                    <button
-                      onClick={() => scrollToSection(scheduleSectionRef)}
-                      style={{
-                        fontSize: "0.875rem",
-                        color: "#16a34a",
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        padding: 0,
-                        fontWeight: "600",
-                        textDecoration: "underline"
-                      }}
-                    >
-                      Schedule Now →
-                    </button>
-                  )}
-                </div>
-
-                {/* Plan */}
-                <div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Plan
-                  </div>
-                  {user.selectedPlan ? (
-                    <>
-                      <div style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
-                        {PLAN_NAMES[user.selectedPlan] || user.selectedPlan}
+                        {/* Admin Partner Applications Section */}
+                        <AdminPartnerApplications />
+                        <AdminPartnerManagement />
                       </div>
-                      <div style={{ 
-                        fontSize: "0.875rem", 
-                        color: user.subscriptionStatus === "active" ? "#16a34a" : "#6b7280",
-                        fontWeight: "500"
-                      }}>
-                        {user.subscriptionStatus === "active" ? "Active" : "Inactive"}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize: "1.125rem", fontWeight: "600", color: "#6b7280" }}>
-                      No plan selected
-                    </div>
-                  )}
-                </div>
+                    )}
 
-                {/* Payments */}
-                  <div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Payments
-                    </div>
-                  <div style={{ 
-                    fontSize: "1.125rem", 
-                    fontWeight: "600", 
-                    color: user.paymentStatus === "paid" ? "#16a34a" : "#dc2626"
-                  }}>
-                    {user.paymentStatus === "paid" ? "Paid" : user.paymentStatus === "pending" ? "Pending" : "Past Due"}
-                  </div>
-                </div>
-              </div>
-            )}
-            </div>
+                    {/* TAB: Customers */}
+                    {adminActiveTab === "customers" && (
+                      <div>
+                        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem" }}>
+                          Customers
+                        </h2>
 
-            {/* (A) Hero Welcome + Status Summary - Closing div */}
-            </div>
+                        {/* Customer Insights */}
+                        {!adminLoading && (
+                          <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                            gap: "1rem",
+                            marginBottom: "2rem"
+                          }}>
+                            {/* High-Value Customers */}
+                            <div style={{
+                              background: "#ffffff",
+                              borderRadius: "12px",
+                              padding: "1.5rem",
+                              border: "1px solid #e5e7eb",
+                              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                            }}>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                High-Value Customers
+                              </div>
+                              <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
+                                {allCustomers.filter((c: any) => c.completedCleanings >= 10).length}
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                                10+ cleanings
+                              </div>
+                            </div>
 
-            {/* (B) Quick Action Buttons Row - Hidden for admin */}
-            {!isAdmin && (
-            <div style={{ marginBottom: "2rem" }}>
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                gap: "1rem"
-              }}>
-                <button
-                  onClick={() => scrollToSection(scheduleSectionRef)}
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    padding: "1.25rem 1rem",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    transition: "all 0.2s",
-                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
-                  }}
-                >
-                  <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>Schedule Cleaning</span>
-                </button>
+                            {/* Inactive Customers */}
+                            <div style={{
+                              background: "#ffffff",
+                              borderRadius: "12px",
+                              padding: "1.5rem",
+                              border: "1px solid #e5e7eb",
+                              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                            }}>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                Inactive Customers
+                              </div>
+                              <div style={{ fontSize: "2rem", fontWeight: "700", color: "#dc2626" }}>
+                                {allCustomers.filter((c: any) => c.subscriptionStatus !== "active").length}
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                                Not active
+                              </div>
+                            </div>
 
-                <button
-                  onClick={() => scrollToSection(planSectionRef)}
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    padding: "1.25rem 1rem",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    transition: "all 0.2s",
-                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
-                  }}
-                >
-                  <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>Manage Plan</span>
-                </button>
+                            {/* New Customers (This Month) */}
+                            <div style={{
+                              background: "#ffffff",
+                              borderRadius: "12px",
+                              padding: "1.5rem",
+                              border: "1px solid #e5e7eb",
+                              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                            }}>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                New This Month
+                              </div>
+                              <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                                {allCustomers.filter((c: any) => {
+                                  const createdAt = c.createdAt?.toDate?.() || new Date(c.createdAt || 0);
+                                  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+                                  return createdAt >= startOfMonth;
+                                }).length}
+                              </div>
+                            </div>
 
-                <button
-                  onClick={() => scrollToSection(rewardsSectionRef)}
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    padding: "1.25rem 1rem",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    transition: "all 0.2s",
-                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
-                  }}
-                >
-                  <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>View Rewards</span>
-                </button>
+                            {/* Churn Risk */}
+                            <div style={{
+                              background: "#ffffff",
+                              borderRadius: "12px",
+                              padding: "1.5rem",
+                              border: "1px solid #e5e7eb",
+                              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                            }}>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                Churn Risk
+                              </div>
+                              <div style={{ fontSize: "2rem", fontWeight: "700", color: "#f59e0b" }}>
+                                {allCustomers.filter((c: any) => {
+                                  const lastCleaning = allCleanings
+                                    .filter((cl: any) => cl.userId === c.id && (cl.status === "completed" || cl.jobStatus === "completed"))
+                                    .sort((a: any, b: any) => {
+                                      const dateA = a.completedAt?.toDate?.() || new Date(a.completedAt || 0);
+                                      const dateB = b.completedAt?.toDate?.() || new Date(b.completedAt || 0);
+                                      return dateB.getTime() - dateA.getTime();
+                                    })[0];
+                                  if (!lastCleaning) return c.subscriptionStatus !== "active";
+                                  const lastDate = lastCleaning.completedAt?.toDate?.() || new Date(lastCleaning.completedAt || 0);
+                                  const daysSince = (new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24);
+                                  return daysSince > 60 && c.subscriptionStatus === "active";
+                                }).length}
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                                No cleaning in 60+ days
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
-                <button
-                  onClick={() => scrollToSection(accountSectionRef)}
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    padding: "1.25rem 1rem",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    transition: "all 0.2s",
-                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
-                  }}
-                >
-                  <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>Update Info</span>
-                </button>
-              </div>
-            </div>
-            )}
+                        {/* Loyalty Level Distribution */}
+                        {!adminLoading && (
+                          <div style={{
+                            background: "#ffffff",
+                            borderRadius: "12px",
+                            padding: "1.5rem",
+                            border: "1px solid #e5e7eb",
+                            marginBottom: "2rem"
+                          }}>
+                            <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                              Loyalty Level Distribution
+                            </h3>
+                            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                              {["Getting Started", "Clean Freak", "Bin Boss", "Sparkle Specialist", "Sanitation Superstar", "Bin Royalty"].map((level) => {
+                                const count = allCustomers.filter((c: any) => c.loyaltyLevel === level).length;
+                                return (
+                                  <div key={level} style={{
+                                    padding: "0.75rem 1rem",
+                                    background: "#f9fafb",
+                                    borderRadius: "8px",
+                                    border: "1px solid #e5e7eb",
+                                    flex: "1",
+                                    minWidth: "150px"
+                                  }}>
+                                    <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
+                                      {level}
+                                    </div>
+                                    <div style={{ fontSize: "1.25rem", fontWeight: "600", color: "var(--text-dark)" }}>
+                                      {count}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
 
-            {/* Admin: Customers & Tiers Section */}
-            {isAdmin && (
-              <div ref={customersSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
-                <div style={{
-                  background: "#ffffff",
-                  borderRadius: "20px",
-                  padding: "2.5rem",
-                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1.5rem" }}>
-                    Customers
-                  </h2>
-
-                  {/* Filters */}
+                        {/* Filters */}
                   <div style={{
                     display: "flex",
                     gap: "1rem",
@@ -2404,153 +2805,599 @@ function DashboardPageContent() {
                           <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Source</th>
                           <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Status</th>
                           <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Ranking/Loyalty</th>
+                          <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Risk</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredCustomers.length === 0 ? (
                           <tr>
-                            <td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
+                            <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
                               No customers found matching your filters.
                             </td>
                           </tr>
                         ) : (
-                          filteredCustomers.slice(0, 50).map((customer: any) => (
-                            <tr key={customer.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                              <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)" }}>
-                                {customer.firstName} {customer.lastName}
-                              </td>
-                              <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
-                                {customer.email}
-                              </td>
-                              <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
-                                {customer.selectedPlan ? (PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan) : "No plan"}
-                              </td>
-                              <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
-                                <span style={{
-                                  padding: "0.25rem 0.5rem",
-                                  borderRadius: "4px",
-                                  fontSize: "0.75rem",
-                                  fontWeight: "600",
-                                  background: customer.source === "partner" ? "#dbeafe" : "#f3f4f6",
-                                  color: customer.source === "partner" ? "#1e40af" : "#6b7280"
-                                }}>
-                                  {customer.source === "partner" ? "Partner" : "Direct"}
-                                </span>
-                              </td>
-                              <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
-                                <span style={{
-                                  padding: "0.25rem 0.5rem",
-                                  borderRadius: "4px",
-                                  fontSize: "0.75rem",
-                                  fontWeight: "600",
-                                  background: customer.subscriptionStatus === "active" ? "#d1fae5" : "#fef3c7",
-                                  color: customer.subscriptionStatus === "active" ? "#065f46" : "#92400e"
-                                }}>
-                                  {customer.subscriptionStatus === "active" ? "Active" : customer.subscriptionStatus || "Inactive"}
-                                </span>
-                              </td>
-                              <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
-                                <div style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
-                                  {customer.loyaltyLevel || "Getting Started"}
-                                </div>
-                                <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>
-                                  {customer.completedCleanings || 0} cleanings
-                                </div>
-                              </td>
-                            </tr>
-                          ))
+                          filteredCustomers.slice(0, 50).map((customer: any) => {
+                            // Calculate churn risk
+                            const lastCleaning = allCleanings
+                              .filter((cl: any) => cl.userId === customer.id && (cl.status === "completed" || cl.jobStatus === "completed"))
+                              .sort((a: any, b: any) => {
+                                const dateA = a.completedAt?.toDate?.() || new Date(a.completedAt || 0);
+                                const dateB = b.completedAt?.toDate?.() || new Date(b.completedAt || 0);
+                                return dateB.getTime() - dateA.getTime();
+                              })[0];
+                            
+                            let riskLevel = "Low";
+                            let riskColor = "#16a34a";
+                            if (customer.subscriptionStatus !== "active") {
+                              riskLevel = "High";
+                              riskColor = "#dc2626";
+                            } else if (lastCleaning) {
+                              const lastDate = lastCleaning.completedAt?.toDate?.() || new Date(lastCleaning.completedAt || 0);
+                              const daysSince = (new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24);
+                              if (daysSince > 60) {
+                                riskLevel = "High";
+                                riskColor = "#dc2626";
+                              } else if (daysSince > 30) {
+                                riskLevel = "Medium";
+                                riskColor = "#f59e0b";
+                              }
+                            } else if (customer.subscriptionStatus === "active") {
+                              riskLevel = "Medium";
+                              riskColor = "#f59e0b";
+                            }
+
+                            return (
+                              <tr key={customer.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "var(--text-dark)" }}>
+                                  {customer.firstName} {customer.lastName}
+                                </td>
+                                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                                  {customer.email}
+                                </td>
+                                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                                  {customer.selectedPlan ? (PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan) : "No plan"}
+                                </td>
+                                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                                  <span style={{
+                                    padding: "0.25rem 0.5rem",
+                                    borderRadius: "4px",
+                                    fontSize: "0.75rem",
+                                    fontWeight: "600",
+                                    background: customer.source === "partner" ? "#dbeafe" : "#f3f4f6",
+                                    color: customer.source === "partner" ? "#1e40af" : "#6b7280"
+                                  }}>
+                                    {customer.source === "partner" ? "Partner" : "Direct"}
+                                  </span>
+                                </td>
+                                <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
+                                  <span style={{
+                                    padding: "0.25rem 0.5rem",
+                                    borderRadius: "4px",
+                                    fontSize: "0.75rem",
+                                    fontWeight: "600",
+                                    background: customer.subscriptionStatus === "active" ? "#d1fae5" : "#fef3c7",
+                                    color: customer.subscriptionStatus === "active" ? "#065f46" : "#92400e"
+                                  }}>
+                                    {customer.subscriptionStatus === "active" ? "Active" : customer.subscriptionStatus || "Inactive"}
+                                  </span>
+                                </td>
+                                <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                                  <div style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
+                                    {customer.loyaltyLevel || "Getting Started"}
+                                  </div>
+                                  <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>
+                                    {customer.completedCleanings || 0} cleanings
+                                  </div>
+                                </td>
+                                <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
+                                  <span style={{
+                                    padding: "0.25rem 0.5rem",
+                                    borderRadius: "4px",
+                                    fontSize: "0.75rem",
+                                    fontWeight: "600",
+                                    background: riskColor === "#16a34a" ? "#d1fae5" : riskColor === "#f59e0b" ? "#fef3c7" : "#fee2e2",
+                                    color: riskColor
+                                  }}>
+                                    {riskLevel}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
                   </div>
-                </div>
-              </div>
-            )}
+                      </div>
+                    )}
 
-            {/* Admin: Commercial Accounts Section */}
-            {isAdmin && (
-              <div ref={commercialSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
-                <div style={{
-                  background: "#ffffff",
-                  borderRadius: "20px",
-                  padding: "2.5rem",
-                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1.5rem" }}>
-                    Commercial Accounts
-                  </h2>
-                  {commercialCustomers.length === 0 ? (
-                    <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
-                      No commercial accounts found.
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                      {commercialCustomers.map((customer) => (
-                        <div
-                          key={customer.id}
-                          style={{
-                            padding: "1.5rem",
-                            background: "#f9fafb",
-                            borderRadius: "12px",
-                            border: "1px solid #e5e7eb"
-                          }}
-                        >
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-                            <div>
-                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600", textTransform: "uppercase" }}>
-                                Business Name
+                    {/* TAB: Financial */}
+                    {adminActiveTab === "financial" && (
+                      <div>
+                        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem" }}>
+                          Financial Overview
+                        </h2>
+                        
+                        {adminLoading ? (
+                          <p style={{ color: "#6b7280" }}>Loading financial data...</p>
+                        ) : (
+                          <>
+                            {/* Revenue Overview */}
+                            <div style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                              gap: "1rem",
+                              marginBottom: "2rem"
+                            }}>
+                              <div style={{
+                                background: "#ffffff",
+                                borderRadius: "12px",
+                                padding: "1.5rem",
+                                border: "1px solid #e5e7eb",
+                                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                              }}>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                  Monthly Recurring Revenue
+                                </div>
+                                <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
+                                  ${Math.round(adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue).toLocaleString()}
+                                </div>
                               </div>
-                              <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)" }}>
-                                {customer.firstName} {customer.lastName}
+
+                              <div style={{
+                                background: "#ffffff",
+                                borderRadius: "12px",
+                                padding: "1.5rem",
+                                border: "1px solid #e5e7eb",
+                                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                              }}>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                  Total Revenue (Est.)
+                                </div>
+                                <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
+                                  ${Math.round((adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue) * 12).toLocaleString()}
+                                </div>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                                  Annual projection
+                                </div>
+                              </div>
+
+                              <div style={{
+                                background: "#ffffff",
+                                borderRadius: "12px",
+                                padding: "1.5rem",
+                                border: "1px solid #e5e7eb",
+                                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                              }}>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                  Direct Revenue
+                                </div>
+                                <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                                  ${Math.round(adminStats.revenueBySource?.direct || 0).toLocaleString()}
+                                </div>
+                              </div>
+
+                              <div style={{
+                                background: "#ffffff",
+                                borderRadius: "12px",
+                                padding: "1.5rem",
+                                border: "1px solid #e5e7eb",
+                                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                              }}>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                  Partner Revenue
+                                </div>
+                                <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                                  ${Math.round(adminStats.revenueBySource?.partner || 0).toLocaleString()}
+                                </div>
                               </div>
                             </div>
-                            <div>
-                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600", textTransform: "uppercase" }}>
-                                Contact Email
-                              </div>
-                              <div style={{ fontSize: "1rem", color: "var(--text-dark)" }}>
-                                {customer.email}
+
+                            {/* Payouts Section */}
+                            <div style={{
+                              background: "#ffffff",
+                              borderRadius: "12px",
+                              padding: "1.5rem",
+                              border: "1px solid #e5e7eb",
+                              marginBottom: "2rem"
+                            }}>
+                              <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                                Payouts
+                              </h3>
+                              <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                                gap: "1rem"
+                              }}>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Employee Payouts (Est.)
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                                    ${(adminStats.completedCleaningsThisMonth * 10).toLocaleString()}
+                                  </div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                                    Based on {adminStats.completedCleaningsThisMonth} completed cleanings @ $10/job
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Partner Payouts (Est.)
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                                    ${Math.round((adminStats.revenueBySource?.partner || 0) * 0.6).toLocaleString()}
+                                  </div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                                    60% of partner revenue
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Total Payouts (Est.)
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#dc2626" }}>
+                                    ${((adminStats.completedCleaningsThisMonth * 10) + Math.round((adminStats.revenueBySource?.partner || 0) * 0.6)).toLocaleString()}
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                            <div>
-                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600", textTransform: "uppercase" }}>
-                                Plan Type
-                              </div>
-                              <div style={{ fontSize: "1rem", color: "var(--text-dark)" }}>
-                                {PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan || "N/A"}
+
+                            {/* Profit Analysis */}
+                            <div style={{
+                              background: "#ffffff",
+                              borderRadius: "12px",
+                              padding: "1.5rem",
+                              border: "1px solid #e5e7eb",
+                              marginBottom: "2rem"
+                            }}>
+                              <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                                Profit Analysis
+                              </h3>
+                              <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                                gap: "1rem"
+                              }}>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Gross Revenue
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#16a34a" }}>
+                                    ${Math.round(adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue).toLocaleString()}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Total Expenses
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#dc2626" }}>
+                                    ${((adminStats.completedCleaningsThisMonth * 10) + Math.round((adminStats.revenueBySource?.partner || 0) * 0.6)).toLocaleString()}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Net Profit (Est.)
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#16a34a" }}>
+                                    ${(Math.round(adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue) - ((adminStats.completedCleaningsThisMonth * 10) + Math.round((adminStats.revenueBySource?.partner || 0) * 0.6))).toLocaleString()}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Profit Margin
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#16a34a" }}>
+                                    {adminStats.monthlyRecurringRevenue > 0 ? Math.round(((Math.round(adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue) - ((adminStats.completedCleaningsThisMonth * 10) + Math.round((adminStats.revenueBySource?.partner || 0) * 0.6))) / Math.round(adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue)) * 100) : 0}%
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                            <div>
-                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", fontWeight: "600", textTransform: "uppercase" }}>
-                                Status
+
+                            {/* Revenue by Plan Chart */}
+                            {chartData.revenueByPlan.length > 0 && (
+                              <div style={{
+                                background: "#ffffff",
+                                borderRadius: "12px",
+                                padding: "1.5rem",
+                                border: "1px solid #e5e7eb",
+                                marginBottom: "2rem"
+                              }}>
+                                <BarChart
+                                  data={chartData.revenueByPlan.map(p => ({ ...p, color: "#16a34a" }))}
+                                  height={250}
+                                  title="Revenue by Plan Type"
+                                />
                               </div>
-                              <div>
-                                <span style={{
-                                  padding: "0.25rem 0.5rem",
-                                  borderRadius: "4px",
-                                  fontSize: "0.75rem",
-                                  fontWeight: "600",
-                                  background: customer.subscriptionStatus === "active" ? "#d1fae5" : "#fef3c7",
-                                  color: customer.subscriptionStatus === "active" ? "#065f46" : "#92400e"
+                            )}
+
+                            {/* Revenue Trend Chart */}
+                            {chartData.revenueTrend.length > 0 && (
+                              <div style={{
+                                background: "#ffffff",
+                                borderRadius: "12px",
+                                padding: "1.5rem",
+                                border: "1px solid #e5e7eb"
+                              }}>
+                                <LineChart
+                                  data={chartData.revenueTrend}
+                                  height={250}
+                                  title="Revenue Trend (Last 30 Days)"
+                                />
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* TAB: Partners */}
+                    {adminActiveTab === "partners" && (
+                      <div>
+                        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem" }}>
+                          Partner Management
+                        </h2>
+                        <AdminPartnerApplications />
+                        <AdminPartnerManagement />
+                      </div>
+                    )}
+
+                    {/* TAB: Analytics */}
+                    {adminActiveTab === "analytics" && (
+                      <div>
+                        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem" }}>
+                          Analytics & Reports
+                        </h2>
+                        
+                        {adminLoading ? (
+                          <p style={{ color: "#6b7280" }}>Loading analytics...</p>
+                        ) : (
+                          <>
+                            {/* Growth Metrics */}
+                            <div style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                              gap: "1rem",
+                              marginBottom: "2rem"
+                            }}>
+                              <div style={{
+                                background: "#ffffff",
+                                borderRadius: "12px",
+                                padding: "1.5rem",
+                                border: "1px solid #e5e7eb",
+                                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                              }}>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                  Customer Growth Rate
+                                </div>
+                                <div style={{ fontSize: "2rem", fontWeight: "700", color: adminStats.customerGrowthRate >= 0 ? "#16a34a" : "#dc2626" }}>
+                                  {adminStats.customerGrowthRate >= 0 ? "+" : ""}{adminStats.customerGrowthRate.toFixed(1)}%
+                                </div>
+                              </div>
+
+                              <div style={{
+                                background: "#ffffff",
+                                borderRadius: "12px",
+                                padding: "1.5rem",
+                                border: "1px solid #e5e7eb",
+                                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                              }}>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                  Revenue Growth Rate
+                                </div>
+                                <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
+                                  {adminStats.monthlyRecurringRevenue > 0 ? "+" : ""}{((adminStats.completedCleaningsThisMonth / Math.max(adminStats.completedCleaningsThisMonth - 10, 1)) - 1) * 100 > 0 ? Math.round(((adminStats.completedCleaningsThisMonth / Math.max(adminStats.completedCleaningsThisMonth - 10, 1)) - 1) * 100) : 0}%
+                                </div>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                                  Based on cleanings
+                                </div>
+                              </div>
+
+                              <div style={{
+                                background: "#ffffff",
+                                borderRadius: "12px",
+                                padding: "1.5rem",
+                                border: "1px solid #e5e7eb",
+                                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                              }}>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                  Cleanings Growth Rate
+                                </div>
+                                <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
+                                  {adminStats.completedCleaningsThisWeek > 0 ? "+" : ""}{adminStats.completedCleaningsThisWeek > 0 ? Math.round(((adminStats.completedCleaningsThisWeek / Math.max(adminStats.completedCleaningsThisWeek - 5, 1)) - 1) * 100) : 0}%
+                                </div>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                                  Week over week
+                                </div>
+                              </div>
+
+                              <div style={{
+                                background: "#ffffff",
+                                borderRadius: "12px",
+                                padding: "1.5rem",
+                                border: "1px solid #e5e7eb",
+                                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                              }}>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                  Customer Retention Rate
+                                </div>
+                                <div style={{ fontSize: "2rem", fontWeight: "700", color: adminStats.customerRetentionRate >= 80 ? "#16a34a" : adminStats.customerRetentionRate >= 60 ? "#f59e0b" : "#dc2626" }}>
+                                  {adminStats.customerRetentionRate.toFixed(1)}%
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Charts Section */}
+                            <div style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+                              gap: "1.5rem",
+                              marginBottom: "2rem"
+                            }}>
+                              {/* Customer Growth Chart */}
+                              {chartData.customerGrowth.length > 0 && (
+                                <div style={{
+                                  background: "#ffffff",
+                                  borderRadius: "12px",
+                                  padding: "1.5rem",
+                                  border: "1px solid #e5e7eb",
+                                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
                                 }}>
-                                  {customer.subscriptionStatus === "active" ? "Active" : "Inactive"}
-                                </span>
+                                  <LineChart
+                                    data={chartData.customerGrowth}
+                                    height={250}
+                                    title="Customer Growth Trend (Last 6 Months)"
+                                  />
+                                </div>
+                              )}
+
+                              {/* Weekly Cleanings Chart */}
+                              {chartData.weeklyCleanings.length > 0 && (
+                                <div style={{
+                                  background: "#ffffff",
+                                  borderRadius: "12px",
+                                  padding: "1.5rem",
+                                  border: "1px solid #e5e7eb",
+                                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                                }}>
+                                  <BarChart
+                                    data={chartData.weeklyCleanings}
+                                    height={250}
+                                    title="Cleanings Completed (Weekly Trend)"
+                                  />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Monthly Trends */}
+                            <div style={{
+                              background: "#ffffff",
+                              borderRadius: "12px",
+                              padding: "1.5rem",
+                              border: "1px solid #e5e7eb",
+                              marginBottom: "2rem"
+                            }}>
+                              <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                                Monthly Performance Summary
+                              </h3>
+                              <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                                gap: "1rem"
+                              }}>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Customers
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                                    {adminStats.totalCustomers}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Cleanings (MTD)
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#16a34a" }}>
+                                    {adminStats.completedCleaningsThisMonth}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Revenue (MRR)
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#16a34a" }}>
+                                    ${Math.round(adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue).toLocaleString()}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Active Subscriptions
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                                    {adminStats.activeSubscriptions}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Avg Revenue/Customer
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#16a34a" }}>
+                                    ${Math.round(adminStats.averageRevenuePerCustomer || 0)}
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          {customer.phone && (
-                            <div style={{ marginTop: "1rem", fontSize: "0.875rem", color: "#6b7280" }}>
-                              <strong>Phone:</strong> {customer.phone}
+
+                            {/* Forecast Section */}
+                            <div style={{
+                              background: "#ffffff",
+                              borderRadius: "12px",
+                              padding: "1.5rem",
+                              border: "1px solid #e5e7eb"
+                            }}>
+                              <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                                Revenue Forecast
+                              </h3>
+                              <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                                gap: "1rem"
+                              }}>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Next Month (Est.)
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#16a34a" }}>
+                                    ${Math.round((adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue) * 1.05).toLocaleString()}
+                                  </div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                                    +5% growth assumption
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Next Quarter (Est.)
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#16a34a" }}>
+                                    ${Math.round((adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue) * 3.15).toLocaleString()}
+                                  </div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                                    3 months projection
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase" }}>
+                                    Annual (Est.)
+                                  </div>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#16a34a" }}>
+                                    ${Math.round((adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue) * 12).toLocaleString()}
+                                  </div>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                                    Based on current MRR
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* Owner Dashboard - Complete Business Control Center */}
+              {isOwner && userId && (
+                <div style={{ marginBottom: "3rem" }}>
+                  <BusinessOverview userId={userId} />
+                  <CustomerManagement userId={userId} />
+                  <CleaningScheduleBoard userId={userId} />
+                  <CommercialAccounts userId={userId} />
+                  <PartnerProgramManagement userId={userId} />
+                  <FinancialAnalytics userId={userId} />
+                  <SystemControls userId={userId} />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* (C) Schedule a Cleaning - Hidden for admin */}
             {!isAdmin && (
@@ -3244,8 +4091,8 @@ function DashboardPageContent() {
                 )}
               </div>
             </div>
-
           </div>
+        </div>
       </main>
       
       {/* Edit Cleaning Modal */}
