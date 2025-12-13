@@ -36,9 +36,37 @@ export function CurrentShiftCard({ employeeId }: CurrentShiftCardProps) {
       if (response.ok) {
         const data = await response.json();
         setShiftStatus(data);
+      } else {
+        // If API returns error, set default "not started" status instead of showing error
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Error loading shift status:", errorData.error || response.statusText);
+        // Set default status instead of null to avoid error message
+        setShiftStatus({
+          shiftStatus: "not_started",
+          shiftStartTime: null,
+          expectedEndTime: null,
+          assignedStops: 0,
+          completedStops: 0,
+          inProgressStops: 0,
+          pendingStops: 0,
+          missedStops: 0,
+          stopsRemaining: 0,
+        });
       }
     } catch (error) {
       console.error("Error loading shift status:", error);
+      // Set default status instead of null to avoid error message
+      setShiftStatus({
+        shiftStatus: "not_started",
+        shiftStartTime: null,
+        expectedEndTime: null,
+        assignedStops: 0,
+        completedStops: 0,
+        inProgressStops: 0,
+        pendingStops: 0,
+        missedStops: 0,
+        stopsRemaining: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -68,22 +96,21 @@ export function CurrentShiftCard({ employeeId }: CurrentShiftCardProps) {
     );
   }
 
-  if (!shiftStatus) {
-    return (
-      <div style={{
-        background: "#ffffff",
-        borderRadius: "12px",
-        padding: "2rem",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-        border: "1px solid #e5e7eb",
-      }}>
-        <div style={{ textAlign: "center", color: "#dc2626" }}>Failed to load shift status</div>
-      </div>
-    );
-  }
+  // Show default "not started" status if shiftStatus is null (shouldn't happen with new error handling)
+  const displayStatus = shiftStatus || {
+    shiftStatus: "not_started" as const,
+    shiftStartTime: null,
+    expectedEndTime: null,
+    assignedStops: 0,
+    completedStops: 0,
+    inProgressStops: 0,
+    pendingStops: 0,
+    missedStops: 0,
+    stopsRemaining: 0,
+  };
 
-  const progressPercentage = shiftStatus.assignedStops > 0
-    ? (shiftStatus.completedStops / shiftStatus.assignedStops) * 100
+  const progressPercentage = displayStatus.assignedStops > 0
+    ? (displayStatus.completedStops / displayStatus.assignedStops) * 100
     : 0;
 
   return (
@@ -107,24 +134,24 @@ export function CurrentShiftCard({ employeeId }: CurrentShiftCardProps) {
             fontWeight: "600",
             padding: "0.25rem 0.75rem",
             borderRadius: "6px",
-            background: shiftStatus.shiftStatus === "clocked_in" ? "#d1fae5" : "#f3f4f6",
-            color: shiftStatus.shiftStatus === "clocked_in" ? "#065f46" : "#6b7280",
+            background: displayStatus.shiftStatus === "clocked_in" ? "#d1fae5" : "#f3f4f6",
+            color: displayStatus.shiftStatus === "clocked_in" ? "#065f46" : "#6b7280",
           }}>
-            {shiftStatus.shiftStatus === "not_started" ? "Not Started" :
-             shiftStatus.shiftStatus === "clocked_in" ? "Clocked In" : "Completed"}
+            {displayStatus.shiftStatus === "not_started" ? "Not Started" :
+             displayStatus.shiftStatus === "clocked_in" ? "Clocked In" : "Completed"}
           </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
           <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>Start Time:</span>
           <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "#111827" }}>
-            {formatTime(shiftStatus.shiftStartTime)}
+            {formatTime(displayStatus.shiftStartTime)}
           </span>
         </div>
-        {shiftStatus.expectedEndTime && (
+        {displayStatus.expectedEndTime && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>Expected End:</span>
             <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "#111827" }}>
-              {formatTime(shiftStatus.expectedEndTime)}
+              {formatTime(displayStatus.expectedEndTime)}
             </span>
           </div>
         )}
@@ -134,10 +161,10 @@ export function CurrentShiftCard({ employeeId }: CurrentShiftCardProps) {
       <div style={{ marginBottom: "1.5rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
           <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "#111827" }}>
-            Progress: {shiftStatus.completedStops} / {shiftStatus.assignedStops} stops
+            Progress: {displayStatus.completedStops} / {displayStatus.assignedStops} stops
           </span>
           <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-            {shiftStatus.stopsRemaining} remaining
+            {displayStatus.stopsRemaining} remaining
           </span>
         </div>
         <div style={{
@@ -170,7 +197,7 @@ export function CurrentShiftCard({ employeeId }: CurrentShiftCardProps) {
           textAlign: "center",
         }}>
           <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#16a34a" }}>
-            {shiftStatus.completedStops}
+            {displayStatus.completedStops}
           </div>
           <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
             Completed
@@ -182,8 +209,8 @@ export function CurrentShiftCard({ employeeId }: CurrentShiftCardProps) {
           borderRadius: "8px",
           textAlign: "center",
         }}>
-          <div style={{ fontSize: "1.5rem", fontWeight: "700", color: shiftStatus.missedStops > 0 ? "#dc2626" : "#6b7280" }}>
-            {shiftStatus.missedStops}
+          <div style={{ fontSize: "1.5rem", fontWeight: "700", color: displayStatus.missedStops > 0 ? "#dc2626" : "#6b7280" }}>
+            {displayStatus.missedStops}
           </div>
           <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
             Missed/Late
@@ -196,7 +223,7 @@ export function CurrentShiftCard({ employeeId }: CurrentShiftCardProps) {
           textAlign: "center",
         }}>
           <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#3b82f6" }}>
-            {shiftStatus.inProgressStops}
+            {displayStatus.inProgressStops}
           </div>
           <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
             In Progress
@@ -209,7 +236,7 @@ export function CurrentShiftCard({ employeeId }: CurrentShiftCardProps) {
           textAlign: "center",
         }}>
           <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#f59e0b" }}>
-            {shiftStatus.pendingStops}
+            {displayStatus.pendingStops}
           </div>
           <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
             Pending

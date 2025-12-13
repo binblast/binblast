@@ -33,17 +33,49 @@ export async function GET(
 
     // Get current clock-in status
     const clockInsRef = collection(db, "clockIns");
-    const activeClockInQuery = query(
-      clockInsRef,
-      where("employeeId", "==", employeeId),
-      where("date", "==", today),
-      where("isActive", "==", true),
-      orderBy("clockInTime", "desc"),
-      limit(1)
-    );
-
-    const clockInSnapshot = await getDocs(activeClockInQuery);
-    const clockInData = clockInSnapshot.empty ? null : clockInSnapshot.docs[0].data();
+    let clockInData = null;
+    
+    try {
+      // Try query with orderBy first (requires index)
+      const activeClockInQuery = query(
+        clockInsRef,
+        where("employeeId", "==", employeeId),
+        where("date", "==", today),
+        where("isActive", "==", true),
+        orderBy("clockInTime", "desc"),
+        limit(1)
+      );
+      const clockInSnapshot = await getDocs(activeClockInQuery);
+      clockInData = clockInSnapshot.empty ? null : clockInSnapshot.docs[0].data();
+    } catch (error: any) {
+      // If orderBy fails (missing index), try without orderBy
+      console.warn("OrderBy query failed, trying without orderBy:", error.message);
+      try {
+        const activeClockInQuery = query(
+          clockInsRef,
+          where("employeeId", "==", employeeId),
+          where("date", "==", today),
+          where("isActive", "==", true)
+        );
+        const clockInSnapshot = await getDocs(activeClockInQuery);
+        if (!clockInSnapshot.empty) {
+          // Get the most recent one manually
+          const docs = clockInSnapshot.docs;
+          let latestDoc = docs[0];
+          for (const doc of docs) {
+            const docTime = doc.data().clockInTime?.toDate?.() || new Date(doc.data().clockInTime || 0);
+            const latestTime = latestDoc.data().clockInTime?.toDate?.() || new Date(latestDoc.data().clockInTime || 0);
+            if (docTime > latestTime) {
+              latestDoc = doc;
+            }
+          }
+          clockInData = latestDoc.data();
+        }
+      } catch (fallbackError) {
+        console.error("Error getting clock-in data:", fallbackError);
+        // Continue with null clockInData
+      }
+    }
 
     // Get today's assigned stops
     const cleaningsRef = collection(db, "scheduledCleanings");

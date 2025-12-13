@@ -115,6 +115,7 @@ export default function EmployeeDetailPage() {
             firstName: nameParts[0] || "",
             lastName: nameParts.slice(1).join(" ") || "",
             email: foundEmployee.email,
+            phone: foundEmployee.phone || foundEmployee.phoneNumber || undefined,
             serviceArea: foundEmployee.serviceArea || [],
             status: foundEmployee.status || "active",
           });
@@ -280,6 +281,29 @@ export default function EmployeeDetailPage() {
                   >
                     Refresh
                   </button>
+                  {employee?.phone && (
+                    <button
+                      onClick={() => window.location.href = `tel:${employee.phone}`}
+                      style={{
+                        padding: "0.5rem 1rem",
+                        background: "#16a34a",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "6px",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        transition: "opacity 0.2s",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                    >
+                      📞 Call Employee
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowMessageModal(true)}
                     style={{
