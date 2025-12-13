@@ -4,6 +4,11 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
+// Import Leaflet CSS - Next.js will handle this
+if (typeof window !== "undefined") {
+  require("leaflet/dist/leaflet.css");
+}
+
 // Dynamically import Leaflet to avoid SSR issues
 const MapContainer = dynamic(() => import("react-leaflet").then(mod => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import("react-leaflet").then(mod => mod.TileLayer), { ssr: false });
@@ -32,12 +37,8 @@ export function RouteMap({ employeeId, stops, employeeLocation }: RouteMapProps)
   const [optimizing, setOptimizing] = useState(false);
 
   useEffect(() => {
-    // Load Leaflet CSS dynamically
-    if (typeof window !== "undefined") {
-      // Import CSS only on client side
-      require("leaflet/dist/leaflet.css");
-      setMapReady(true);
-    }
+    // Map is ready when component mounts
+    setMapReady(true);
   }, []);
 
   useEffect(() => {
