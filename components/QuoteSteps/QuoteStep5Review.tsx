@@ -1,23 +1,35 @@
 // components/QuoteSteps/QuoteStep5Review.tsx
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { QuoteFormData } from "../CustomQuoteWizard";
 import { calculatePricingWithSafeguards, PricingInput } from "@/lib/pricing-safeguards";
 
 interface QuoteStep5ReviewProps {
   formData: QuoteFormData;
+  updateFormData: (data: Partial<QuoteFormData>) => void;
   onSubmit: () => void;
   onBack: () => void;
+  onNavigateToStep: (step: number) => void;
   isSubmitting: boolean;
+}
+
+interface FixSuggestion {
+  label: string;
+  action: () => void;
+  step?: number;
+  description?: string;
 }
 
 export function QuoteStep5Review({
   formData,
+  updateFormData,
   onSubmit,
   onBack,
+  onNavigateToStep,
   isSubmitting,
 }: QuoteStep5ReviewProps) {
+  const [fixApplied, setFixApplied] = useState<string | null>(null);
   const pricingResult = useMemo(() => {
     const input: PricingInput = {
       propertyType: formData.propertyType!,
@@ -33,6 +45,14 @@ export function QuoteStep5Review({
 
     return calculatePricingWithSafeguards(input);
   }, [formData]);
+
+  // Auto-recheck when formData changes
+  useEffect(() => {
+    if (fixApplied && !pricingResult.requiresManualReview) {
+      // Clear fix applied message after showing success
+      setTimeout(() => setFixApplied(null), 3000);
+    }
+  }, [pricingResult.requiresManualReview, fixApplied]);
 
   // Legacy compatibility - maintain existing structure for UI
   const estimatedPrice = {
@@ -64,6 +84,133 @@ export function QuoteStep5Review({
       default:
         return "";
     }
+  };
+
+  // Helper function to get fix suggestions for each review reason
+  const getFixSuggestions = (reason: string): FixSuggestion[] => {
+    const suggestions: FixSuggestion[] = [];
+    const currentFrequency = formData.commercialFrequency || formData.residentialFrequency || formData.hoaFrequency || "Monthly";
+    const isCommercial = formData.propertyType === "commercial";
+    const isRestaurant = formData.commercialType === "Restaurant";
+
+    if (reason.includes("Total monthly price exceeds $500")) {
+      if (currentFrequency === "Weekly") {
+        suggestions.push({
+          label: "Change to Bi-weekly",
+          action: () => {
+            if (isCommercial) {
+              updateFormData({ commercialFrequency: "Bi-weekly" });
+            } else if (formData.propertyType === "residential") {
+              updateFormData({ residentialFrequency: "Bi-weekly" });
+            } else {
+              updateFormData({ hoaFrequency: "Bi-weekly" });
+            }
+            setFixApplied("frequency");
+          },
+          step: 2,
+          description: "Reduces monthly cost by ~44%"
+        });
+      }
+      if (formData.dumpsterPadCleaning) {
+        suggestions.push({
+          label: "Remove Dumpster Pad Cleaning",
+          action: () => {
+            updateFormData({ dumpsterPadCleaning: false });
+            setFixApplied("dumpsterPad");
+          },
+          step: 2,
+          description: "Saves $75/month"
+        });
+      }
+      if (formData.commercialBins && formData.commercialBins > 2) {
+        suggestions.push({
+          label: `Reduce to ${formData.commercialBins - 1} Dumpster${formData.commercialBins - 1 > 1 ? 's' : ''}`,
+          action: () => {
+            updateFormData({ commercialBins: (formData.commercialBins || 1) - 1 });
+            setFixApplied("dumpsterCount");
+          },
+          step: 2,
+          description: `Saves $${isRestaurant ? 20 : 15}/month`
+        });
+      }
+    }
+
+    if (reason.includes("Dumpster count")) {
+      const match = reason.match(/\((\d+)\)/);
+      const count = match ? parseInt(match[1]) : 0;
+      if (count >= 4) {
+        suggestions.push({
+          label: "Reduce to 3 Dumpsters",
+          action: () => {
+            updateFormData({ commercialBins: 3 });
+            setFixApplied("dumpsterCount");
+          },
+          step: 2,
+          description: "Meets auto-approval threshold"
+        });
+      }
+    }
+
+    if (reason.includes("Weekly restaurant service")) {
+      suggestions.push({
+        label: "Change to Bi-weekly",
+        action: () => {
+          updateFormData({ commercialFrequency: "Bi-weekly" });
+          setFixApplied("frequency");
+        },
+        step: 2,
+        description: "Still provides excellent service coverage"
+      });
+    }
+
+    if (reason.includes("Weekly dumpster pad")) {
+      suggestions.push({
+        label: "Change to Bi-weekly",
+        action: () => {
+          updateFormData({ commercialFrequency: "Bi-weekly" });
+          setFixApplied("frequency");
+        },
+        step: 2,
+        description: "Maintains pad cleaning with better pricing"
+      });
+      suggestions.push({
+        label: "Remove Dumpster Pad Cleaning",
+        action: () => {
+          updateFormData({ dumpsterPadCleaning: false });
+          setFixApplied("dumpsterPad");
+        },
+        step: 2,
+        description: "Saves $75/month"
+      });
+    }
+
+    if (reason.includes("Special requirements")) {
+      suggestions.push({
+        label: "Remove Special Requirements",
+        action: () => {
+          if (isCommercial) {
+            updateFormData({ commercialSpecialRequirements: "" });
+          } else if (formData.propertyType === "residential") {
+            updateFormData({ residentialSpecialRequirements: "" });
+          } else {
+            updateFormData({ communityAccessRequirements: "" });
+          }
+          setFixApplied("specialRequirements");
+        },
+        step: isCommercial ? 2 : formData.propertyType === "residential" ? 2 : 2,
+        description: "Allows auto-approval"
+      });
+      suggestions.push({
+        label: "Edit Requirements",
+        action: () => {
+          onNavigateToStep(isCommercial ? 2 : formData.propertyType === "residential" ? 2 : 2);
+        },
+        step: isCommercial ? 2 : formData.propertyType === "residential" ? 2 : 2,
+        description: "Modify your special requirements"
+      });
+    }
+
+    return suggestions;
   };
 
   const getPropertyDetails = () => {
@@ -218,20 +365,44 @@ export function QuoteStep5Review({
           </div>
         )}
 
-        {/* Manual Review Required */}
-        {estimatedPrice.requiresManualReview && (
+        {/* Success Message When Issues Resolved */}
+        {fixApplied && !estimatedPrice.requiresManualReview && (
           <div style={{
             marginTop: "1rem",
             padding: "1rem",
-            background: "#fee2e2",
+            background: "#dcfce7",
             borderRadius: "8px",
-            border: "2px solid #dc2626"
+            border: "2px solid #16a34a",
+            animation: "fadeInUp 0.3s ease-out"
           }}>
             <div style={{
               fontSize: "0.875rem",
               fontWeight: "700",
-              color: "#991b1b",
-              marginBottom: "0.5rem",
+              color: "#166534",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem"
+            }}>
+              ✓ Great! Your quote no longer requires manual review.
+            </div>
+          </div>
+        )}
+
+        {/* Manual Review Required - Actionable Version */}
+        {estimatedPrice.requiresManualReview && (
+          <div style={{
+            marginTop: "1rem",
+            padding: "1.25rem",
+            background: "#fef3c7",
+            borderRadius: "12px",
+            border: "2px solid #fbbf24",
+            animation: "fadeInUp 0.3s ease-out"
+          }}>
+            <div style={{
+              fontSize: "0.875rem",
+              fontWeight: "700",
+              color: "#92400e",
+              marginBottom: "0.75rem",
               display: "flex",
               alignItems: "center",
               gap: "0.5rem"
@@ -240,38 +411,508 @@ export function QuoteStep5Review({
             </div>
             <div style={{
               fontSize: "0.875rem",
-              color: "#991b1b",
-              marginBottom: "0.75rem",
+              color: "#92400e",
+              marginBottom: "1rem",
               lineHeight: "1.5"
             }}>
-              This service requires a custom review to ensure proper sanitation and scheduling.
+              Your quote requires a custom review. You can fix the issues below to enable instant approval, or submit as-is for manual review.
             </div>
+
+            {/* Review Reasons with Fix Suggestions */}
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "1rem",
+              marginBottom: "1rem"
+            }}>
+              {estimatedPrice.reviewReasons.map((reason, index) => {
+                const suggestions = getFixSuggestions(reason);
+                return (
+                  <div key={index} style={{
+                    padding: "0.75rem",
+                    background: "#ffffff",
+                    borderRadius: "8px",
+                    border: "1px solid #fbbf24"
+                  }}>
+                    <div style={{
+                      fontSize: "0.8125rem",
+                      fontWeight: "600",
+                      color: "#92400e",
+                      marginBottom: "0.5rem"
+                    }}>
+                      {reason}
+                    </div>
+                    {suggestions.length > 0 && (
+                      <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.5rem",
+                        marginTop: "0.5rem"
+                      }}>
+                        <div style={{
+                          fontSize: "0.75rem",
+                          color: "#78350f",
+                          fontWeight: "600",
+                          marginBottom: "0.25rem"
+                        }}>
+                          Quick Fixes:
+                        </div>
+                        <div style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "0.5rem"
+                        }}>
+                          {suggestions.map((suggestion, sugIndex) => (
+                            <div key={sugIndex} style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "0.25rem"
+                            }}>
+                              <button
+                                onClick={suggestion.action}
+                                style={{
+                                  padding: "0.5rem 0.75rem",
+                                  background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                                  border: "none",
+                                  borderRadius: "6px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: "600",
+                                  color: "#ffffff",
+                                  cursor: "pointer",
+                                  transition: "all 0.2s ease",
+                                  boxShadow: "0 2px 4px rgba(22, 163, 74, 0.2)"
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.transform = "translateY(-1px)";
+                                  e.currentTarget.style.boxShadow = "0 4px 8px rgba(22, 163, 74, 0.3)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.transform = "translateY(0)";
+                                  e.currentTarget.style.boxShadow = "0 2px 4px rgba(22, 163, 74, 0.2)";
+                                }}
+                              >
+                                {suggestion.label}
+                              </button>
+                              {suggestion.description && (
+                                <div style={{
+                                  fontSize: "0.7rem",
+                                  color: "#78350f",
+                                  fontStyle: "italic"
+                                }}>
+                                  {suggestion.description}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          {suggestions.some(s => s.step) && (
+                            <button
+                              onClick={() => {
+                                const step = suggestions.find(s => s.step)?.step || 2;
+                                onNavigateToStep(step);
+                              }}
+                              style={{
+                                padding: "0.5rem 0.75rem",
+                                background: "#ffffff",
+                                border: "2px solid #fbbf24",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                fontWeight: "600",
+                                color: "#92400e",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease"
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = "#fef3c7";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "#ffffff";
+                              }}
+                            >
+                              Go to Step {suggestions.find(s => s.step)?.step || 2}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Inline Editing for Simple Fixes */}
+            {estimatedPrice.reviewReasons.some(r => 
+              r.includes("frequency") || 
+              r.includes("Frequency") ||
+              r.includes("dumpster count") || 
+              r.includes("Dumpster count") ||
+              r.includes("dumpster pad") ||
+              r.includes("Dumpster pad") ||
+              r.includes("Special requirements")
+            ) && (
+              <div style={{
+                padding: "0.75rem",
+                background: "#ffffff",
+                borderRadius: "8px",
+                border: "1px solid #fbbf24",
+                marginBottom: "1rem"
+              }}>
+                <div style={{
+                  fontSize: "0.75rem",
+                  fontWeight: "600",
+                  color: "#92400e",
+                  marginBottom: "0.75rem"
+                }}>
+                  Or Edit Here:
+                </div>
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem"
+                }}>
+                  {formData.propertyType === "commercial" && (
+                    <>
+                      {estimatedPrice.reviewReasons.some(r => r.includes("frequency")) && (
+                        <div>
+                          <label style={{
+                            display: "block",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#92400e",
+                            marginBottom: "0.25rem"
+                          }}>
+                            Frequency:
+                          </label>
+                          <select
+                            value={formData.commercialFrequency || "Monthly"}
+                            onChange={(e) => {
+                              updateFormData({ commercialFrequency: e.target.value });
+                              setFixApplied("frequency");
+                            }}
+                            style={{
+                              width: "100%",
+                              padding: "0.5rem",
+                              border: "2px solid #fbbf24",
+                              borderRadius: "6px",
+                              fontSize: "0.875rem",
+                              background: "#ffffff",
+                              cursor: "pointer"
+                            }}
+                          >
+                            <option value="Monthly">Monthly</option>
+                            <option value="Bi-weekly">Bi-weekly</option>
+                            <option value="Weekly">Weekly</option>
+                          </select>
+                        </div>
+                      )}
+                      {estimatedPrice.reviewReasons.some(r => r.includes("dumpster count")) && (
+                        <div>
+                          <label style={{
+                            display: "block",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#92400e",
+                            marginBottom: "0.25rem"
+                          }}>
+                            Number of Dumpsters:
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="3"
+                            value={formData.commercialBins || 1}
+                            onChange={(e) => {
+                              const value = Math.min(3, Math.max(1, parseInt(e.target.value) || 1));
+                              updateFormData({ commercialBins: value });
+                              setFixApplied("dumpsterCount");
+                            }}
+                            style={{
+                              width: "100%",
+                              padding: "0.5rem",
+                              border: "2px solid #fbbf24",
+                              borderRadius: "6px",
+                              fontSize: "0.875rem",
+                              background: "#ffffff"
+                            }}
+                          />
+                          <div style={{
+                            fontSize: "0.7rem",
+                            color: "#78350f",
+                            marginTop: "0.25rem"
+                          }}>
+                            Maximum 3 for auto-approval
+                          </div>
+                        </div>
+                      )}
+                      {estimatedPrice.reviewReasons.some(r => r.includes("dumpster pad")) && (
+                        <div>
+                          <label style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#92400e",
+                            cursor: "pointer"
+                          }}>
+                            <input
+                              type="checkbox"
+                              checked={formData.dumpsterPadCleaning || false}
+                              onChange={(e) => {
+                                updateFormData({ dumpsterPadCleaning: e.target.checked });
+                                setFixApplied("dumpsterPad");
+                              }}
+                              style={{
+                                width: "18px",
+                                height: "18px",
+                                cursor: "pointer"
+                              }}
+                            />
+                            Dumpster Pad Cleaning (+$75/month)
+                          </label>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {formData.propertyType === "residential" && estimatedPrice.reviewReasons.some(r => r.includes("frequency")) && (
+                    <div>
+                      <label style={{
+                        display: "block",
+                        fontSize: "0.75rem",
+                        fontWeight: "600",
+                        color: "#92400e",
+                        marginBottom: "0.25rem"
+                      }}>
+                        Frequency:
+                      </label>
+                      <select
+                        value={formData.residentialFrequency || "Monthly"}
+                        onChange={(e) => {
+                          updateFormData({ residentialFrequency: e.target.value });
+                          setFixApplied("frequency");
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "0.5rem",
+                          border: "2px solid #fbbf24",
+                          borderRadius: "6px",
+                          fontSize: "0.875rem",
+                          background: "#ffffff",
+                          cursor: "pointer"
+                        }}
+                      >
+                        <option value="Monthly">Monthly</option>
+                        <option value="Bi-weekly">Bi-weekly</option>
+                        <option value="Weekly">Weekly</option>
+                      </select>
+                    </div>
+                  )}
+                  {formData.propertyType === "hoa" && estimatedPrice.reviewReasons.some(r => r.includes("frequency")) && (
+                    <div>
+                      <label style={{
+                        display: "block",
+                        fontSize: "0.75rem",
+                        fontWeight: "600",
+                        color: "#92400e",
+                        marginBottom: "0.25rem"
+                      }}>
+                        Frequency:
+                      </label>
+                      <select
+                        value={formData.hoaFrequency || "Monthly"}
+                        onChange={(e) => {
+                          updateFormData({ hoaFrequency: e.target.value });
+                          setFixApplied("frequency");
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "0.5rem",
+                          border: "2px solid #fbbf24",
+                          borderRadius: "6px",
+                          fontSize: "0.875rem",
+                          background: "#ffffff",
+                          cursor: "pointer"
+                        }}
+                      >
+                        <option value="Monthly">Monthly</option>
+                        <option value="Bi-weekly">Bi-weekly</option>
+                        <option value="Weekly">Weekly</option>
+                      </select>
+                    </div>
+                  )}
+                  {estimatedPrice.reviewReasons.some(r => r.includes("Special requirements")) && (
+                    <div>
+                      <label style={{
+                        display: "block",
+                        fontSize: "0.75rem",
+                        fontWeight: "600",
+                        color: "#92400e",
+                        marginBottom: "0.25rem"
+                      }}>
+                        Special Requirements:
+                      </label>
+                      <textarea
+                        value={
+                          formData.commercialSpecialRequirements ||
+                          formData.residentialSpecialRequirements ||
+                          formData.communityAccessRequirements ||
+                          ""
+                        }
+                        onChange={(e) => {
+                          if (formData.propertyType === "commercial") {
+                            updateFormData({ commercialSpecialRequirements: e.target.value });
+                          } else if (formData.propertyType === "residential") {
+                            updateFormData({ residentialSpecialRequirements: e.target.value });
+                          } else {
+                            updateFormData({ communityAccessRequirements: e.target.value });
+                          }
+                          setFixApplied("specialRequirements");
+                        }}
+                        placeholder="Leave empty for auto-approval"
+                        style={{
+                          width: "100%",
+                          padding: "0.5rem",
+                          border: "2px solid #fbbf24",
+                          borderRadius: "6px",
+                          fontSize: "0.875rem",
+                          background: "#ffffff",
+                          minHeight: "60px",
+                          resize: "vertical"
+                        }}
+                      />
+                      <div style={{
+                        fontSize: "0.7rem",
+                        color: "#78350f",
+                        marginTop: "0.25rem"
+                      }}>
+                        Leave empty to enable auto-approval
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Navigation to Previous Steps */}
+            <div style={{
+              padding: "0.75rem",
+              background: "#ffffff",
+              borderRadius: "8px",
+              border: "1px solid #fbbf24"
+            }}>
+              <div style={{
+                fontSize: "0.75rem",
+                fontWeight: "600",
+                color: "#92400e",
+                marginBottom: "0.5rem"
+              }}>
+                Or Modify Quote Details:
+              </div>
+              <div style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "0.5rem"
+              }}>
+                <button
+                  onClick={() => onNavigateToStep(1)}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    background: "#ffffff",
+                    border: "2px solid #fbbf24",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: "600",
+                    color: "#92400e",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#fef3c7";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ffffff";
+                  }}
+                >
+                  Step 1: Property Type
+                </button>
+                <button
+                  onClick={() => onNavigateToStep(2)}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    background: "#ffffff",
+                    border: "2px solid #fbbf24",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: "600",
+                    color: "#92400e",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#fef3c7";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ffffff";
+                  }}
+                >
+                  Step 2: Property Details
+                </button>
+                <button
+                  onClick={() => onNavigateToStep(3)}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    background: "#ffffff",
+                    border: "2px solid #fbbf24",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: "600",
+                    color: "#92400e",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#fef3c7";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ffffff";
+                  }}
+                >
+                  Step 3: Contact Info
+                </button>
+                <button
+                  onClick={() => onNavigateToStep(4)}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    background: "#ffffff",
+                    border: "2px solid #fbbf24",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: "600",
+                    color: "#92400e",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#fef3c7";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ffffff";
+                  }}
+                >
+                  Step 4: Additional Details
+                </button>
+              </div>
+            </div>
+
             <div style={{
               fontSize: "0.75rem",
-              color: "#991b1b",
-              fontWeight: "600",
-              marginBottom: "0.5rem"
+              color: "#78350f",
+              marginTop: "1rem",
+              padding: "0.75rem",
+              background: "#ffffff",
+              borderRadius: "6px",
+              border: "1px dashed #fbbf24"
             }}>
-              Review Reasons:
-            </div>
-            <ul style={{
-              fontSize: "0.75rem",
-              color: "#991b1b",
-              margin: 0,
-              paddingLeft: "1.25rem",
-              lineHeight: "1.5"
-            }}>
-              {estimatedPrice.reviewReasons.map((reason, index) => (
-                <li key={index}>{reason}</li>
-              ))}
-            </ul>
-            <div style={{
-              fontSize: "0.75rem",
-              color: "#991b1b",
-              marginTop: "0.75rem",
-              fontStyle: "italic"
-            }}>
-              Your quote request will be reviewed by our team. We'll contact you within 24 hours to discuss your needs and provide a final quote.
+              <strong>Note:</strong> If you prefer, you can submit as-is and our team will review your quote within 24 hours.
             </div>
           </div>
         )}

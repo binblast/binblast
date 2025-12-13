@@ -92,6 +92,12 @@ export function CustomQuoteWizard({ isOpen, onClose }: CustomQuoteWizardProps) {
     }
   };
 
+  const handleNavigateToStep = (step: number) => {
+    if (step >= 1 && step <= getTotalSteps()) {
+      setCurrentStep(step);
+    }
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
@@ -327,8 +333,10 @@ export function CustomQuoteWizard({ isOpen, onClose }: CustomQuoteWizardProps) {
           {currentStep === 5 && (
             <QuoteStep5Review
               formData={formData}
+              updateFormData={updateFormData}
               onSubmit={handleSubmit}
               onBack={handleBack}
+              onNavigateToStep={handleNavigateToStep}
               isSubmitting={isSubmitting}
             />
           )}
