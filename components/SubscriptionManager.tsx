@@ -143,7 +143,7 @@ export function SubscriptionManager({
           const cleaningDate = cleaningData.scheduledDate?.toDate?.() || new Date(cleaningData.scheduledDate);
           const isCompleted = cleaningData.status === "completed" || cleaningData.jobStatus === "completed";
           
-          if (isCompleted && billingPeriodStart && cleaningDate >= billingPeriodStart && cleaningDate <= billingPeriodEnd) {
+          if (isCompleted && billingPeriodStart && billingPeriodEnd && cleaningDate >= billingPeriodStart && cleaningDate <= billingPeriodEnd) {
             used++;
           }
         });
@@ -201,7 +201,7 @@ export function SubscriptionManager({
     const proratedAmountOwed = isUpgrade ? proratedAmountNew - proratedCredit : 0;
 
     // Calculate cleaning credits rollover
-    const cleaningCreditsRollover = billingPeriodStart 
+    const cleaningCreditsRollover = billingPeriodStart && billingPeriodEnd
       ? calculateCleaningRollover(
           currentPlanId,
           billingPeriodStart,
