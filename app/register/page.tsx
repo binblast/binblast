@@ -39,16 +39,17 @@ function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [verifyingSession, setVerifyingSession] = useState(!!sessionId);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [stripeData, setStripeData] = useState<{
     customerId: string | null;
     subscriptionId: string | null;
     customerEmail: string | null;
   } | null>(null);
 
-  // If referral code is present in URL, redirect to pricing page to choose plan
-  // User will register first, then go to checkout with their chosen plan
+  // If referral code is present in URL without session_id, redirect to pricing page to choose plan
+  // User must pay first before registering
   useEffect(() => {
-    if (referralCode && !sessionId && typeof window !== 'undefined') {
+    if (referralCode && !sessionId && !redirectParam && typeof window !== 'undefined') {
       const normalizedCode = referralCode.trim().toUpperCase();
       
       // Don't redirect if code is empty
@@ -60,7 +61,35 @@ function RegisterForm() {
       console.log("[Register] Referral code detected, redirecting to pricing page to choose plan:", normalizedCode);
       router.push(`/#pricing?ref=${normalizedCode}`);
     }
-  }, [referralCode, sessionId, router]);
+  }, [referralCode, sessionId, redirectParam, router]);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const { getAuthInstance } = await import("@/lib/firebase");
+        const auth = await getAuthInstance();
+        
+        if (auth?.currentUser) {
+          setIsLoggedIn(true);
+          
+          // If user is logged in and has session_id, they just paid
+          // Their account already exists, so redirect them to dashboard
+          if (sessionId) {
+            console.log("[Register] User is logged in and has payment session, redirecting to dashboard");
+            router.push("/dashboard");
+            return;
+          }
+        } else {
+          setIsLoggedIn(false);
+        }
+      } catch (err) {
+        console.error("[Register] Error checking auth:", err);
+      }
+    }
+    
+    checkAuth();
+  }, [sessionId, router]);
 
   // Verify Stripe session on mount if session_id is present
   useEffect(() => {
@@ -103,6 +132,13 @@ function RegisterForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    // Require session_id for customer registration (employee registration is handled separately)
+    if (!sessionId && !redirectParam) {
+      setError("Please complete payment before creating an account. Select a service plan first.");
+      router.push("/#pricing");
+      return;
+    }
 
     if (password !== confirm) {
       setError("Passwords do not match.");
@@ -439,8 +475,18 @@ function RegisterForm() {
         <div className="container">
           <div style={{ maxWidth: "600px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
-              Create Your Account
+              {sessionId ? "Complete Your Registration" : "Create Your Account"}
             </h1>
+            {!sessionId && (
+              <p style={{ textAlign: "center", color: "#dc2626", marginBottom: "1rem", fontSize: "0.875rem" }}>
+                Please select a service plan and complete payment before creating an account.
+              </p>
+            )}
+            {sessionId && (
+              <p style={{ textAlign: "center", color: "#16a34a", marginBottom: "1rem", fontSize: "0.875rem" }}>
+                Payment successful! Please complete your registration below.
+              </p>
+            )}
 
             {verifyingSession && (
               <div style={{
@@ -477,6 +523,25 @@ function RegisterForm() {
                   Account Created!
                 </h2>
                 <p style={{ color: "var(--text-light)" }}>Redirecting to your dashboard...</p>
+              </div>
+            ) : !sessionId && !redirectParam ? (
+              <div style={{ textAlign: "center", padding: "3rem 0" }}>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem", color: "#111827" }}>
+                  Select a Service Plan First
+                </h2>
+                <p style={{ color: "#6b7280", marginBottom: "2rem" }}>
+                  To create an account, please select a service plan and complete payment first.
+                </p>
+                <Link
+                  href="/#pricing"
+                  className="btn btn-primary"
+                  style={{
+                    display: "inline-block",
+                    textDecoration: "none",
+                  }}
+                >
+                  View Pricing Plans
+                </Link>
               </div>
             ) : (
               <div style={{
