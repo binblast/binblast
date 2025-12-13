@@ -898,7 +898,7 @@ function DashboardPageContent() {
 
   // Compute filtered customers for admin view
   const filteredCustomers = useMemo(() => {
-    if (!isAdmin) return [];
+    if (!roleDetermined || !isAdmin) return [];
     const searchTerm = customerFilter.search || "";
     const planFilter = customerFilter.plan || "";
     const sourceFilter = customerFilter.source || "";
@@ -916,7 +916,7 @@ function DashboardPageContent() {
       if (sourceFilter && customer.source !== sourceFilter) return false;
       return true;
     });
-  }, [isAdmin, allCustomers, customerFilter.search, customerFilter.plan, customerFilter.source]);
+  }, [roleDetermined, isAdmin, allCustomers, customerFilter.search, customerFilter.plan, customerFilter.source]);
 
   // Get next cleaning
   const getNextCleaning = () => {
@@ -994,7 +994,7 @@ function DashboardPageContent() {
 
   // Compute filtered customers for operator view
   const filteredDirectCustomers = useMemo(() => {
-    if (!isOperator) return [];
+    if (!roleDetermined || !isOperator) return [];
     let filtered = operatorDirectCustomers;
     
     if (operatorCustomerSearch) {
@@ -1022,7 +1022,7 @@ function DashboardPageContent() {
     }
     
     return filtered;
-  }, [isOperator, operatorDirectCustomers, operatorCustomerSearch, operatorCustomerFilter]);
+  }, [roleDetermined, isOperator, operatorDirectCustomers, operatorCustomerSearch, operatorCustomerFilter]);
 
   // Helper function to safely convert scheduledDate to Date object
   const getCleaningDate = (cleaning: any): Date => {
@@ -1054,7 +1054,7 @@ function DashboardPageContent() {
   };
 
   const filteredCleanings = useMemo(() => {
-    if (!isOperator) return [];
+    if (!roleDetermined || !isOperator) return [];
     let filtered = operatorAllCleanings;
     
     if (operatorDateFilter) {
@@ -1087,10 +1087,10 @@ function DashboardPageContent() {
     }
     
     return filtered;
-  }, [isOperator, operatorAllCleanings, operatorDateFilter, operatorCityFilter, operatorTypeFilter]);
+  }, [roleDetermined, isOperator, operatorAllCleanings, operatorDateFilter, operatorCityFilter, operatorTypeFilter]);
 
   const cleaningsByDate = useMemo(() => {
-    if (!isOperator) return {};
+    if (!roleDetermined || !isOperator) return {};
     const grouped: Record<string, any[]> = {};
     filteredCleanings.forEach(cleaning => {
       const date = getCleaningDate(cleaning);
@@ -1101,7 +1101,7 @@ function DashboardPageContent() {
       grouped[dateKey].push(cleaning);
     });
     return grouped;
-  }, [isOperator, filteredCleanings]);
+  }, [roleDetermined, isOperator, filteredCleanings]);
 
   // Show loading state until role is determined
   if (loading || !roleDetermined || !userId) {
