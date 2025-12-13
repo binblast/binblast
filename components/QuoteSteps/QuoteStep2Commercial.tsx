@@ -170,7 +170,7 @@ export function QuoteStep2Commercial({
             marginBottom: "0.75rem",
             lineHeight: "1.5"
           }}>
-            Dumpster pad cleaning is a high-value sanitation service that includes hot water wash, degreasing, and odor control. Pricing varies by frequency and helps ensure health department compliance.
+            Dumpster pad cleaning is a high-value sanitation service that includes hot water wash, degreasing, and odor control. Helps ensure health department compliance. Additional $75/month minimum.
           </p>
           <div style={{
             display: "flex",
@@ -217,7 +217,7 @@ export function QuoteStep2Commercial({
               No
             </button>
           </div>
-          {formData.dumpsterPadCleaning && formData.commercialFrequency && (
+          {formData.dumpsterPadCleaning && (
             <div style={{
               marginTop: "0.75rem",
               padding: "0.75rem",
@@ -228,12 +228,10 @@ export function QuoteStep2Commercial({
               color: "#166534"
             }}>
               <div style={{ fontWeight: "600", marginBottom: "0.25rem" }}>
-                {formData.commercialFrequency === "Monthly" && "Package A - Essential Pad Care: $150-$195/month"}
-                {formData.commercialFrequency === "Bi-weekly" && "Package B - Sanitation Plus: $250-$350/month"}
-                {formData.commercialFrequency === "Weekly" && "Package C - Health-Grade Protection: $400-$600/month"}
+                Dumpster Pad Cleaning: +$75/month
               </div>
               <div style={{ fontSize: "0.7rem", marginTop: "0.25rem" }}>
-                Includes hot water wash, degreasing, odor control, and compliance protection.
+                Includes hot water wash, degreasing, odor control, and compliance protection. Minimum total service price: $150/month.
               </div>
             </div>
           )}

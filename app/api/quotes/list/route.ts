@@ -24,6 +24,13 @@ export async function GET(request: NextRequest) {
 
     if (status === "all") {
       quotesQuery = query(quotesRef, orderBy("submittedAt", "desc"));
+    } else if (status === "pending_review") {
+      // Filter for quotes requiring manual review
+      quotesQuery = query(
+        quotesRef,
+        where("requiresManualReview", "==", true),
+        orderBy("submittedAt", "desc")
+      );
     } else {
       quotesQuery = query(
         quotesRef,

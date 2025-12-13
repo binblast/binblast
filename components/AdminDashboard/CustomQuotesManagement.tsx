@@ -10,8 +10,16 @@ interface CustomQuote {
   email: string;
   phone: string;
   address: string;
-  status: "pending" | "contacted" | "quoted" | "converted";
+  status: "pending" | "pending_review" | "contacted" | "quoted" | "converted";
   estimatedPrice?: number;
+  estimatedPriceLow?: number;
+  estimatedPriceHigh?: number;
+  originalCalculatedPrice?: number;
+  safeguardAdjustedPrice?: number;
+  safeguardReasons?: string[];
+  requiresManualReview?: boolean;
+  reviewReasons?: string[];
+  minimumPriceEnforced?: boolean;
   submittedAt: any;
   [key: string]: any;
 }
@@ -64,6 +72,8 @@ export function CustomQuotesManagement() {
     switch (status) {
       case "pending":
         return "#f59e0b";
+      case "pending_review":
+        return "#dc2626";
       case "contacted":
         return "#2563eb";
       case "quoted":
@@ -79,6 +89,8 @@ export function CustomQuotesManagement() {
     switch (status) {
       case "pending":
         return "#fef3c7";
+      case "pending_review":
+        return "#fee2e2";
       case "contacted":
         return "#dbeafe";
       case "quoted":
@@ -87,6 +99,23 @@ export function CustomQuotesManagement() {
         return "#dcfce7";
       default:
         return "#f3f4f6";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "pending_review":
+        return "Requires Review";
+      case "pending":
+        return "Pending";
+      case "contacted":
+        return "Contacted";
+      case "quoted":
+        return "Quoted";
+      case "converted":
+        return "Converted";
+      default:
+        return status;
     }
   };
 
@@ -157,26 +186,28 @@ export function CustomQuotesManagement() {
           gap: "0.5rem",
           flexWrap: "wrap"
         }}>
-          {["all", "pending", "contacted", "quoted", "converted"].map((status) => (
+          {["all", "pending", "pending_review", "contacted", "quoted", "converted"].map((status) => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
               style={{
                 padding: "0.5rem 1rem",
                 background: filterStatus === status
-                  ? "linear-gradient(135deg, #16a34a 0%, #15803d 100%)"
+                  ? status === "pending_review" 
+                    ? "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)"
+                    : "linear-gradient(135deg, #16a34a 0%, #15803d 100%)"
                   : "#f9fafb",
-                border: `2px solid ${filterStatus === status ? "#16a34a" : "#e5e7eb"}`,
+                border: `2px solid ${filterStatus === status ? (status === "pending_review" ? "#dc2626" : "#16a34a") : "#e5e7eb"}`,
                 borderRadius: "8px",
                 fontSize: "0.875rem",
                 fontWeight: "600",
                 color: filterStatus === status ? "#ffffff" : "#6b7280",
                 cursor: "pointer",
-                textTransform: "capitalize",
+                textTransform: status === "pending_review" ? "none" : "capitalize",
                 transition: "all 0.2s ease"
               }}
             >
-              {status}
+              {status === "pending_review" ? "Requires Review" : status}
             </button>
           ))}
         </div>
@@ -246,8 +277,21 @@ export function CustomQuotesManagement() {
                       background: getStatusBg(quote.status),
                       color: getStatusColor(quote.status)
                     }}>
-                      {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+                      {getStatusLabel(quote.status)}
                     </span>
+                    {quote.requiresManualReview && (
+                      <span style={{
+                        padding: "0.25rem 0.75rem",
+                        borderRadius: "6px",
+                        fontSize: "0.75rem",
+                        fontWeight: "600",
+                        background: "#fee2e2",
+                        color: "#dc2626",
+                        marginLeft: "0.5rem"
+                      }}>
+                        ⚠️ Review Required
+                      </span>
+                    )}
                   </div>
                   <div style={{
                     fontSize: "0.875rem",
@@ -263,13 +307,30 @@ export function CustomQuotesManagement() {
                   }}>
                     {getPropertyTypeLabel(quote.propertyType)} • {quote.address}
                   </div>
-                  {quote.estimatedPrice && (
+                  {quote.estimatedPriceLow && quote.estimatedPriceHigh ? (
+                    <div style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      color: "#16a34a"
+                    }}>
+                      Est. Price: ${quote.estimatedPriceLow.toLocaleString()} - ${quote.estimatedPriceHigh.toLocaleString()}/month
+                    </div>
+                  ) : quote.estimatedPrice ? (
                     <div style={{
                       fontSize: "0.875rem",
                       fontWeight: "600",
                       color: "#16a34a"
                     }}>
                       Est. Price: ${quote.estimatedPrice.toLocaleString()}/month
+                    </div>
+                  ) : null}
+                  {quote.minimumPriceEnforced && quote.originalCalculatedPrice && (
+                    <div style={{
+                      fontSize: "0.75rem",
+                      color: "#f59e0b",
+                      marginTop: "0.25rem"
+                    }}>
+                      ⚠️ Price adjusted from ${quote.originalCalculatedPrice.toLocaleString()}
                     </div>
                   )}
                   <div style={{
@@ -354,6 +415,84 @@ export function CustomQuotesManagement() {
                   borderTop: "2px solid #e5e7eb",
                   animation: "fadeInUp 0.3s ease-out"
                 }}>
+                  {/* Safeguard Information */}
+                  {(quote.requiresManualReview || quote.minimumPriceEnforced || quote.safeguardReasons) && (
+                    <div style={{
+                      marginBottom: "1rem",
+                      padding: "1rem",
+                      background: quote.requiresManualReview ? "#fee2e2" : "#fef3c7",
+                      borderRadius: "8px",
+                      border: `2px solid ${quote.requiresManualReview ? "#dc2626" : "#fbbf24"}`
+                    }}>
+                      <div style={{
+                        fontSize: "0.875rem",
+                        fontWeight: "700",
+                        color: quote.requiresManualReview ? "#991b1b" : "#92400e",
+                        marginBottom: "0.75rem"
+                      }}>
+                        {quote.requiresManualReview ? "⚠️ Manual Review Required" : "💰 Pricing Safeguards Applied"}
+                      </div>
+                      {quote.reviewReasons && quote.reviewReasons.length > 0 && (
+                        <div style={{ marginBottom: "0.75rem" }}>
+                          <div style={{
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#991b1b",
+                            marginBottom: "0.25rem"
+                          }}>
+                            Review Reasons:
+                          </div>
+                          <ul style={{
+                            fontSize: "0.75rem",
+                            color: "#991b1b",
+                            margin: 0,
+                            paddingLeft: "1.25rem",
+                            lineHeight: "1.5"
+                          }}>
+                            {quote.reviewReasons.map((reason: string, idx: number) => (
+                              <li key={idx}>{reason}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {quote.safeguardReasons && quote.safeguardReasons.length > 0 && (
+                        <div style={{ marginBottom: "0.75rem" }}>
+                          <div style={{
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            color: "#92400e",
+                            marginBottom: "0.25rem"
+                          }}>
+                            Safeguard Reasons:
+                          </div>
+                          <ul style={{
+                            fontSize: "0.75rem",
+                            color: "#92400e",
+                            margin: 0,
+                            paddingLeft: "1.25rem",
+                            lineHeight: "1.5"
+                          }}>
+                            {quote.safeguardReasons.map((reason: string, idx: number) => (
+                              <li key={idx}>{reason}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {quote.originalCalculatedPrice && quote.minimumPriceEnforced && (
+                        <div style={{
+                          fontSize: "0.75rem",
+                          color: "#92400e",
+                          marginTop: "0.5rem",
+                          paddingTop: "0.5rem",
+                          borderTop: "1px solid #fbbf24"
+                        }}>
+                          <strong>Original Price:</strong> ${quote.originalCalculatedPrice.toLocaleString()}/month<br />
+                          <strong>Adjusted Price:</strong> ${quote.estimatedPrice?.toLocaleString() || quote.safeguardAdjustedPrice?.toLocaleString() || "N/A"}/month
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",

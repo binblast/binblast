@@ -3,6 +3,7 @@
 
 import { useMemo } from "react";
 import { QuoteFormData } from "../CustomQuoteWizard";
+import { calculatePricingWithSafeguards, PricingInput } from "@/lib/pricing-safeguards";
 
 interface QuoteStep5ReviewProps {
   formData: QuoteFormData;
@@ -17,197 +18,40 @@ export function QuoteStep5Review({
   onBack,
   isSubmitting,
 }: QuoteStep5ReviewProps) {
-  const estimatedPrice = useMemo(() => {
-    // Residential pricing
-    if (formData.propertyType === "residential") {
-      const basePrice = 55; // Updated base monthly price
-      const binPrice = (formData.residentialBins || 1) * 10; // $10 per bin
-      
-      let frequencyMultiplier = 1;
-      if (formData.residentialFrequency === "Weekly") {
-        frequencyMultiplier = 4;
-      } else if (formData.residentialFrequency === "Bi-weekly") {
-        frequencyMultiplier = 2;
-      }
-      
-      const total = (basePrice + binPrice) * frequencyMultiplier;
-      let lowEstimate = Math.floor(total * 0.85);
-      let highEstimate = Math.ceil(total * 1.15);
-      
-      // Cap residential range to $55-$85/month
-      lowEstimate = Math.max(lowEstimate, 55);
-      highEstimate = Math.min(highEstimate, 85);
-      
-      // Ensure low <= high
-      if (lowEstimate > highEstimate) {
-        const temp = lowEstimate;
-        lowEstimate = highEstimate;
-        highEstimate = temp;
-      }
-      
-      return { 
-        low: lowEstimate, 
-        high: highEstimate, 
-        base: total,
-        recommendedBundle: null,
-        padPackageTier: null
-      };
-    }
-    
-    // Commercial pricing
-    if (formData.propertyType === "commercial") {
-      const isRestaurant = formData.commercialType === "Restaurant";
-      const hasDumpsterPad = formData.dumpsterPadCleaning === true;
-      const frequency = formData.commercialFrequency;
-      const dumpsterCount = formData.commercialBins || 1;
-      
-      // Base dumpster cleaning price
-      // First dumpster included in base price, additional dumpsters cost extra
-      const dumpsterBasePrice = isRestaurant ? 120 : 95;
-      const additionalDumpsterFee = isRestaurant ? 20 : 15;
-      const additionalDumpsters = Math.max(0, dumpsterCount - 1); // Number of dumpsters beyond the first
-      const dumpsterPrice = dumpsterBasePrice + (additionalDumpsters * additionalDumpsterFee);
-      
-      // Apply frequency multiplier to dumpster cleaning
-      let dumpsterMonthlyPrice = dumpsterPrice;
-      if (frequency === "Bi-weekly") {
-        dumpsterMonthlyPrice *= 2;
-      } else if (frequency === "Weekly") {
-        dumpsterMonthlyPrice *= 4;
-      }
-      
-      // Dumpster pad package pricing (tiered)
-      let padPackagePrice = 0;
-      let padPackageTier: "A" | "B" | "C" | null = null;
-      
-      if (hasDumpsterPad) {
-        if (frequency === "Monthly") {
-          padPackagePrice = 150; // Package A
-          padPackageTier = "A";
-        } else if (frequency === "Bi-weekly") {
-          padPackagePrice = 250; // Package B
-          padPackageTier = "B";
-        } else if (frequency === "Weekly") {
-          padPackagePrice = 400; // Package C
-          padPackageTier = "C";
-        }
-      }
-      
-      // Calculate total
-      let totalPrice = dumpsterMonthlyPrice + padPackagePrice;
-      
-      // Bundle detection
-      let recommendedBundle: string | null = null;
-      if (hasDumpsterPad) {
-        if (isRestaurant && frequency === "Weekly") {
-          recommendedBundle = "Premium Property Protection";
-        } else if (isRestaurant && frequency === "Bi-weekly") {
-          recommendedBundle = "Restaurant Compliance Bundle";
-        } else if (frequency === "Bi-weekly") {
-          recommendedBundle = "Commercial Clean Site Bundle";
-        } else if (frequency === "Monthly") {
-          recommendedBundle = "Commercial Clean Site Bundle";
-        }
-      }
-      
-      // Minimum price enforcement
-      let minimumPriceEnforced = false;
-      if (isRestaurant && hasDumpsterPad && frequency === "Weekly") {
-        if (totalPrice < 350) {
-          totalPrice = 350;
-          minimumPriceEnforced = true;
-        }
-      } else if (isRestaurant && hasDumpsterPad && frequency === "Bi-weekly") {
-        if (totalPrice < 250) {
-          totalPrice = 250;
-          minimumPriceEnforced = true;
-        }
-      } else if (isRestaurant && hasDumpsterPad && frequency === "Monthly") {
-        if (totalPrice < 150) {
-          totalPrice = 150;
-          minimumPriceEnforced = true;
-        }
-      }
-      
-      // Calculate range (±15-20%)
-      let lowEstimate = Math.floor(totalPrice * 0.85);
-      let highEstimate = Math.ceil(totalPrice * 1.15);
-      
-      // Cap ranges based on package tiers and frequency
-      if (hasDumpsterPad) {
-        if (frequency === "Monthly") {
-          lowEstimate = Math.max(lowEstimate, 150);
-          highEstimate = Math.min(highEstimate, 195);
-        } else if (frequency === "Bi-weekly") {
-          lowEstimate = Math.max(lowEstimate, 250);
-          highEstimate = Math.min(highEstimate, 350);
-        } else if (frequency === "Weekly") {
-          lowEstimate = Math.max(lowEstimate, 400);
-          highEstimate = Math.min(highEstimate, 600);
-        }
-      } else {
-        // Commercial without pad - cap by frequency
-        if (frequency === "Monthly") {
-          lowEstimate = Math.max(lowEstimate, 95);
-          highEstimate = Math.min(highEstimate, 160);
-        } else if (frequency === "Bi-weekly") {
-          lowEstimate = Math.max(lowEstimate, 160);
-          highEstimate = Math.min(highEstimate, 240);
-        } else if (frequency === "Weekly") {
-          lowEstimate = Math.max(lowEstimate, 280);
-          highEstimate = Math.min(highEstimate, 400);
-        }
-      }
-      
-      // Ensure low <= high (fix any inversion from capping)
-      if (lowEstimate > highEstimate) {
-        const temp = lowEstimate;
-        lowEstimate = highEstimate;
-        highEstimate = temp;
-      }
-      
-      return {
-        low: lowEstimate,
-        high: highEstimate,
-        base: totalPrice,
-        dumpsterPrice: dumpsterMonthlyPrice,
-        padPrice: padPackagePrice,
-        padPackageTier,
-        recommendedBundle,
-        minimumPriceEnforced
-      };
-    }
-    
-    // HOA pricing (keep existing logic)
-    if (formData.propertyType === "hoa") {
-      const units = formData.hoaUnits || 1;
-      const bins = formData.hoaBins || 1;
-      
-      const basePrice = units * 25;
-      const binPrice = bins * 8;
-      
-      let frequencyMultiplier = 1;
-      if (formData.hoaFrequency === "Weekly") {
-        frequencyMultiplier = 4;
-      } else if (formData.hoaFrequency === "Bi-weekly") {
-        frequencyMultiplier = 2;
-      }
-      
-      const total = (basePrice + binPrice) * frequencyMultiplier;
-      const lowEstimate = Math.floor(total * 0.85);
-      const highEstimate = Math.ceil(total * 1.15);
-      
-      return { 
-        low: lowEstimate, 
-        high: highEstimate, 
-        base: total,
-        recommendedBundle: null,
-        padPackageTier: null
-      };
-    }
-    
-    return { low: 0, high: 0, base: 0, recommendedBundle: null, padPackageTier: null };
+  const pricingResult = useMemo(() => {
+    const input: PricingInput = {
+      propertyType: formData.propertyType!,
+      commercialType: formData.commercialType,
+      dumpsterCount: formData.commercialBins,
+      hasDumpsterPad: formData.dumpsterPadCleaning,
+      frequency: (formData.commercialFrequency || formData.residentialFrequency || formData.hoaFrequency || "Monthly") as "Monthly" | "Bi-weekly" | "Weekly",
+      specialRequirements: formData.commercialSpecialRequirements || formData.residentialSpecialRequirements || formData.communityAccessRequirements || formData.specialInstructions,
+      residentialBins: formData.residentialBins,
+      hoaUnits: formData.hoaUnits,
+      hoaBins: formData.hoaBins,
+    };
+
+    return calculatePricingWithSafeguards(input);
   }, [formData]);
+
+  // Legacy compatibility - maintain existing structure for UI
+  const estimatedPrice = {
+    low: pricingResult.lowEstimate,
+    high: pricingResult.highEstimate,
+    base: pricingResult.finalPrice,
+    recommendedBundle: pricingResult.requiresManualReview ? null : (
+      formData.propertyType === "commercial" && formData.dumpsterPadCleaning ? (
+        formData.commercialType === "Restaurant" && formData.commercialFrequency === "Weekly" ? "Premium Property Protection" :
+        formData.commercialType === "Restaurant" && formData.commercialFrequency === "Bi-weekly" ? "Restaurant Compliance Bundle" :
+        "Commercial Clean Site Bundle"
+      ) : null
+    ),
+    padPackageTier: null as "A" | "B" | "C" | null,
+    minimumPriceEnforced: pricingResult.minimumPriceEnforced,
+    requiresManualReview: pricingResult.requiresManualReview,
+    reviewReasons: pricingResult.reviewReasons,
+    safeguardReasons: pricingResult.safeguardReasons,
+  };
 
   const getPropertyTypeLabel = () => {
     switch (formData.propertyType) {
@@ -342,6 +186,95 @@ export function QuoteStep5Review({
         }}>
           * Final pricing may adjust based on grease levels, access, water availability, and environmental requirements. This is an estimated operational price range for sanitation and compliance services, not a final quote.
         </div>
+
+        {/* Safeguard Reasons */}
+        {estimatedPrice.safeguardReasons && estimatedPrice.safeguardReasons.length > 0 && (
+          <div style={{
+            marginTop: "1rem",
+            padding: "0.75rem",
+            background: "#fef3c7",
+            borderRadius: "8px",
+            border: "1px solid #fbbf24"
+          }}>
+            <div style={{
+              fontSize: "0.75rem",
+              fontWeight: "600",
+              color: "#92400e",
+              marginBottom: "0.5rem"
+            }}>
+              Price Adjustment Applied:
+            </div>
+            <ul style={{
+              fontSize: "0.75rem",
+              color: "#92400e",
+              margin: 0,
+              paddingLeft: "1.25rem",
+              lineHeight: "1.5"
+            }}>
+              {estimatedPrice.safeguardReasons.map((reason, index) => (
+                <li key={index}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Manual Review Required */}
+        {estimatedPrice.requiresManualReview && (
+          <div style={{
+            marginTop: "1rem",
+            padding: "1rem",
+            background: "#fee2e2",
+            borderRadius: "8px",
+            border: "2px solid #dc2626"
+          }}>
+            <div style={{
+              fontSize: "0.875rem",
+              fontWeight: "700",
+              color: "#991b1b",
+              marginBottom: "0.5rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem"
+            }}>
+              ⚠️ Manual Review Required
+            </div>
+            <div style={{
+              fontSize: "0.875rem",
+              color: "#991b1b",
+              marginBottom: "0.75rem",
+              lineHeight: "1.5"
+            }}>
+              This service requires a custom review to ensure proper sanitation and scheduling.
+            </div>
+            <div style={{
+              fontSize: "0.75rem",
+              color: "#991b1b",
+              fontWeight: "600",
+              marginBottom: "0.5rem"
+            }}>
+              Review Reasons:
+            </div>
+            <ul style={{
+              fontSize: "0.75rem",
+              color: "#991b1b",
+              margin: 0,
+              paddingLeft: "1.25rem",
+              lineHeight: "1.5"
+            }}>
+              {estimatedPrice.reviewReasons.map((reason, index) => (
+                <li key={index}>{reason}</li>
+              ))}
+            </ul>
+            <div style={{
+              fontSize: "0.75rem",
+              color: "#991b1b",
+              marginTop: "0.75rem",
+              fontStyle: "italic"
+            }}>
+              Your quote request will be reviewed by our team. We'll contact you within 24 hours to discuss your needs and provide a final quote.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Property Details */}
@@ -540,11 +473,11 @@ export function QuoteStep5Review({
         </button>
         <button
           onClick={onSubmit}
-          disabled={isSubmitting}
+          disabled={isSubmitting || estimatedPrice.requiresManualReview}
           style={{
             flex: 2,
             padding: "clamp(0.875rem, 2vw, 1rem)",
-            background: isSubmitting
+            background: isSubmitting || estimatedPrice.requiresManualReview
               ? "#9ca3af"
               : "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
             border: "none",
@@ -552,13 +485,14 @@ export function QuoteStep5Review({
             fontSize: "clamp(0.95rem, 2vw, 1rem)",
             fontWeight: "700",
             color: "#ffffff",
-            cursor: isSubmitting ? "not-allowed" : "pointer",
+            cursor: isSubmitting || estimatedPrice.requiresManualReview ? "not-allowed" : "pointer",
             minHeight: "44px",
-            boxShadow: isSubmitting ? "none" : "0 4px 12px rgba(22, 163, 74, 0.3)",
-            transition: "all 0.2s ease"
+            boxShadow: isSubmitting || estimatedPrice.requiresManualReview ? "none" : "0 4px 12px rgba(22, 163, 74, 0.3)",
+            transition: "all 0.2s ease",
+            opacity: estimatedPrice.requiresManualReview ? 0.6 : 1
           }}
         >
-          {isSubmitting ? "Submitting..." : "Submit Quote Request"}
+          {isSubmitting ? "Submitting..." : estimatedPrice.requiresManualReview ? "Manual Review Required" : "Submit Quote Request"}
         </button>
       </div>
 
