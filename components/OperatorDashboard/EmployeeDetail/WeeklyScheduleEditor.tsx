@@ -50,11 +50,27 @@ export function WeeklyScheduleEditor({ employeeId, weekStartDate }: WeeklySchedu
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
 
   useEffect(() => {
     loadSchedule();
     loadTemplates();
   }, [employeeId, selectedWeekStart]);
+
+  // Close template dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showTemplateDropdown && !target.closest('[data-template-dropdown]')) {
+        setShowTemplateDropdown(false);
+      }
+    };
+
+    if (showTemplateDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showTemplateDropdown]);
 
   const loadSchedule = async () => {
     try {
@@ -80,6 +96,8 @@ export function WeeklyScheduleEditor({ employeeId, weekStartDate }: WeeklySchedu
       if (response.ok) {
         const data = await response.json();
         setTemplates(data.templates || []);
+      } else {
+        console.error("Failed to load templates:", response.statusText);
       }
     } catch (error) {
       console.error("Error loading templates:", error);
@@ -102,9 +120,11 @@ export function WeeklyScheduleEditor({ employeeId, weekStartDate }: WeeklySchedu
         throw new Error("Failed to save schedule");
       }
 
-      alert("Schedule saved successfully");
+      const result = await response.json();
+      alert(result.message || "Schedule saved successfully");
     } catch (error: any) {
-      alert(error.message || "Failed to save schedule");
+      console.error("Error saving schedule:", error);
+      alert(error.message || "Failed to save schedule. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -122,20 +142,46 @@ export function WeeklyScheduleEditor({ employeeId, weekStartDate }: WeeklySchedu
       if (response.ok) {
         const data = await response.json();
         if (data.schedule && data.schedule.schedule) {
-          setSchedule(data.schedule.schedule);
-          alert("Last week's schedule copied");
+          // Ensure schedule is properly ordered by dayOfWeek
+          const orderedSchedule = DAYS_OF_WEEK.map(dayInfo => {
+            const daySchedule = data.schedule.schedule.find((s: DaySchedule) => s.dayOfWeek === dayInfo.day);
+            return daySchedule || {
+              dayOfWeek: dayInfo.day,
+              isWorking: false,
+              startTime: "",
+              endTime: "",
+              maxStops: 0,
+            };
+          });
+          setSchedule(orderedSchedule);
+          alert("Last week's schedule copied successfully");
         } else {
           alert("No schedule found for last week");
         }
+      } else {
+        alert("Failed to load last week's schedule");
       }
     } catch (error) {
+      console.error("Error copying last week:", error);
       alert("Failed to copy last week's schedule");
     }
   };
 
   const handleApplyTemplate = (template: any) => {
     if (template.schedule) {
-      setSchedule(template.schedule);
+      // Ensure schedule is properly ordered by dayOfWeek
+      const orderedSchedule = DAYS_OF_WEEK.map(dayInfo => {
+        const daySchedule = template.schedule.find((s: DaySchedule) => s.dayOfWeek === dayInfo.day);
+        return daySchedule || {
+          dayOfWeek: dayInfo.day,
+          isWorking: false,
+          startTime: "",
+          endTime: "",
+          maxStops: 0,
+        };
+      });
+      setSchedule(orderedSchedule);
+      setShowTemplateDropdown(false);
       alert(`Template "${template.name}" applied`);
     }
   };
@@ -172,7 +218,7 @@ export function WeeklyScheduleEditor({ employeeId, weekStartDate }: WeeklySchedu
         <h3 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#111827" }}>
           Weekly Work Schedule
         </h3>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "0.5rem", position: "relative" }}>
           <button
             onClick={handleCopyLastWeek}
             style={{
@@ -184,30 +230,110 @@ export function WeeklyScheduleEditor({ employeeId, weekStartDate }: WeeklySchedu
               fontSize: "0.875rem",
               fontWeight: "600",
               cursor: "pointer",
+              transition: "background 0.2s",
             }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#4b5563"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "#6b7280"}
           >
             Copy Last Week
           </button>
           {templates.length > 0 && (
-            <select
-              onChange={(e) => {
-                const template = templates.find(t => t.id === e.target.value);
-                if (template) handleApplyTemplate(template);
-              }}
-              defaultValue=""
-              style={{
-                padding: "0.5rem 1rem",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-                fontSize: "0.875rem",
-                cursor: "pointer",
-              }}
-            >
-              <option value="">Apply Template...</option>
-              {templates.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
+            <div style={{ position: "relative" }} data-template-dropdown>
+              <button
+                onClick={() => setShowTemplateDropdown(!showTemplateDropdown)}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: "#ffffff",
+                  color: "#374151",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "6px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#9ca3af";
+                  e.currentTarget.style.background = "#f9fafb";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#e5e7eb";
+                  e.currentTarget.style.background = "#ffffff";
+                }}
+              >
+                Apply Template...
+                <span style={{ fontSize: "0.75rem" }}>▼</span>
+              </button>
+              {showTemplateDropdown && (
+                <>
+                  <div
+                    style={{
+                      position: "fixed",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 998,
+                    }}
+                    onClick={() => setShowTemplateDropdown(false)}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      right: 0,
+                      marginTop: "0.25rem",
+                      background: "#ffffff",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "6px",
+                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                      minWidth: "280px",
+                      zIndex: 999,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "0.5rem 0.75rem",
+                        background: "#f9fafb",
+                        borderBottom: "1px solid #e5e7eb",
+                        fontSize: "0.75rem",
+                        fontWeight: "600",
+                        color: "#6b7280",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Apply Template...
+                    </div>
+                    {templates.map(template => (
+                      <button
+                        key={template.id}
+                        onClick={() => handleApplyTemplate(template)}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem 1rem",
+                          background: "#ffffff",
+                          border: "none",
+                          borderBottom: "1px solid #f3f4f6",
+                          textAlign: "left",
+                          fontSize: "0.875rem",
+                          color: "#374151",
+                          cursor: "pointer",
+                          transition: "background 0.15s",
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "#f9fafb"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "#ffffff"}
+                      >
+                        {template.name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
