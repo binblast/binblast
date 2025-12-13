@@ -146,7 +146,7 @@ service cloud.firestore {
       // Operators/admins can create cleanings and assign them to employees
       allow create: if (
         (isAuthenticated() 
-          && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
           && request.resource.data.keys().hasAll(['userId', 'userEmail', 'addressLine1', 'city', 'state', 'zipCode', 'trashDay', 'scheduledDate', 'scheduledTime', 'status']))
         || isAdminOrOperator() // Operators/admins can create and assign jobs
       );
