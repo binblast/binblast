@@ -2012,9 +2012,17 @@ function DashboardPageContent() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: "calc(100vh - 80px)", padding: "3rem 0", background: "#f9fafb" }}>
+      <main style={{ 
+        minHeight: "calc(100vh - 80px)", 
+        padding: "clamp(1.5rem, 4vw, 3rem) 0", 
+        background: "#f9fafb" 
+      }}>
         <div className="container">
-          <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <div style={{ 
+            maxWidth: "1200px", 
+            margin: "0 auto",
+            padding: "0 clamp(1rem, 4vw, 2rem)"
+          }}>
             
             {/* (A) Hero Welcome + Status Summary */}
             <div style={{ 
@@ -2059,8 +2067,14 @@ function DashboardPageContent() {
                     display: "flex",
                     gap: "0.75rem",
                     flexWrap: "wrap",
-                    animation: "slideDown 0.4s ease-out"
-                  }}>
+                    animation: "slideDown 0.4s ease-out",
+                    overflowX: "auto",
+                    WebkitOverflowScrolling: "touch",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none"
+                  }}
+                  className="hide-scrollbar tab-navigation"
+                  >
                     {(["overview", "customers", "operations", "financial", "partners", "analytics"] as const).map((tab) => (
                       <button
                         key={tab}
@@ -2068,10 +2082,10 @@ function DashboardPageContent() {
                         style={{
                           flex: "1",
                           minWidth: "120px",
-                          padding: "0.875rem 1.75rem",
+                          padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 3vw, 1.75rem)",
                           border: "none",
                           borderRadius: "10px",
-                          fontSize: "0.95rem",
+                          fontSize: "clamp(0.875rem, 2vw, 0.95rem)",
                           fontWeight: "700",
                           cursor: "pointer",
                           background: adminActiveTab === tab 
@@ -2085,6 +2099,7 @@ function DashboardPageContent() {
                             ? "0 4px 12px rgba(22, 163, 74, 0.3)" 
                             : "none",
                           transform: adminActiveTab === tab ? "scale(1.05)" : "scale(1)",
+                          whiteSpace: "nowrap"
                         }}
                         onMouseEnter={(e) => {
                           if (adminActiveTab !== tab) {
@@ -2154,7 +2169,7 @@ function DashboardPageContent() {
                   <div style={{
                     background: "#ffffff",
                     borderRadius: "20px",
-                    padding: "2rem",
+                    padding: "clamp(1rem, 4vw, 2rem)",
                     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                     border: "1px solid #e5e7eb",
                     position: "relative",
@@ -2197,7 +2212,9 @@ function DashboardPageContent() {
                       gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                       gap: "1.25rem",
                       marginBottom: "2rem"
-                    }}>
+                    }}
+                    className="responsive-grid"
+                    >
                       <KPICard
                         title="Total Active Customers"
                         value={adminStats.totalCustomers}
@@ -2667,8 +2684,19 @@ function DashboardPageContent() {
                   </div>
 
                   {/* Customers Table */}
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <div style={{ 
+                    overflowX: "auto",
+                    WebkitOverflowScrolling: "touch",
+                    margin: "0 -1rem",
+                    padding: "0 1rem"
+                  }}
+                  className="table-responsive"
+                  >
+                    <table style={{ 
+                      width: "100%", 
+                      borderCollapse: "collapse",
+                      minWidth: "600px"
+                    }}>
                       <thead>
                         <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
                           <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Name</th>

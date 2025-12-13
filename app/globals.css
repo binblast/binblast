@@ -178,3 +178,227 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
+/* ============================================ */
+/* RESPONSIVE DESIGN UTILITIES */
+/* ============================================ */
+
+/* Mobile-first breakpoints */
+/* Small devices (phones, 320px and up) */
+/* Default styles are mobile-first */
+
+/* Medium devices (tablets, 768px and up) */
+@media (min-width: 768px) {
+  .container {
+    padding: 0 2rem;
+  }
+}
+
+/* Large devices (desktops, 1024px and up) */
+@media (min-width: 1024px) {
+  .container {
+    padding: 0 3rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}
+
+/* Extra large devices (large desktops, 1280px and up) */
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1400px;
+  }
+}
+
+/* Mobile-specific utilities */
+@media (max-width: 767px) {
+  /* Hide on mobile */
+  .hide-mobile {
+    display: none !important;
+  }
+  
+  /* Full width on mobile */
+  .full-width-mobile {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Stack on mobile */
+  .stack-mobile {
+    flex-direction: column !important;
+  }
+  
+  /* Reduce padding on mobile */
+  .reduce-padding-mobile {
+    padding: 1rem !important;
+  }
+  
+  /* Smaller text on mobile */
+  .text-mobile {
+    font-size: 0.875rem !important;
+  }
+  
+  /* Touch-friendly buttons */
+  button, .btn, a.btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.75rem 1.5rem;
+  }
+  
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Responsive tables - convert to cards */
+  .table-responsive {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -1rem;
+    padding: 0 1rem;
+  }
+  
+  .table-responsive table {
+    min-width: 600px;
+    font-size: 0.875rem;
+  }
+  
+  .table-responsive th,
+  .table-responsive td {
+    padding: 0.5rem !important;
+    font-size: 0.875rem !important;
+  }
+  
+  /* Responsive grids */
+  .responsive-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  
+  /* Card-based table layout for mobile */
+  .table-card-view {
+    display: none;
+  }
+  
+  /* Tab navigation mobile */
+  .tab-navigation {
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    padding-bottom: 0.5rem;
+  }
+  
+  .tab-navigation button {
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 100px;
+  }
+  
+  /* Form optimizations */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="date"],
+  input[type="time"],
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents iOS zoom */
+    padding: 0.75rem 1rem !important;
+    min-height: 44px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Modal optimizations */
+  .modal-content,
+  [role="dialog"] {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin: 1rem auto !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+  
+  /* Card optimizations */
+  .card,
+  [class*="card"] {
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Employee dashboard optimizations */
+  .employee-dashboard {
+    padding: 1rem !important;
+  }
+  
+  .employee-dashboard section {
+    margin-bottom: 1.5rem !important;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .container {
+    padding: 0 1.5rem;
+  }
+}
+
+/* Desktop optimizations */
+@media (min-width: 1024px) {
+  /* Show on desktop */
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch targets */
+  button, .btn, a.btn, input[type="button"], input[type="submit"] {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  
+  /* Remove hover effects on touch devices */
+  .card-hover:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 767px) and (orientation: landscape) {
+  /* Reduce vertical spacing in landscape */
+  section {
+    padding: 2rem 0 !important;
+  }
+  
+  .hero {
+    min-height: auto !important;
+    padding: 1.5rem 0 !important;
+  }
+}
+
+/* Hide scrollbar but keep functionality */
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white;
+    color: black;
+  }
+}
+

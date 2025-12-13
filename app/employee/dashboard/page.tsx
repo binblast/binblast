@@ -382,7 +382,11 @@ export default function EmployeeDashboardPage() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "2rem" }}>
+        <main style={{ 
+          minHeight: "calc(100vh - 80px)", 
+          padding: "clamp(1rem, 4vw, 2rem)",
+          className: "employee-dashboard"
+        }}>
           <div style={{ textAlign: "center", color: "#6b7280" }}>Loading...</div>
         </main>
       </>
@@ -404,10 +408,18 @@ export default function EmployeeDashboardPage() {
         style={{
           minHeight: "calc(100vh - 80px)",
           background: "#f9fafb",
-          paddingBottom: "2rem",
+          paddingBottom: "clamp(1rem, 4vw, 2rem)",
+          paddingTop: "clamp(1rem, 4vw, 2rem)",
         }}
+        className="employee-dashboard"
       >
-        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "1rem", width: "100%" }}>
+        <div style={{ 
+          maxWidth: "800px", 
+          margin: "0 auto", 
+          padding: "clamp(1rem, 4vw, 1.5rem)", 
+          width: "100%",
+          boxSizing: "border-box"
+        }}>
           <TodayStatusBar
             employeeName={`${employee.firstName} ${employee.lastName}`}
             clockInStatus={clockInStatus}

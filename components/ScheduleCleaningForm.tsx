@@ -232,10 +232,12 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
         <div style={{
           background: "#ffffff",
           borderRadius: "20px",
-          padding: "2rem",
+          padding: "clamp(1rem, 4vw, 2rem)",
           boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
           border: "1px solid #e5e7eb",
-          marginBottom: "2rem"
+          marginBottom: "2rem",
+          width: "100%",
+          boxSizing: "border-box"
         }}>
           <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
             Schedule Your Bin Cleaning
@@ -253,10 +255,12 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
                 required
                 style={{
                   width: "100%",
-                  padding: "0.75rem 1rem",
+                  padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 3vw, 1.25rem)",
                   border: "1px solid #e5e7eb",
                   borderRadius: "8px",
-                  fontSize: "0.95rem"
+                  fontSize: "clamp(0.95rem, 2vw, 1rem)",
+                  minHeight: "44px",
+                  boxSizing: "border-box"
                 }}
               >
                 <option value="">Select preferred cleaning day</option>
@@ -294,10 +298,12 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
                 required
                 style={{
                   width: "100%",
-                  padding: "0.75rem 1rem",
+                  padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 3vw, 1.25rem)",
                   border: "1px solid #e5e7eb",
                   borderRadius: "8px",
-                  fontSize: "0.95rem"
+                  fontSize: "clamp(0.95rem, 2vw, 1rem)",
+                  minHeight: "44px",
+                  boxSizing: "border-box"
                 }}
               >
                 <option value="">Select time</option>

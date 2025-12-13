@@ -97,7 +97,7 @@ export function KPICard({ title, value, color = "neutral", icon, delay = 0, form
       style={{
         background: config.gradient,
         borderRadius: "16px",
-        padding: "1.75rem",
+        padding: "clamp(1.25rem, 3vw, 1.75rem)",
         border: `2px solid ${config.border}`,
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
         position: "relative",
@@ -107,6 +107,8 @@ export function KPICard({ title, value, color = "neutral", icon, delay = 0, form
         transform: isVisible ? "translateY(0)" : "translateY(20px)",
         transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         willChange: "transform",
+        width: "100%",
+        minHeight: "120px"
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-6px) scale(1.02)";
@@ -139,7 +141,7 @@ export function KPICard({ title, value, color = "neutral", icon, delay = 0, form
           marginBottom: "0.75rem"
         }}>
           <div style={{ 
-            fontSize: "0.75rem", 
+            fontSize: "clamp(0.7rem, 2vw, 0.75rem)", 
             color: config.text, 
             fontWeight: "700", 
             textTransform: "uppercase", 
@@ -151,14 +153,14 @@ export function KPICard({ title, value, color = "neutral", icon, delay = 0, form
           {icon && (
             <div
               style={{
-                width: "32px",
-                height: "32px",
+                width: "clamp(28px, 4vw, 32px)",
+                height: "clamp(28px, 4vw, 32px)",
                 borderRadius: "8px",
                 background: `${config.iconBg}20`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "1.25rem",
+                fontSize: "clamp(1rem, 3vw, 1.25rem)",
               }}
             >
               {icon}
@@ -167,7 +169,7 @@ export function KPICard({ title, value, color = "neutral", icon, delay = 0, form
         </div>
         <div 
           style={{ 
-            fontSize: "2.5rem", 
+            fontSize: "clamp(1.75rem, 5vw, 2.5rem)", 
             fontWeight: "800", 
             color: config.text,
             lineHeight: "1.2",
