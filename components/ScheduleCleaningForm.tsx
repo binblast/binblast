@@ -25,6 +25,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [trashDay, setTrashDay] = useState("");
+  const [selectedDateValue, setSelectedDateValue] = useState(""); // Store the actual date value
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isReady: firebaseReady } = useFirebase();
@@ -42,37 +43,99 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
     return `${year}-${month}-${day}`;
   };
 
-  // Calculate the scheduled date based on preferred cleaning day
-  const getCalculatedDate = () => {
-    if (!trashDay) return null;
-    
+  // Generate dropdown options for each day within 2-week window
+  const getDayOptions = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const twoWeeksFromNow = new Date(today);
+    twoWeeksFromNow.setDate(today.getDate() + 14);
+    
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const trashDayIndex = dayNames.indexOf(trashDay);
+    const options: Array<{ dayName: string; date: Date; value: string; label: string }> = [];
     
-    if (trashDayIndex === -1) return null;
+    // For each day of the week, find the next occurrence within 2 weeks
+    dayNames.forEach((dayName, dayIndex) => {
+      const currentDayIndex = today.getDay();
+      let daysUntilDay = dayIndex - currentDayIndex;
+      
+      // If the day has already passed this week, move to next week
+      if (daysUntilDay < 0) {
+        daysUntilDay += 7;
+      }
+      
+      // Check if this occurrence is within 2 weeks
+      const firstOccurrence = new Date(today);
+      firstOccurrence.setDate(today.getDate() + daysUntilDay);
+      
+      if (firstOccurrence <= twoWeeksFromNow) {
+        const dateValue = formatDateForInput(firstOccurrence);
+        const monthName = firstOccurrence.toLocaleDateString("en-US", { month: "short" });
+        const dayNumber = firstOccurrence.getDate();
+        const label = `${dayName}, ${monthName} ${dayNumber}`;
+        
+        options.push({
+          dayName,
+          date: firstOccurrence,
+          value: dateValue,
+          label
+        });
+      }
+      
+      // Also check the second occurrence (next week) if within 2 weeks
+      const secondOccurrence = new Date(firstOccurrence);
+      secondOccurrence.setDate(firstOccurrence.getDate() + 7);
+      
+      if (secondOccurrence <= twoWeeksFromNow) {
+        const dateValue = formatDateForInput(secondOccurrence);
+        const monthName = secondOccurrence.toLocaleDateString("en-US", { month: "short" });
+        const dayNumber = secondOccurrence.getDate();
+        const label = `${dayName}, ${monthName} ${dayNumber}`;
+        
+        options.push({
+          dayName,
+          date: secondOccurrence,
+          value: dateValue,
+          label
+        });
+      }
+    });
     
-    const currentDayIndex = today.getDay();
-    let daysUntilTrashDay = trashDayIndex - currentDayIndex;
-    if (daysUntilTrashDay < 0) {
-      daysUntilTrashDay += 7; // Move to next week
-    }
+    // Sort by date
+    options.sort((a, b) => a.date.getTime() - b.date.getTime());
     
-    const scheduledDateObj = new Date(today);
-    scheduledDateObj.setDate(today.getDate() + daysUntilTrashDay);
-    
-    return scheduledDateObj;
+    return options;
+  };
+
+  const dayOptions = getDayOptions();
+
+  // Calculate the scheduled date based on selected date value
+  const getCalculatedDate = () => {
+    if (!selectedDateValue) return null;
+    return new Date(selectedDateValue);
   };
 
   const calculatedDate = getCalculatedDate();
+
+  // Handle day selection - extract day name and date value
+  const handleDayChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedValue = e.target.value;
+    setSelectedDateValue(selectedValue);
+    
+    // Extract day name from the selected option
+    const selectedOption = dayOptions.find(opt => opt.value === selectedValue);
+    if (selectedOption) {
+      setTrashDay(selectedOption.dayName);
+    } else {
+      setTrashDay("");
+    }
+  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!addressLine1 || !city || !state || !zipCode || !trashDay || !selectedTime) {
+    if (!addressLine1 || !city || !state || !zipCode || !selectedDateValue || !selectedTime) {
       setError("Please fill in all required fields");
       return;
     }
@@ -99,20 +162,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
       const firestore = await safeImportFirestore();
       const { collection, addDoc, serverTimestamp } = firestore;
 
-      // Calculate scheduled date based on preferred cleaning day
-      // Use the next occurrence of the selected trash day
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const trashDayIndex = dayNames.indexOf(trashDay);
-      const currentDayIndex = today.getDay();
-      let daysUntilTrashDay = trashDayIndex - currentDayIndex;
-      if (daysUntilTrashDay < 0) {
-        daysUntilTrashDay += 7; // Move to next week
-      }
-      const scheduledDateObj = new Date(today);
-      scheduledDateObj.setDate(today.getDate() + daysUntilTrashDay);
-      const scheduledDate = formatDateForInput(scheduledDateObj);
+      // Use the selected date value directly
+      const scheduledDate = selectedDateValue;
 
       // Save scheduled cleaning to Firestore
       const scheduledCleaning = {
@@ -140,6 +191,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
       setState("");
       setZipCode("");
       setTrashDay("");
+      setSelectedDateValue("");
       setSelectedTime("");
       setNotes("");
       setIsOpen(false);
@@ -192,8 +244,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
                 Preferred Cleaning Day
               </label>
               <select
-                value={trashDay}
-                onChange={(e) => setTrashDay(e.target.value)}
+                value={selectedDateValue}
+                onChange={handleDayChange}
                 required
                 style={{
                   width: "100%",
@@ -204,13 +256,11 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
                 }}
               >
                 <option value="">Select preferred cleaning day</option>
-                <option value="Monday">Monday</option>
-                <option value="Tuesday">Tuesday</option>
-                <option value="Wednesday">Wednesday</option>
-                <option value="Thursday">Thursday</option>
-                <option value="Friday">Friday</option>
-                <option value="Saturday">Saturday</option>
-                <option value="Sunday">Sunday</option>
+                {dayOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
               {calculatedDate && (
                 <p style={{ 
@@ -374,7 +424,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
 
             <button
               type="submit"
-              disabled={loading || !trashDay || !selectedTime}
+              disabled={loading || !selectedDateValue || !selectedTime}
               className={`btn btn-primary ${loading ? "disabled" : ""}`}
               style={{
                 width: "100%",
