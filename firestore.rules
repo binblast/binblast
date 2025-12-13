@@ -407,6 +407,25 @@ service cloud.firestore {
       );
     }
 
+    // Employee messages collection - for operator-to-employee messages
+    match /employeeMessages/{messageId} {
+      // Admins and operators can read/write messages
+      // Server-side can create messages
+      allow read: if isAdminOrOperator() || request.auth == null;
+      allow create: if isAdminOrOperator() || request.auth == null;
+      allow update, delete: if false; // Messages are immutable once created
+    }
+
+    // Employee issues collection - for flagged employee issues
+    match /employeeIssues/{issueId} {
+      // Admins and operators can read/write issues
+      // Server-side can create issues
+      allow read: if isAdminOrOperator() || request.auth == null;
+      allow create: if isAdminOrOperator() || request.auth == null;
+      allow update: if isAdminOrOperator() || request.auth == null; // Allow status updates
+      allow delete: if false; // Issues cannot be deleted
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
