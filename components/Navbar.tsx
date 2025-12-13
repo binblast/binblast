@@ -298,6 +298,11 @@ export function Navbar() {
               <Link href="/partners">Partners</Link>
             </li>
           )}
+          {!isEmployee && (
+            <li>
+              <Link href="/login?redirect=/employee/dashboard">Employee Portal</Link>
+            </li>
+          )}
           {!loading && (
             <li>
               {isLoggedIn ? (
