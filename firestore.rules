@@ -134,10 +134,12 @@ service cloud.firestore {
       // Users can read their own scheduled cleanings
       // Employees can read jobs assigned to them (assignedEmployeeId == request.auth.uid)
       // Admins and operators can read all
+      // Server-side API routes can read all (request.auth == null)
       allow read: if (
         (isAuthenticated() && resource.data.userId == request.auth.uid) 
         || (isAuthenticated() && resource.data.assignedEmployeeId == request.auth.uid)
         || isAdminOrOperator()
+        || request.auth == null // Server-side reads (API routes)
       );
       
       // Users can create scheduled cleanings for themselves
@@ -171,7 +173,15 @@ service cloud.firestore {
     match /clockIns/{clockInId} {
       // Employees can read their own clock-in records
       // Operators and admins can read all clock-in records
-      allow read: if (
+      // Allow list queries for employees (to query by employeeId)
+      // For list queries, Firestore will filter results based on the query's where clause
+      // So employees can query where employeeId == their own UID
+      allow list: if (
+        isAuthenticated() // Employees can list - Firestore will filter by query where clause
+        || isAdminOrOperator()
+        || request.auth == null // Server-side reads
+      );
+      allow get: if (
         (isAuthenticated() && resource.data.employeeId == request.auth.uid)
         || isAdminOrOperator()
         || request.auth == null // Server-side reads

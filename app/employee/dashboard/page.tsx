@@ -10,7 +10,6 @@ import { JobDetailModal } from "@/components/EmployeeDashboard/JobDetailModal";
 import { ProgressTracker } from "@/components/EmployeeDashboard/ProgressTracker";
 import { PayPreview } from "@/components/EmployeeDashboard/PayPreview";
 import {
-  getEmployeeClockInStatus,
   getEmployeeData,
   ClockInRecord,
   Employee,
@@ -111,8 +110,14 @@ export default function EmployeeDashboardPage() {
   const loadClockInStatus = async () => {
     if (!employee?.id) return;
     try {
-      const status = await getEmployeeClockInStatus(employee.id);
-      setClockInStatus(status);
+      // Use API route instead of direct Firestore query to avoid permission issues
+      const response = await fetch(
+        `/api/employee/clock-in-status?employeeId=${employee.id}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setClockInStatus(data.clockInStatus);
+      }
     } catch (error) {
       console.error("Error loading clock-in status:", error);
     }
