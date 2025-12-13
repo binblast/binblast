@@ -190,6 +190,9 @@ function DashboardPageContent() {
   const overviewSectionRef = useRef<HTMLDivElement>(null);
   const customersSectionRef = useRef<HTMLDivElement>(null);
   const commercialSectionRef = useRef<HTMLDivElement>(null);
+  
+  // Ref to prevent multiple operator data loads
+  const operatorDataLoadingRef = useRef(false);
 
   // Handle Stripe Checkout callback
   useEffect(() => {
@@ -300,23 +303,6 @@ function DashboardPageContent() {
           if (!mounted) return;
           setUserId(firebaseUser.uid);
 
-          // Check if user is a partner and redirect accordingly (unless admin)
-          try {
-            const { getDashboardUrl } = await import("@/lib/partner-auth");
-            const dashboardUrl = await getDashboardUrl(firebaseUser.uid);
-            
-            // If user is a partner and not on admin email, redirect to partner dashboard
-            if (dashboardUrl !== "/dashboard" && firebaseUser.email !== ADMIN_EMAIL) {
-              if (mounted) {
-                router.push(dashboardUrl);
-              }
-              return;
-            }
-          } catch (partnerCheckErr) {
-            console.warn("[Dashboard] Error checking partner status:", partnerCheckErr);
-            // Continue with regular dashboard if partner check fails
-          }
-
           try {
             const userDocRef = doc(db, "users", firebaseUser.uid);
             const userDoc = await getDoc(userDocRef);
@@ -330,6 +316,28 @@ function DashboardPageContent() {
               setIsAdmin((userData.role === "admin") || (userData.email === ADMIN_EMAIL));
               // Check for operator role
               setIsOperator(userData.role === "operator");
+              
+              // If user is an operator, don't check for partner redirects
+              if (userData.role === "operator") {
+                // Operator stays on dashboard - no redirect needed
+              } else {
+                // Check if user is a partner and redirect accordingly (unless admin or operator)
+                try {
+                  const { getDashboardUrl } = await import("@/lib/partner-auth");
+                  const dashboardUrl = await getDashboardUrl(firebaseUser.uid);
+                  
+                  // If user is a partner and not on admin email, redirect to partner dashboard
+                  if (dashboardUrl !== "/dashboard" && firebaseUser.email !== ADMIN_EMAIL) {
+                    if (mounted) {
+                      router.push(dashboardUrl);
+                    }
+                    return;
+                  }
+                } catch (partnerCheckErr) {
+                  console.warn("[Dashboard] Error checking partner status:", partnerCheckErr);
+                  // Continue with regular dashboard if partner check fails
+                }
+              }
             } else {
               const userEmail = firebaseUser.email || "";
               setUser({
@@ -599,11 +607,33 @@ function DashboardPageContent() {
   // Load operator data
   useEffect(() => {
     if (!isOperator || !userId) {
+      // Reset operator data when not operator
+      if (!isOperator) {
+        setOperatorDirectCustomers([]);
+        setOperatorCommercialCustomers([]);
+        setOperatorAllCleanings([]);
+        setOperatorStats({
+          totalDirectCustomers: 0,
+          totalCommercialCustomers: 0,
+          upcomingCleanings: 0,
+          cleaningsCompletedThisWeek: 0,
+          openIssues: 0,
+        });
+        operatorDataLoadingRef.current = false;
+      }
+      return;
+    }
+    
+    // Prevent multiple simultaneous loads
+    if (operatorDataLoadingRef.current) {
+      console.log("[Operator] Data load already in progress, skipping...");
       return;
     }
     
     let mounted = true;
+    
     async function loadOperatorData() {
+      operatorDataLoadingRef.current = true;
       setOperatorLoading(true);
       try {
         const { getDbInstance } = await import("@/lib/firebase");
@@ -749,17 +779,22 @@ function DashboardPageContent() {
             openIssues,
           });
           setOperatorLoading(false);
+          operatorDataLoadingRef.current = false;
         }
       } catch (err: any) {
         console.error("[Dashboard] Error loading operator data:", err);
         if (mounted) {
           setOperatorLoading(false);
+          operatorDataLoadingRef.current = false;
         }
       }
     }
 
     loadOperatorData();
-    return () => { mounted = false; };
+    return () => { 
+      mounted = false;
+      operatorDataLoadingRef.current = false;
+    };
   }, [isOperator, userId]);
 
   // Helper functions
