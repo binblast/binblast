@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
 import { stripe } from "@/lib/stripe";
+import { calculateCleaningRollover } from "@/lib/subscription-utils";
 import type Stripe from "stripe";
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
   try {
     // Dynamically import Firebase to prevent build-time initialization
     const { getDbInstance } = await import("@/lib/firebase");
-    const { doc, updateDoc } = await import("firebase/firestore");
+    const { doc, updateDoc, collection } = await import("firebase/firestore");
     
     const body = await req.json();
     const { checkoutSessionId, userId, newPlanId, subscriptionId } = body;
@@ -64,6 +65,60 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Get cleaning credits rollover from session metadata
+    const cleaningCreditsRollover = parseInt(session.metadata?.cleaningCreditsRollover || "0", 10);
+    
+    // Get user data to calculate current cleaning credits
+    const db = await getDbInstance();
+    let currentCleaningCredits = 0;
+    let finalCleaningCreditsRollover = cleaningCreditsRollover;
+    
+    if (db) {
+      const { getDoc, query, where, getDocs } = await import("firebase/firestore");
+      const userDocRef = doc(db, "users", userId);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        currentCleaningCredits = userDoc.data()?.cleaningCredits || 0;
+      }
+
+      // If cleaning credits weren't in metadata, calculate them now
+      if (finalCleaningCreditsRollover === 0 && session.metadata?.currentPlanId && session.metadata?.subscriptionId) {
+        try {
+          // Get subscription to find billing period
+          const subscription = await stripe.subscriptions.retrieve(session.metadata.subscriptionId);
+          const billingPeriodStart = new Date(subscription.current_period_start * 1000);
+          const billingPeriodEnd = new Date(subscription.current_period_end * 1000);
+          
+          // Count cleanings used
+          const cleaningsQuery = query(
+            collection(db, "scheduledCleanings"),
+            where("userId", "==", userId)
+          );
+          const cleaningsSnapshot = await getDocs(cleaningsQuery);
+          
+          let used = 0;
+          cleaningsSnapshot.forEach((doc) => {
+            const cleaningData = doc.data();
+            const cleaningDate = cleaningData.scheduledDate?.toDate?.() || new Date(cleaningData.scheduledDate);
+            const isCompleted = cleaningData.status === "completed" || cleaningData.jobStatus === "completed";
+            
+            if (isCompleted && cleaningDate >= billingPeriodStart && cleaningDate <= billingPeriodEnd) {
+              used++;
+            }
+          });
+          
+          finalCleaningCreditsRollover = calculateCleaningRollover(
+            session.metadata.currentPlanId as PlanId,
+            billingPeriodStart,
+            billingPeriodEnd,
+            used
+          );
+        } catch (err) {
+          console.error("[Complete Subscription Change] Error calculating cleaning credits:", err);
+        }
+      }
+    }
+
     // Create new price for the new plan
     let newPriceId: string;
     
@@ -108,12 +163,13 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    // Update Firestore user document
-    const db = await getDbInstance();
+    // Update Firestore user document with cleaning credits rollover
     if (db) {
+      const newCleaningCredits = currentCleaningCredits + finalCleaningCreditsRollover;
       const userDocRef = doc(db, "users", userId);
       await updateDoc(userDocRef, {
         selectedPlan: newPlanId,
+        cleaningCredits: newCleaningCredits,
         updatedAt: new Date(),
       });
     }

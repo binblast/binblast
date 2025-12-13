@@ -85,3 +85,67 @@ export function canChangePlan(planId: PlanId): boolean {
   return planId !== "commercial";
 }
 
+/**
+ * Get expected number of cleanings per month for a plan
+ */
+export function getCleaningsPerMonth(planId: PlanId): number {
+  switch (planId) {
+    case "one-time":
+      return 1; // 1 cleaning per month
+    case "twice-month":
+      return 2; // 2 cleanings per month
+    case "bi-monthly":
+      return 0.5; // 6 cleanings per year = 0.5 per month
+    case "quarterly":
+      return 1/3; // 4 cleanings per year = 1/3 per month
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Calculate cleaning credits rollover
+ * @param currentPlanId - Current plan ID
+ * @param billingPeriodStart - Start of current billing period
+ * @param billingPeriodEnd - End of current billing period
+ * @param cleaningsUsed - Number of cleanings actually used in this period
+ * @returns Number of cleaning credits to roll over
+ */
+export function calculateCleaningRollover(
+  currentPlanId: PlanId,
+  billingPeriodStart: Date,
+  billingPeriodEnd: Date,
+  cleaningsUsed: number
+): number {
+  const cleaningsPerMonth = getCleaningsPerMonth(currentPlanId);
+  if (cleaningsPerMonth === 0) return 0;
+
+  // Calculate total days in billing period
+  const totalDays = Math.ceil(
+    (billingPeriodEnd.getTime() - billingPeriodStart.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  
+  // Calculate expected cleanings based on plan frequency
+  let expectedCleanings = 0;
+  
+  if (currentPlanId === "bi-monthly") {
+    // 6 cleanings per year = 1 every 2 months
+    // Calculate how many cleanings should have occurred in this period
+    const monthsInPeriod = totalDays / 30;
+    expectedCleanings = Math.floor(monthsInPeriod / 2) * 1; // 1 cleaning per 2 months
+  } else if (currentPlanId === "quarterly") {
+    // 4 cleanings per year = 1 every 3 months
+    const monthsInPeriod = totalDays / 30;
+    expectedCleanings = Math.floor(monthsInPeriod / 3) * 1; // 1 cleaning per 3 months
+  } else {
+    // Monthly or bi-weekly: calculate based on monthly rate
+    const monthsInPeriod = totalDays / 30;
+    expectedCleanings = Math.floor(cleaningsPerMonth * monthsInPeriod);
+  }
+
+  // Rollover = expected - used (minimum 0)
+  const rollover = Math.max(0, expectedCleanings - cleaningsUsed);
+  
+  return Math.floor(rollover); // Return whole number of cleanings
+}
+

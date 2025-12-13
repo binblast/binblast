@@ -4,9 +4,9 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
-import { getMonthlyPriceForPlan, canChangePlan } from "@/lib/subscription-utils";
+import { getMonthlyPriceForPlan, canChangePlan, calculateCleaningRollover } from "@/lib/subscription-utils";
 
 interface SubscriptionManagerProps {
   userId: string;
@@ -29,6 +29,8 @@ export function SubscriptionManager({
   const [error, setError] = useState<string | null>(null);
   const [selectedNewPlan, setSelectedNewPlan] = useState<PlanId | null>(null);
   const [showChangeModal, setShowChangeModal] = useState(false);
+  const [cleaningsUsed, setCleaningsUsed] = useState<number>(0);
+  const [billingPeriodStart, setBillingPeriodStart] = useState<Date | null>(null);
 
   // Safety checks - don't render if required props are missing or invalid
   if (!userId || !currentPlanId || !PLAN_CONFIGS[currentPlanId]) {
@@ -81,14 +83,26 @@ export function SubscriptionManager({
         throw new Error(data.error || "Failed to change subscription");
       }
 
-      // Show success message
-      alert(
-        `Subscription changed successfully! ${
-          data.proration.isUpgrade
-            ? `You owe $${(data.proration.proratedAmountOwed / 100).toFixed(2)} for the upgrade.`
-            : `You received a credit of $${(data.proration.proratedCredit / 100).toFixed(2)} for the remaining days.`
-        }`
-      );
+      // Show success message with cleaning credits info
+      let message = `Subscription changed successfully! `;
+      
+      if (data.proration.isUpgrade) {
+        const amountOwed = typeof data.proration.proratedAmountOwed === 'number' 
+          ? (data.proration.proratedAmountOwed >= 100 ? data.proration.proratedAmountOwed / 100 : data.proration.proratedAmountOwed)
+          : parseFloat(data.proration.proratedAmountOwed) || 0;
+        message += `You owe $${amountOwed.toFixed(2)} for the upgrade.`;
+      } else {
+        const credit = typeof data.proration.proratedCredit === 'number'
+          ? (data.proration.proratedCredit >= 100 ? data.proration.proratedCredit / 100 : data.proration.proratedCredit)
+          : parseFloat(data.proration.proratedCredit) || 0;
+        message += `You received a credit of $${credit.toFixed(2)} for the remaining days.`;
+      }
+      
+      if (data.cleaningCredits?.rollover > 0) {
+        message += `\n\n${data.cleaningCredits.rollover} unused cleaning${data.cleaningCredits.rollover > 1 ? 's' : ''} ${data.cleaningCredits.rollover > 1 ? 'have' : 'has'} been rolled over to your new plan!`;
+      }
+      
+      alert(message);
 
       setShowChangeModal(false);
       setSelectedNewPlan(null);
@@ -103,8 +117,69 @@ export function SubscriptionManager({
     }
   };
 
+  // Load cleanings used in current billing period
+  useEffect(() => {
+    if (!userId || !billingPeriodEnd || !billingPeriodStart) return;
+
+    async function loadCleaningsUsed() {
+      try {
+        const { getDbInstance } = await import("@/lib/firebase");
+        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+        const db = await getDbInstance();
+        if (!db) return;
+
+        const firestore = await safeImportFirestore();
+        const { collection, query, where, getDocs } = firestore;
+        
+        const cleaningsQuery = query(
+          collection(db, "scheduledCleanings"),
+          where("userId", "==", userId)
+        );
+        const cleaningsSnapshot = await getDocs(cleaningsQuery);
+        
+        let used = 0;
+        cleaningsSnapshot.forEach((doc) => {
+          const cleaningData = doc.data();
+          const cleaningDate = cleaningData.scheduledDate?.toDate?.() || new Date(cleaningData.scheduledDate);
+          const isCompleted = cleaningData.status === "completed" || cleaningData.jobStatus === "completed";
+          
+          if (isCompleted && cleaningDate >= billingPeriodStart && cleaningDate <= billingPeriodEnd) {
+            used++;
+          }
+        });
+        
+        setCleaningsUsed(used);
+      } catch (err) {
+        console.error("[SubscriptionManager] Error loading cleanings:", err);
+      }
+    }
+
+    loadCleaningsUsed();
+  }, [userId, billingPeriodStart, billingPeriodEnd]);
+
+  // Load billing period start from Stripe subscription
+  useEffect(() => {
+    if (!stripeSubscriptionId) return;
+
+    async function loadBillingPeriod() {
+      try {
+        const response = await fetch(`/api/stripe/get-subscription?subscriptionId=${stripeSubscriptionId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.billingPeriodStart) {
+            setBillingPeriodStart(new Date(data.billingPeriodStart * 1000));
+          }
+        }
+      } catch (err) {
+        console.error("[SubscriptionManager] Error loading billing period:", err);
+      }
+    }
+
+    loadBillingPeriod();
+  }, [stripeSubscriptionId]);
+
   const calculateProrationPreview = (newPlanId: PlanId) => {
-    if (!billingPeriodEnd) return null;
+    if (!billingPeriodEnd || !billingPeriodStart) return null;
 
     const newMonthlyPrice = getMonthlyPriceForPlan(newPlanId);
     const now = new Date();
@@ -113,8 +188,9 @@ export function SubscriptionManager({
       Math.ceil((billingPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     );
 
-    // Assume 30-day billing cycle for calculation
-    const totalDays = 30;
+    const totalDays = Math.ceil(
+      (billingPeriodEnd.getTime() - billingPeriodStart.getTime()) / (1000 * 60 * 60 * 24)
+    );
     const dailyRateCurrent = currentMonthlyPrice / totalDays;
     const proratedCredit = dailyRateCurrent * daysRemaining;
 
@@ -124,11 +200,21 @@ export function SubscriptionManager({
     const isUpgrade = newMonthlyPrice > currentMonthlyPrice;
     const proratedAmountOwed = isUpgrade ? proratedAmountNew - proratedCredit : 0;
 
+    // Calculate cleaning credits rollover
+    const cleaningCreditsRollover = calculateCleaningRollover(
+      currentPlanId,
+      billingPeriodStart,
+      billingPeriodEnd,
+      cleaningsUsed
+    );
+
     return {
       daysRemaining,
       proratedCredit: isUpgrade ? 0 : proratedCredit,
       proratedAmountOwed,
       isUpgrade,
+      cleaningCreditsRollover,
+      cleaningsUsed,
     };
   };
 
@@ -273,6 +359,11 @@ export function SubscriptionManager({
                               You&apos;ll receive approximately $
                               {proration.proratedCredit.toFixed(2)} credit for remaining days
                             </span>
+                          )}
+                          {proration.cleaningCreditsRollover > 0 && (
+                            <div style={{ marginTop: "0.5rem", color: "#16a34a", fontWeight: "500" }}>
+                              {proration.cleaningCreditsRollover} unused cleaning{proration.cleaningCreditsRollover > 1 ? 's' : ''} will roll over to your new plan
+                            </div>
                           )}
                         </div>
                       )}

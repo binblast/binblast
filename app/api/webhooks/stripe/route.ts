@@ -130,6 +130,37 @@ export async function POST(req: NextRequest) {
             }
           }
 
+          // Handle subscription upgrade proration payment - apply cleaning credits rollover
+          if (session.metadata?.type === 'subscription_upgrade_proration' && session.payment_status === 'paid' && userId) {
+            try {
+              const cleaningCreditsRollover = parseInt(session.metadata.cleaningCreditsRollover || '0', 10);
+              
+              if (cleaningCreditsRollover > 0) {
+                const userDocRef = doc(db, "users", userId);
+                const userDoc = await getDoc(userDocRef);
+                
+                if (userDoc.exists()) {
+                  const currentCleaningCredits = userDoc.data().cleaningCredits || 0;
+                  const newCleaningCredits = currentCleaningCredits + cleaningCreditsRollover;
+                  
+                  await updateDoc(userDocRef, {
+                    cleaningCredits: newCleaningCredits,
+                    updatedAt: serverTimestamp(),
+                  });
+                  
+                  console.log("[Webhook] Cleaning credits rollover applied:", {
+                    userId,
+                    cleaningCreditsRollover,
+                    previousCredits: currentCleaningCredits,
+                    newCredits: newCleaningCredits,
+                  });
+                }
+              }
+            } catch (rolloverError) {
+              console.error("[Webhook] Error applying cleaning credits rollover:", rolloverError);
+            }
+          }
+
           // Handle extra bin payment
           if (session.metadata?.type === 'extra_bin' && session.payment_status === 'paid' && userId) {
             try {

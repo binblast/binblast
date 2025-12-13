@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
 import { stripe } from "@/lib/stripe";
-import { getMonthlyPriceForPlan } from "@/lib/subscription-utils";
+import { getMonthlyPriceForPlan, calculateCleaningRollover } from "@/lib/subscription-utils";
 import type Stripe from "stripe";
 
 export const dynamic = 'force-dynamic';
@@ -244,6 +244,40 @@ export async function POST(req: NextRequest) {
     const dailyRateCurrent = currentMonthlyPrice / totalDays;
     const proratedCredit = dailyRateCurrent * daysRemaining;
 
+    // Calculate cleaning credits rollover
+    // Count cleanings used in current billing period
+    const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+    const firestore = await safeImportFirestore();
+    const { query, where, getDocs } = firestore;
+    
+    let cleaningsUsed = 0;
+    if (db) {
+      const cleaningsQuery = query(
+        collection(db, "scheduledCleanings"),
+        where("userId", "==", userId)
+      );
+      const cleaningsSnapshot = await getDocs(cleaningsQuery);
+      
+      cleaningsSnapshot.forEach((doc) => {
+        const cleaningData = doc.data();
+        const cleaningDate = cleaningData.scheduledDate?.toDate?.() || new Date(cleaningData.scheduledDate);
+        const isCompleted = cleaningData.status === "completed" || cleaningData.jobStatus === "completed";
+        
+        // Count cleanings completed within the current billing period
+        if (isCompleted && cleaningDate >= billingPeriodStart && cleaningDate <= billingPeriodEnd) {
+          cleaningsUsed++;
+        }
+      });
+    }
+
+    // Calculate cleaning credits rollover
+    const cleaningCreditsRollover = calculateCleaningRollover(
+      finalCurrentPlanId,
+      billingPeriodStart,
+      billingPeriodEnd,
+      cleaningsUsed
+    );
+
     console.log("[Change Subscription] Proration calculation:", {
       currentMonthlyPrice,
       newMonthlyPrice,
@@ -253,6 +287,8 @@ export async function POST(req: NextRequest) {
       proratedCredit,
       actualProratedAmountFromStripe: actualProratedAmount,
       stripeCustomerId: !!stripeCustomerId,
+      cleaningsUsed,
+      cleaningCreditsRollover,
     });
 
     // If this is an upgrade with a prorated amount, require payment first
@@ -301,6 +337,15 @@ export async function POST(req: NextRequest) {
 
       console.log("[Change Subscription] Checkout session created:", session.id, session.url);
 
+      // Store cleaning credits in session metadata for later retrieval
+      await stripe.checkout.sessions.update(session.id, {
+        metadata: {
+          ...session.metadata,
+          cleaningCreditsRollover: cleaningCreditsRollover.toString(),
+          cleaningsUsed: cleaningsUsed.toString(),
+        },
+      });
+
       return NextResponse.json({
         requiresPayment: true,
         checkoutSessionId: session.id,
@@ -311,6 +356,10 @@ export async function POST(req: NextRequest) {
           proratedCredit: 0,
           proratedAmountOwed: actualProratedAmount / 100, // Convert back to dollars
           isUpgrade: true,
+        },
+        cleaningCredits: {
+          rollover: cleaningCreditsRollover,
+          used: cleaningsUsed,
         },
       });
     }
@@ -334,11 +383,15 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    // Update Firestore user document
+    // Update Firestore user document with cleaning credits rollover
     if (db) {
       const userDocRef = doc(collection(db, "users"), userId);
+      const currentCleaningCredits = userData?.cleaningCredits || 0;
+      const newCleaningCredits = currentCleaningCredits + cleaningCreditsRollover;
+      
       await updateDoc(userDocRef, {
         selectedPlan: newPlanId,
+        cleaningCredits: newCleaningCredits,
         updatedAt: new Date(),
       });
     }
@@ -352,6 +405,11 @@ export async function POST(req: NextRequest) {
         proratedCredit: isUpgrade ? 0 : proratedCredit,
         proratedAmountOwed: 0,
         isUpgrade,
+      },
+      cleaningCredits: {
+        rollover: cleaningCreditsRollover,
+        used: cleaningsUsed,
+        total: (userData?.cleaningCredits || 0) + cleaningCreditsRollover,
       },
     });
   } catch (err: any) {
