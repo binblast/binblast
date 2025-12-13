@@ -586,15 +586,17 @@ function DashboardPageContent() {
         });
 
         // Load completed cleanings count for each customer (for loyalty levels)
+        // Query all cleanings and filter in memory to check both status and jobStatus
         const customerCompletedCounts: Record<string, number> = {};
-        const completedCleaningsQuery = query(
-          collection(db, "scheduledCleanings"),
-          where("status", "==", "completed")
+        const allCleaningsForLoyaltyQuery = query(
+          collection(db, "scheduledCleanings")
         );
-        const completedCleaningsSnapshot = await getDocs(completedCleaningsQuery);
-        completedCleaningsSnapshot.forEach((doc) => {
+        const allCleaningsForLoyaltySnapshot = await getDocs(allCleaningsForLoyaltyQuery);
+        allCleaningsForLoyaltySnapshot.forEach((doc) => {
           const data = doc.data();
-          if (data.userId) {
+          // Check both status and jobStatus fields
+          const isCompleted = data.status === "completed" || data.jobStatus === "completed";
+          if (isCompleted && data.userId) {
             customerCompletedCounts[data.userId] = (customerCompletedCounts[data.userId] || 0) + 1;
           }
         });
@@ -859,8 +861,9 @@ function DashboardPageContent() {
             upcomingCount++;
           }
 
-          // Count completed this week
-          if (cleaning.status === "completed" && cleaning.completedAt) {
+          // Count completed this week (check both status and jobStatus)
+          const isCompleted = cleaning.status === "completed" || (cleaning as any).jobStatus === "completed";
+          if (isCompleted && cleaning.completedAt) {
             const completedDate = cleaning.completedAt?.toDate?.() || new Date(cleaning.completedAt);
             if (completedDate >= weekStart && completedDate < weekEnd) {
               completedThisWeek++;
@@ -949,7 +952,9 @@ function DashboardPageContent() {
   
   const filteredUpcoming = scheduledCleanings.filter(c => {
     const date = new Date(c.scheduledDate);
-    return date >= new Date() && c.status !== "cancelled";
+    // Exclude completed jobs from upcoming (check both status and jobStatus)
+    const isCompleted = c.status === "completed" || (c as any).jobStatus === "completed";
+    return date >= new Date() && c.status !== "cancelled" && !isCompleted;
   });
   const upcomingCleanings = filteredUpcoming.sort((a, b) => {
     return new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime();
@@ -957,7 +962,9 @@ function DashboardPageContent() {
 
   const filteredPast = scheduledCleanings.filter(c => {
     const date = new Date(c.scheduledDate);
-    return date < new Date() || c.status === "completed" || c.status === "cancelled";
+    // Check both status and jobStatus fields for compatibility
+    const isCompleted = c.status === "completed" || (c as any).jobStatus === "completed";
+    return date < new Date() || isCompleted || c.status === "cancelled";
   });
   const pastCleanings = filteredPast.sort((a, b) => {
     return new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime();
@@ -1561,12 +1568,15 @@ function DashboardPageContent() {
                                 {date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
                               </h3>
                               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                                {cleanings.map(cleaning => (
+                                {cleanings.map(cleaning => {
+                                  const isCompleted = cleaning.status === "completed" || (cleaning as any).jobStatus === "completed";
+                                  const isCancelled = cleaning.status === "cancelled";
+                                  return (
                                   <div key={cleaning.id} style={{
                                     padding: "1rem",
-                                    background: cleaning.status === "completed" ? "#f0fdf4" : cleaning.status === "cancelled" ? "#fef2f2" : "#f0f9ff",
+                                    background: isCompleted ? "#f0fdf4" : isCancelled ? "#fef2f2" : "#f0f9ff",
                                     borderRadius: "8px",
-                                    border: `1px solid ${cleaning.status === "completed" ? "#bbf7d0" : cleaning.status === "cancelled" ? "#fecaca" : "#bae6fd"}`,
+                                    border: `1px solid ${isCompleted ? "#bbf7d0" : isCancelled ? "#fecaca" : "#bae6fd"}`,
                                     display: "flex",
                                     justifyContent: "space-between",
                                     alignItems: "start"
@@ -1594,14 +1604,15 @@ function DashboardPageContent() {
                                         fontSize: "0.75rem",
                                         fontWeight: "600",
                                         textTransform: "capitalize",
-                                        background: cleaning.status === "completed" ? "#d1fae5" : cleaning.status === "cancelled" ? "#fee2e2" : "#dbeafe",
-                                        color: cleaning.status === "completed" ? "#065f46" : cleaning.status === "cancelled" ? "#991b1b" : "#1e40af"
+                                        background: isCompleted ? "#d1fae5" : isCancelled ? "#fee2e2" : "#dbeafe",
+                                        color: isCompleted ? "#065f46" : isCancelled ? "#991b1b" : "#1e40af"
                                       }}>
-                                        {cleaning.status || "scheduled"}
+                                        {cleaning.status || (cleaning as any).jobStatus || "scheduled"}
                                       </span>
                                     </div>
                                   </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </div>
                           );
@@ -1635,7 +1646,8 @@ function DashboardPageContent() {
                             const customerEmailLower = (customer.email || "").toLowerCase();
                             const completedCount = operatorAllCleanings.filter(c => {
                               const cleaningEmailLower = (c.customerEmail || "").toLowerCase();
-                              return cleaningEmailLower === customerEmailLower && c.status === "completed";
+                              const isCompleted = c.status === "completed" || (c as any).jobStatus === "completed";
+                              return cleaningEmailLower === customerEmailLower && isCompleted;
                             }).length;
                             
                             return (
@@ -3078,7 +3090,8 @@ function DashboardPageContent() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                       {pastCleanings.slice(0, 5).map((cleaning) => {
                         const cleaningDate = new Date(cleaning.scheduledDate);
-                        const statusColor = cleaning.status === "completed" ? "#16a34a" : "#dc2626";
+                        const isCompleted = cleaning.status === "completed" || (cleaning as any).jobStatus === "completed";
+                        const statusColor = isCompleted ? "#16a34a" : "#dc2626";
                         return (
                           <div
                             key={cleaning.id}

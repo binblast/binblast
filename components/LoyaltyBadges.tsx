@@ -95,14 +95,18 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
         const firestore = await safeImportFirestore();
         const { collection, query, where, getDocs } = firestore;
         
-        // Count completed cleanings
+        // Count completed cleanings (check both status and jobStatus fields)
+        // Query for status = "completed" first
         const cleaningsQuery = query(
           collection(db, "scheduledCleanings"),
-          where("userId", "==", userId),
-          where("status", "==", "completed")
+          where("userId", "==", userId)
         );
         const cleaningsSnapshot = await getDocs(cleaningsQuery);
-        const completedCount = cleaningsSnapshot.size;
+        // Filter in memory to check both status and jobStatus
+        const completedCount = cleaningsSnapshot.docs.filter(doc => {
+          const data = doc.data();
+          return data.status === "completed" || data.jobStatus === "completed";
+        }).length;
 
         setCompletedServices(completedCount);
 
