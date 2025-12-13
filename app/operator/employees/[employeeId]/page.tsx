@@ -11,6 +11,8 @@ import { RouteMap } from "@/components/OperatorDashboard/EmployeeDetail/RouteMap
 import { WeeklyScheduleEditor } from "@/components/OperatorDashboard/EmployeeDetail/WeeklyScheduleEditor";
 import { StopList } from "@/components/OperatorDashboard/EmployeeDetail/StopList";
 import { ProofOfWorkSection } from "@/components/OperatorDashboard/EmployeeDetail/ProofOfWorkSection";
+import { MessageEmployeeModal } from "@/components/OperatorDashboard/EmployeeDetail/MessageEmployeeModal";
+import { FlagIssueModal } from "@/components/OperatorDashboard/EmployeeDetail/FlagIssueModal";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
   ssr: false,
@@ -45,6 +47,8 @@ export default function EmployeeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("overview");
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [showFlagModal, setShowFlagModal] = useState(false);
 
   useEffect(() => {
     checkAccess();
@@ -269,11 +273,15 @@ export default function EmployeeDetailPage() {
                       fontSize: "0.875rem",
                       fontWeight: "600",
                       cursor: "pointer",
+                      transition: "opacity 0.2s",
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
                   >
                     Refresh
                   </button>
                   <button
+                    onClick={() => setShowMessageModal(true)}
                     style={{
                       padding: "0.5rem 1rem",
                       background: "#6b7280",
@@ -283,21 +291,28 @@ export default function EmployeeDetailPage() {
                       fontSize: "0.875rem",
                       fontWeight: "600",
                       cursor: "pointer",
+                      transition: "opacity 0.2s",
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
                   >
                     Message Employee
                   </button>
                   <button
+                    onClick={() => setShowFlagModal(true)}
                     style={{
                       padding: "0.5rem 1rem",
                       background: "#dc2626",
                       color: "#ffffff",
-                      border: "none",
+                      border: "2px solid #3b82f6",
                       borderRadius: "6px",
                       fontSize: "0.875rem",
                       fontWeight: "600",
                       cursor: "pointer",
+                      transition: "opacity 0.2s",
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
                   >
                     Flag Issue
                   </button>
@@ -398,6 +413,25 @@ export default function EmployeeDetailPage() {
           </div>
         </div>
       </main>
+
+      {/* Modals */}
+      {employee && (
+        <>
+          <MessageEmployeeModal
+            isOpen={showMessageModal}
+            onClose={() => setShowMessageModal(false)}
+            employeeId={employeeId}
+            employeeName={`${employee.firstName} ${employee.lastName}`}
+            employeeEmail={employee.email}
+          />
+          <FlagIssueModal
+            isOpen={showFlagModal}
+            onClose={() => setShowFlagModal(false)}
+            employeeId={employeeId}
+            employeeName={`${employee.firstName} ${employee.lastName}`}
+          />
+        </>
+      )}
     </>
   );
 }
