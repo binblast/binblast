@@ -42,6 +42,31 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
     return `${year}-${month}-${day}`;
   };
 
+  // Calculate the scheduled date based on preferred cleaning day
+  const getCalculatedDate = () => {
+    if (!trashDay) return null;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const trashDayIndex = dayNames.indexOf(trashDay);
+    
+    if (trashDayIndex === -1) return null;
+    
+    const currentDayIndex = today.getDay();
+    let daysUntilTrashDay = trashDayIndex - currentDayIndex;
+    if (daysUntilTrashDay < 0) {
+      daysUntilTrashDay += 7; // Move to next week
+    }
+    
+    const scheduledDateObj = new Date(today);
+    scheduledDateObj.setDate(today.getDate() + daysUntilTrashDay);
+    
+    return scheduledDateObj;
+  };
+
+  const calculatedDate = getCalculatedDate();
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,6 +212,21 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
                 <option value="Saturday">Saturday</option>
                 <option value="Sunday">Sunday</option>
               </select>
+              {calculatedDate && (
+                <p style={{ 
+                  marginTop: "0.5rem", 
+                  fontSize: "0.875rem", 
+                  color: "#16a34a",
+                  fontWeight: "500"
+                }}>
+                  Scheduled for: {calculatedDate.toLocaleDateString("en-US", { 
+                    weekday: "long", 
+                    month: "long", 
+                    day: "numeric", 
+                    year: "numeric" 
+                  })}
+                </p>
+              )}
             </div>
 
             {/* Time Selection */}
