@@ -144,9 +144,58 @@ export function ZonesCountiesPanel({ employeeId }: ZonesCountiesPanelProps) {
 
       {/* Zones Section */}
       <div style={{ marginBottom: "2rem" }}>
-        <label style={{ display: "block", marginBottom: "0.75rem", fontSize: "1rem", fontWeight: "600", color: "#374151" }}>
-          Metro Atlanta Zones ({zones.length} selected)
-        </label>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+          <label style={{ display: "block", fontSize: "1rem", fontWeight: "600", color: "#374151" }}>
+            Metro Atlanta Zones ({zones.length} selected)
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              const info = document.getElementById("zone-info");
+              if (info) {
+                info.style.display = info.style.display === "none" ? "block" : "none";
+              }
+            }}
+            style={{
+              padding: "0.25rem 0.5rem",
+              background: "transparent",
+              border: "1px solid #e5e7eb",
+              borderRadius: "4px",
+              fontSize: "0.75rem",
+              color: "#6b7280",
+              cursor: "pointer",
+            }}
+          >
+            ℹ️ Zone Guide
+          </button>
+        </div>
+        
+        {/* Zone Guidelines */}
+        <div
+          id="zone-info"
+          style={{
+            display: "none",
+            padding: "1rem",
+            background: "#f0f9ff",
+            border: "1px solid #bae6fd",
+            borderRadius: "8px",
+            marginBottom: "1rem",
+            fontSize: "0.875rem",
+            color: "#1e40af",
+          }}
+        >
+          <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>Zone Coverage Guidelines:</div>
+          <ul style={{ margin: 0, paddingLeft: "1.25rem", lineHeight: "1.6" }}>
+            <li><strong>Metro Atlanta Core:</strong> Downtown Atlanta, Midtown, Buckhead, and immediate surrounding areas</li>
+            <li><strong>North Metro:</strong> Alpharetta, Roswell, Sandy Springs, Johns Creek, and northern suburbs</li>
+            <li><strong>South Metro:</strong> College Park, East Point, Hapeville, and southern suburbs</li>
+            <li><strong>East Metro:</strong> Decatur, Stone Mountain, Snellville, and eastern suburbs</li>
+            <li><strong>West Metro:</strong> Marietta, Smyrna, Mableton, and western suburbs</li>
+            <li><strong>Extended/Suburban:</strong> Outer ring suburbs and extended metro areas (30+ miles from downtown)</li>
+            <li><strong>Out-of-area (manual approval):</strong> Areas outside standard metro coverage - requires admin approval</li>
+          </ul>
+        </div>
+
         <div style={{
           display: "flex",
           flexDirection: "column",
