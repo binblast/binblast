@@ -105,6 +105,17 @@ export async function POST(
       );
     }
 
+    // Validate schedule format
+    for (let i = 0; i < schedule.length; i++) {
+      const day = schedule[i];
+      if (!day.hasOwnProperty('dayOfWeek') || day.dayOfWeek !== i) {
+        return NextResponse.json(
+          { error: `Invalid dayOfWeek at index ${i}. Expected ${i}, got ${day.dayOfWeek}` },
+          { status: 400 }
+        );
+      }
+    }
+
     const db = await getDbInstance();
     if (!db) {
       return NextResponse.json(
@@ -119,13 +130,27 @@ export async function POST(
     const scheduleId = `${employeeId}_${weekStartDate}`;
     const scheduleRef = doc(db, "employeeSchedules", scheduleId);
 
-    await setDoc(scheduleRef, {
-      employeeId,
-      weekStartDate,
-      schedule,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+    // Ensure serverTimestamp is available
+    const timestamp = serverTimestamp();
+    if (!timestamp) {
+      // Fallback to current date if serverTimestamp is not available
+      const now = new Date();
+      await setDoc(scheduleRef, {
+        employeeId,
+        weekStartDate,
+        schedule,
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+      }, { merge: true });
+    } else {
+      await setDoc(scheduleRef, {
+        employeeId,
+        weekStartDate,
+        schedule,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }, { merge: true });
+    }
 
     return NextResponse.json({
       success: true,
@@ -134,6 +159,13 @@ export async function POST(
     });
   } catch (error: any) {
     console.error("Error saving schedule:", error);
+    // Log detailed error for debugging
+    if (error.code) {
+      console.error("Firestore error code:", error.code);
+    }
+    if (error.message) {
+      console.error("Error message:", error.message);
+    }
     return NextResponse.json(
       { error: error.message || "Failed to save schedule" },
       { status: 500 }

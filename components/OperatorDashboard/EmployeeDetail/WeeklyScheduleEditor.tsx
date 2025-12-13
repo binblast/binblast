@@ -107,24 +107,37 @@ export function WeeklyScheduleEditor({ employeeId, weekStartDate }: WeeklySchedu
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Ensure schedule is properly formatted with all required fields
+      const formattedSchedule = schedule.map((day: DaySchedule) => ({
+        dayOfWeek: day.dayOfWeek,
+        isWorking: day.isWorking || false,
+        startTime: day.isWorking ? (day.startTime || "") : "",
+        endTime: day.isWorking ? (day.endTime || "") : "",
+        maxStops: day.isWorking ? (day.maxStops || 0) : 0,
+      }));
+
       const response = await fetch(`/api/operator/employees/${employeeId}/schedule`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           weekStartDate: selectedWeekStart,
-          schedule,
+          schedule: formattedSchedule,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save schedule");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Failed to save schedule:", errorData.error || response.statusText);
+        // Don't show alert, just log the error
+        return;
       }
 
       const result = await response.json();
-      alert(result.message || "Schedule saved successfully");
+      console.log("Schedule saved successfully:", result);
+      // Success - no alert needed, user can see the "Saving..." button change back
     } catch (error: any) {
       console.error("Error saving schedule:", error);
-      alert(error.message || "Failed to save schedule. Please try again.");
+      // Don't show alert, just log the error
     } finally {
       setSaving(false);
     }
