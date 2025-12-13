@@ -141,6 +141,7 @@ function DashboardPageContent() {
   const [accountInfoExpanded, setAccountInfoExpanded] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [isOperator, setIsOperator] = useState(false);
   
   // Admin state
   const [adminStats, setAdminStats] = useState({
@@ -162,6 +163,24 @@ function DashboardPageContent() {
   });
   const [adminLoading, setAdminLoading] = useState(false);
   const [customerFilter, setCustomerFilter] = useState<{ plan?: string; source?: string; search?: string }>({});
+  
+  // Operator state
+  const [operatorStats, setOperatorStats] = useState({
+    totalDirectCustomers: 0,
+    totalCommercialCustomers: 0,
+    upcomingCleanings: 0,
+    cleaningsCompletedThisWeek: 0,
+    openIssues: 0,
+  });
+  const [operatorDirectCustomers, setOperatorDirectCustomers] = useState<any[]>([]);
+  const [operatorCommercialCustomers, setOperatorCommercialCustomers] = useState<any[]>([]);
+  const [operatorAllCleanings, setOperatorAllCleanings] = useState<any[]>([]);
+  const [operatorLoading, setOperatorLoading] = useState(false);
+  const [operatorCustomerSearch, setOperatorCustomerSearch] = useState("");
+  const [operatorCustomerFilter, setOperatorCustomerFilter] = useState<{ plan?: string; status?: string }>({});
+  const [operatorDateFilter, setOperatorDateFilter] = useState<string>("");
+  const [operatorCityFilter, setOperatorCityFilter] = useState<string>("");
+  const [operatorTypeFilter, setOperatorTypeFilter] = useState<string>("");
   
   // Refs for scroll targets
   const scheduleSectionRef = useRef<HTMLDivElement>(null);
@@ -309,6 +328,8 @@ function DashboardPageContent() {
               setUser(userData);
               // Check for admin role OR admin email (backward compatibility)
               setIsAdmin((userData.role === "admin") || (userData.email === ADMIN_EMAIL));
+              // Check for operator role
+              setIsOperator(userData.role === "operator");
             } else {
               const userEmail = firebaseUser.email || "";
               setUser({
@@ -575,6 +596,172 @@ function DashboardPageContent() {
     return () => { mounted = false; };
   }, [isAdmin, userId]);
 
+  // Load operator data
+  useEffect(() => {
+    if (!isOperator || !userId) {
+      return;
+    }
+    
+    let mounted = true;
+    async function loadOperatorData() {
+      setOperatorLoading(true);
+      try {
+        const { getDbInstance } = await import("@/lib/firebase");
+        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+        const firestore = await safeImportFirestore();
+        const { collection, query, getDocs, where, orderBy } = firestore;
+
+        const db = await getDbInstance();
+        if (!db) return;
+
+        // Load all users (direct customers only - exclude partner customers)
+        const usersSnapshot = await getDocs(collection(db, "users"));
+        const directCustomers: any[] = [];
+        const commercialCustomers: any[] = [];
+        const partnerCustomerEmails = new Set<string>();
+
+        // Load partner bookings to identify partner customers
+        try {
+          const partnerBookingsSnapshot = await getDocs(collection(db, "partnerBookings"));
+          partnerBookingsSnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.customerEmail) {
+              partnerCustomerEmails.add(data.customerEmail.toLowerCase());
+            }
+          });
+        } catch (err) {
+          console.warn("[Operator] Could not load partner bookings:", err);
+        }
+
+        usersSnapshot.forEach((doc) => {
+          const data = doc.data();
+          const email = (data.email || "").toLowerCase();
+          
+          // Only include direct customers (not partner customers)
+          if (!partnerCustomerEmails.has(email)) {
+            const customer = {
+              id: doc.id,
+              firstName: data.firstName || "",
+              lastName: data.lastName || "",
+              email: data.email || "",
+              phone: data.phone || "",
+              addressLine1: data.addressLine1 || "",
+              city: data.city || "",
+              state: data.state || "",
+              zipCode: data.zipCode || "",
+              selectedPlan: data.selectedPlan || "",
+              subscriptionStatus: data.subscriptionStatus || "none",
+              paymentStatus: data.paymentStatus || "pending",
+              loyaltyRanking: data.loyaltyRanking || "Getting Started",
+              internalNotes: data.internalNotes || "",
+              servicePaused: data.servicePaused || false,
+            };
+
+            if (data.selectedPlan === "commercial" || data.selectedPlan?.includes("commercial") || data.selectedPlan?.includes("HOA")) {
+              commercialCustomers.push({
+                ...customer,
+                businessName: data.businessName || `${data.firstName} ${data.lastName}`,
+                contactPerson: `${data.firstName} ${data.lastName}`,
+                binsCount: data.binsCount || 1,
+                frequency: data.selectedPlan || "monthly",
+                specialInstructions: data.specialInstructions || "",
+              });
+            } else {
+              directCustomers.push(customer);
+            }
+          }
+        });
+
+        // Load all scheduled cleanings
+        const cleaningsSnapshot = await getDocs(query(
+          collection(db, "scheduledCleanings"),
+          orderBy("scheduledDate", "asc")
+        ));
+        const allCleanings: any[] = [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const sevenDaysFromNow = new Date();
+        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+        sevenDaysFromNow.setHours(23, 59, 59, 999);
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+
+        let upcomingCount = 0;
+        let completedThisWeek = 0;
+
+        cleaningsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          const cleaningDate = data.scheduledDate?.toDate?.() || new Date(data.scheduledDate);
+          
+          const cleaning = {
+            id: doc.id,
+            userId: data.userId || "",
+            customerName: data.userName || "",
+            customerEmail: data.userEmail || "",
+            addressLine1: data.addressLine1 || "",
+            addressLine2: data.addressLine2 || "",
+            city: data.city || "",
+            state: data.state || "",
+            zipCode: data.zipCode || "",
+            scheduledDate: cleaningDate,
+            scheduledTime: data.scheduledTime || "TBD",
+            planType: data.planType || "",
+            status: data.status || "scheduled",
+            notes: data.notes || "",
+            internalNotes: data.internalNotes || "",
+            completedAt: data.completedAt || null,
+            isCommercial: data.planType === "commercial" || data.planType?.includes("commercial"),
+          };
+
+          allCleanings.push(cleaning);
+
+          // Count upcoming cleanings (today + next 7 days)
+          if (cleaningDate >= today && cleaningDate <= sevenDaysFromNow && cleaning.status !== "cancelled") {
+            upcomingCount++;
+          }
+
+          // Count completed this week
+          if (cleaning.status === "completed" && cleaning.completedAt) {
+            const completedDate = cleaning.completedAt?.toDate?.() || new Date(cleaning.completedAt);
+            if (completedDate >= weekStart && completedDate < weekEnd) {
+              completedThisWeek++;
+            }
+          }
+        });
+
+        // Load internal issues/notes (could be stored in a separate collection or as part of customer data)
+        // For now, count customers with internal notes as "open issues"
+        const openIssues = directCustomers.filter(c => c.internalNotes && c.internalNotes.trim().length > 0).length +
+                          commercialCustomers.filter(c => c.specialInstructions && c.specialInstructions.trim().length > 0).length;
+
+        if (mounted) {
+          setOperatorDirectCustomers(directCustomers);
+          setOperatorCommercialCustomers(commercialCustomers);
+          setOperatorAllCleanings(allCleanings);
+          setOperatorStats({
+            totalDirectCustomers: directCustomers.length,
+            totalCommercialCustomers: commercialCustomers.length,
+            upcomingCleanings: upcomingCount,
+            cleaningsCompletedThisWeek: completedThisWeek,
+            openIssues,
+          });
+          setOperatorLoading(false);
+        }
+      } catch (err: any) {
+        console.error("[Dashboard] Error loading operator data:", err);
+        if (mounted) {
+          setOperatorLoading(false);
+        }
+      }
+    }
+
+    loadOperatorData();
+    return () => { mounted = false; };
+  }, [isOperator, userId]);
+
   // Helper functions
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -675,6 +862,664 @@ function DashboardPageContent() {
   const hasUserId = Boolean(userId);
   const isFirebaseReady = Boolean(firebaseReady);
   const shouldShowSubscriptionManager = Boolean(hasValidPlan && hasValidSubscription && hasUserId && isFirebaseReady);
+
+  // Compute filtered customers for operator view
+  const filteredDirectCustomers = useMemo(() => {
+    if (!isOperator) return [];
+    let filtered = operatorDirectCustomers;
+    
+    if (operatorCustomerSearch) {
+      const search = operatorCustomerSearch.toLowerCase();
+      filtered = filtered.filter(c => 
+        `${c.firstName} ${c.lastName}`.toLowerCase().includes(search) ||
+        (c.email || "").toLowerCase().includes(search) ||
+        (c.addressLine1 || "").toLowerCase().includes(search) ||
+        (c.city || "").toLowerCase().includes(search)
+      );
+    }
+    
+    if (operatorCustomerFilter.plan) {
+      filtered = filtered.filter(c => c.selectedPlan === operatorCustomerFilter.plan);
+    }
+    
+    if (operatorCustomerFilter.status) {
+      if (operatorCustomerFilter.status === "active") {
+        filtered = filtered.filter(c => c.subscriptionStatus === "active" && !c.servicePaused);
+      } else if (operatorCustomerFilter.status === "paused") {
+        filtered = filtered.filter(c => c.servicePaused);
+      } else if (operatorCustomerFilter.status === "canceled") {
+        filtered = filtered.filter(c => c.subscriptionStatus === "cancelled" || c.subscriptionStatus === "canceled");
+      }
+    }
+    
+    return filtered;
+  }, [isOperator, operatorDirectCustomers, operatorCustomerSearch, operatorCustomerFilter]);
+
+  const filteredCleanings = useMemo(() => {
+    if (!isOperator) return [];
+    let filtered = operatorAllCleanings;
+    
+    if (operatorDateFilter) {
+      const filterDate = new Date(operatorDateFilter);
+      filterDate.setHours(0, 0, 0, 0);
+      const filterDateEnd = new Date(filterDate);
+      filterDateEnd.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(c => {
+        const cleaningDate = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
+        return cleaningDate >= filterDate && cleaningDate <= filterDateEnd;
+      });
+    }
+    
+    if (operatorCityFilter) {
+      filtered = filtered.filter(c => (c.city || "").toLowerCase().includes(operatorCityFilter.toLowerCase()));
+    }
+    
+    if (operatorTypeFilter) {
+      if (operatorTypeFilter === "commercial") {
+        filtered = filtered.filter(c => c.isCommercial);
+      } else if (operatorTypeFilter === "residential") {
+        filtered = filtered.filter(c => !c.isCommercial);
+      }
+    }
+    
+    return filtered;
+  }, [isOperator, operatorAllCleanings, operatorDateFilter, operatorCityFilter, operatorTypeFilter]);
+
+  const cleaningsByDate = useMemo(() => {
+    if (!isOperator) return {};
+    const grouped: Record<string, any[]> = {};
+    filteredCleanings.forEach(cleaning => {
+      const date = cleaning.scheduledDate?.toDate?.() || new Date(cleaning.scheduledDate);
+      const dateKey = date.toISOString().split('T')[0];
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey].push(cleaning);
+    });
+    return grouped;
+  }, [isOperator, filteredCleanings]);
+
+  // Operator Dashboard
+  if (isOperator) {
+    return (
+      <>
+        <Navbar />
+        <main style={{ minHeight: "calc(100vh - 80px)", padding: "3rem 0", background: "#f9fafb" }}>
+          <div className="container">
+            <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+              
+              {/* Operator Header */}
+              <div style={{ marginBottom: "2rem" }}>
+                <h1 style={{ 
+                  fontSize: "clamp(2rem, 5vw, 2.5rem)", 
+                  fontWeight: "700", 
+                  color: "var(--text-dark)",
+                  marginBottom: "0.5rem"
+                }}>
+                  Operator Dashboard
+                </h1>
+                <p style={{ 
+                  fontSize: "1rem", 
+                  color: "#6b7280", 
+                  marginBottom: "1.5rem"
+                }}>
+                  Day-to-day operations and customer management
+                </p>
+              </div>
+
+              {operatorLoading ? (
+                <div style={{ textAlign: "center", padding: "3rem 0" }}>
+                  <p style={{ color: "#6b7280" }}>Loading operator dashboard...</p>
+                </div>
+              ) : (
+                <>
+                  {/* SECTION A: Operations Overview */}
+                  <div style={{ marginBottom: "2rem" }}>
+                    <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                      Operations Overview
+                    </h2>
+                    <div style={{ 
+                      display: "grid", 
+                      gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+                      gap: "1rem",
+                      marginBottom: "2rem"
+                    }}>
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                        border: "1px solid #e5e7eb"
+                      }}>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>Direct Customers</div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                          {operatorStats.totalDirectCustomers}
+                        </div>
+                      </div>
+                      
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                        border: "1px solid #e5e7eb"
+                      }}>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>Commercial Accounts</div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                          {operatorStats.totalCommercialCustomers}
+                        </div>
+                      </div>
+                      
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                        border: "1px solid #e5e7eb"
+                      }}>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>Upcoming Cleanings</div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                          {operatorStats.upcomingCleanings}
+                        </div>
+                      </div>
+                      
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                        border: "1px solid #e5e7eb"
+                      }}>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>Completed This Week</div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                          {operatorStats.cleaningsCompletedThisWeek}
+                        </div>
+                      </div>
+                      
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                        border: "1px solid #e5e7eb"
+                      }}>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>Open Issues</div>
+                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                          {operatorStats.openIssues}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION B: Direct Customers Management */}
+                  <div style={{ marginBottom: "2rem" }}>
+                    <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                      Direct Customers
+                    </h2>
+                    
+                    {/* Search and Filters */}
+                    <div style={{ 
+                      display: "flex", 
+                      gap: "1rem", 
+                      marginBottom: "1rem",
+                      flexWrap: "wrap"
+                    }}>
+                      <input
+                        type="text"
+                        placeholder="Search customers..."
+                        value={operatorCustomerSearch}
+                        onChange={(e) => setOperatorCustomerSearch(e.target.value)}
+                        style={{
+                          flex: "1",
+                          minWidth: "200px",
+                          padding: "0.75rem 1rem",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          fontSize: "0.95rem"
+                        }}
+                      />
+                      <select
+                        value={operatorCustomerFilter.plan || ""}
+                        onChange={(e) => setOperatorCustomerFilter({ ...operatorCustomerFilter, plan: e.target.value || undefined })}
+                        style={{
+                          padding: "0.75rem 1rem",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          fontSize: "0.95rem",
+                          background: "#ffffff"
+                        }}
+                      >
+                        <option value="">All Plans</option>
+                        <option value="one-time">Monthly Clean</option>
+                        <option value="twice-month">Bi-Weekly</option>
+                        <option value="bi-monthly">Bi-Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                      </select>
+                      <select
+                        value={operatorCustomerFilter.status || ""}
+                        onChange={(e) => setOperatorCustomerFilter({ ...operatorCustomerFilter, status: e.target.value || undefined })}
+                        style={{
+                          padding: "0.75rem 1rem",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          fontSize: "0.95rem",
+                          background: "#ffffff"
+                        }}
+                      >
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="paused">Paused</option>
+                        <option value="canceled">Canceled</option>
+                      </select>
+                    </div>
+
+                    {/* Customers Table */}
+                    <div style={{
+                      background: "#ffffff",
+                      borderRadius: "12px",
+                      overflow: "hidden",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      {filteredDirectCustomers.length === 0 ? (
+                        <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
+                          No customers found.
+                        </div>
+                      ) : (
+                        <div style={{ overflowX: "auto" }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <thead>
+                              <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Name</th>
+                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Email</th>
+                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Address</th>
+                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Plan</th>
+                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Status</th>
+                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Loyalty</th>
+                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Next Cleaning</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredDirectCustomers.map((customer) => {
+                                const nextCleaning = operatorAllCleanings
+                                  .filter(c => c.customerEmail === customer.email && c.status !== "cancelled" && c.status !== "completed")
+                                  .sort((a, b) => {
+                                    const dateA = a.scheduledDate?.toDate?.() || new Date(a.scheduledDate);
+                                    const dateB = b.scheduledDate?.toDate?.() || new Date(b.scheduledDate);
+                                    return dateA.getTime() - dateB.getTime();
+                                  })[0];
+                                
+                                return (
+                                  <tr key={customer.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                    <td style={{ padding: "1rem", fontSize: "0.95rem" }}>
+                                      {customer.firstName} {customer.lastName}
+                                    </td>
+                                    <td style={{ padding: "1rem", fontSize: "0.95rem", color: "#6b7280" }}>
+                                      {customer.email}
+                                    </td>
+                                    <td style={{ padding: "1rem", fontSize: "0.95rem", color: "#6b7280" }}>
+                                      {customer.addressLine1 ? `${customer.addressLine1}, ${customer.city}` : customer.city || "N/A"}
+                                    </td>
+                                    <td style={{ padding: "1rem", fontSize: "0.95rem" }}>
+                                      {PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan || "N/A"}
+                                    </td>
+                                    <td style={{ padding: "1rem" }}>
+                                      <span style={{
+                                        padding: "0.25rem 0.75rem",
+                                        borderRadius: "999px",
+                                        fontSize: "0.75rem",
+                                        fontWeight: "600",
+                                        background: customer.servicePaused ? "#fef3c7" : customer.subscriptionStatus === "active" ? "#d1fae5" : "#fee2e2",
+                                        color: customer.servicePaused ? "#92400e" : customer.subscriptionStatus === "active" ? "#065f46" : "#991b1b"
+                                      }}>
+                                        {customer.servicePaused ? "Paused" : customer.subscriptionStatus === "active" ? "Active" : "Inactive"}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: "1rem", fontSize: "0.95rem", color: "#6b7280" }}>
+                                      {customer.loyaltyRanking || "Getting Started"}
+                                    </td>
+                                    <td style={{ padding: "1rem", fontSize: "0.95rem", color: "#6b7280" }}>
+                                      {nextCleaning ? (
+                                        <>
+                                          {(nextCleaning.scheduledDate?.toDate?.() || new Date(nextCleaning.scheduledDate)).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                          <br />
+                                          <span style={{ fontSize: "0.75rem" }}>{nextCleaning.scheduledTime || "TBD"}</span>
+                                        </>
+                                      ) : "None scheduled"}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* SECTION C: Commercial Accounts */}
+                  <div style={{ marginBottom: "2rem" }}>
+                    <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                      Commercial Accounts
+                    </h2>
+                    
+                    {operatorCommercialCustomers.length === 0 ? (
+                      <div style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "2rem",
+                        textAlign: "center",
+                        color: "#6b7280",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                        border: "1px solid #e5e7eb"
+                      }}>
+                        No commercial accounts found.
+                      </div>
+                    ) : (
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                        gap: "1rem"
+                      }}>
+                        {operatorCommercialCustomers.map((account) => {
+                          const nextService = operatorAllCleanings
+                            .filter(c => c.customerEmail === account.email && c.status !== "cancelled" && c.status !== "completed")
+                            .sort((a, b) => {
+                              const dateA = a.scheduledDate?.toDate?.() || new Date(a.scheduledDate);
+                              const dateB = b.scheduledDate?.toDate?.() || new Date(b.scheduledDate);
+                              return dateA.getTime() - dateB.getTime();
+                            })[0];
+                          
+                          return (
+                            <div key={account.id} style={{
+                              background: "#ffffff",
+                              borderRadius: "12px",
+                              padding: "1.5rem",
+                              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                              border: "1px solid #e5e7eb"
+                            }}>
+                              <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                                {account.businessName}
+                              </h3>
+                              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "1rem" }}>
+                                <div>{account.contactPerson}</div>
+                                <div>{account.email}</div>
+                                {account.phone && <div>{account.phone}</div>}
+                              </div>
+                              <div style={{ fontSize: "0.875rem", marginBottom: "0.5rem" }}>
+                                <strong>Bins:</strong> {account.binsCount}
+                              </div>
+                              <div style={{ fontSize: "0.875rem", marginBottom: "0.5rem" }}>
+                                <strong>Frequency:</strong> {account.frequency}
+                              </div>
+                              <div style={{ fontSize: "0.875rem", marginBottom: "0.5rem" }}>
+                                <strong>Next Service:</strong> {nextService ? (
+                                  (nextService.scheduledDate?.toDate?.() || new Date(nextService.scheduledDate)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                                ) : "Not scheduled"}
+                              </div>
+                              {account.specialInstructions && (
+                                <div style={{ fontSize: "0.875rem", marginTop: "1rem", padding: "0.75rem", background: "#f9fafb", borderRadius: "8px" }}>
+                                  <strong>Notes:</strong> {account.specialInstructions}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* SECTION D: Schedule & Route Board */}
+                  <div style={{ marginBottom: "2rem" }}>
+                    <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                      Schedule & Route Board
+                    </h2>
+                    
+                    {/* Filters */}
+                    <div style={{ 
+                      display: "flex", 
+                      gap: "1rem", 
+                      marginBottom: "1rem",
+                      flexWrap: "wrap"
+                    }}>
+                      <input
+                        type="date"
+                        value={operatorDateFilter}
+                        onChange={(e) => setOperatorDateFilter(e.target.value)}
+                        style={{
+                          padding: "0.75rem 1rem",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          fontSize: "0.95rem"
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Filter by city..."
+                        value={operatorCityFilter}
+                        onChange={(e) => setOperatorCityFilter(e.target.value)}
+                        style={{
+                          padding: "0.75rem 1rem",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          fontSize: "0.95rem"
+                        }}
+                      />
+                      <select
+                        value={operatorTypeFilter}
+                        onChange={(e) => setOperatorTypeFilter(e.target.value)}
+                        style={{
+                          padding: "0.75rem 1rem",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          fontSize: "0.95rem",
+                          background: "#ffffff"
+                        }}
+                      >
+                        <option value="">All Types</option>
+                        <option value="commercial">Commercial</option>
+                        <option value="residential">Residential</option>
+                      </select>
+                    </div>
+
+                    {/* Schedule by Date */}
+                    <div style={{
+                      background: "#ffffff",
+                      borderRadius: "12px",
+                      padding: "1.5rem",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      {Object.keys(cleaningsByDate).length === 0 ? (
+                        <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+                          No cleanings scheduled.
+                        </div>
+                      ) : (
+                        Object.keys(cleaningsByDate).sort().map(dateKey => {
+                          const cleanings = cleaningsByDate[dateKey];
+                          const date = new Date(dateKey);
+                          
+                          return (
+                            <div key={dateKey} style={{ marginBottom: "2rem" }}>
+                              <h3 style={{ 
+                                fontSize: "1.125rem", 
+                                fontWeight: "600", 
+                                marginBottom: "1rem",
+                                color: "var(--text-dark)",
+                                paddingBottom: "0.5rem",
+                                borderBottom: "2px solid #e5e7eb"
+                              }}>
+                                {date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                              </h3>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                {cleanings.map(cleaning => (
+                                  <div key={cleaning.id} style={{
+                                    padding: "1rem",
+                                    background: cleaning.status === "completed" ? "#f0fdf4" : cleaning.status === "cancelled" ? "#fef2f2" : "#f0f9ff",
+                                    borderRadius: "8px",
+                                    border: `1px solid ${cleaning.status === "completed" ? "#bbf7d0" : cleaning.status === "cancelled" ? "#fecaca" : "#bae6fd"}`,
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "start"
+                                  }}>
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>
+                                        {cleaning.customerName || cleaning.customerEmail}
+                                      </div>
+                                      <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
+                                        {cleaning.addressLine1}, {cleaning.city}
+                                      </div>
+                                      <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                                        {PLAN_NAMES[cleaning.planType] || cleaning.planType || "N/A"} • {cleaning.scheduledTime || "TBD"}
+                                      </div>
+                                      {cleaning.internalNotes && (
+                                        <div style={{ fontSize: "0.875rem", marginTop: "0.5rem", padding: "0.5rem", background: "#ffffff", borderRadius: "4px" }}>
+                                          <strong>Notes:</strong> {cleaning.internalNotes}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <span style={{
+                                        padding: "0.25rem 0.75rem",
+                                        borderRadius: "999px",
+                                        fontSize: "0.75rem",
+                                        fontWeight: "600",
+                                        textTransform: "capitalize",
+                                        background: cleaning.status === "completed" ? "#d1fae5" : cleaning.status === "cancelled" ? "#fee2e2" : "#dbeafe",
+                                        color: cleaning.status === "completed" ? "#065f46" : cleaning.status === "cancelled" ? "#991b1b" : "#1e40af"
+                                      }}>
+                                        {cleaning.status || "scheduled"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* SECTION E: Customer Loyalty & Rankings */}
+                  <div style={{ marginBottom: "2rem" }}>
+                    <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                      Customer Loyalty & Rankings
+                    </h2>
+                    
+                    <div style={{
+                      background: "#ffffff",
+                      borderRadius: "12px",
+                      padding: "1.5rem",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "1rem" }}>
+                        {filteredDirectCustomers
+                          .filter(c => c.loyaltyRanking && c.loyaltyRanking !== "Getting Started")
+                          .sort((a, b) => {
+                            const levels = ["Bin Royalty", "Sanitation Superstar", "Sparkle Specialist", "Bin Boss", "Clean Freak", "Getting Started"];
+                            return levels.indexOf(a.loyaltyRanking) - levels.indexOf(b.loyaltyRanking);
+                          })
+                          .slice(0, 20)
+                          .map(customer => {
+                            const completedCount = operatorAllCleanings.filter(c => 
+                              c.customerEmail === customer.email && c.status === "completed"
+                            ).length;
+                            
+                            return (
+                              <div key={customer.id} style={{
+                                padding: "1rem",
+                                background: "#f9fafb",
+                                borderRadius: "8px",
+                                border: "1px solid #e5e7eb"
+                              }}>
+                                <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>
+                                  {customer.firstName} {customer.lastName}
+                                </div>
+                                <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+                                  {customer.loyaltyRanking}
+                                </div>
+                                <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+                                  {completedCount} completed cleanings
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                      {filteredDirectCustomers.filter(c => c.loyaltyRanking && c.loyaltyRanking !== "Getting Started").length === 0 && (
+                        <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+                          No loyalty rankings available.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* SECTION F: Internal Issues & Notes */}
+                  <div style={{ marginBottom: "2rem" }}>
+                    <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                      Internal Issues & Notes
+                    </h2>
+                    
+                    <div style={{
+                      background: "#ffffff",
+                      borderRadius: "12px",
+                      padding: "1.5rem",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      {operatorStats.openIssues === 0 ? (
+                        <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+                          No open issues or notes.
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                          {filteredDirectCustomers
+                            .filter(c => c.internalNotes && c.internalNotes.trim().length > 0)
+                            .map(customer => (
+                              <div key={customer.id} style={{
+                                padding: "1rem",
+                                background: "#fef3c7",
+                                borderRadius: "8px",
+                                border: "1px solid #fde68a"
+                              }}>
+                                <div style={{ fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                                  {customer.firstName} {customer.lastName} ({customer.email})
+                                </div>
+                                <div style={{ fontSize: "0.875rem", color: "#92400e" }}>
+                                  {customer.internalNotes}
+                                </div>
+                              </div>
+                            ))}
+                          {operatorCommercialCustomers
+                            .filter(c => c.specialInstructions && c.specialInstructions.trim().length > 0)
+                            .map(account => (
+                              <div key={account.id} style={{
+                                padding: "1rem",
+                                background: "#fef3c7",
+                                borderRadius: "8px",
+                                border: "1px solid #fde68a"
+                              }}>
+                                <div style={{ fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                                  {account.businessName} ({account.email})
+                                </div>
+                                <div style={{ fontSize: "0.875rem", color: "#92400e" }}>
+                                  {account.specialInstructions}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
