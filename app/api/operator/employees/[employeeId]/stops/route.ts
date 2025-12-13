@@ -77,7 +77,7 @@ export async function GET(
     const upcomingStops = upcomingSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-    }));
+    })) as Array<{ id: string; scheduledDate?: string; scheduledTime?: string; [key: string]: any }>;
 
     return NextResponse.json({
       todayStops,

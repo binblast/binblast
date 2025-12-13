@@ -57,7 +57,7 @@ export async function GET(
     const stops = stopsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-    }));
+    })) as Array<{ id: string; status?: string; jobStatus?: string; scheduledTime?: string; [key: string]: any }>;
 
     const assignedStops = stops.length;
     const completedStops = stops.filter(s => 
