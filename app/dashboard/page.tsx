@@ -190,6 +190,7 @@ function DashboardPageContent() {
   const [operatorDateFilter, setOperatorDateFilter] = useState<string>("");
   const [operatorCityFilter, setOperatorCityFilter] = useState<string>("");
   const [operatorTypeFilter, setOperatorTypeFilter] = useState<string>("");
+  const [operatorActiveTab, setOperatorActiveTab] = useState<"overview" | "employees" | "customers" | "schedule">("overview");
   
   // Refs for scroll targets
   const scheduleSectionRef = useRef<HTMLDivElement>(null);
@@ -1177,17 +1178,115 @@ function DashboardPageContent() {
                 </div>
               ) : (
                 <>
-                  {/* SECTION A: Operations Overview */}
-                  <div style={{ marginBottom: "2rem" }}>
-                    <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                      Operations Overview
-                    </h2>
-                    <div style={{ 
-                      display: "grid", 
-                      gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
-                      gap: "1rem",
-                      marginBottom: "2rem"
-                    }}>
+                  {/* Sticky Tab Navigation */}
+                  <div style={{
+                    position: "sticky",
+                    top: "80px",
+                    background: "#ffffff",
+                    borderRadius: "12px",
+                    padding: "0.5rem",
+                    marginBottom: "1.5rem",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                    border: "1px solid #e5e7eb",
+                    zIndex: 100,
+                    display: "flex",
+                    gap: "0.5rem",
+                    flexWrap: "wrap"
+                  }}>
+                    <button
+                      onClick={() => setOperatorActiveTab("overview")}
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        padding: "0.75rem 1.5rem",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        background: operatorActiveTab === "overview" ? "#16a34a" : "transparent",
+                        color: operatorActiveTab === "overview" ? "#ffffff" : "#6b7280",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Overview
+                    </button>
+                    <button
+                      onClick={() => setOperatorActiveTab("employees")}
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        padding: "0.75rem 1.5rem",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        background: operatorActiveTab === "employees" ? "#16a34a" : "transparent",
+                        color: operatorActiveTab === "employees" ? "#ffffff" : "#6b7280",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Employees
+                    </button>
+                    <button
+                      onClick={() => setOperatorActiveTab("customers")}
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        padding: "0.75rem 1.5rem",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        background: operatorActiveTab === "customers" ? "#16a34a" : "transparent",
+                        color: operatorActiveTab === "customers" ? "#ffffff" : "#6b7280",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Customers
+                    </button>
+                    <button
+                      onClick={() => setOperatorActiveTab("schedule")}
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        padding: "0.75rem 1.5rem",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        background: operatorActiveTab === "schedule" ? "#16a34a" : "transparent",
+                        color: operatorActiveTab === "schedule" ? "#ffffff" : "#6b7280",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Schedule
+                    </button>
+                  </div>
+
+                  {/* Unified Card Container */}
+                  <div style={{
+                    background: "#ffffff",
+                    borderRadius: "20px",
+                    padding: "2rem",
+                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                    border: "1px solid #e5e7eb"
+                  }}>
+                    {/* TAB: Overview */}
+                    {operatorActiveTab === "overview" && (
+                      <div>
+                        <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
+                          Operations Overview
+                        </h2>
+                        <div style={{ 
+                          display: "grid", 
+                          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+                          gap: "1rem",
+                          marginBottom: "1.5rem"
+                        }}>
                       <div style={{
                         background: "#ffffff",
                         borderRadius: "12px",
@@ -1252,20 +1351,29 @@ function DashboardPageContent() {
                           {operatorStats.openIssues}
                         </div>
                       </div>
-                    </div>
-                  </div>
+                        </div>
+                      </div>
+                    )}
 
-                  {/* SECTION B: Employee Status */}
-                  <EmployeeStatus userId={userId} />
+                    {/* TAB: Employees */}
+                    {operatorActiveTab === "employees" && (
+                      <div>
+                        <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
+                          Employee Status
+                        </h2>
+                        <EmployeeStatus userId={userId} />
+                      </div>
+                    )}
 
-                  {/* SECTION C: Direct Customers Management */}
-                  <div style={{ marginBottom: "2rem" }}>
-                    <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                      Direct Customers
-                    </h2>
-                    
-                    {/* Search and Filters */}
-                    <div style={{ 
+                    {/* TAB: Customers */}
+                    {operatorActiveTab === "customers" && (
+                      <div>
+                        <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
+                          Direct Customers
+                        </h2>
+                        
+                        {/* Search and Filters */}
+                        <div style={{ 
                       display: "flex", 
                       gap: "1rem", 
                       marginBottom: "1rem",
@@ -1318,10 +1426,10 @@ function DashboardPageContent() {
                         <option value="paused">Paused</option>
                         <option value="canceled">Canceled</option>
                       </select>
-                    </div>
+                        </div>
 
-                    {/* Customers Table */}
-                    <div style={{
+                        {/* Customers Table */}
+                        <div style={{
                       background: "#ffffff",
                       borderRadius: "12px",
                       overflow: "hidden",
@@ -1407,16 +1515,15 @@ function DashboardPageContent() {
                           </table>
                         </div>
                       )}
-                    </div>
-                  </div>
-
-                  {/* SECTION C: Commercial Accounts */}
-                  <div style={{ marginBottom: "2rem" }}>
-                    <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                      Commercial Accounts
-                    </h2>
-                    
-                    {operatorCommercialCustomers.length === 0 ? (
+                        </div>
+                        
+                        {/* Commercial Accounts Section */}
+                        <div style={{ marginTop: "2rem", paddingTop: "2rem", borderTop: "1px solid #e5e7eb" }}>
+                          <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                            Commercial Accounts
+                          </h3>
+                          
+                          {operatorCommercialCustomers.length === 0 ? (
                       <div style={{
                         background: "#ffffff",
                         borderRadius: "12px",
@@ -1484,15 +1591,18 @@ function DashboardPageContent() {
                             </div>
                           );
                         })}
+                          </div>
+                        )}
+                        </div>
                       </div>
                     )}
-                  </div>
 
-                  {/* SECTION D: Schedule & Route Board */}
-                  <div style={{ marginBottom: "2rem" }}>
-                    <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                      Schedule & Route Board
-                    </h2>
+                    {/* TAB: Schedule */}
+                    {operatorActiveTab === "schedule" && (
+                      <div>
+                        <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
+                          Schedule & Route Board
+                        </h2>
                     
                     {/* Filters */}
                     <div style={{ 
@@ -1539,10 +1649,10 @@ function DashboardPageContent() {
                         <option value="commercial">Commercial</option>
                         <option value="residential">Residential</option>
                       </select>
-                    </div>
+                        </div>
 
-                    {/* Schedule by Date */}
-                    <div style={{
+                        {/* Schedule by Date */}
+                        <div style={{
                       background: "#ffffff",
                       borderRadius: "12px",
                       padding: "1.5rem",
@@ -1622,121 +1732,126 @@ function DashboardPageContent() {
                         })
                       )}
                     </div>
-                  </div>
-
-                  {/* SECTION E: Customer Loyalty & Rankings */}
-                  <div style={{ marginBottom: "2rem" }}>
-                    <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                      Customer Loyalty & Rankings
-                    </h2>
-                    
-                    <div style={{
-                      background: "#ffffff",
-                      borderRadius: "12px",
-                      padding: "1.5rem",
-                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                      border: "1px solid #e5e7eb"
-                    }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "1rem" }}>
-                        {operatorDirectCustomers
-                          .filter(c => c.loyaltyRanking && c.loyaltyRanking !== "Getting Started")
-                          .sort((a, b) => {
-                            const levels = ["Bin Royalty", "Sanitation Superstar", "Sparkle Specialist", "Bin Boss", "Clean Freak", "Getting Started"];
-                            return levels.indexOf(a.loyaltyRanking || "Getting Started") - levels.indexOf(b.loyaltyRanking || "Getting Started");
-                          })
-                          .slice(0, 20)
-                          .map(customer => {
-                            const customerEmailLower = (customer.email || "").toLowerCase();
-                            const completedCount = operatorAllCleanings.filter(c => {
-                              const cleaningEmailLower = (c.customerEmail || "").toLowerCase();
-                              const isCompleted = c.status === "completed" || (c as any).jobStatus === "completed";
-                              return cleaningEmailLower === customerEmailLower && isCompleted;
-                            }).length;
-                            
-                            return (
-                              <div key={customer.id} style={{
-                                padding: "1rem",
-                                background: "#f9fafb",
-                                borderRadius: "8px",
-                                border: "1px solid #e5e7eb"
-                              }}>
-                                <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>
-                                  {customer.firstName} {customer.lastName}
-                                </div>
-                                <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
-                                  {customer.loyaltyRanking}
-                                </div>
-                                <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
-                                  {completedCount} completed cleanings
-                                </div>
-                              </div>
-                            );
-                          })}
                       </div>
-                      {filteredDirectCustomers.filter(c => c.loyaltyRanking && c.loyaltyRanking !== "Getting Started").length === 0 && (
-                        <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
-                          No loyalty rankings available.
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    )}
 
-                  {/* SECTION F: Internal Issues & Notes */}
-                  <div style={{ marginBottom: "2rem" }}>
-                    <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                      Internal Issues & Notes
-                    </h2>
-                    
-                    <div style={{
-                      background: "#ffffff",
-                      borderRadius: "12px",
-                      padding: "1.5rem",
-                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                      border: "1px solid #e5e7eb"
-                    }}>
-                      {operatorStats.openIssues === 0 ? (
-                        <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
-                          No open issues or notes.
-                        </div>
-                      ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                          {operatorDirectCustomers
-                            .filter(c => c.internalNotes && c.internalNotes.trim().length > 0)
-                            .map(customer => (
-                              <div key={customer.id} style={{
-                                padding: "1rem",
-                                background: "#fef3c7",
-                                borderRadius: "8px",
-                                border: "1px solid #fde68a"
-                              }}>
-                                <div style={{ fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                                  {customer.firstName} {customer.lastName} ({customer.email})
-                                </div>
-                                <div style={{ fontSize: "0.875rem", color: "#92400e" }}>
-                                  {customer.internalNotes}
-                                </div>
+                    {/* Additional sections in Overview tab */}
+                    {operatorActiveTab === "overview" && (
+                      <>
+                        {/* Customer Loyalty & Rankings */}
+                        <div style={{ marginTop: "2rem", paddingTop: "2rem", borderTop: "1px solid #e5e7eb" }}>
+                          <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                            Customer Loyalty & Rankings
+                          </h3>
+                          
+                          <div style={{
+                            background: "#f9fafb",
+                            borderRadius: "12px",
+                            padding: "1.5rem",
+                            border: "1px solid #e5e7eb"
+                          }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "1rem" }}>
+                              {operatorDirectCustomers
+                                .filter(c => c.loyaltyRanking && c.loyaltyRanking !== "Getting Started")
+                                .sort((a, b) => {
+                                  const levels = ["Bin Royalty", "Sanitation Superstar", "Sparkle Specialist", "Bin Boss", "Clean Freak", "Getting Started"];
+                                  return levels.indexOf(a.loyaltyRanking || "Getting Started") - levels.indexOf(b.loyaltyRanking || "Getting Started");
+                                })
+                                .slice(0, 20)
+                                .map(customer => {
+                                  const customerEmailLower = (customer.email || "").toLowerCase();
+                                  const completedCount = operatorAllCleanings.filter(c => {
+                                    const cleaningEmailLower = (c.customerEmail || "").toLowerCase();
+                                    const isCompleted = c.status === "completed" || (c as any).jobStatus === "completed";
+                                    return cleaningEmailLower === customerEmailLower && isCompleted;
+                                  }).length;
+                                  
+                                  return (
+                                    <div key={customer.id} style={{
+                                      padding: "1rem",
+                                      background: "#ffffff",
+                                      borderRadius: "8px",
+                                      border: "1px solid #e5e7eb"
+                                    }}>
+                                      <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>
+                                        {customer.firstName} {customer.lastName}
+                                      </div>
+                                      <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+                                        {customer.loyaltyRanking}
+                                      </div>
+                                      <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+                                        {completedCount} completed cleanings
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                            {filteredDirectCustomers.filter(c => c.loyaltyRanking && c.loyaltyRanking !== "Getting Started").length === 0 && (
+                              <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+                                No loyalty rankings available.
                               </div>
-                            ))}
-                          {operatorCommercialCustomers
-                            .filter(c => c.specialInstructions && c.specialInstructions.trim().length > 0)
-                            .map(account => (
-                              <div key={account.id} style={{
-                                padding: "1rem",
-                                background: "#fef3c7",
-                                borderRadius: "8px",
-                                border: "1px solid #fde68a"
-                              }}>
-                                <div style={{ fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                                  {account.businessName} ({account.email})
-                                </div>
-                                <div style={{ fontSize: "0.875rem", color: "#92400e" }}>
-                                  {account.specialInstructions}
-                                </div>
-                              </div>
-                            ))}
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
+
+                        {/* Internal Issues & Notes */}
+                        <div style={{ marginTop: "2rem", paddingTop: "2rem", borderTop: "1px solid #e5e7eb" }}>
+                          <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                            Internal Issues & Notes
+                          </h3>
+                          
+                          <div style={{
+                            background: "#f9fafb",
+                            borderRadius: "12px",
+                            padding: "1.5rem",
+                            border: "1px solid #e5e7eb"
+                          }}>
+                            {operatorStats.openIssues === 0 ? (
+                              <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+                                No open issues or notes.
+                              </div>
+                            ) : (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                {operatorDirectCustomers
+                                  .filter(c => c.internalNotes && c.internalNotes.trim().length > 0)
+                                  .map(customer => (
+                                    <div key={customer.id} style={{
+                                      padding: "1rem",
+                                      background: "#fef3c7",
+                                      borderRadius: "8px",
+                                      border: "1px solid #fde68a"
+                                    }}>
+                                      <div style={{ fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                                        {customer.firstName} {customer.lastName} ({customer.email})
+                                      </div>
+                                      <div style={{ fontSize: "0.875rem", color: "#92400e" }}>
+                                        {customer.internalNotes}
+                                      </div>
+                                    </div>
+                                  ))}
+                                {operatorCommercialCustomers
+                                  .filter(c => c.specialInstructions && c.specialInstructions.trim().length > 0)
+                                  .map(account => (
+                                    <div key={account.id} style={{
+                                      padding: "1rem",
+                                      background: "#fef3c7",
+                                      borderRadius: "8px",
+                                      border: "1px solid #fde68a"
+                                    }}>
+                                      <div style={{ fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                                        {account.businessName} ({account.email})
+                                      </div>
+                                      <div style={{ fontSize: "0.875rem", color: "#92400e" }}>
+                                        {account.specialInstructions}
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </>
               )}
