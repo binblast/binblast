@@ -102,7 +102,7 @@ export function EditCleaningModal({ cleaning, isOpen, onClose, onUpdated }: Edit
   const dayOptions = getDayOptions();
 
   // Get the selected day option based on the cleaning's scheduled date
-  const getSelectedDayValue = (cleaningData: Cleaning, options: typeof dayOptions) => {
+  const getSelectedDayValue = (cleaningData: Cleaning, options: Array<{ dayName: string; date: Date; value: string; label: string }>) => {
     if (!cleaningData.scheduledDate) return "";
     try {
       const cleaningDate = cleaningData.scheduledDate?.toDate?.() || new Date(cleaningData.scheduledDate);
@@ -115,7 +115,10 @@ export function EditCleaningModal({ cleaning, isOpen, onClose, onUpdated }: Edit
     }
   };
 
-  const [selectedDayValue, setSelectedDayValue] = useState(() => getSelectedDayValue(cleaning, dayOptions));
+  const [selectedDayValue, setSelectedDayValue] = useState(() => {
+    const options = getDayOptions();
+    return getSelectedDayValue(cleaning, options);
+  });
 
   // Update form when cleaning changes
   useEffect(() => {
