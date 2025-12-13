@@ -38,6 +38,85 @@ export function EditCleaningModal({ cleaning, isOpen, onClose, onUpdated }: Edit
   const [selectedTime, setSelectedTime] = useState(cleaning.scheduledTime || "");
   const [notes, setNotes] = useState(cleaning.notes || "");
 
+  // Format date for input (YYYY-MM-DD)
+  const formatDateForInput = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Generate dropdown options for each day within 2-week window
+  const getDayOptions = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1); // Start from tomorrow
+    const twoWeeksFromNow = new Date(today);
+    twoWeeksFromNow.setDate(today.getDate() + 14);
+    
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const options: Array<{ dayName: string; date: Date; value: string; label: string }> = [];
+    
+    // For each day of the week, find the next occurrence within 2 weeks
+    dayNames.forEach((dayName, dayIndex) => {
+      const currentDayIndex = today.getDay();
+      let daysUntilDay = dayIndex - currentDayIndex;
+      
+      // If the day has already passed this week, move to next week
+      if (daysUntilDay < 0) {
+        daysUntilDay += 7;
+      }
+      
+      // First occurrence (this week or next)
+      const firstOccurrence = new Date(today);
+      firstOccurrence.setDate(today.getDate() + daysUntilDay);
+      firstOccurrence.setHours(0, 0, 0, 0);
+
+      if (firstOccurrence >= tomorrow && firstOccurrence <= twoWeeksFromNow) {
+        const dateValue = formatDateForInput(firstOccurrence);
+        const monthName = firstOccurrence.toLocaleDateString("en-US", { month: "short" });
+        const dayNumber = firstOccurrence.getDate();
+        const label = `${dayName}, ${monthName} ${dayNumber}`;
+        options.push({ dayName, date: firstOccurrence, value: dateValue, label });
+      }
+
+      // Second occurrence (next week)
+      const secondOccurrence = new Date(firstOccurrence);
+      secondOccurrence.setDate(firstOccurrence.getDate() + 7);
+      secondOccurrence.setHours(0, 0, 0, 0);
+
+      if (secondOccurrence >= tomorrow && secondOccurrence <= twoWeeksFromNow) {
+        const dateValue = formatDateForInput(secondOccurrence);
+        const monthName = secondOccurrence.toLocaleDateString("en-US", { month: "short" });
+        const dayNumber = secondOccurrence.getDate();
+        const label = `${dayName}, ${monthName} ${dayNumber}`;
+        options.push({ dayName, date: secondOccurrence, value: dateValue, label });
+      }
+    });
+
+    options.sort((a, b) => a.date.getTime() - b.date.getTime());
+    return options;
+  };
+
+  const dayOptions = getDayOptions();
+
+  // Get the selected day option based on the cleaning's scheduled date
+  const getSelectedDayValue = (cleaningData: Cleaning, options: typeof dayOptions) => {
+    if (!cleaningData.scheduledDate) return "";
+    try {
+      const cleaningDate = cleaningData.scheduledDate?.toDate?.() || new Date(cleaningData.scheduledDate);
+      const dateValue = formatDateForInput(cleaningDate);
+      // Find matching option
+      const matchingOption = options.find(opt => opt.value === dateValue);
+      return matchingOption ? matchingOption.value : "";
+    } catch (e) {
+      return "";
+    }
+  };
+
+  const [selectedDayValue, setSelectedDayValue] = useState(() => getSelectedDayValue(cleaning, dayOptions));
+
   // Update form when cleaning changes
   useEffect(() => {
     if (cleaning) {
@@ -49,23 +128,30 @@ export function EditCleaningModal({ cleaning, isOpen, onClose, onUpdated }: Edit
       setTrashDay(cleaning.trashDay || "");
       setSelectedTime(cleaning.scheduledTime || "");
       setNotes(cleaning.notes || "");
+      const newDayOptions = getDayOptions();
+      setSelectedDayValue(getSelectedDayValue(cleaning, newDayOptions));
     }
   }, [cleaning]);
+
+  // Handle day selection change
+  const handleDayChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedValue = e.target.value;
+    setSelectedDayValue(selectedValue);
+    
+    if (selectedValue) {
+      const selectedOption = dayOptions.find(opt => opt.value === selectedValue);
+      if (selectedOption) {
+        setTrashDay(selectedOption.dayName); // Store the day name
+      }
+    } else {
+      setTrashDay("");
+    }
+  };
 
   const timeOptions = [
     "9:00 AM - 12:00 PM",
     "12:00 PM - 3:00 PM",
     "3:00 PM - 6:00 PM",
-  ];
-
-  const dayOptions = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -326,8 +412,8 @@ export function EditCleaningModal({ cleaning, isOpen, onClose, onUpdated }: Edit
               Preferred Cleaning Day <span style={{ color: "#dc2626" }}>*</span>
             </label>
             <select
-              value={trashDay}
-              onChange={(e) => setTrashDay(e.target.value)}
+              value={selectedDayValue}
+              onChange={handleDayChange}
               required
               style={{
                 width: "100%",
@@ -338,13 +424,28 @@ export function EditCleaningModal({ cleaning, isOpen, onClose, onUpdated }: Edit
                 background: "#ffffff",
               }}
             >
-              <option value="">Select a day</option>
-              {dayOptions.map((day) => (
-                <option key={day} value={day}>
-                  {day}
+              <option value="">Select preferred cleaning day</option>
+              {dayOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
+            {selectedDayValue && (
+              <p style={{ 
+                marginTop: "0.5rem", 
+                fontSize: "0.875rem", 
+                color: "#16a34a",
+                fontWeight: "500"
+              }}>
+                Scheduled for: {dayOptions.find(opt => opt.value === selectedDayValue)?.date.toLocaleDateString("en-US", { 
+                  weekday: "long", 
+                  month: "long", 
+                  day: "numeric", 
+                  year: "numeric" 
+                })}
+              </p>
+            )}
           </div>
 
           {/* Preferred Time Window */}
