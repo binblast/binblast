@@ -155,9 +155,17 @@ export function calculatePricingWithSafeguards(input: PricingInput): PricingResu
   }
 
   // Auto-flag for manual review conditions
-  if (finalPrice > 500) {
-    requiresManualReview = true;
-    reviewReasons.push("Total monthly price exceeds $500");
+  // Tiered price thresholds: higher threshold for weekly services
+  if (input.frequency === "Weekly") {
+    if (finalPrice > 600) {
+      requiresManualReview = true;
+      reviewReasons.push("Total monthly price exceeds $600");
+    }
+  } else {
+    if (finalPrice > 500) {
+      requiresManualReview = true;
+      reviewReasons.push("Total monthly price exceeds $500");
+    }
   }
 
   if (input.dumpsterCount && input.dumpsterCount >= 4) {
@@ -165,15 +173,8 @@ export function calculatePricingWithSafeguards(input: PricingInput): PricingResu
     reviewReasons.push(`Dumpster count (${input.dumpsterCount}) requires custom scheduling`);
   }
 
-  if (input.commercialType === "Restaurant" && input.frequency === "Weekly") {
-    requiresManualReview = true;
-    reviewReasons.push("Weekly restaurant service requires custom review");
-  }
-
-  if (input.hasDumpsterPad && input.frequency === "Weekly") {
-    requiresManualReview = true;
-    reviewReasons.push("Weekly dumpster pad cleaning requires custom scheduling");
-  }
+  // Removed weekly-specific flags to allow weekly services
+  // Weekly restaurant and weekly dumpster pad are now allowed with appropriate price thresholds
 
   if (input.specialRequirements && input.specialRequirements.trim().length > 0) {
     requiresManualReview = true;

@@ -93,24 +93,32 @@ export function QuoteStep5Review({
     const isCommercial = formData.propertyType === "commercial";
     const isRestaurant = formData.commercialType === "Restaurant";
 
-    if (reason.includes("Total monthly price exceeds $500")) {
-      if (currentFrequency === "Weekly") {
-        suggestions.push({
-          label: "Change to Bi-weekly",
-          action: () => {
-            if (isCommercial) {
-              updateFormData({ commercialFrequency: "Bi-weekly" });
-            } else if (formData.propertyType === "residential") {
-              updateFormData({ residentialFrequency: "Bi-weekly" });
-            } else {
-              updateFormData({ hoaFrequency: "Bi-weekly" });
-            }
-            setFixApplied("frequency");
-          },
-          step: 2,
-          description: "Reduces monthly cost by ~44%"
-        });
+    // Handle price threshold flags (both $500 and $600 thresholds)
+    if (reason.includes("Total monthly price exceeds $500") || reason.includes("Total monthly price exceeds $600")) {
+      // Don't suggest frequency changes for weekly services - let them keep weekly
+      // Instead, offer alternatives that maintain weekly frequency
+      if (currentFrequency !== "Weekly") {
+        // Only suggest frequency change if NOT already weekly
+        if (currentFrequency === "Monthly") {
+          suggestions.push({
+            label: "Change to Bi-weekly",
+            action: () => {
+              if (isCommercial) {
+                updateFormData({ commercialFrequency: "Bi-weekly" });
+              } else if (formData.propertyType === "residential") {
+                updateFormData({ residentialFrequency: "Bi-weekly" });
+              } else {
+                updateFormData({ hoaFrequency: "Bi-weekly" });
+              }
+              setFixApplied("frequency");
+            },
+            step: 2,
+            description: "Reduces monthly cost while maintaining service"
+          });
+        }
       }
+      
+      // Always offer these alternatives regardless of frequency
       if (formData.dumpsterPadCleaning) {
         suggestions.push({
           label: "Remove Dumpster Pad Cleaning",
@@ -119,18 +127,40 @@ export function QuoteStep5Review({
             setFixApplied("dumpsterPad");
           },
           step: 2,
-          description: "Saves $75/month"
+          description: currentFrequency === "Weekly" 
+            ? "Saves $75/month (keeps weekly service)" 
+            : "Saves $75/month"
         });
       }
-      if (formData.commercialBins && formData.commercialBins > 2) {
+      
+      if (formData.commercialBins && formData.commercialBins > 1) {
+        const reduction = formData.commercialBins - 1;
         suggestions.push({
-          label: `Reduce to ${formData.commercialBins - 1} Dumpster${formData.commercialBins - 1 > 1 ? 's' : ''}`,
+          label: `Reduce to ${reduction} Dumpster${reduction > 1 ? 's' : ''}`,
           action: () => {
-            updateFormData({ commercialBins: (formData.commercialBins || 1) - 1 });
+            updateFormData({ commercialBins: reduction });
             setFixApplied("dumpsterCount");
           },
           step: 2,
-          description: `Saves $${isRestaurant ? 20 : 15}/month`
+          description: currentFrequency === "Weekly"
+            ? `Saves $${(isRestaurant ? 20 : 15) * (formData.commercialBins || 1)}/month (keeps weekly service)`
+            : `Saves $${(isRestaurant ? 20 : 15) * (formData.commercialBins || 1)}/month`
+        });
+      }
+      
+      // For residential, offer bin reduction
+      if (formData.propertyType === "residential" && formData.residentialBins && formData.residentialBins > 1) {
+        const reduction = formData.residentialBins - 1;
+        suggestions.push({
+          label: `Reduce to ${reduction} Bin${reduction > 1 ? 's' : ''}`,
+          action: () => {
+            updateFormData({ residentialBins: reduction });
+            setFixApplied("binCount");
+          },
+          step: 2,
+          description: currentFrequency === "Weekly"
+            ? `Saves $${10 * (formData.residentialBins || 1)}/month (keeps weekly service)`
+            : `Saves $${10 * (formData.residentialBins || 1)}/month`
         });
       }
     }
@@ -151,28 +181,36 @@ export function QuoteStep5Review({
       }
     }
 
+    // Removed weekly-specific flags - these reasons should no longer appear
+    // But keeping this code as fallback in case old data exists
     if (reason.includes("Weekly restaurant service")) {
-      suggestions.push({
-        label: "Change to Bi-weekly",
-        action: () => {
-          updateFormData({ commercialFrequency: "Bi-weekly" });
-          setFixApplied("frequency");
-        },
-        step: 2,
-        description: "Still provides excellent service coverage"
-      });
+      // Don't suggest frequency change - offer alternatives instead
+      if (formData.dumpsterPadCleaning) {
+        suggestions.push({
+          label: "Remove Dumpster Pad Cleaning",
+          action: () => {
+            updateFormData({ dumpsterPadCleaning: false });
+            setFixApplied("dumpsterPad");
+          },
+          step: 2,
+          description: "Saves $75/month (keeps weekly service)"
+        });
+      }
+      if (formData.commercialBins && formData.commercialBins > 1) {
+        suggestions.push({
+          label: `Reduce to ${formData.commercialBins - 1} Dumpster${formData.commercialBins - 1 > 1 ? 's' : ''}`,
+          action: () => {
+            updateFormData({ commercialBins: (formData.commercialBins || 1) - 1 });
+            setFixApplied("dumpsterCount");
+          },
+          step: 2,
+          description: `Saves $${isRestaurant ? 20 : 15}/month (keeps weekly service)`
+        });
+      }
     }
 
     if (reason.includes("Weekly dumpster pad")) {
-      suggestions.push({
-        label: "Change to Bi-weekly",
-        action: () => {
-          updateFormData({ commercialFrequency: "Bi-weekly" });
-          setFixApplied("frequency");
-        },
-        step: 2,
-        description: "Maintains pad cleaning with better pricing"
-      });
+      // Don't suggest frequency change - offer alternatives instead
       suggestions.push({
         label: "Remove Dumpster Pad Cleaning",
         action: () => {
@@ -180,8 +218,19 @@ export function QuoteStep5Review({
           setFixApplied("dumpsterPad");
         },
         step: 2,
-        description: "Saves $75/month"
+        description: "Saves $75/month (keeps weekly service)"
       });
+      if (formData.commercialBins && formData.commercialBins > 1) {
+        suggestions.push({
+          label: `Reduce to ${formData.commercialBins - 1} Dumpster${formData.commercialBins - 1 > 1 ? 's' : ''}`,
+          action: () => {
+            updateFormData({ commercialBins: (formData.commercialBins || 1) - 1 });
+            setFixApplied("dumpsterCount");
+          },
+          step: 2,
+          description: `Saves $${isRestaurant ? 20 : 15}/month (keeps weekly service)`
+        });
+      }
     }
 
     if (reason.includes("Special requirements")) {

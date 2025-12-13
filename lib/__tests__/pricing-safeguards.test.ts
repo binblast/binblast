@@ -209,7 +209,21 @@ describe("Pricing Safeguards", () => {
   });
 
   describe("Auto-Flag for Manual Review", () => {
-    test("Flags when price exceeds $500", () => {
+    test("Flags when price exceeds $500 for monthly/bi-weekly", () => {
+      const input: PricingInput = {
+        propertyType: "commercial",
+        commercialType: "Office Building",
+        dumpsterCount: 5,
+        frequency: "Monthly",
+      };
+      const result = calculatePricingWithSafeguards(input);
+      if (result.finalPrice > 500) {
+        expect(result.requiresManualReview).toBe(true);
+        expect(result.reviewReasons).toContain("Total monthly price exceeds $500");
+      }
+    });
+
+    test("Flags when price exceeds $600 for weekly", () => {
       const input: PricingInput = {
         propertyType: "commercial",
         commercialType: "Office Building",
@@ -217,9 +231,24 @@ describe("Pricing Safeguards", () => {
         frequency: "Weekly",
       };
       const result = calculatePricingWithSafeguards(input);
-      if (result.finalPrice > 500) {
+      if (result.finalPrice > 600) {
         expect(result.requiresManualReview).toBe(true);
-        expect(result.reviewReasons).toContain("Total monthly price exceeds $500");
+        expect(result.reviewReasons).toContain("Total monthly price exceeds $600");
+      }
+    });
+
+    test("Does not flag weekly services below $600", () => {
+      const input: PricingInput = {
+        propertyType: "commercial",
+        commercialType: "Office Building",
+        dumpsterCount: 1,
+        hasDumpsterPad: true,
+        frequency: "Weekly",
+      };
+      const result = calculatePricingWithSafeguards(input);
+      if (result.finalPrice <= 600) {
+        expect(result.requiresManualReview).toBe(false);
+        expect(result.reviewReasons).not.toContain("Total monthly price exceeds $600");
       }
     });
 
@@ -235,7 +264,7 @@ describe("Pricing Safeguards", () => {
       expect(result.reviewReasons).toContain("Dumpster count (4) requires custom scheduling");
     });
 
-    test("Flags weekly restaurant service", () => {
+    test("Does not flag weekly restaurant service (removed flag)", () => {
       const input: PricingInput = {
         propertyType: "commercial",
         commercialType: "Restaurant",
@@ -243,11 +272,11 @@ describe("Pricing Safeguards", () => {
         frequency: "Weekly",
       };
       const result = calculatePricingWithSafeguards(input);
-      expect(result.requiresManualReview).toBe(true);
-      expect(result.reviewReasons).toContain("Weekly restaurant service requires custom review");
+      // Weekly restaurant should only be flagged if price exceeds $600, not automatically
+      expect(result.reviewReasons).not.toContain("Weekly restaurant service requires custom review");
     });
 
-    test("Flags dumpster pad + weekly frequency", () => {
+    test("Does not flag dumpster pad + weekly frequency (removed flag)", () => {
       const input: PricingInput = {
         propertyType: "commercial",
         commercialType: "Office Building",
@@ -256,8 +285,8 @@ describe("Pricing Safeguards", () => {
         frequency: "Weekly",
       };
       const result = calculatePricingWithSafeguards(input);
-      expect(result.requiresManualReview).toBe(true);
-      expect(result.reviewReasons).toContain("Weekly dumpster pad cleaning requires custom scheduling");
+      // Weekly dumpster pad should only be flagged if price exceeds $600, not automatically
+      expect(result.reviewReasons).not.toContain("Weekly dumpster pad cleaning requires custom scheduling");
     });
 
     test("Flags when special requirements provided", () => {
