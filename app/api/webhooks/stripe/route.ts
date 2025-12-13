@@ -130,6 +130,36 @@ export async function POST(req: NextRequest) {
             }
           }
 
+          // Handle extra bin payment
+          if (session.metadata?.type === 'extra_bin' && session.payment_status === 'paid' && userId) {
+            try {
+              const quantity = parseInt(session.metadata.quantity || '1');
+              const userDocRef = doc(db, "users", userId);
+              const userDoc = await getDoc(userDocRef);
+              
+              if (userDoc.exists()) {
+                const currentBinCount = userDoc.data().binsCount || 1;
+                const newBinCount = currentBinCount + quantity;
+                
+                await updateDoc(userDocRef, {
+                  binsCount: newBinCount,
+                  updatedAt: serverTimestamp(),
+                });
+                
+                console.log("[Webhook] Extra bin payment processed:", {
+                  userId,
+                  quantity,
+                  previousBinCount: currentBinCount,
+                  newBinCount,
+                });
+              } else {
+                console.warn("[Webhook] User document not found for extra bin payment:", userId);
+              }
+            } catch (extraBinError) {
+              console.error("[Webhook] Error processing extra bin payment:", extraBinError);
+            }
+          }
+
           // Process referral code from checkout session (for non-logged-in users who used a code)
           if (session.metadata?.referralCode && session.payment_status === 'paid' && customerEmail) {
             try {

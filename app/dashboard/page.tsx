@@ -177,6 +177,10 @@ function DashboardPageContent() {
   const [operatorDirectCustomers, setOperatorDirectCustomers] = useState<any[]>([]);
   const [operatorCommercialCustomers, setOperatorCommercialCustomers] = useState<any[]>([]);
   const [operatorAllCleanings, setOperatorAllCleanings] = useState<any[]>([]);
+  
+  // Extra bin state
+  const [extraBinQuantity, setExtraBinQuantity] = useState(1);
+  const [extraBinLoading, setExtraBinLoading] = useState(false);
   const [operatorLoading, setOperatorLoading] = useState(false);
   const [operatorCustomerSearch, setOperatorCustomerSearch] = useState("");
   const [operatorCustomerFilter, setOperatorCustomerFilter] = useState<{ plan?: string; status?: string }>({});
@@ -203,7 +207,17 @@ function DashboardPageContent() {
   // Handle Stripe Checkout callback
   useEffect(() => {
     const subscriptionChange = searchParams.get("subscription_change");
+    const extraBin = searchParams.get("extra_bin");
     const sessionId = searchParams.get("session_id");
+    const quantity = searchParams.get("quantity");
+
+    if (extraBin === "success" && quantity) {
+      console.log("[Dashboard] Extra bin checkout success detected.");
+      router.replace("/dashboard", undefined);
+      alert(`Successfully added ${quantity} extra bin${parseInt(quantity) > 1 ? 's' : ''}! Your payment has been processed.`);
+      window.location.reload();
+      return;
+    }
 
     if (subscriptionChange === "success" && sessionId) {
       console.log("[Dashboard] Stripe Checkout success detected. Completing subscription change...");
@@ -2517,52 +2531,154 @@ function DashboardPageContent() {
                     </div>
                   )}
 
-                  <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid #e5e7eb", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-                    <button
-                      onClick={() => scrollToSection(planSectionRef)}
-                      style={{
-                        fontSize: "0.875rem",
-                        color: "#16a34a",
-                        background: "transparent",
-                        border: "1px solid #16a34a",
-                        borderRadius: "8px",
-                        padding: "0.5rem 1rem",
-                        cursor: "pointer",
-                        fontWeight: "600",
-                        transition: "all 0.2s"
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#16a34a";
-                        e.currentTarget.style.color = "#ffffff";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.color = "#16a34a";
-                      }}
-                    >
-                      Change Plan
-                    </button>
-                    <button
-                      style={{
-                        fontSize: "0.875rem",
-                        color: "#6b7280",
-                        background: "transparent",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "8px",
-                        padding: "0.5rem 1rem",
-                        cursor: "pointer",
-                        fontWeight: "600",
-                        transition: "all 0.2s"
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = "#6b7280";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = "#d1d5db";
-                      }}
-                    >
-                      Add an Extra Bin
-                    </button>
+                  <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid #e5e7eb" }}>
+                    <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+                      <button
+                        onClick={() => scrollToSection(planSectionRef)}
+                        style={{
+                          fontSize: "0.875rem",
+                          color: "#16a34a",
+                          background: "transparent",
+                          border: "1px solid #16a34a",
+                          borderRadius: "8px",
+                          padding: "0.5rem 1rem",
+                          cursor: "pointer",
+                          fontWeight: "600",
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "#16a34a";
+                          e.currentTarget.style.color = "#ffffff";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.color = "#16a34a";
+                        }}
+                      >
+                        Change Plan
+                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", border: "1px solid #d1d5db", borderRadius: "8px", padding: "0.25rem" }}>
+                        <button
+                          type="button"
+                          onClick={() => setExtraBinQuantity(Math.max(1, extraBinQuantity - 1))}
+                          disabled={extraBinQuantity <= 1}
+                          style={{
+                            fontSize: "1rem",
+                            color: extraBinQuantity <= 1 ? "#9ca3af" : "#6b7280",
+                            background: "transparent",
+                            border: "none",
+                            borderRadius: "4px",
+                            padding: "0.25rem 0.5rem",
+                            cursor: extraBinQuantity <= 1 ? "not-allowed" : "pointer",
+                            fontWeight: "600",
+                            minWidth: "32px",
+                            transition: "all 0.2s"
+                          }}
+                          onMouseEnter={(e) => {
+                            if (extraBinQuantity > 1) {
+                              e.currentTarget.style.background = "#f3f4f6";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          −
+                        </button>
+                        <span style={{ 
+                          fontSize: "0.875rem", 
+                          fontWeight: "600", 
+                          color: "#111827",
+                          minWidth: "40px",
+                          textAlign: "center"
+                        }}>
+                          {extraBinQuantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setExtraBinQuantity(extraBinQuantity + 1)}
+                          style={{
+                            fontSize: "1rem",
+                            color: "#6b7280",
+                            background: "transparent",
+                            border: "none",
+                            borderRadius: "4px",
+                            padding: "0.25rem 0.5rem",
+                            cursor: "pointer",
+                            fontWeight: "600",
+                            minWidth: "32px",
+                            transition: "all 0.2s"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "#f3f4f6";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (!userId) {
+                            alert("Please log in to add extra bins");
+                            return;
+                          }
+                          setExtraBinLoading(true);
+                          try {
+                            const response = await fetch("/api/stripe/extra-bin", {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                              },
+                              body: JSON.stringify({
+                                userId,
+                                quantity: extraBinQuantity,
+                              }),
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                              throw new Error(data.error || "Failed to create checkout session");
+                            }
+
+                            if (data.url) {
+                              window.location.href = data.url;
+                            } else {
+                              throw new Error("No checkout URL returned");
+                            }
+                          } catch (error: any) {
+                            console.error("Error creating extra bin checkout:", error);
+                            alert(error.message || "Failed to start checkout. Please try again.");
+                            setExtraBinLoading(false);
+                          }
+                        }}
+                        disabled={extraBinLoading}
+                        style={{
+                          fontSize: "0.875rem",
+                          color: extraBinLoading ? "#9ca3af" : "#6b7280",
+                          background: "transparent",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "8px",
+                          padding: "0.5rem 1rem",
+                          cursor: extraBinLoading ? "not-allowed" : "pointer",
+                          fontWeight: "600",
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!extraBinLoading) {
+                            e.currentTarget.style.borderColor = "#6b7280";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "#d1d5db";
+                        }}
+                      >
+                        {extraBinLoading ? "Processing..." : `Add ${extraBinQuantity} Extra Bin${extraBinQuantity > 1 ? 's' : ''} ($${(extraBinQuantity * 10).toFixed(2)})`}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
