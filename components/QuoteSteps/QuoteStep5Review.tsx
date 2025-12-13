@@ -38,6 +38,13 @@ export function QuoteStep5Review({
       lowEstimate = Math.max(lowEstimate, 55);
       highEstimate = Math.min(highEstimate, 85);
       
+      // Ensure low <= high
+      if (lowEstimate > highEstimate) {
+        const temp = lowEstimate;
+        lowEstimate = highEstimate;
+        highEstimate = temp;
+      }
+      
       return { 
         low: lowEstimate, 
         high: highEstimate, 
@@ -147,6 +154,13 @@ export function QuoteStep5Review({
           lowEstimate = Math.max(lowEstimate, 280);
           highEstimate = Math.min(highEstimate, 400);
         }
+      }
+      
+      // Ensure low <= high (fix any inversion from capping)
+      if (lowEstimate > highEstimate) {
+        const temp = lowEstimate;
+        lowEstimate = highEstimate;
+        highEstimate = temp;
       }
       
       return {

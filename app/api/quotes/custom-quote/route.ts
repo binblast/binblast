@@ -67,6 +67,13 @@ export async function POST(request: NextRequest) {
       lowEstimate = Math.max(lowEstimate, 55);
       highEstimate = Math.min(highEstimate, 85);
       
+      // Ensure low <= high
+      if (lowEstimate > highEstimate) {
+        const temp = lowEstimate;
+        lowEstimate = highEstimate;
+        highEstimate = temp;
+      }
+      
     } else if (formData.propertyType === "commercial") {
       const isRestaurant = formData.commercialType === "Restaurant";
       const hasDumpsterPad = formData.dumpsterPadCleaning === true;
@@ -162,6 +169,13 @@ export async function POST(request: NextRequest) {
           lowEstimate = Math.max(lowEstimate, 280);
           highEstimate = Math.min(highEstimate, 400);
         }
+      }
+      
+      // Ensure low <= high (fix any inversion from capping)
+      if (lowEstimate > highEstimate) {
+        const temp = lowEstimate;
+        lowEstimate = highEstimate;
+        highEstimate = temp;
       }
       
       // Store pricing breakdown
