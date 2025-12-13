@@ -59,14 +59,14 @@ service cloud.firestore {
         // Client-side: user updating their own document (can update referralCode, referralCount)
         (isOwner(userId) && request.resource.data.email == resource.data.email)
         ||
-        // Operator: can update internalNotes, servicePaused, and serviceArea for operations management
+        // Operator: can update internalNotes, servicePaused, serviceArea, counties, zones, status, lastKnownLocation for operations management
         (isOperator() && 
          request.resource.data.email == resource.data.email && // Can't change email
          request.resource.data.firstName == resource.data.firstName && // Can't change name
          request.resource.data.lastName == resource.data.lastName && // Can't change name
          request.resource.data.phone == resource.data.phone && // Can't change phone
          // Only allow updates to operational fields
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['internalNotes', 'servicePaused', 'serviceArea', 'updatedAt']))
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['internalNotes', 'servicePaused', 'serviceArea', 'counties', 'zones', 'status', 'lastKnownLocation', 'lastLocationUpdate', 'updatedAt']))
         ||
         // Server-side: API route updating subscription-related or referral-related fields
         // This allows the change-subscription API and referral API to update specific fields
@@ -397,6 +397,16 @@ service cloud.firestore {
       }
     }
     
+    // Employee schedules collection - for weekly work schedules
+    match /employeeSchedules/{scheduleId} {
+      // Admins and operators can read/write schedules
+      // Server-side can read/write schedules
+      allow read, write: if (
+        isAdminOrOperator()
+        || request.auth == null // Server-side operations
+      );
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

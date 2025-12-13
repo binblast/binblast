@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { formatTime, getTodayDateString } from "@/lib/employee-utils";
@@ -26,6 +27,7 @@ interface EmployeeStatusProps {
 }
 
 export function EmployeeStatus({ userId }: EmployeeStatusProps) {
+  const router = useRouter();
   const [employees, setEmployees] = useState<EmployeeStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
@@ -246,7 +248,7 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
               <div
                 key={employee.id}
                 onClick={() => {
-                  window.location.href = `/operator/employees/${employee.id}`;
+                  router.push(`/operator/employees/${employee.id}`);
                 }}
                 style={{
                   background: "#ffffff",
