@@ -285,7 +285,7 @@ function RegisterForm() {
             await setDoc(userDocRef, {
               firstName,
               lastName,
-              email,
+              email: email.toLowerCase(), // Store email in lowercase to match Firebase Auth token
               phone: phone || null,
               selectedPlan: selectedPlanId || null,
               stripeCustomerId: stripeData?.customerId || null,

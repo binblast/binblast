@@ -28,6 +28,8 @@ service cloud.firestore {
       allow read: if isOwner(userId) || isAdmin() || request.auth == null;
       
       // Users can create their own document (during registration)
+      // Allow creation with required fields and optional fields like role, phone, plan, etc.
+      // Email must match auth token email (Firebase Auth normalizes emails to lowercase)
       allow create: if isOwner(userId) 
         && request.resource.data.keys().hasAll(['firstName', 'lastName', 'email'])
         && request.resource.data.firstName is string
