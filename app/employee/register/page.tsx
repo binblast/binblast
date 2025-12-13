@@ -20,7 +20,7 @@ export default function EmployeeRegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [serviceArea, setServiceArea] = useState("");
-  const [payRatePerJob, setPayRatePerJob] = useState("");
+  const [payRatePerJob, setPayRatePerJob] = useState("10.00");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -252,9 +252,9 @@ export default function EmployeeRegisterPage() {
 
                   <div>
                     <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "#111827" }}>
-                      Pay Rate Per Job <span style={{ color: "#6b7280", fontWeight: "400" }}>(optional)</span>
+                      Pay Rate Per Service <span style={{ color: "#6b7280", fontWeight: "400" }}>(optional)</span>
                       <span style={{ display: "block", fontSize: "0.75rem", color: "#6b7280", fontWeight: "400", marginTop: "0.25rem" }}>
-                        Can be set later by admin/operator
+                        $10 flat rate per service per house per visit (regardless of number of trash cans)
                       </span>
                     </label>
                     <input
