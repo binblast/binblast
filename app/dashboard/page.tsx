@@ -2039,7 +2039,7 @@ function DashboardPageContent() {
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text"
               }}>
-                Welcome back, {user.firstName}! 👋
+                Welcome back, {user.firstName || "Bin Blast"}!
             </h1>
               <p style={{ 
                 fontSize: "1.125rem", 
