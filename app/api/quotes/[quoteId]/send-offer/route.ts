@@ -50,7 +50,6 @@ export async function POST(
     const offerData = offerSnap.data();
 
     // Update offer status to "sent"
-    const offerRef = doc(db, "customQuotes", quoteId, "offers", offerId);
     await updateDoc(offerRef, {
       status: "sent",
       sentAt: serverTimestamp(),
