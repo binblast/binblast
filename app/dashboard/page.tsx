@@ -193,6 +193,7 @@ function DashboardPageContent() {
   
   // Ref to prevent multiple operator data loads
   const operatorDataLoadingRef = useRef(false);
+  const operatorDataLoadedRef = useRef<string | null>(null); // Track userId for which data was loaded
 
   // Handle Stripe Checkout callback
   useEffect(() => {
@@ -313,9 +314,22 @@ function DashboardPageContent() {
               const userData = userDoc.data() as UserData;
               setUser(userData);
               // Check for admin role OR admin email (backward compatibility)
-              setIsAdmin((userData.role === "admin") || (userData.email === ADMIN_EMAIL));
-              // Check for operator role
-              setIsOperator(userData.role === "operator");
+              const newIsAdmin = (userData.role === "admin") || (userData.email === ADMIN_EMAIL);
+              if (isAdmin !== newIsAdmin) {
+                setIsAdmin(newIsAdmin);
+              }
+              // Check for operator role - only update if changed to prevent re-renders
+              const newIsOperator = userData.role === "operator";
+              if (isOperator !== newIsOperator) {
+                setIsOperator(newIsOperator);
+                // Reset loaded flag when operator status changes
+                if (!newIsOperator) {
+                  operatorDataLoadedRef.current = null;
+                } else {
+                  // Reset loaded flag when becoming operator to allow fresh load
+                  operatorDataLoadedRef.current = null;
+                }
+              }
               
               // If user is an operator, don't check for partner redirects
               if (userData.role === "operator") {
@@ -606,9 +620,10 @@ function DashboardPageContent() {
 
   // Load operator data
   useEffect(() => {
+    // Early return if not operator or no userId
     if (!isOperator || !userId) {
-      // Reset operator data when not operator
-      if (!isOperator) {
+      // Only reset operator data if it was previously loaded (to prevent unnecessary state updates)
+      if (!isOperator && operatorDataLoadedRef.current) {
         setOperatorDirectCustomers([]);
         setOperatorCommercialCustomers([]);
         setOperatorAllCleanings([]);
@@ -620,7 +635,15 @@ function DashboardPageContent() {
           openIssues: 0,
         });
         operatorDataLoadingRef.current = false;
+        operatorDataLoadedRef.current = null;
       }
+      return;
+    }
+    
+    // CRITICAL: Prevent re-loading if data is already loaded for this userId
+    // This prevents infinite loops when component re-renders
+    if (operatorDataLoadedRef.current === userId) {
+      console.log("[Operator] Data already loaded for userId:", userId);
       return;
     }
     
@@ -780,12 +803,14 @@ function DashboardPageContent() {
           });
           setOperatorLoading(false);
           operatorDataLoadingRef.current = false;
+          operatorDataLoadedRef.current = userId; // Mark as loaded for this userId
         }
       } catch (err: any) {
         console.error("[Dashboard] Error loading operator data:", err);
         if (mounted) {
           setOperatorLoading(false);
           operatorDataLoadingRef.current = false;
+          // Don't set loaded flag on error, so it can retry
         }
       }
     }
@@ -793,7 +818,8 @@ function DashboardPageContent() {
     loadOperatorData();
     return () => { 
       mounted = false;
-      operatorDataLoadingRef.current = false;
+      // Don't reset loading ref in cleanup - let it complete
+      // Only reset if userId changes or isOperator becomes false
     };
   }, [isOperator, userId]);
 
@@ -1010,7 +1036,8 @@ function DashboardPageContent() {
   }, [isOperator, filteredCleanings]);
 
   // Operator Dashboard
-  if (isOperator) {
+  // Only render if operator and we have userId (prevents rendering before auth is ready)
+  if (isOperator && userId) {
     return (
       <>
         <Navbar />
