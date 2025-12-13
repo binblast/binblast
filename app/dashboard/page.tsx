@@ -1658,7 +1658,7 @@ function DashboardPageContent() {
                     </div>
                   )}
                 </div>
-              </div>
+            </div>
             )}
 
             {/* (G) Upcoming & Past Cleanings */}
@@ -1765,7 +1765,7 @@ function DashboardPageContent() {
                         </div>
                         {isAdmin && customer && (
                           <div style={{ display: "flex", gap: "1rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
-                            <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                              <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
                               <strong>Plan:</strong> {customer.selectedPlan ? (PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan) : "N/A"}
                             </div>
                             <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
@@ -2005,7 +2005,6 @@ function DashboardPageContent() {
             </div>
 
           </div>
-        </div>
       </main>
     </>
   );
