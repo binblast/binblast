@@ -19,7 +19,6 @@ export default function EmployeeRegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [serviceArea, setServiceArea] = useState("");
   const [payRatePerJob, setPayRatePerJob] = useState("10.00");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,11 +35,6 @@ export default function EmployeeRegisterPage() {
 
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
-      return;
-    }
-
-    if (!serviceArea.trim()) {
-      setError("Service area is required.");
       return;
     }
 
@@ -64,12 +58,6 @@ export default function EmployeeRegisterPage() {
       const { collection, doc, setDoc, serverTimestamp } = firestore;
       
       if (db && userCredential.user) {
-        // Parse service area (comma-separated cities/zipCodes)
-        const serviceAreas = serviceArea
-          .split(",")
-          .map((area) => area.trim())
-          .filter((area) => area.length > 0);
-
         const userDocRef = doc(collection(db, "users"), userCredential.user.uid);
         
         await setDoc(userDocRef, {
@@ -78,7 +66,7 @@ export default function EmployeeRegisterPage() {
           email: email.toLowerCase(),
           phone: phone || null,
           role: "employee",
-          serviceArea: serviceAreas,
+          serviceArea: [], // Service areas will be assigned later by operators
           payRatePerJob: payRatePerJob ? parseFloat(payRatePerJob) : null,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -211,32 +199,6 @@ export default function EmployeeRegisterPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       autoComplete="tel"
-                      style={{
-                        width: "100%",
-                        padding: "0.75rem 1rem",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "8px",
-                        fontSize: "0.95rem",
-                        transition: "border-color 0.2s"
-                      }}
-                      onFocus={(e) => e.currentTarget.style.borderColor = "#16a34a"}
-                      onBlur={(e) => e.currentTarget.style.borderColor = "#e5e7eb"}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "#111827" }}>
-                      Service Area *
-                      <span style={{ display: "block", fontSize: "0.75rem", color: "#6b7280", fontWeight: "400", marginTop: "0.25rem" }}>
-                        Enter cities or zip codes separated by commas (e.g., "Peachtree City, 30269, Fayetteville")
-                      </span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={serviceArea}
-                      onChange={(e) => setServiceArea(e.target.value)}
-                      placeholder="Peachtree City, 30269, Fayetteville"
                       style={{
                         width: "100%",
                         padding: "0.75rem 1rem",
