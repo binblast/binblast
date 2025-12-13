@@ -895,19 +895,54 @@ function DashboardPageContent() {
     return filtered;
   }, [isOperator, operatorDirectCustomers, operatorCustomerSearch, operatorCustomerFilter]);
 
+  // Helper function to safely convert scheduledDate to Date object
+  const getCleaningDate = (cleaning: any): Date => {
+    if (!cleaning || !cleaning.scheduledDate) return new Date();
+    // If it's already a Date object, return it
+    if (cleaning.scheduledDate instanceof Date) {
+      // Check if it's a valid date
+      if (isNaN(cleaning.scheduledDate.getTime())) return new Date();
+      return cleaning.scheduledDate;
+    }
+    // If it has toDate method (Firestore timestamp), use it
+    if (typeof cleaning.scheduledDate.toDate === 'function') {
+      try {
+        const date = cleaning.scheduledDate.toDate();
+        if (isNaN(date.getTime())) return new Date();
+        return date;
+      } catch (e) {
+        return new Date();
+      }
+    }
+    // Otherwise, try to create a Date from it
+    try {
+      const date = new Date(cleaning.scheduledDate);
+      if (isNaN(date.getTime())) return new Date();
+      return date;
+    } catch (e) {
+      return new Date();
+    }
+  };
+
   const filteredCleanings = useMemo(() => {
     if (!isOperator) return [];
     let filtered = operatorAllCleanings;
     
     if (operatorDateFilter) {
-      const filterDate = new Date(operatorDateFilter);
-      filterDate.setHours(0, 0, 0, 0);
-      const filterDateEnd = new Date(filterDate);
-      filterDateEnd.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(c => {
-        const cleaningDate = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
-        return cleaningDate >= filterDate && cleaningDate <= filterDateEnd;
-      });
+      try {
+        const filterDate = new Date(operatorDateFilter);
+        if (!isNaN(filterDate.getTime())) {
+          filterDate.setHours(0, 0, 0, 0);
+          const filterDateEnd = new Date(filterDate);
+          filterDateEnd.setHours(23, 59, 59, 999);
+          filtered = filtered.filter(c => {
+            const cleaningDate = getCleaningDate(c);
+            return cleaningDate >= filterDate && cleaningDate <= filterDateEnd;
+          });
+        }
+      } catch (e) {
+        console.warn("[Operator] Invalid date filter:", operatorDateFilter);
+      }
     }
     
     if (operatorCityFilter) {
@@ -929,7 +964,7 @@ function DashboardPageContent() {
     if (!isOperator) return {};
     const grouped: Record<string, any[]> = {};
     filteredCleanings.forEach(cleaning => {
-      const date = cleaning.scheduledDate?.toDate?.() || new Date(cleaning.scheduledDate);
+      const date = getCleaningDate(cleaning);
       const dateKey = date.toISOString().split('T')[0];
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
@@ -1141,11 +1176,17 @@ function DashboardPageContent() {
                             </thead>
                             <tbody>
                               {filteredDirectCustomers.map((customer) => {
+                                const customerEmailLower = (customer.email || "").toLowerCase();
                                 const nextCleaning = operatorAllCleanings
-                                  .filter(c => c.customerEmail === customer.email && c.status !== "cancelled" && c.status !== "completed")
+                                  .filter(c => {
+                                    const cleaningEmailLower = (c.customerEmail || "").toLowerCase();
+                                    return cleaningEmailLower === customerEmailLower && 
+                                           c.status !== "cancelled" && 
+                                           c.status !== "completed";
+                                  })
                                   .sort((a, b) => {
-                                    const dateA = a.scheduledDate?.toDate?.() || new Date(a.scheduledDate);
-                                    const dateB = b.scheduledDate?.toDate?.() || new Date(b.scheduledDate);
+                                    const dateA = getCleaningDate(a);
+                                    const dateB = getCleaningDate(b);
                                     return dateA.getTime() - dateB.getTime();
                                   })[0];
                                 
@@ -1181,7 +1222,7 @@ function DashboardPageContent() {
                                     <td style={{ padding: "1rem", fontSize: "0.95rem", color: "#6b7280" }}>
                                       {nextCleaning ? (
                                         <>
-                                          {(nextCleaning.scheduledDate?.toDate?.() || new Date(nextCleaning.scheduledDate)).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                          {getCleaningDate(nextCleaning).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                                           <br />
                                           <span style={{ fontSize: "0.75rem" }}>{nextCleaning.scheduledTime || "TBD"}</span>
                                         </>
@@ -1222,11 +1263,17 @@ function DashboardPageContent() {
                         gap: "1rem"
                       }}>
                         {operatorCommercialCustomers.map((account) => {
+                          const accountEmailLower = (account.email || "").toLowerCase();
                           const nextService = operatorAllCleanings
-                            .filter(c => c.customerEmail === account.email && c.status !== "cancelled" && c.status !== "completed")
+                            .filter(c => {
+                              const cleaningEmailLower = (c.customerEmail || "").toLowerCase();
+                              return cleaningEmailLower === accountEmailLower && 
+                                     c.status !== "cancelled" && 
+                                     c.status !== "completed";
+                            })
                             .sort((a, b) => {
-                              const dateA = a.scheduledDate?.toDate?.() || new Date(a.scheduledDate);
-                              const dateB = b.scheduledDate?.toDate?.() || new Date(b.scheduledDate);
+                              const dateA = getCleaningDate(a);
+                              const dateB = getCleaningDate(b);
                               return dateA.getTime() - dateB.getTime();
                             })[0];
                           
@@ -1254,7 +1301,7 @@ function DashboardPageContent() {
                               </div>
                               <div style={{ fontSize: "0.875rem", marginBottom: "0.5rem" }}>
                                 <strong>Next Service:</strong> {nextService ? (
-                                  (nextService.scheduledDate?.toDate?.() || new Date(nextService.scheduledDate)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                                  getCleaningDate(nextService).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                                 ) : "Not scheduled"}
                               </div>
                               {account.specialInstructions && (
@@ -1415,17 +1462,19 @@ function DashboardPageContent() {
                       border: "1px solid #e5e7eb"
                     }}>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "1rem" }}>
-                        {filteredDirectCustomers
+                        {operatorDirectCustomers
                           .filter(c => c.loyaltyRanking && c.loyaltyRanking !== "Getting Started")
                           .sort((a, b) => {
                             const levels = ["Bin Royalty", "Sanitation Superstar", "Sparkle Specialist", "Bin Boss", "Clean Freak", "Getting Started"];
-                            return levels.indexOf(a.loyaltyRanking) - levels.indexOf(b.loyaltyRanking);
+                            return levels.indexOf(a.loyaltyRanking || "Getting Started") - levels.indexOf(b.loyaltyRanking || "Getting Started");
                           })
                           .slice(0, 20)
                           .map(customer => {
-                            const completedCount = operatorAllCleanings.filter(c => 
-                              c.customerEmail === customer.email && c.status === "completed"
-                            ).length;
+                            const customerEmailLower = (customer.email || "").toLowerCase();
+                            const completedCount = operatorAllCleanings.filter(c => {
+                              const cleaningEmailLower = (c.customerEmail || "").toLowerCase();
+                              return cleaningEmailLower === customerEmailLower && c.status === "completed";
+                            }).length;
                             
                             return (
                               <div key={customer.id} style={{
@@ -1474,7 +1523,7 @@ function DashboardPageContent() {
                         </div>
                       ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                          {filteredDirectCustomers
+                          {operatorDirectCustomers
                             .filter(c => c.internalNotes && c.internalNotes.trim().length > 0)
                             .map(customer => (
                               <div key={customer.id} style={{
