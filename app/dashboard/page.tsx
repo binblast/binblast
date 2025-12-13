@@ -2832,14 +2832,207 @@ function DashboardPageContent() {
               </div>
             )}
 
-            {/* (E) Loyalty Badges - Hidden for admin */}
+            {/* (E) Upcoming & Past Cleanings */}
+            <div style={{ marginBottom: "2rem" }}>
+            <div style={{
+              background: "#ffffff",
+              borderRadius: "20px",
+                padding: "2.5rem",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb"
+            }}>
+                <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1.5rem" }}>
+                  {isAdmin ? "All Cleanings / Route Schedule" : "Your Cleanings"}
+              </h2>
+              
+                {/* Upcoming */}
+                <div style={{ marginBottom: "2rem" }}>
+                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                    {isAdmin ? "Today's Cleanings" : "Upcoming"}
+                  </h3>
+              {cleaningsLoading ? (
+                    <p style={{ color: "#6b7280" }}>Loading scheduled cleanings...</p>
+                  ) : (isAdmin ? allCleanings.filter(c => {
+                    const date = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const cleaningDate = new Date(date);
+                    cleaningDate.setHours(0, 0, 0, 0);
+                    return cleaningDate.getTime() === today.getTime() && c.status !== "cancelled";
+                  }) : upcomingCleanings).length === 0 ? (
+                    <div style={{
+                      padding: "2rem",
+                      background: "#f9fafb",
+                      borderRadius: "12px",
+                      textAlign: "center",
+                      border: "1px dashed #d1d5db"
+                    }}>
+                      <p style={{ color: "#6b7280", margin: 0 }}>
+                        {isAdmin ? "No cleanings scheduled for today." : "No cleanings scheduled yet. Use the Schedule button above to book your first cleaning."}
+                      </p>
+                    </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                      {(isAdmin ? allCleanings.filter(c => {
+                        const date = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const cleaningDate = new Date(date);
+                        cleaningDate.setHours(0, 0, 0, 0);
+                        return cleaningDate.getTime() === today.getTime() && c.status !== "cancelled";
+                      }).slice(0, 20) : upcomingCleanings).map((cleaning) => {
+                        const cleaningDate = getCleaningDate(cleaning);
+                        const customer = isAdmin ? allCustomers.find((c: any) => c.id === cleaning.userId) : null;
+                        const isCompleted = cleaning.status === "completed" || (cleaning as any).jobStatus === "completed";
+                        const canEdit = !isAdmin && !isCompleted && cleaning.status !== "cancelled" && cleaningDate.getTime() > new Date().getTime() + (12 * 60 * 60 * 1000);
+                        
+                        return (
+                          <div
+                            key={cleaning.id}
+                            style={{
+                              padding: "1.5rem",
+                              background: isCompleted ? "#f0fdf4" : "#f0f9ff",
+                              borderRadius: "12px",
+                              border: `2px solid ${isCompleted ? "#bbf7d0" : "#bae6fd"}`,
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "start",
+                              flexWrap: "wrap",
+                              gap: "1rem"
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: "200px" }}>
+                              <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.5rem" }}>
+                                {cleaningDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                              </div>
+                              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
+                                <strong>Time Window:</strong> {cleaning.scheduledTime || "TBD"}
+                              </div>
+                              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
+                                <strong>Address:</strong> {cleaning.addressLine1}{cleaning.addressLine2 ? `, ${cleaning.addressLine2}` : ""}, {cleaning.city}, {cleaning.state} {cleaning.zipCode}
+                              </div>
+                              {cleaning.preferredCleaningDay && (
+                                <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
+                                  <strong>Preferred Cleaning Day:</strong> {cleaning.preferredCleaningDay}
+                                </div>
+                              )}
+                              {customer && (
+                                <div style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: "0.5rem" }}>
+                                  {customer.selectedPlan ? (PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan) : "No plan"} • {customer.source === "partner" ? "Partner" : "Direct"}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: "flex-end" }}>
+                              {canEdit && (
+                                <button
+                                  onClick={() => {
+                                    setEditingCleaning(cleaning);
+                                    setIsEditModalOpen(true);
+                                  }}
+                                  style={{
+                                    padding: "0.5rem 1rem",
+                                    background: "#16a34a",
+                                    color: "#ffffff",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    fontSize: "0.875rem",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s"
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = "#15803d";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = "#16a34a";
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              {!canEdit && !isCompleted && cleaning.status !== "cancelled" && (
+                                <div style={{ fontSize: "0.75rem", color: "#dc2626", textAlign: "right" }}>
+                                  Editing not available within 12 hours of service
+                                </div>
+                              )}
+                          <span style={{
+                            padding: "0.25rem 0.75rem",
+                            borderRadius: "999px",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                                background: "#3b82f620",
+                                color: "#3b82f6",
+                            textTransform: "capitalize"
+                          }}>
+                                {cleaning.status || "Scheduled"}
+                          </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* History */}
+                {pastCleanings.length > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
+                      History
+                    </h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                      {pastCleanings.slice(0, 5).map((cleaning) => {
+                        const cleaningDate = new Date(cleaning.scheduledDate);
+                        const isCompleted = cleaning.status === "completed" || (cleaning as any).jobStatus === "completed";
+                        const statusColor = isCompleted ? "#16a34a" : "#dc2626";
+                        return (
+                          <div
+                            key={cleaning.id}
+                            style={{
+                              padding: "1rem",
+                              background: isCompleted ? "#f0fdf4" : "#fef2f2",
+                              borderRadius: "8px",
+                              border: `1px solid ${isCompleted ? "#bbf7d0" : "#fecaca"}`,
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center"
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
+                                {cleaningDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                                {cleaning.addressLine1}, {cleaning.city}
+                              </div>
+                            </div>
+                            <span style={{
+                              padding: "0.25rem 0.75rem",
+                              borderRadius: "999px",
+                              fontSize: "0.75rem",
+                              fontWeight: "600",
+                              background: isCompleted ? "#d1fae5" : "#fee2e2",
+                              color: statusColor
+                            }}>
+                              {cleaning.status}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* (F) Loyalty Badges - Hidden for admin */}
             {!isAdmin && userId && (
               <div ref={rewardsSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
                 <LoyaltyBadges userId={userId} />
               </div>
             )}
 
-            {/* (F) Referral Rewards - Hidden for admin */}
+            {/* (G) Referral Rewards - Hidden for admin */}
             {!isAdmin && userId && (
               <div style={{ marginBottom: "2rem" }}>
                 <ReferralRewards userId={userId} />
@@ -2977,317 +3170,6 @@ function DashboardPageContent() {
                 </div>
             </div>
             )}
-
-            {/* (G) Upcoming & Past Cleanings */}
-            <div style={{ marginBottom: "2rem" }}>
-            <div style={{
-              background: "#ffffff",
-              borderRadius: "20px",
-                padding: "2.5rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb"
-            }}>
-                <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1.5rem" }}>
-                  {isAdmin ? "All Cleanings / Route Schedule" : "Your Cleanings"}
-              </h2>
-              
-                {/* Upcoming */}
-                <div style={{ marginBottom: "2rem" }}>
-                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
-                    {isAdmin ? "Today's Cleanings" : "Upcoming"}
-                  </h3>
-              {cleaningsLoading ? (
-                    <p style={{ color: "#6b7280" }}>Loading scheduled cleanings...</p>
-                  ) : (isAdmin ? allCleanings.filter(c => {
-                    const date = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const cleaningDate = new Date(date);
-                    cleaningDate.setHours(0, 0, 0, 0);
-                    return cleaningDate.getTime() === today.getTime() && c.status !== "cancelled";
-                  }) : upcomingCleanings).length === 0 ? (
-                    <div style={{
-                      padding: "2rem",
-                      background: "#f9fafb",
-                      borderRadius: "12px",
-                      textAlign: "center",
-                      border: "1px dashed #d1d5db"
-                    }}>
-                      <p style={{ color: "#6b7280", margin: 0 }}>
-                        {isAdmin ? "No cleanings scheduled for today." : "No cleanings scheduled yet. Use the Schedule button above to book your first cleaning."}
-                      </p>
-                    </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                      {(isAdmin ? allCleanings.filter(c => {
-                        const date = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        const cleaningDate = new Date(date);
-                        cleaningDate.setHours(0, 0, 0, 0);
-                        return cleaningDate.getTime() === today.getTime() && c.status !== "cancelled";
-                      }).slice(0, 20) : upcomingCleanings).map((cleaning) => {
-                    const cleaningDate = cleaning.scheduledDate?.toDate?.() || new Date(cleaning.scheduledDate);
-                    // Find customer info for admin view
-                    const customer = isAdmin && cleaning.userId 
-                      ? allCustomers.find(c => c.id === cleaning.userId)
-                      : null;
-                    
-                    // Check if cleaning is more than 12 hours away (for edit button)
-                    const now = new Date();
-                    const hoursUntilCleaning = (cleaningDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-                    const canEdit = !isAdmin && hoursUntilCleaning > 12 && cleaning.status !== "completed" && cleaning.status !== "cancelled";
-                    
-                    return (
-                      <div
-                        key={cleaning.id}
-                        style={{
-                          padding: "1.25rem",
-                              background: "#f0f9ff",
-                          borderRadius: "12px",
-                              border: "1px solid #bae6fd"
-                        }}
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "0.75rem" }}>
-                          <div style={{ flex: 1 }}>
-                            {isAdmin && customer && (
-                              <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.5rem" }}>
-                                {customer.firstName} {customer.lastName}
-                              </div>
-                            )}
-                            <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
-                              {cleaningDate.toLocaleDateString("en-US", { 
-                                weekday: "long", 
-                                month: "long", 
-                                day: "numeric",
-                                year: "numeric"
-                              })}
-                            </div>
-                                <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                              {cleaning.scheduledTime || "TBD"}
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                            {canEdit && (
-                              <button
-                                onClick={() => {
-                                  setEditingCleaning(cleaning);
-                                  setIsEditModalOpen(true);
-                                }}
-                                style={{
-                                  padding: "0.5rem 1rem",
-                                  border: "1px solid #16a34a",
-                                  borderRadius: "8px",
-                                  background: "#ffffff",
-                                  color: "#16a34a",
-                                  fontSize: "0.875rem",
-                                  fontWeight: "600",
-                                  cursor: "pointer",
-                                  transition: "all 0.2s",
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = "#16a34a";
-                                  e.currentTarget.style.color = "#ffffff";
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = "#ffffff";
-                                  e.currentTarget.style.color = "#16a34a";
-                                }}
-                              >
-                                Edit
-                              </button>
-                            )}
-                          <span style={{
-                            padding: "0.25rem 0.75rem",
-                            borderRadius: "999px",
-                            fontSize: "0.75rem",
-                            fontWeight: "600",
-                                background: "#3b82f620",
-                                color: "#3b82f6",
-                            textTransform: "capitalize"
-                          }}>
-                                {cleaning.status || "Scheduled"}
-                          </span>
-                          </div>
-                        </div>
-                            <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
-                          <strong>Address:</strong> {cleaning.addressLine1}
-                          {cleaning.addressLine2 && `, ${cleaning.addressLine2}`}
-                          <br />
-                          {cleaning.city}, {cleaning.state} {cleaning.zipCode}
-                        </div>
-                        {isAdmin && customer && (
-                          <div style={{ display: "flex", gap: "1rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
-                              <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                              <strong>Plan:</strong> {customer.selectedPlan ? (PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan) : "N/A"}
-                            </div>
-                            <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                              <strong>Source:</strong> <span style={{
-                                padding: "0.125rem 0.5rem",
-                                borderRadius: "4px",
-                                fontSize: "0.75rem",
-                                fontWeight: "600",
-                                background: customer.source === "partner" ? "#dbeafe" : "#f3f4f6",
-                                color: customer.source === "partner" ? "#1e40af" : "#6b7280"
-                              }}>
-                                {customer.source === "partner" ? "Partner" : "Direct"}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                        {cleaning.trashDay && (
-                              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.5rem" }}>
-                            <strong>Preferred Cleaning Day:</strong> {cleaning.trashDay}
-                          </div>
-                        )}
-                        {!canEdit && !isAdmin && hoursUntilCleaning <= 12 && (
-                          <div style={{ fontSize: "0.75rem", color: "#dc2626", marginTop: "0.5rem", fontStyle: "italic" }}>
-                            Editing is only available up to 12 hours before the scheduled service time.
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-                {/* Admin: Next 7 Days */}
-                {isAdmin && (
-                  <div style={{ marginBottom: "2rem" }}>
-                    <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
-                      Next 7 Days
-                    </h3>
-                    {allCleanings.filter(c => {
-                      const date = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
-                      const today = new Date();
-                      const sevenDaysFromNow = new Date();
-                      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-                      return date >= today && date <= sevenDaysFromNow && c.status !== "cancelled";
-                    }).length === 0 ? (
-                      <div style={{
-                        padding: "2rem",
-                        background: "#f9fafb",
-                        borderRadius: "12px",
-                        textAlign: "center",
-                        border: "1px dashed #d1d5db"
-                      }}>
-                        <p style={{ color: "#6b7280", margin: 0 }}>
-                          No cleanings scheduled for the next 7 days.
-                        </p>
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                        {allCleanings
-                          .filter(c => {
-                            const date = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
-                            const today = new Date();
-                            const sevenDaysFromNow = new Date();
-                            sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-                            return date >= today && date <= sevenDaysFromNow && c.status !== "cancelled";
-                          })
-                          .sort((a, b) => {
-                            const dateA = a.scheduledDate?.toDate?.() || new Date(a.scheduledDate);
-                            const dateB = b.scheduledDate?.toDate?.() || new Date(b.scheduledDate);
-                            return dateA.getTime() - dateB.getTime();
-                          })
-                          .slice(0, 30)
-                          .map((cleaning) => {
-                            const cleaningDate = cleaning.scheduledDate?.toDate?.() || new Date(cleaning.scheduledDate);
-                            const customer = cleaning.userId ? allCustomers.find(c => c.id === cleaning.userId) : null;
-                            return (
-                              <div
-                                key={cleaning.id}
-                                style={{
-                                  padding: "1rem",
-                                  background: "#f0f9ff",
-                                  borderRadius: "8px",
-                                  border: "1px solid #bae6fd",
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center"
-                                }}
-                              >
-                                <div style={{ flex: 1 }}>
-                                  {customer && (
-                                    <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
-                                      {customer.firstName} {customer.lastName}
-                                    </div>
-                                  )}
-                                  <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "0.25rem" }}>
-                                    {cleaningDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-                                  </div>
-                                  <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-                                    {cleaning.addressLine1}, {cleaning.city}
-                                  </div>
-                                  {customer && (
-                                    <div style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: "0.25rem" }}>
-                                      {customer.selectedPlan ? (PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan) : "No plan"} • {customer.source === "partner" ? "Partner" : "Direct"}
-                                    </div>
-                                  )}
-                                </div>
-                                <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-                                  {cleaning.scheduledTime || "TBD"}
-                                </div>
-                              </div>
-                            );
-                          })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* History */}
-                {pastCleanings.length > 0 && (
-                  <div>
-                    <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
-                      History
-                    </h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                      {pastCleanings.slice(0, 5).map((cleaning) => {
-                        const cleaningDate = new Date(cleaning.scheduledDate);
-                        const isCompleted = cleaning.status === "completed" || (cleaning as any).jobStatus === "completed";
-                        const statusColor = isCompleted ? "#16a34a" : "#dc2626";
-                        return (
-                          <div
-                            key={cleaning.id}
-                            style={{
-                              padding: "1rem",
-                              background: "#f9fafb",
-                              borderRadius: "8px",
-                              border: "1px solid #e5e7eb",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center"
-                            }}
-                          >
-                            <div>
-                              <div style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--text-dark)" }}>
-                                {cleaningDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                              </div>
-                              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-                                {cleaning.addressLine1}, {cleaning.city}
-                              </div>
-                            </div>
-                            <span style={{
-                              padding: "0.25rem 0.75rem",
-                              borderRadius: "999px",
-                              fontSize: "0.75rem",
-                              fontWeight: "600",
-                              background: `${statusColor}20`,
-                              color: statusColor,
-                              textTransform: "capitalize"
-                            }}>
-                              {cleaning.status}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
 
             {/* (H) Account Information (Collapsible) */}
             <div ref={accountSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
