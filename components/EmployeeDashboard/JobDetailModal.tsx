@@ -20,6 +20,7 @@ interface Job {
   flags?: string[];
   completionPhotoUrl?: string;
   employeeNotes?: string;
+  completedAt?: any;
 }
 
 interface JobDetailModalProps {
