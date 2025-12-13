@@ -38,17 +38,52 @@ function LoginForm() {
       const user = auth?.currentUser;
       
       if (user) {
+        // Check redirect parameter first (for employee portal, etc.)
+        const redirectParam = searchParams.get("redirect");
+        if (redirectParam) {
+          router.push(redirectParam);
+          return;
+        }
+
+        // Check callbackUrl parameter (for NextAuth redirects)
+        const callbackUrl = searchParams.get("callbackUrl");
+        if (callbackUrl) {
+          router.push(callbackUrl);
+          return;
+        }
+
+        // Check if user is an employee
+        try {
+          const { getDbInstance } = await import("@/lib/firebase");
+          const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+          const db = await getDbInstance();
+          
+          if (db) {
+            const firestore = await safeImportFirestore();
+            const { doc, getDoc } = firestore;
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              if (userData.role === "employee") {
+                router.push("/employee/dashboard");
+                return;
+              }
+            }
+          }
+        } catch (err) {
+          console.error("[Login] Error checking employee status:", err);
+        }
+
         // Check if user is a partner and redirect accordingly
         const { getDashboardUrl } = await import("@/lib/partner-auth");
         const dashboardUrl = await getDashboardUrl(user.uid);
-        
-        // Use callbackUrl if provided, otherwise use partner-aware dashboard URL
-        const callbackUrl = searchParams.get("callbackUrl") || dashboardUrl;
-        router.push(callbackUrl);
+        router.push(dashboardUrl);
       } else {
         // Fallback to regular dashboard if user not found
-      const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
-      router.push(callbackUrl);
+        const redirectParam = searchParams.get("redirect");
+        const callbackUrl = searchParams.get("callbackUrl");
+        router.push(redirectParam || callbackUrl || "/dashboard");
       }
     } catch (err: any) {
       console.error("Login error:", err);
