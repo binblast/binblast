@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs, orderBy } = firestore;
+    const { collection, query, where, getDocs } = firestore;
 
     const today = getTodayDateString();
     const cleaningsRef = collection(db, "scheduledCleanings");
@@ -34,15 +34,19 @@ export async function GET(req: NextRequest) {
     const jobsQuery = query(
       cleaningsRef,
       where("assignedEmployeeId", "==", employeeId),
-      where("scheduledDate", "==", today),
-      orderBy("addressLine1", "asc") // Order by address for route planning
+      where("scheduledDate", "==", today)
     );
 
     const snapshot = await getDocs(jobsQuery);
     const jobs = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    }));
+    })).sort((a, b) => {
+      // Sort by address on client side for route planning
+      const addressA = (a.addressLine1 || "").toLowerCase();
+      const addressB = (b.addressLine1 || "").toLowerCase();
+      return addressA.localeCompare(addressB);
+    });
 
     return NextResponse.json({ jobs }, { status: 200 });
   } catch (error: any) {
