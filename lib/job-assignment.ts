@@ -88,7 +88,7 @@ export async function autoAssignJobsForToday(): Promise<JobAssignment[]> {
     });
 
     // Assign jobs within each area
-    for (const [areaKey, jobs] of jobsByArea) {
+    for (const [areaKey, jobs] of Array.from(jobsByArea.entries())) {
       const [city, zipCode] = areaKey.split("_");
 
       // Find employees who service this area
