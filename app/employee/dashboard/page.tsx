@@ -58,7 +58,41 @@ export default function EmployeeDashboardPage() {
   });
 
   useEffect(() => {
-    loadEmployeeData();
+    let unsubscribe: (() => void) | undefined;
+    let isMounted = true;
+
+    async function setupAuthListener() {
+      try {
+        const { onAuthStateChanged } = await import("@/lib/firebase");
+        unsubscribe = await onAuthStateChanged(async (user) => {
+          if (!isMounted) return;
+
+          if (user) {
+            // User is authenticated, load employee data
+            await loadEmployeeData(user.uid);
+          } else {
+            // No user, redirect to login
+            setLoading(false);
+            router.push("/login?redirect=/employee/dashboard");
+          }
+        });
+      } catch (error) {
+        console.error("Error setting up auth listener:", error);
+        if (isMounted) {
+          setLoading(false);
+          router.push("/login?redirect=/employee/dashboard");
+        }
+      }
+    }
+
+    setupAuthListener();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -86,17 +120,10 @@ export default function EmployeeDashboardPage() {
     };
   }, [clockInStatus?.isActive, employee?.id]);
 
-  const loadEmployeeData = async () => {
+  const loadEmployeeData = async (userId: string) => {
     try {
-      const auth = await getAuthInstance();
-      const user = auth?.currentUser;
-      if (!user) {
-        router.push("/login?redirect=/employee/dashboard");
-        return;
-      }
-
       const { getEmployeeData } = await import("@/lib/employee-utils");
-      const employeeData = await getEmployeeData(user.uid);
+      const employeeData = await getEmployeeData(userId);
       
       if (!employeeData) {
         router.push("/login");

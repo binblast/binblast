@@ -232,6 +232,17 @@ export async function getAuthInstance(): Promise<any> {
       const app = await getFirebaseApp();
       if (app) {
         auth = firebaseAuthModule.getAuth(app);
+        // Ensure auth persistence is set to browserLocalPersistence (persists across page refreshes)
+        if (typeof window !== 'undefined' && firebaseAuthModule.setPersistence) {
+          try {
+            await firebaseAuthModule.setPersistence(auth, firebaseAuthModule.browserLocalPersistence);
+          } catch (error: any) {
+            // Ignore errors if persistence is already set
+            if (!error.message?.includes('already been set')) {
+              console.warn("[Firebase Client] Could not set auth persistence:", error.message);
+            }
+          }
+        }
         if (typeof window !== 'undefined') {
           (window as any).__firebaseAuthImported = true;
         }
@@ -242,6 +253,17 @@ export async function getAuthInstance(): Promise<any> {
       const app = await getFirebaseApp();
       if (app) {
         auth = firebaseAuthModule.getAuth(app);
+        // Ensure auth persistence is set to browserLocalPersistence (default, but explicit is better)
+        if (typeof window !== 'undefined' && firebaseAuthModule.setPersistence) {
+          try {
+            await firebaseAuthModule.setPersistence(auth, firebaseAuthModule.browserLocalPersistence);
+          } catch (error: any) {
+            // Ignore errors if persistence is already set
+            if (!error.message?.includes('already been set')) {
+              console.warn("[Firebase Client] Could not set auth persistence:", error.message);
+            }
+          }
+        }
       }
     }
   }
