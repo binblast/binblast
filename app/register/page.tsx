@@ -258,36 +258,57 @@ function RegisterForm() {
           console.log("[Register] User is a partner, skipping user document creation:", userCredential.user.uid);
         } else {
           // User is not a partner - create user document
-          const userDocRef = doc(collection(db, "users"), userCredential.user.uid);
-        
-        // Determine subscription status based on Stripe data
-        let subscriptionStatus = "none";
-        if (stripeData?.subscriptionId) {
-          subscriptionStatus = "active";
-        } else if (stripeData?.customerId && !stripeData?.subscriptionId) {
-          subscriptionStatus = "one_time_paid";
-        }
+          try {
+            const userDocRef = doc(collection(db, "users"), userCredential.user.uid);
+          
+            // Determine subscription status based on Stripe data
+            let subscriptionStatus = "none";
+            if (stripeData?.subscriptionId) {
+              subscriptionStatus = "active";
+            } else if (stripeData?.customerId && !stripeData?.subscriptionId) {
+              subscriptionStatus = "one_time_paid";
+            }
 
-        // Generate unique referral code
-        const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
-        const generatedCode = userCredential.user.uid.substring(0, 8).toUpperCase() + randomChars;
+            // Generate unique referral code
+            const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const generatedCode = userCredential.user.uid.substring(0, 8).toUpperCase() + randomChars;
 
-        await setDoc(userDocRef, {
-          firstName,
-          lastName,
-          email,
-          phone: phone || null,
-          selectedPlan: selectedPlanId || null,
-          stripeCustomerId: stripeData?.customerId || null,
-          stripeSubscriptionId: stripeData?.subscriptionId || null,
-          subscriptionStatus,
-          paymentStatus: stripeData ? "paid" : "pending",
-          referralCode: generatedCode, // Generate unique code on registration
-          referralCount: 0, // Initialize referral count
-            role: "customer", // Default role - can be "customer" | "partner" | "admin"
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+            // Determine user role based on email
+            // Check for operator email (case-insensitive)
+            const userEmailLower = email.toLowerCase();
+            let userRole = "customer"; // Default role
+            if (userEmailLower === "keyjboone@gmail.com") {
+              userRole = "operator";
+              console.log("[Register] Assigning operator role to:", email);
+            }
+
+            await setDoc(userDocRef, {
+              firstName,
+              lastName,
+              email,
+              phone: phone || null,
+              selectedPlan: selectedPlanId || null,
+              stripeCustomerId: stripeData?.customerId || null,
+              stripeSubscriptionId: stripeData?.subscriptionId || null,
+              subscriptionStatus,
+              paymentStatus: stripeData ? "paid" : "pending",
+              referralCode: generatedCode, // Generate unique code on registration
+              referralCount: 0, // Initialize referral count
+              role: userRole, // Set role based on email check (customer, operator, etc.)
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+            
+            console.log("[Register] User document created successfully with role:", userRole);
+          } catch (userDocErr: any) {
+            console.error("[Register] Error creating user document:", userDocErr);
+            // If it's a permission error, provide a more helpful message
+            if (userDocErr.code === "permission-denied" || userDocErr.message?.includes("Missing or insufficient permissions")) {
+              throw new Error("Permission denied: Unable to create user account. Please contact support.");
+            }
+            // Re-throw the error so it can be caught by the main catch block
+            throw new Error(`Failed to create user document: ${userDocErr.message || "Unknown error"}`);
+          }
         }
 
         // Process referral if referral code was provided
