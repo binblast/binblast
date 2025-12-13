@@ -85,7 +85,8 @@ export async function POST(req: NextRequest) {
       if (finalCleaningCreditsRollover === 0 && session.metadata?.currentPlanId && session.metadata?.subscriptionId) {
         try {
           // Get subscription to find billing period
-          const subscription = await stripe.subscriptions.retrieve(session.metadata.subscriptionId);
+          const subscriptionResponse = await stripe.subscriptions.retrieve(session.metadata.subscriptionId);
+          const subscription = subscriptionResponse as Stripe.Subscription;
           const billingPeriodStart = new Date(subscription.current_period_start * 1000);
           const billingPeriodEnd = new Date(subscription.current_period_end * 1000);
           
