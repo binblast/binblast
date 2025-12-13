@@ -164,27 +164,60 @@ function RegisterForm() {
       
       if (db && userCredential.user) {
         // IMPORTANT: Check if user is already a partner - partners should NOT have user documents
-        const partnersQuery = query(
-          collection(db, "partners"),
-          where("userId", "==", userCredential.user.uid)
-        );
-        const partnersSnapshot = await getDocs(partnersQuery);
+        // Wrap queries in try-catch to handle permission errors gracefully
+        // Regular users may not have permission to query partners collection
+        let partnersSnapshot: any = { empty: true };
+        let partnersByEmailSnapshot: any = { empty: true };
+        let applicationsByEmailSnapshot: any = { empty: true };
+        
+        try {
+          const partnersQuery = query(
+            collection(db, "partners"),
+            where("userId", "==", userCredential.user.uid)
+          );
+          partnersSnapshot = await getDocs(partnersQuery);
+        } catch (partnerQueryErr: any) {
+          // Permission error means user is not a partner - this is expected for regular users
+          if (partnerQueryErr.code === "permission-denied" || partnerQueryErr.message?.includes("Missing or insufficient permissions")) {
+            console.log("[Register] User is not a partner (permission denied on partners query) - continuing as regular user");
+          } else {
+            console.warn("[Register] Error querying partners by userId:", partnerQueryErr);
+          }
+        }
         
         // Also check if there's a partner application or partner record by email
         // (in case application was submitted before registration)
-        const partnersByEmailQuery = query(
-          collection(db, "partners"),
-          where("email", "==", email)
-        );
-        const partnersByEmailSnapshot = await getDocs(partnersByEmailQuery);
+        try {
+          const partnersByEmailQuery = query(
+            collection(db, "partners"),
+            where("email", "==", email)
+          );
+          partnersByEmailSnapshot = await getDocs(partnersByEmailQuery);
+        } catch (partnerEmailQueryErr: any) {
+          // Permission error means user is not a partner - this is expected for regular users
+          if (partnerEmailQueryErr.code === "permission-denied" || partnerEmailQueryErr.message?.includes("Missing or insufficient permissions")) {
+            console.log("[Register] User is not a partner by email (permission denied) - continuing as regular user");
+          } else {
+            console.warn("[Register] Error querying partners by email:", partnerEmailQueryErr);
+          }
+        }
         
         // Check for partner applications by email that need userId linking
-        const applicationsByEmailQuery = query(
-          collection(db, "partnerApplications"),
-          where("email", "==", email),
-          where("userId", "==", null)
-        );
-        const applicationsByEmailSnapshot = await getDocs(applicationsByEmailQuery);
+        try {
+          const applicationsByEmailQuery = query(
+            collection(db, "partnerApplications"),
+            where("email", "==", email),
+            where("userId", "==", null)
+          );
+          applicationsByEmailSnapshot = await getDocs(applicationsByEmailQuery);
+        } catch (applicationQueryErr: any) {
+          // Permission error means user has no applications - this is expected for regular users
+          if (applicationQueryErr.code === "permission-denied" || applicationQueryErr.message?.includes("Missing or insufficient permissions")) {
+            console.log("[Register] User has no partner applications (permission denied) - continuing as regular user");
+          } else {
+            console.warn("[Register] Error querying partner applications:", applicationQueryErr);
+          }
+        }
         
         // Link userId to any applications that were submitted before registration
         if (!applicationsByEmailSnapshot.empty) {
@@ -226,35 +259,35 @@ function RegisterForm() {
         } else {
           // User is not a partner - create user document
           const userDocRef = doc(collection(db, "users"), userCredential.user.uid);
-          
-          // Determine subscription status based on Stripe data
-          let subscriptionStatus = "none";
-          if (stripeData?.subscriptionId) {
-            subscriptionStatus = "active";
-          } else if (stripeData?.customerId && !stripeData?.subscriptionId) {
-            subscriptionStatus = "one_time_paid";
-          }
+        
+        // Determine subscription status based on Stripe data
+        let subscriptionStatus = "none";
+        if (stripeData?.subscriptionId) {
+          subscriptionStatus = "active";
+        } else if (stripeData?.customerId && !stripeData?.subscriptionId) {
+          subscriptionStatus = "one_time_paid";
+        }
 
-          // Generate unique referral code
-          const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
-          const generatedCode = userCredential.user.uid.substring(0, 8).toUpperCase() + randomChars;
+        // Generate unique referral code
+        const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const generatedCode = userCredential.user.uid.substring(0, 8).toUpperCase() + randomChars;
 
-          await setDoc(userDocRef, {
-            firstName,
-            lastName,
-            email,
-            phone: phone || null,
-            selectedPlan: selectedPlanId || null,
-            stripeCustomerId: stripeData?.customerId || null,
-            stripeSubscriptionId: stripeData?.subscriptionId || null,
-            subscriptionStatus,
-            paymentStatus: stripeData ? "paid" : "pending",
-            referralCode: generatedCode, // Generate unique code on registration
-            referralCount: 0, // Initialize referral count
+        await setDoc(userDocRef, {
+          firstName,
+          lastName,
+          email,
+          phone: phone || null,
+          selectedPlan: selectedPlanId || null,
+          stripeCustomerId: stripeData?.customerId || null,
+          stripeSubscriptionId: stripeData?.subscriptionId || null,
+          subscriptionStatus,
+          paymentStatus: stripeData ? "paid" : "pending",
+          referralCode: generatedCode, // Generate unique code on registration
+          referralCount: 0, // Initialize referral count
             role: "customer", // Default role - can be "customer" | "partner" | "admin"
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
         }
 
         // Process referral if referral code was provided
@@ -298,11 +331,23 @@ function RegisterForm() {
         if (userCredential?.user && db) {
           const { query, where, getDocs, collection: firestoreCollection } = firestore;
           // Check if user has a partner record
-          const partnersQuery = query(
-            firestoreCollection(db, "partners"),
-            where("userId", "==", userCredential.user.uid)
-          );
-          const partnersSnapshot = await getDocs(partnersQuery);
+          // Wrap in try-catch to handle permission errors gracefully
+          let partnersSnapshot: any = { empty: true };
+          try {
+            const partnersQuery = query(
+              firestoreCollection(db, "partners"),
+              where("userId", "==", userCredential.user.uid)
+            );
+            partnersSnapshot = await getDocs(partnersQuery);
+          } catch (partnerQueryErr: any) {
+            // Permission error means user is not a partner - this is expected for regular users
+            if (partnerQueryErr.code === "permission-denied" || partnerQueryErr.message?.includes("Missing or insufficient permissions")) {
+              console.log("[Register] User is not a partner (permission denied) - redirecting to regular dashboard");
+              // User is not a partner, continue with regular redirect logic
+            } else {
+              console.warn("[Register] Error querying partners for redirect:", partnerQueryErr);
+            }
+          }
           
           if (!partnersSnapshot.empty) {
             const partnerData = partnersSnapshot.docs[0].data();
@@ -328,7 +373,7 @@ function RegisterForm() {
         console.warn("[Register] Error checking partner status:", partnerCheckErr);
         // Continue with original redirect if check fails
       }
-
+      
       // Redirect logic:
       // 1. If redirect parameter exists (or partner dashboard) -> use it
       // 2. If user has already paid (has stripeData) -> go to dashboard
