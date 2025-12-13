@@ -24,6 +24,7 @@ import { SystemControls } from "@/components/OwnerDashboard/SystemControls";
 import { EmployeeStatus } from "@/components/OperatorDashboard/EmployeeStatus";
 import { RevenueTrendSummary, CustomerGrowthSummary, WeeklyCleaningsSummary, PlanDistributionSummary, RevenueByPlanSummary } from "@/components/AdminDashboard/ChartSummaries";
 import { AdminAIChat } from "@/components/AdminDashboard/AdminAIChat";
+import { KPICard } from "@/components/AdminDashboard/KPICard";
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
@@ -2016,19 +2017,27 @@ function DashboardPageContent() {
           <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
             
             {/* (A) Hero Welcome + Status Summary */}
-            <div style={{ marginBottom: "2rem" }}>
+            <div style={{ 
+              marginBottom: "2rem",
+              animation: "fadeInUp 0.6s ease-out"
+            }}>
               <h1 style={{ 
                 fontSize: "clamp(2rem, 5vw, 2.5rem)", 
-                fontWeight: "700", 
+                fontWeight: "800", 
                 color: "var(--text-dark)",
-                marginBottom: "0.5rem"
+                marginBottom: "0.75rem",
+                background: "linear-gradient(135deg, #1f2937 0%, #374151 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text"
               }}>
-                Welcome back, {user.firstName}!
+                Welcome back, {user.firstName}! 👋
             </h1>
               <p style={{ 
-                fontSize: "1rem", 
+                fontSize: "1.125rem", 
                 color: "#6b7280", 
-                marginBottom: "1.5rem"
+                marginBottom: "1.5rem",
+                fontWeight: "500"
               }}>
                 {isOwner ? "Owner Dashboard - Complete business control center" : isAdmin ? "Admin Dashboard - Manage your business operations" : "Here's a quick look at your bin cleaning status."}
               </p>
@@ -2040,146 +2049,101 @@ function DashboardPageContent() {
                   <div style={{
                     position: "sticky",
                     top: "80px",
-                    background: "#ffffff",
-                    borderRadius: "12px",
-                    padding: "0.5rem",
-                    marginBottom: "1.5rem",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                    border: "1px solid #e5e7eb",
+                    background: "linear-gradient(135deg, #ffffff 0%, #f9fafb 100%)",
+                    borderRadius: "16px",
+                    padding: "0.75rem",
+                    marginBottom: "2rem",
+                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+                    border: "2px solid #e5e7eb",
                     zIndex: 100,
                     display: "flex",
-                    gap: "0.5rem",
-                    flexWrap: "wrap"
+                    gap: "0.75rem",
+                    flexWrap: "wrap",
+                    animation: "slideDown 0.4s ease-out"
                   }}>
-                    <button
-                      onClick={() => setAdminActiveTab("overview")}
-                      style={{
-                        flex: "1",
-                        minWidth: "120px",
-                        padding: "0.75rem 1.5rem",
-                        border: "none",
-                        borderRadius: "8px",
-                        fontSize: "0.95rem",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        background: adminActiveTab === "overview" ? "#16a34a" : "transparent",
-                        color: adminActiveTab === "overview" ? "#ffffff" : "#6b7280",
-                        transition: "all 0.2s"
-                      }}
-                    >
-                      Overview
-                    </button>
-                    <button
-                      onClick={() => setAdminActiveTab("customers")}
-                      style={{
-                        flex: "1",
-                        minWidth: "120px",
-                        padding: "0.75rem 1.5rem",
-                        border: "none",
-                        borderRadius: "8px",
-                        fontSize: "0.95rem",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        background: adminActiveTab === "customers" ? "#16a34a" : "transparent",
-                        color: adminActiveTab === "customers" ? "#ffffff" : "#6b7280",
-                        transition: "all 0.2s"
-                      }}
-                    >
-                      Customers
-                    </button>
-                    <button
-                      onClick={() => setAdminActiveTab("operations")}
-                      style={{
-                        flex: "1",
-                        minWidth: "120px",
-                        padding: "0.75rem 1.5rem",
-                        border: "none",
-                        borderRadius: "8px",
-                        fontSize: "0.95rem",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        background: adminActiveTab === "operations" ? "#16a34a" : "transparent",
-                        color: adminActiveTab === "operations" ? "#ffffff" : "#6b7280",
-                        transition: "all 0.2s"
-                      }}
-                    >
-                      Operations
-                    </button>
-                    <button
-                      onClick={() => setAdminActiveTab("financial")}
-                      style={{
-                        flex: "1",
-                        minWidth: "120px",
-                        padding: "0.75rem 1.5rem",
-                        border: "none",
-                        borderRadius: "8px",
-                        fontSize: "0.95rem",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        background: adminActiveTab === "financial" ? "#16a34a" : "transparent",
-                        color: adminActiveTab === "financial" ? "#ffffff" : "#6b7280",
-                        transition: "all 0.2s"
-                      }}
-                    >
-                      Financial
-                    </button>
-                    <button
-                      onClick={() => setAdminActiveTab("partners")}
-                      style={{
-                        flex: "1",
-                        minWidth: "120px",
-                        padding: "0.75rem 1.5rem",
-                        border: "none",
-                        borderRadius: "8px",
-                        fontSize: "0.95rem",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        background: adminActiveTab === "partners" ? "#16a34a" : "transparent",
-                        color: adminActiveTab === "partners" ? "#ffffff" : "#6b7280",
-                        transition: "all 0.2s"
-                      }}
-                    >
-                      Partners
-                    </button>
-                    <button
-                      onClick={() => setAdminActiveTab("analytics")}
-                      style={{
-                        flex: "1",
-                        minWidth: "120px",
-                        padding: "0.75rem 1.5rem",
-                        border: "none",
-                        borderRadius: "8px",
-                        fontSize: "0.95rem",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        background: adminActiveTab === "analytics" ? "#16a34a" : "transparent",
-                        color: adminActiveTab === "analytics" ? "#ffffff" : "#6b7280",
-                        transition: "all 0.2s"
-                      }}
-                    >
-                      Analytics
-                    </button>
+                    {(["overview", "customers", "operations", "financial", "partners", "analytics"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setAdminActiveTab(tab)}
+                        style={{
+                          flex: "1",
+                          minWidth: "120px",
+                          padding: "0.875rem 1.75rem",
+                          border: "none",
+                          borderRadius: "10px",
+                          fontSize: "0.95rem",
+                          fontWeight: "700",
+                          cursor: "pointer",
+                          background: adminActiveTab === tab 
+                            ? "linear-gradient(135deg, #16a34a 0%, #15803d 100%)" 
+                            : "transparent",
+                          color: adminActiveTab === tab ? "#ffffff" : "#6b7280",
+                          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                          position: "relative",
+                          overflow: "hidden",
+                          boxShadow: adminActiveTab === tab 
+                            ? "0 4px 12px rgba(22, 163, 74, 0.3)" 
+                            : "none",
+                          transform: adminActiveTab === tab ? "scale(1.05)" : "scale(1)",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (adminActiveTab !== tab) {
+                            e.currentTarget.style.background = "#f3f4f6";
+                            e.currentTarget.style.color = "#374151";
+                            e.currentTarget.style.transform = "scale(1.02)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (adminActiveTab !== tab) {
+                            e.currentTarget.style.background = "transparent";
+                            e.currentTarget.style.color = "#6b7280";
+                            e.currentTarget.style.transform = "scale(1)";
+                          }
+                        }}
+                      >
+                        <span style={{ position: "relative", zIndex: 1, textTransform: "capitalize" }}>
+                          {tab}
+                        </span>
+                        {adminActiveTab === tab && (
+                          <div style={{
+                            position: "absolute",
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            height: "3px",
+                            background: "#ffffff",
+                            borderRadius: "3px 3px 0 0",
+                            animation: "slideInLeft 0.3s ease-out"
+                          }} />
+                        )}
+                      </button>
+                    ))}
                     <a
                       href="/employee/register"
                       style={{
-                        padding: "0.75rem 1.5rem",
-                        background: "#16a34a",
+                        padding: "0.875rem 1.75rem",
+                        background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
                         color: "#ffffff",
-                        borderRadius: "8px",
+                        borderRadius: "10px",
                         textDecoration: "none",
-                        fontWeight: "600",
+                        fontWeight: "700",
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "0.5rem",
-                        transition: "background 0.2s",
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                         fontSize: "0.95rem",
-                        whiteSpace: "nowrap"
+                        whiteSpace: "nowrap",
+                        boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#15803d";
+                        e.currentTarget.style.background = "linear-gradient(135deg, #15803d 0%, #166534 100%)";
+                        e.currentTarget.style.transform = "scale(1.05)";
+                        e.currentTarget.style.boxShadow = "0 6px 16px rgba(22, 163, 74, 0.4)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "#16a34a";
+                        e.currentTarget.style.background = "linear-gradient(135deg, #16a34a 0%, #15803d 100%)";
+                        e.currentTarget.style.transform = "scale(1)";
+                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(22, 163, 74, 0.3)";
                       }}
                     >
                       + Register Employee
@@ -2192,11 +2156,20 @@ function DashboardPageContent() {
                     borderRadius: "20px",
                     padding: "2rem",
                     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                    border: "1px solid #e5e7eb"
+                    border: "1px solid #e5e7eb",
+                    position: "relative",
+                    overflow: "hidden",
+                    minHeight: "400px"
                   }}>
                     {/* TAB: Overview */}
                     {adminActiveTab === "overview" && (
-                      <div>
+                      <div 
+                        key="overview"
+                        style={{
+                          animation: "fadeInUp 0.4s ease-out",
+                          opacity: 1
+                        }}
+                      >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
                           <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0 }}>
                             Business Overview
@@ -2213,191 +2186,101 @@ function DashboardPageContent() {
                           </div>
                         </div>
                   {adminLoading ? (
-                    <p style={{ color: "#6b7280" }}>Loading admin statistics...</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "2rem" }}>
+                      {[...Array(10)].map((_, i) => (
+                        <div key={i} className="skeleton" style={{ borderRadius: "16px", padding: "1.75rem", height: "140px" }} />
+                      ))}
+                    </div>
                   ) : (
                     <div style={{
                       display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                      gap: "1rem",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                      gap: "1.25rem",
                       marginBottom: "2rem"
                     }}>
-                      {/* Total Active Customers */}
-                      <div style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        padding: "1.5rem",
-                        border: "1px solid #e5e7eb",
-                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                      }}>
-                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          Total Active Customers
-                        </div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
-                          {adminStats.totalCustomers}
-                        </div>
-                      </div>
-
-                      {/* Active Partners */}
-                      <div style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        padding: "1.5rem",
-                        border: "1px solid #e5e7eb",
-                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                      }}>
-                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          Active Partners
-                        </div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
-                          {adminStats.activePartners}
-                        </div>
-                      </div>
-
-                      {/* Upcoming Cleanings */}
-                      <div style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        padding: "1.5rem",
-                        border: "1px solid #e5e7eb",
-                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                      }}>
-                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          Upcoming Cleanings (7 days)
-                        </div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
-                          {adminStats.upcomingCleanings}
-                        </div>
-                      </div>
-
-                      {/* Monthly Recurring Revenue */}
-                      <div style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        padding: "1.5rem",
-                        border: "1px solid #e5e7eb",
-                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                      }}>
-                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          Monthly Recurring Revenue
-                        </div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
-                          {"$" + Math.round(adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue).toLocaleString()}
-                        </div>
-                      </div>
-
-                      {/* Active Subscriptions */}
-                      <div style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        padding: "1.5rem",
-                        border: "1px solid #e5e7eb",
-                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                      }}>
-                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          Active Subscriptions
-                        </div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
-                          {adminStats.activeSubscriptions || 0}
-                        </div>
-                      </div>
-
-                      {/* Completed Cleanings This Month */}
-                      <div style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        padding: "1.5rem",
-                        border: "1px solid #e5e7eb",
-                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                      }}>
-                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          Completed This Month
-                        </div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
-                          {adminStats.completedCleaningsThisMonth || 0}
-                        </div>
-                      </div>
-
-                      {/* Completed Cleanings This Week */}
-                      <div style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        padding: "1.5rem",
-                        border: "1px solid #e5e7eb",
-                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                      }}>
-                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          Completed This Week
-                        </div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
-                          {adminStats.completedCleaningsThisWeek || 0}
-                        </div>
-                      </div>
-
-                      {/* Active Employees */}
-                      <div style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        padding: "1.5rem",
-                        border: "1px solid #e5e7eb",
-                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                      }}>
-                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          Active Employees
-                        </div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
-                          {adminStats.activeEmployees || 0}
-                        </div>
-                      </div>
-
-                      {/* Average Revenue Per Customer */}
-                      <div style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        padding: "1.5rem",
-                        border: "1px solid #e5e7eb",
-                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                      }}>
-                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          Avg Revenue Per Customer
-                        </div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "#16a34a" }}>
-                          {"$" + Math.round(adminStats.averageRevenuePerCustomer || 0).toLocaleString()}
-                        </div>
-                      </div>
-
-                      {/* Customer Growth Rate */}
+                      <KPICard
+                        title="Total Active Customers"
+                        value={adminStats.totalCustomers}
+                        color="blue"
+                        icon="👥"
+                        delay={100}
+                      />
+                      <KPICard
+                        title="Active Partners"
+                        value={adminStats.activePartners}
+                        color="purple"
+                        icon="🤝"
+                        delay={150}
+                      />
+                      <KPICard
+                        title="Upcoming Cleanings"
+                        value={adminStats.upcomingCleanings}
+                        color="orange"
+                        icon="📅"
+                        delay={200}
+                      />
+                      <KPICard
+                        title="Monthly Recurring Revenue"
+                        value={adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue}
+                        color="green"
+                        icon="💰"
+                        delay={250}
+                        formatValue={(val) => "$" + Math.round(val).toLocaleString()}
+                      />
+                      <KPICard
+                        title="Active Subscriptions"
+                        value={adminStats.activeSubscriptions || 0}
+                        color="blue"
+                        icon="📊"
+                        delay={300}
+                      />
+                      <KPICard
+                        title="Completed This Month"
+                        value={adminStats.completedCleaningsThisMonth || 0}
+                        color="green"
+                        icon="✅"
+                        delay={350}
+                      />
+                      <KPICard
+                        title="Completed This Week"
+                        value={adminStats.completedCleaningsThisWeek || 0}
+                        color="green"
+                        icon="📈"
+                        delay={400}
+                      />
+                      <KPICard
+                        title="Active Employees"
+                        value={adminStats.activeEmployees || 0}
+                        color="neutral"
+                        icon="👷"
+                        delay={450}
+                      />
+                      <KPICard
+                        title="Avg Revenue Per Customer"
+                        value={adminStats.averageRevenuePerCustomer || 0}
+                        color="green"
+                        icon="💵"
+                        delay={500}
+                        formatValue={(val) => "$" + Math.round(val).toLocaleString()}
+                      />
                       {adminStats.customerGrowthRate !== 0 && (
-                        <div style={{
-                          background: "#ffffff",
-                          borderRadius: "12px",
-                          padding: "1.5rem",
-                          border: "1px solid #e5e7eb",
-                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                        }}>
-                          <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                            Customer Growth Rate
-                          </div>
-                          <div style={{ fontSize: "2rem", fontWeight: "700", color: adminStats.customerGrowthRate >= 0 ? "#16a34a" : "#dc2626" }}>
-                            {adminStats.customerGrowthRate >= 0 ? "+" : ""}{adminStats.customerGrowthRate.toFixed(1)}%
-                          </div>
-                        </div>
+                        <KPICard
+                          title="Customer Growth Rate"
+                          value={adminStats.customerGrowthRate}
+                          color={adminStats.customerGrowthRate >= 0 ? "green" : "orange"}
+                          icon="📊"
+                          delay={550}
+                          formatValue={(val) => (val >= 0 ? "+" : "") + val.toFixed(1) + "%"}
+                        />
                       )}
-
-                      {/* Customer Retention Rate */}
-                      <div style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        padding: "1.5rem",
-                        border: "1px solid #e5e7eb",
-                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                      }}>
-                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          Customer Retention Rate
-                        </div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: adminStats.customerRetentionRate >= 80 ? "#16a34a" : adminStats.customerRetentionRate >= 60 ? "#f59e0b" : "#dc2626" }}>
-                          {adminStats.customerRetentionRate.toFixed(1)}%
-                        </div>
-                      </div>
+                      <KPICard
+                        title="Customer Retention Rate"
+                        value={adminStats.customerRetentionRate}
+                        color={adminStats.customerRetentionRate >= 80 ? "green" : adminStats.customerRetentionRate >= 60 ? "orange" : "neutral"}
+                        icon="🔄"
+                        delay={600}
+                        formatValue={(val) => val.toFixed(1) + "%"}
+                      />
                     </div>
                   )}
 
@@ -2482,11 +2365,10 @@ function DashboardPageContent() {
                       {/* Revenue Trend Summary */}
                       {chartData.revenueTrend.length > 0 && (
                         <div style={{
-                          background: "#ffffff",
-                          borderRadius: "12px",
-                          padding: "1.5rem",
-                          border: "1px solid #e5e7eb",
-                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                          animation: "fadeInUp 0.5s ease-out",
+                          animationDelay: "0.1s",
+                          opacity: 0,
+                          animationFillMode: "forwards"
                         }}>
                           <RevenueTrendSummary data={chartData.revenueTrend} />
                         </div>
@@ -2495,11 +2377,10 @@ function DashboardPageContent() {
                       {/* Customer Growth Summary */}
                       {chartData.customerGrowth.length > 0 && (
                         <div style={{
-                          background: "#ffffff",
-                          borderRadius: "12px",
-                          padding: "1.5rem",
-                          border: "1px solid #e5e7eb",
-                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                          animation: "fadeInUp 0.5s ease-out",
+                          animationDelay: "0.2s",
+                          opacity: 0,
+                          animationFillMode: "forwards"
                         }}>
                           <CustomerGrowthSummary data={chartData.customerGrowth} />
                         </div>
@@ -2508,11 +2389,10 @@ function DashboardPageContent() {
                       {/* Weekly Cleanings Summary */}
                       {chartData.weeklyCleanings.length > 0 && (
                         <div style={{
-                          background: "#ffffff",
-                          borderRadius: "12px",
-                          padding: "1.5rem",
-                          border: "1px solid #e5e7eb",
-                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                          animation: "fadeInUp 0.5s ease-out",
+                          animationDelay: "0.3s",
+                          opacity: 0,
+                          animationFillMode: "forwards"
                         }}>
                           <WeeklyCleaningsSummary data={chartData.weeklyCleanings} />
                         </div>
@@ -2521,11 +2401,10 @@ function DashboardPageContent() {
                       {/* Plan Distribution Summary */}
                       {chartData.planDistribution.length > 0 && (
                         <div style={{
-                          background: "#ffffff",
-                          borderRadius: "12px",
-                          padding: "1.5rem",
-                          border: "1px solid #e5e7eb",
-                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                          animation: "fadeInUp 0.5s ease-out",
+                          animationDelay: "0.4s",
+                          opacity: 0,
+                          animationFillMode: "forwards"
                         }}>
                           <PlanDistributionSummary data={chartData.planDistribution} />
                         </div>
@@ -2534,11 +2413,10 @@ function DashboardPageContent() {
                       {/* Revenue by Plan Summary */}
                       {chartData.revenueByPlan.length > 0 && (
                         <div style={{
-                          background: "#ffffff",
-                          borderRadius: "12px",
-                          padding: "1.5rem",
-                          border: "1px solid #e5e7eb",
-                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                          animation: "fadeInUp 0.5s ease-out",
+                          animationDelay: "0.5s",
+                          opacity: 0,
+                          animationFillMode: "forwards"
                         }}>
                           <RevenueByPlanSummary data={chartData.revenueByPlan} />
                         </div>
@@ -2586,7 +2464,13 @@ function DashboardPageContent() {
 
                     {/* TAB: Customers */}
                     {adminActiveTab === "customers" && (
-                      <div>
+                      <div 
+                        key="customers"
+                        style={{
+                          animation: "fadeInUp 0.4s ease-out",
+                          opacity: 1
+                        }}
+                      >
                         <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem" }}>
                           Customers
                         </h2>
@@ -2901,7 +2785,13 @@ function DashboardPageContent() {
 
                     {/* TAB: Financial */}
                     {adminActiveTab === "financial" && (
-                      <div>
+                      <div 
+                        key="financial"
+                        style={{
+                          animation: "fadeInUp 0.4s ease-out",
+                          opacity: 1
+                        }}
+                      >
                         <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem" }}>
                           Financial Overview
                         </h2>
@@ -3112,7 +3002,13 @@ function DashboardPageContent() {
 
                     {/* TAB: Partners */}
                     {adminActiveTab === "partners" && (
-                      <div>
+                      <div 
+                        key="partners"
+                        style={{
+                          animation: "fadeInUp 0.4s ease-out",
+                          opacity: 1
+                        }}
+                      >
                         <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem" }}>
                           Partner Management
                         </h2>
@@ -3123,7 +3019,13 @@ function DashboardPageContent() {
 
                     {/* TAB: Analytics */}
                     {adminActiveTab === "analytics" && (
-                      <div>
+                      <div 
+                        key="analytics"
+                        style={{
+                          animation: "fadeInUp 0.4s ease-out",
+                          opacity: 1
+                        }}
+                      >
                         <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem" }}>
                           Analytics & Reports
                         </h2>
@@ -3216,11 +3118,10 @@ function DashboardPageContent() {
                               {/* Customer Growth Summary */}
                               {chartData.customerGrowth.length > 0 && (
                                 <div style={{
-                                  background: "#ffffff",
-                                  borderRadius: "12px",
-                                  padding: "1.5rem",
-                                  border: "1px solid #e5e7eb",
-                                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                                  animation: "fadeInUp 0.5s ease-out",
+                                  animationDelay: "0.1s",
+                                  opacity: 0,
+                                  animationFillMode: "forwards"
                                 }}>
                                   <CustomerGrowthSummary data={chartData.customerGrowth} />
                                 </div>
@@ -3229,11 +3130,10 @@ function DashboardPageContent() {
                               {/* Weekly Cleanings Summary */}
                               {chartData.weeklyCleanings.length > 0 && (
                                 <div style={{
-                                  background: "#ffffff",
-                                  borderRadius: "12px",
-                                  padding: "1.5rem",
-                                  border: "1px solid #e5e7eb",
-                                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                                  animation: "fadeInUp 0.5s ease-out",
+                                  animationDelay: "0.2s",
+                                  opacity: 0,
+                                  animationFillMode: "forwards"
                                 }}>
                                   <WeeklyCleaningsSummary data={chartData.weeklyCleanings} />
                                 </div>
