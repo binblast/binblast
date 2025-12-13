@@ -77,6 +77,25 @@ export function JobList({ jobs, onJobClick, isClockedIn }: JobListProps) {
     return "Residential";
   };
 
+  const openMap = (address: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const encodedAddress = encodeURIComponent(address);
+    // Detect mobile device
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    
+    let mapUrl: string;
+    if (isIOS) {
+      mapUrl = `maps://maps.apple.com/?q=${encodedAddress}`;
+    } else if (isMobile) {
+      mapUrl = `https://maps.google.com/?q=${encodedAddress}`;
+    } else {
+      mapUrl = `https://maps.google.com/?q=${encodedAddress}`;
+    }
+    
+    window.open(mapUrl, "_blank");
+  };
+
   return (
     <div
       style={{
@@ -133,11 +152,16 @@ export function JobList({ jobs, onJobClick, isClockedIn }: JobListProps) {
                   {job.customerName || job.userEmail || "Customer"}
                 </div>
                 <div
+                  onClick={(e) => openMap(fullAddress, e)}
                   style={{
                     fontSize: "0.875rem",
-                    color: "#6b7280",
+                    color: "#2563eb",
                     marginBottom: "0.5rem",
+                    textDecoration: "underline",
+                    cursor: "pointer",
+                    fontWeight: "500",
                   }}
+                  title="Tap to open in maps"
                 >
                   {fullAddress}
                 </div>

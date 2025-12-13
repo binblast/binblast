@@ -55,6 +55,8 @@ export function JobDetailModal({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   if (!isOpen || !job) return null;
 
@@ -80,6 +82,28 @@ export function JobDetailModal({
     }
   };
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        setError("Please select an image file");
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Image must be less than 5MB");
+        return;
+      }
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCompleteJob = async () => {
     setIsSubmitting(true);
     setError(null);
@@ -87,8 +111,11 @@ export function JobDetailModal({
       await onCompleteJob(job.id, {
         employeeNotes: employeeNotes.trim() || undefined,
         binCount,
+        completionPhotoUrl: selectedPhoto || undefined,
       });
       setEmployeeNotes("");
+      setSelectedPhoto(null);
+      setPhotoFile(null);
       onClose();
     } catch (err: any) {
       setError(err.message || "Failed to complete job");
@@ -264,9 +291,10 @@ export function JobDetailModal({
                 disabled={isCompleted}
                 style={{
                   width: "100%",
+                  minHeight: "44px",
                   padding: "0.75rem",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "6px",
+                  border: "2px solid #e5e7eb",
+                  borderRadius: "8px",
                   fontSize: "0.875rem",
                 }}
               />
@@ -292,15 +320,118 @@ export function JobDetailModal({
                 rows={4}
                 style={{
                   width: "100%",
+                  minHeight: "120px",
                   padding: "0.75rem",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "6px",
+                  border: "2px solid #e5e7eb",
+                  borderRadius: "8px",
                   fontSize: "0.875rem",
                   fontFamily: "inherit",
                 }}
               />
             </div>
+
+            {/* Photo Upload */}
+            <div style={{ marginBottom: "1rem" }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  marginBottom: "0.5rem",
+                  color: "#111827",
+                }}
+              >
+                Completion Photo (optional but recommended)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoSelect}
+                disabled={isCompleted}
+                style={{
+                  width: "100%",
+                  minHeight: "44px",
+                  padding: "0.75rem",
+                  border: "2px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                  cursor: isCompleted ? "not-allowed" : "pointer",
+                }}
+              />
+              {selectedPhoto && (
+                <div style={{ marginTop: "0.75rem" }}>
+                  <img
+                    src={selectedPhoto}
+                    alt="Completion preview"
+                    style={{
+                      width: "100%",
+                      maxHeight: "300px",
+                      objectFit: "contain",
+                      borderRadius: "6px",
+                      border: "1px solid #e5e7eb",
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      setSelectedPhoto(null);
+                      setPhotoFile(null);
+                    }}
+                    style={{
+                      marginTop: "0.5rem",
+                      minHeight: "44px",
+                      padding: "0.75rem 1rem",
+                      background: "#fee2e2",
+                      color: "#991b1b",
+                      border: "2px solid #fecaca",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseDown={(e) => {
+                      e.currentTarget.style.transform = "scale(0.98)";
+                    }}
+                    onMouseUp={(e) => {
+                      e.currentTarget.style.transform = "scale(1)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "scale(1)";
+                    }}
+                  >
+                    Remove Photo
+                  </button>
+                </div>
+              )}
+            </div>
           </>
+        )}
+
+        {/* Display uploaded photo if completed */}
+        {isCompleted && job.completionPhotoUrl && (
+          <div style={{ marginBottom: "1rem" }}>
+            <div
+              style={{
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                marginBottom: "0.5rem",
+                color: "#111827",
+              }}
+            >
+              Completion Photo
+            </div>
+            <img
+              src={job.completionPhotoUrl}
+              alt="Job completion"
+              style={{
+                width: "100%",
+                maxHeight: "300px",
+                objectFit: "contain",
+                borderRadius: "6px",
+                border: "1px solid #e5e7eb",
+              }}
+            />
+          </div>
         )}
 
         {/* Issue Flags */}
@@ -343,15 +474,28 @@ export function JobDetailModal({
               disabled={isSubmitting}
               style={{
                 flex: 1,
+                minHeight: "48px",
                 padding: "0.75rem 1rem",
-                borderRadius: "6px",
+                borderRadius: "8px",
                 border: "none",
                 fontSize: "1rem",
-                fontWeight: "600",
+                fontWeight: "700",
                 color: "#ffffff",
                 background: "#2563eb",
                 cursor: isSubmitting ? "not-allowed" : "pointer",
                 opacity: isSubmitting ? 0.6 : 1,
+                transition: "opacity 0.2s, transform 0.1s",
+              }}
+              onMouseDown={(e) => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.transform = "scale(0.98)";
+                }
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
               }}
             >
               {isSubmitting ? "Starting..." : "Start Job"}
@@ -364,15 +508,28 @@ export function JobDetailModal({
               disabled={isSubmitting}
               style={{
                 flex: 1,
+                minHeight: "48px",
                 padding: "0.75rem 1rem",
-                borderRadius: "6px",
+                borderRadius: "8px",
                 border: "none",
                 fontSize: "1rem",
-                fontWeight: "600",
+                fontWeight: "700",
                 color: "#ffffff",
                 background: "#16a34a",
                 cursor: isSubmitting ? "not-allowed" : "pointer",
                 opacity: isSubmitting ? 0.6 : 1,
+                transition: "opacity 0.2s, transform 0.1s",
+              }}
+              onMouseDown={(e) => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.transform = "scale(0.98)";
+                }
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
               }}
             >
               {isSubmitting ? "Completing..." : "Complete Job"}
@@ -399,14 +556,25 @@ export function JobDetailModal({
           <button
             onClick={onClose}
             style={{
+              minHeight: "48px",
               padding: "0.75rem 1rem",
-              borderRadius: "6px",
-              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              border: "2px solid #e5e7eb",
               fontSize: "1rem",
               fontWeight: "600",
               color: "#111827",
               background: "#ffffff",
               cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.transform = "scale(0.98)";
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
             }}
           >
             Close

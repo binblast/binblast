@@ -47,13 +47,15 @@ export function IssueFlags({ jobId, currentFlags, onFlag }: IssueFlagsProps) {
               key={flag.value}
               onClick={() => onFlag(flag.value)}
               style={{
-                padding: "0.5rem 1rem",
-                borderRadius: "6px",
-                border: `1px solid ${isFlagged ? "#dc2626" : "#e5e7eb"}`,
+                minHeight: "44px",
+                minWidth: "120px",
+                padding: "0.75rem 1rem",
+                borderRadius: "8px",
+                border: `2px solid ${isFlagged ? "#dc2626" : "#e5e7eb"}`,
                 background: isFlagged ? "#fee2e2" : "#ffffff",
                 color: isFlagged ? "#991b1b" : "#111827",
                 fontSize: "0.875rem",
-                fontWeight: "500",
+                fontWeight: "600",
                 cursor: "pointer",
                 transition: "all 0.2s",
               }}

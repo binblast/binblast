@@ -70,10 +70,20 @@ export default function EmployeeDashboardPage() {
   }, [employee?.id]);
 
   useEffect(() => {
-    if (clockInStatus?.isActive && employee?.id) {
-      // Set up real-time listener for jobs
-      setupJobsListener();
-    }
+    if (!clockInStatus?.isActive || !employee?.id) return;
+    
+    // Set up real-time listener for jobs
+    let unsubscribe: (() => void) | undefined;
+    
+    setupJobsListener().then((cleanup) => {
+      unsubscribe = cleanup;
+    });
+    
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [clockInStatus?.isActive, employee?.id]);
 
   const loadEmployeeData = async () => {
@@ -157,7 +167,7 @@ export default function EmployeeDashboardPage() {
     }
   };
 
-  const setupJobsListener = async () => {
+  const setupJobsListener = async (): Promise<(() => void) | undefined> => {
     if (!employee?.id || !clockInStatus?.isActive) return;
 
     try {
@@ -185,9 +195,10 @@ export default function EmployeeDashboardPage() {
         loadPayPreview(); // Refresh pay preview when jobs change
       });
 
-      return () => unsubscribe();
+      return unsubscribe;
     } catch (error) {
       console.error("Error setting up jobs listener:", error);
+      return undefined;
     }
   };
 
@@ -210,9 +221,12 @@ export default function EmployeeDashboardPage() {
         throw new Error(error.message || "Failed to clock in");
       }
 
+      // Refresh all data after clock-in
       await loadClockInStatus();
       await loadJobs();
       await loadPayPreview();
+      // Set up real-time listener for jobs
+      await setupJobsListener();
     } catch (error: any) {
       alert(error.message || "Failed to clock in. Please try again.");
     } finally {
@@ -303,8 +317,11 @@ export default function EmployeeDashboardPage() {
         throw new Error(error.message || "Failed to complete job");
       }
 
+      // Refresh jobs and pay preview immediately
       await loadJobs();
       await loadPayPreview();
+      // Also refresh clock-in status to update jobs remaining count
+      await loadClockInStatus();
     } catch (error: any) {
       throw error;
     }
@@ -363,7 +380,7 @@ export default function EmployeeDashboardPage() {
           paddingBottom: "2rem",
         }}
       >
-        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "1rem" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "1rem", width: "100%" }}>
           <TodayStatusBar
             employeeName={`${employee.firstName} ${employee.lastName}`}
             clockInStatus={clockInStatus}
