@@ -2446,6 +2446,14 @@ function DashboardPageContent() {
                 }}>
                   We&apos;ll arrive on or shortly after your preferred cleaning day.
                 </p>
+                <p style={{ 
+                  fontSize: "0.875rem", 
+                  color: "#dc2626", 
+                  marginTop: "0.5rem",
+                  fontWeight: "500"
+                }}>
+                  Important: Please ensure your trash can is empty for faster, more effective cleaning.
+                </p>
               </div>
             </div>
             )}
