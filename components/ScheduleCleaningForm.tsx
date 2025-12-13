@@ -32,63 +32,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
   // Form fields
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [notes, setNotes] = useState("");
-
-  // Calculate available dates (same day as trash day, or within 24-48 hours after)
-  const getAvailableDates = () => {
-    if (!trashDay) return [];
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset to start of day
-    
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const trashDayIndex = dayNames.indexOf(trashDay);
-    
-    if (trashDayIndex === -1) return [];
-    
-    const dates: string[] = [];
-    const currentDayIndex = today.getDay();
-    
-    // Find next occurrence of trash day (on or after today)
-    let daysUntilTrashDay = trashDayIndex - currentDayIndex;
-    if (daysUntilTrashDay < 0) {
-      daysUntilTrashDay += 7; // Move to next week
-    }
-    // If today IS the trash day, we can schedule for today
-    // If it's a future day, we schedule for that day
-    
-    const trashDayDate = new Date(today);
-    trashDayDate.setDate(today.getDate() + daysUntilTrashDay);
-    trashDayDate.setHours(0, 0, 0, 0);
-    
-    // Only add dates that are on or after the trash day (never before)
-    // Same day as trash day
-    const sameDay = new Date(trashDayDate);
-    dates.push(formatDateForInput(sameDay));
-    
-    // +1 day (24 hours after trash day)
-    const nextDay = new Date(trashDayDate);
-    nextDay.setDate(trashDayDate.getDate() + 1);
-    nextDay.setHours(0, 0, 0, 0);
-    dates.push(formatDateForInput(nextDay));
-    
-    // +2 days (48 hours after trash day)
-    const dayAfter = new Date(trashDayDate);
-    dayAfter.setDate(trashDayDate.getDate() + 2);
-    dayAfter.setHours(0, 0, 0, 0);
-    dates.push(formatDateForInput(dayAfter));
-    
-    // Filter out any dates that are in the past (shouldn't happen, but safety check)
-    const filteredDates = dates.filter(dateStr => {
-      const dateObj = new Date(dateStr);
-      dateObj.setHours(0, 0, 0, 0);
-      return dateObj >= today;
-    });
-    
-    return filteredDates;
-  };
 
   const formatDateForInput = (date: Date): string => {
     const year = date.getFullYear();
@@ -102,7 +47,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
     e.preventDefault();
     setError(null);
 
-    if (!addressLine1 || !city || !state || !zipCode || !trashDay || !selectedDate || !selectedTime) {
+    if (!addressLine1 || !city || !state || !zipCode || !trashDay || !selectedTime) {
       setError("Please fill in all required fields");
       return;
     }
@@ -129,6 +74,21 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
       const firestore = await safeImportFirestore();
       const { collection, addDoc, serverTimestamp } = firestore;
 
+      // Calculate scheduled date based on preferred cleaning day
+      // Use the next occurrence of the selected trash day
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const trashDayIndex = dayNames.indexOf(trashDay);
+      const currentDayIndex = today.getDay();
+      let daysUntilTrashDay = trashDayIndex - currentDayIndex;
+      if (daysUntilTrashDay < 0) {
+        daysUntilTrashDay += 7; // Move to next week
+      }
+      const scheduledDateObj = new Date(today);
+      scheduledDateObj.setDate(today.getDate() + daysUntilTrashDay);
+      const scheduledDate = formatDateForInput(scheduledDateObj);
+
       // Save scheduled cleaning to Firestore
       const scheduledCleaning = {
         userId,
@@ -139,7 +99,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
         state,
         zipCode,
         trashDay,
-        scheduledDate: selectedDate,
+        scheduledDate: scheduledDate,
         scheduledTime: selectedTime,
         notes: notes || null,
         status: "upcoming",
@@ -155,7 +115,6 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
       setState("");
       setZipCode("");
       setTrashDay("");
-      setSelectedDate("");
       setSelectedTime("");
       setNotes("");
       setIsOpen(false);
@@ -171,7 +130,6 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
     }
   };
 
-  const availableDates = getAvailableDates();
   const timeSlots = [
     "6:00 AM - 9:00 AM",
     "9:00 AM - 12:00 PM",
@@ -228,6 +186,32 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
                 <option value="Friday">Friday</option>
                 <option value="Saturday">Saturday</option>
                 <option value="Sunday">Sunday</option>
+              </select>
+            </div>
+
+            {/* Time Selection */}
+            <div>
+              <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                Preferred Time Window
+              </label>
+              <select
+                value={selectedTime}
+                onChange={(e) => setSelectedTime(e.target.value)}
+                required
+                style={{
+                  width: "100%",
+                  padding: "0.75rem 1rem",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "0.95rem"
+                }}
+              >
+                <option value="">Select time</option>
+                {timeSlots.map((time) => (
+                  <option key={time} value={time}>
+                    {time}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -313,70 +297,6 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
               </div>
             </div>
 
-            {/* Date Selection */}
-            {trashDay && availableDates.length > 0 && (
-              <div>
-                <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                  Select Cleaning Date
-                </label>
-                <select
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem 1rem",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px",
-                    fontSize: "0.95rem"
-                  }}
-                >
-                  <option value="">Select date</option>
-                  {availableDates.map((date) => {
-                    const dateObj = new Date(date);
-                    const dayName = dateObj.toLocaleDateString("en-US", { weekday: "long" });
-                    const formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                    return (
-                      <option key={date} value={date}>
-                        {dayName}, {formattedDate}
-                      </option>
-                    );
-                  })}
-                </select>
-                <p style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "var(--text-light)" }}>
-                  Available dates: Same day as trash pickup, or within 24-48 hours after
-                </p>
-              </div>
-            )}
-
-            {/* Time Selection */}
-            {selectedDate && (
-              <div>
-                <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                  Preferred Time Window
-                </label>
-                <select
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem 1rem",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px",
-                    fontSize: "0.95rem"
-                  }}
-                >
-                  <option value="">Select time</option>
-                  {timeSlots.map((time) => (
-                    <option key={time} value={time}>
-                      {time}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             {/* Notes */}
             <div>
               <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
@@ -414,7 +334,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
 
             <button
               type="submit"
-              disabled={loading || !trashDay || !selectedDate || !selectedTime}
+              disabled={loading || !trashDay || !selectedTime}
               className={`btn btn-primary ${loading ? "disabled" : ""}`}
               style={{
                 width: "100%",
