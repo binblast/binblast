@@ -203,10 +203,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
           </h2>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            {/* Trash Day Selection */}
+            {/* Preferred Cleaning Day Selection */}
             <div>
               <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                Trash Day
+                Preferred Cleaning Day
               </label>
               <select
                 value={trashDay}
@@ -220,7 +220,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
                   fontSize: "0.95rem"
                 }}
               >
-                <option value="">Select trash day</option>
+                <option value="">Select preferred cleaning day</option>
                 <option value="Monday">Monday</option>
                 <option value="Tuesday">Tuesday</option>
                 <option value="Wednesday">Wednesday</option>

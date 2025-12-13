@@ -2429,7 +2429,7 @@ function DashboardPageContent() {
                   color: "#6b7280", 
                   marginBottom: "2rem"
                 }}>
-                  Pick your trash day and confirm your address below.
+                  Pick your preferred cleaning day and confirm your address below.
                 </p>
                 <ScheduleCleaningForm
                   userId={userId}
@@ -2444,7 +2444,7 @@ function DashboardPageContent() {
                   marginTop: "1rem",
                   fontStyle: "italic"
                 }}>
-                  We&apos;ll arrive on or shortly after your selected trash day.
+                  We&apos;ll arrive on or shortly after your preferred cleaning day.
                 </p>
               </div>
             </div>
@@ -2850,7 +2850,7 @@ function DashboardPageContent() {
                         )}
                         {cleaning.trashDay && (
                               <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.5rem" }}>
-                            <strong>Trash Day:</strong> {cleaning.trashDay}
+                            <strong>Preferred Cleaning Day:</strong> {cleaning.trashDay}
                           </div>
                         )}
                       </div>
