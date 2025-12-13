@@ -20,6 +20,7 @@ import { CommercialAccounts } from "@/components/OwnerDashboard/CommercialAccoun
 import { PartnerProgramManagement } from "@/components/OwnerDashboard/PartnerProgramManagement";
 import { FinancialAnalytics } from "@/components/OwnerDashboard/FinancialAnalytics";
 import { SystemControls } from "@/components/OwnerDashboard/SystemControls";
+import { EmployeeStatus } from "@/components/OperatorDashboard/EmployeeStatus";
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
@@ -1230,7 +1231,10 @@ function DashboardPageContent() {
                     </div>
                   </div>
 
-                  {/* SECTION B: Direct Customers Management */}
+                  {/* SECTION B: Employee Status */}
+                  <EmployeeStatus userId={userId} />
+
+                  {/* SECTION C: Direct Customers Management */}
                   <div style={{ marginBottom: "2rem" }}>
                     <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
                       Direct Customers
@@ -1811,6 +1815,30 @@ function DashboardPageContent() {
                   >
                     Schedule
                   </button>
+                  <a
+                    href="/employee/register"
+                    style={{
+                      fontSize: "0.875rem",
+                      padding: "0.5rem 1rem",
+                      background: "#16a34a",
+                      color: "#ffffff",
+                      borderRadius: "6px",
+                      textDecoration: "none",
+                      fontWeight: "600",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      transition: "background 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "#15803d";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "#16a34a";
+                    }}
+                  >
+                    + Register Employee
+                  </a>
                 </div>
               )}
 

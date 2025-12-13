@@ -11,11 +11,12 @@ export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [accountUrl, setAccountUrl] = useState("/dashboard");
+  const [isEmployee, setIsEmployee] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
   const isHomePage = pathname === "/";
-  const isDashboard = pathname === "/dashboard" || pathname === "/partners/dashboard";
+  const isDashboard = pathname === "/dashboard" || pathname === "/partners/dashboard" || pathname === "/employee/dashboard";
   const showTextLogo = isHomePage || isDashboard;
   const { isReady: firebaseReady } = useFirebase();
 
@@ -39,19 +40,45 @@ export function Navbar() {
         
         if (!mounted) return;
         
-        // Only proceed if auth is available and valid
+          // Only proceed if auth is available and valid
         if (auth && typeof auth === "object" && "currentUser" in auth) {
           // Check current user immediately
           if (auth.currentUser && mounted) {
             setIsLoggedIn(true);
               
-              // Update account URL based on partner status
+              // Update account URL based on partner/employee status
               try {
-                const { getDashboardUrl } = await import("@/lib/partner-auth");
-                const dashboardUrl = await getDashboardUrl(auth.currentUser.uid);
-                setAccountUrl(dashboardUrl);
+                const { getDbInstance } = await import("@/lib/firebase");
+                const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+                const db = await getDbInstance();
+                
+                if (db) {
+                  const firestore = await safeImportFirestore();
+                  const { doc, getDoc } = firestore;
+                  const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+                  
+                  if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    if (userData.role === "employee") {
+                      setIsEmployee(true);
+                      setAccountUrl("/employee/dashboard");
+                    } else {
+                      setIsEmployee(false);
+                      const { getDashboardUrl } = await import("@/lib/partner-auth");
+                      const dashboardUrl = await getDashboardUrl(auth.currentUser.uid);
+                      setAccountUrl(dashboardUrl);
+                    }
+                  } else {
+                    setIsEmployee(false);
+                    setAccountUrl("/dashboard");
+                  }
+                } else {
+                  setIsEmployee(false);
+                  setAccountUrl("/dashboard");
+                }
               } catch (err) {
                 console.error("[Navbar] Error getting dashboard URL:", err);
+                setIsEmployee(false);
                 setAccountUrl("/dashboard");
               }
               
@@ -59,6 +86,7 @@ export function Navbar() {
             console.log("[Navbar] User is logged in:", auth.currentUser.email);
           } else if (mounted) {
             setIsLoggedIn(false);
+            setIsEmployee(false);
               setAccountUrl("/dashboard");
             setLoading(false);
             console.log("[Navbar] No user logged in");
@@ -69,17 +97,45 @@ export function Navbar() {
             if (mounted) {
               setIsLoggedIn(!!user);
               
-              // Update account URL based on partner status
+              // Update account URL based on partner/employee status
               if (user) {
                 try {
-                  const { getDashboardUrl } = await import("@/lib/partner-auth");
-                  const dashboardUrl = await getDashboardUrl(user.uid);
-                  setAccountUrl(dashboardUrl);
+                  // Check if user is an employee
+                  const { getDbInstance } = await import("@/lib/firebase");
+                  const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+                  const db = await getDbInstance();
+                  
+                  if (db) {
+                    const firestore = await safeImportFirestore();
+                    const { doc, getDoc } = firestore;
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    
+                    if (userDoc.exists()) {
+                      const userData = userDoc.data();
+                      if (userData.role === "employee") {
+                        setIsEmployee(true);
+                        setAccountUrl("/employee/dashboard");
+                      } else {
+                        setIsEmployee(false);
+                        const { getDashboardUrl } = await import("@/lib/partner-auth");
+                        const dashboardUrl = await getDashboardUrl(user.uid);
+                        setAccountUrl(dashboardUrl);
+                      }
+                    } else {
+                      setIsEmployee(false);
+                      setAccountUrl("/dashboard");
+                    }
+                  } else {
+                    setIsEmployee(false);
+                    setAccountUrl("/dashboard");
+                  }
                 } catch (err) {
                   console.error("[Navbar] Error getting dashboard URL:", err);
+                  setIsEmployee(false);
                   setAccountUrl("/dashboard");
                 }
               } else {
+                setIsEmployee(false);
                 setAccountUrl("/dashboard");
               }
               
@@ -232,14 +288,16 @@ export function Navbar() {
           </li>
           <li>
             {isLoggedIn ? (
-              <Link href={accountUrl}>Account</Link>
+              <Link href={accountUrl}>{isEmployee ? "Dashboard" : "Account"}</Link>
             ) : (
               <Link href="#account">Account</Link>
             )}
           </li>
-          <li>
-            <Link href="/partners">Partners</Link>
-          </li>
+          {!isEmployee && (
+            <li>
+              <Link href="/partners">Partners</Link>
+            </li>
+          )}
           {!loading && (
             <li>
               {isLoggedIn ? (

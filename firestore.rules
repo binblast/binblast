@@ -131,26 +131,72 @@ service cloud.firestore {
     
     // Scheduled cleanings collection - users can manage their own scheduled cleanings
     match /scheduledCleanings/{cleaningId} {
-      // Users can read their own scheduled cleanings, admins and operators can read all
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdminOrOperator();
+      // Users can read their own scheduled cleanings
+      // Employees can read jobs assigned to them (assignedEmployeeId == request.auth.uid)
+      // Admins and operators can read all
+      allow read: if (
+        (isAuthenticated() && resource.data.userId == request.auth.uid) 
+        || (isAuthenticated() && resource.data.assignedEmployeeId == request.auth.uid)
+        || isAdminOrOperator()
+      );
       
       // Users can create scheduled cleanings for themselves
-      allow create: if isAuthenticated() 
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.keys().hasAll(['userId', 'userEmail', 'addressLine1', 'city', 'state', 'zipCode', 'trashDay', 'scheduledDate', 'scheduledTime', 'status']);
+      // Operators/admins can create cleanings and assign them to employees
+      allow create: if (
+        (isAuthenticated() 
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.keys().hasAll(['userId', 'userEmail', 'addressLine1', 'city', 'state', 'zipCode', 'trashDay', 'scheduledDate', 'scheduledTime', 'status']))
+        || isAdminOrOperator() // Operators/admins can create and assign jobs
+      );
       
       // Users can update their own scheduled cleanings (e.g., cancel, reschedule)
+      // Employees can update jobs assigned to them (job status, completion data, flags)
       // Operators can update any scheduled cleaning (for operations management)
       allow update: if (
         (isAuthenticated() 
           && resource.data.userId == request.auth.uid
           && request.resource.data.userId == resource.data.userId) // Can't change userId
-        || isOperator() // Operators can update any cleaning
+        || (isAuthenticated() 
+          && resource.data.assignedEmployeeId == request.auth.uid
+          && request.resource.data.assignedEmployeeId == resource.data.assignedEmployeeId) // Employee updating assigned job
+        || isAdminOrOperator() // Operators/admins can update any cleaning and assign jobs
       );
       
       // Users can delete their own scheduled cleanings
       allow delete: if isAuthenticated() 
         && resource.data.userId == request.auth.uid;
+    }
+    
+    // Clock-ins collection - employees can manage their own clock-in records
+    match /clockIns/{clockInId} {
+      // Employees can read their own clock-in records
+      // Operators and admins can read all clock-in records
+      allow read: if (
+        (isAuthenticated() && resource.data.employeeId == request.auth.uid)
+        || isAdminOrOperator()
+        || request.auth == null // Server-side reads
+      );
+      
+      // Employees can create their own clock-in records
+      // Server-side can create clock-in records (from API routes)
+      allow create: if (
+        (isAuthenticated() 
+          && request.resource.data.employeeId == request.auth.uid
+          && request.resource.data.keys().hasAll(['employeeId', 'employeeEmail', 'clockInTime', 'date', 'isActive']))
+        || request.auth == null // Server-side creates
+      );
+      
+      // Employees can update their own active clock-in records (clock out)
+      // Server-side can update any clock-in record
+      allow update: if (
+        (isAuthenticated() 
+          && resource.data.employeeId == request.auth.uid
+          && resource.data.employeeId == request.resource.data.employeeId) // Can't change employeeId
+        || request.auth == null // Server-side updates
+      );
+      
+      // No deletions allowed
+      allow delete: if false;
     }
     
     // Referrals collection - server-side only (created by API routes)
