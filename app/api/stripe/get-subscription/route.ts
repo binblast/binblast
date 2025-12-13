@@ -19,8 +19,8 @@ export async function GET(req: NextRequest) {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
     return NextResponse.json({
-      billingPeriodStart: subscription.current_period_start,
-      billingPeriodEnd: subscription.current_period_end,
+      billingPeriodStart: (subscription as any).current_period_start,
+      billingPeriodEnd: (subscription as any).current_period_end,
     });
   } catch (err: any) {
     console.error("Get subscription error:", err);
