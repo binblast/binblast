@@ -182,7 +182,6 @@ export function WeeklyScheduleEditor({ employeeId, weekStartDate }: WeeklySchedu
       });
       setSchedule(orderedSchedule);
       setShowTemplateDropdown(false);
-      alert(`Template "${template.name}" applied`);
     }
   };
 
