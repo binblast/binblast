@@ -63,11 +63,13 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
         daysUntilDay += 7;
       }
       
-      // Check if this occurrence is within 2 weeks
+      // Check if this occurrence is within 2 weeks AND not in the past
       const firstOccurrence = new Date(today);
       firstOccurrence.setDate(today.getDate() + daysUntilDay);
+      firstOccurrence.setHours(0, 0, 0, 0);
       
-      if (firstOccurrence <= twoWeeksFromNow) {
+      // Only include if date is today or in the future, and within 2 weeks
+      if (firstOccurrence >= today && firstOccurrence <= twoWeeksFromNow) {
         const dateValue = formatDateForInput(firstOccurrence);
         const monthName = firstOccurrence.toLocaleDateString("en-US", { month: "short" });
         const dayNumber = firstOccurrence.getDate();
@@ -84,8 +86,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
       // Also check the second occurrence (next week) if within 2 weeks
       const secondOccurrence = new Date(firstOccurrence);
       secondOccurrence.setDate(firstOccurrence.getDate() + 7);
+      secondOccurrence.setHours(0, 0, 0, 0);
       
-      if (secondOccurrence <= twoWeeksFromNow) {
+      // Only include if date is today or in the future, and within 2 weeks
+      if (secondOccurrence >= today && secondOccurrence <= twoWeeksFromNow) {
         const dateValue = formatDateForInput(secondOccurrence);
         const monthName = secondOccurrence.toLocaleDateString("en-US", { month: "short" });
         const dayNumber = secondOccurrence.getDate();
