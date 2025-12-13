@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 
 interface Cleaning {
   id: string;
-  scheduledDate: string;
+  scheduledDate: string | any; // Can be string or Firestore Timestamp
   scheduledTime: string;
   addressLine1: string;
   addressLine2?: string;
@@ -105,7 +105,15 @@ export function EditCleaningModal({ cleaning, isOpen, onClose, onUpdated }: Edit
   const getSelectedDayValue = (cleaningData: Cleaning, options: Array<{ dayName: string; date: Date; value: string; label: string }>) => {
     if (!cleaningData.scheduledDate) return "";
     try {
-      const cleaningDate = cleaningData.scheduledDate?.toDate?.() || new Date(cleaningData.scheduledDate);
+      // Handle both Firestore Timestamp and string date formats
+      let cleaningDate: Date;
+      if (typeof cleaningData.scheduledDate === 'string') {
+        cleaningDate = new Date(cleaningData.scheduledDate);
+      } else if (cleaningData.scheduledDate && typeof cleaningData.scheduledDate === 'object' && 'toDate' in cleaningData.scheduledDate) {
+        cleaningDate = (cleaningData.scheduledDate as any).toDate();
+      } else {
+        cleaningDate = new Date(cleaningData.scheduledDate as any);
+      }
       const dateValue = formatDateForInput(cleaningDate);
       // Find matching option
       const matchingOption = options.find(opt => opt.value === dateValue);
