@@ -5,6 +5,7 @@ import { useEffect, useState, Component, ErrorInfo, ReactNode, Suspense, useRef,
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
+import { EditCleaningModal } from "@/components/EditCleaningModal";
 import { SubscriptionManagerWrapper } from "@/components/SubscriptionManagerWrapper";
 import { ReferralRewards } from "@/components/ReferralRewards";
 import { ReferralHistory } from "@/components/ReferralHistory";
@@ -164,6 +165,8 @@ function DashboardPageContent() {
     loyaltyLevels: {} as Record<string, number>,
   });
   const [adminLoading, setAdminLoading] = useState(false);
+  const [editingCleaning, setEditingCleaning] = useState<ScheduledCleaning | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [customerFilter, setCustomerFilter] = useState<{ plan?: string; source?: string; search?: string }>({});
   
   // Operator state
@@ -2918,6 +2921,11 @@ function DashboardPageContent() {
                       ? allCustomers.find(c => c.id === cleaning.userId)
                       : null;
                     
+                    // Check if cleaning is more than 12 hours away (for edit button)
+                    const now = new Date();
+                    const hoursUntilCleaning = (cleaningDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+                    const canEdit = !isAdmin && hoursUntilCleaning > 12 && cleaning.status !== "completed" && cleaning.status !== "cancelled";
+                    
                     return (
                       <div
                         key={cleaning.id}
@@ -2947,17 +2955,48 @@ function DashboardPageContent() {
                               {cleaning.scheduledTime || "TBD"}
                             </div>
                           </div>
-                          <span style={{
-                            padding: "0.25rem 0.75rem",
-                            borderRadius: "999px",
-                            fontSize: "0.75rem",
-                            fontWeight: "600",
+                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                            {canEdit && (
+                              <button
+                                onClick={() => {
+                                  setEditingCleaning(cleaning);
+                                  setIsEditModalOpen(true);
+                                }}
+                                style={{
+                                  padding: "0.5rem 1rem",
+                                  border: "1px solid #16a34a",
+                                  borderRadius: "8px",
+                                  background: "#ffffff",
+                                  color: "#16a34a",
+                                  fontSize: "0.875rem",
+                                  fontWeight: "600",
+                                  cursor: "pointer",
+                                  transition: "all 0.2s",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = "#16a34a";
+                                  e.currentTarget.style.color = "#ffffff";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = "#ffffff";
+                                  e.currentTarget.style.color = "#16a34a";
+                                }}
+                              >
+                                Edit
+                              </button>
+                            )}
+                            <span style={{
+                              padding: "0.25rem 0.75rem",
+                              borderRadius: "999px",
+                              fontSize: "0.75rem",
+                              fontWeight: "600",
                                 background: "#3b82f620",
                                 color: "#3b82f6",
-                            textTransform: "capitalize"
-                          }}>
+                              textTransform: "capitalize"
+                            }}>
                                 {cleaning.status || "Scheduled"}
                           </span>
+                          </div>
                         </div>
                             <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
                           <strong>Address:</strong> {cleaning.addressLine1}
@@ -2987,6 +3026,11 @@ function DashboardPageContent() {
                         {cleaning.trashDay && (
                               <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.5rem" }}>
                             <strong>Preferred Cleaning Day:</strong> {cleaning.trashDay}
+                          </div>
+                        )}
+                        {!canEdit && !isAdmin && hoursUntilCleaning <= 12 && (
+                          <div style={{ fontSize: "0.75rem", color: "#dc2626", marginTop: "0.5rem", fontStyle: "italic" }}>
+                            Editing is only available up to 12 hours before the scheduled service time.
                           </div>
                         )}
                       </div>
@@ -3209,6 +3253,24 @@ function DashboardPageContent() {
 
           </div>
       </main>
+      
+      {/* Edit Cleaning Modal */}
+      {editingCleaning && (
+        <EditCleaningModal
+          cleaning={editingCleaning}
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingCleaning(null);
+          }}
+          onUpdated={() => {
+            setIsEditModalOpen(false);
+            setEditingCleaning(null);
+            // Reload cleanings
+            window.location.reload();
+          }}
+        />
+      )}
     </>
   );
 }
