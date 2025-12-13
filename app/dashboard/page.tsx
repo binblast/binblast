@@ -194,6 +194,9 @@ function DashboardPageContent() {
   // Ref to prevent multiple operator data loads
   const operatorDataLoadingRef = useRef(false);
   const operatorDataLoadedRef = useRef<string | null>(null); // Track userId for which data was loaded
+  
+  // Ref to prevent redirect loops
+  const redirectingRef = useRef(false);
 
   // Handle Stripe Checkout callback
   useEffect(() => {
@@ -264,8 +267,16 @@ function DashboardPageContent() {
     return () => { isMounted = false; };
   }, []);
 
+  // Ref to track if auth listener is already set up
+  const authListenerSetupRef = useRef(false);
+
   // Load user data
   useEffect(() => {
+    // Prevent multiple auth listener setups
+    if (authListenerSetupRef.current) {
+      return;
+    }
+    
     let mounted = true;
     let unsubscribe: (() => void) | null = null;
     
@@ -293,6 +304,8 @@ function DashboardPageContent() {
           return;
         }
 
+        authListenerSetupRef.current = true; // Mark as set up
+        
         unsubscribe = await onAuthStateChanged(async (firebaseUser) => {
           if (!firebaseUser) {
             if (mounted) {
@@ -314,42 +327,47 @@ function DashboardPageContent() {
               const userData = userDoc.data() as UserData;
               setUser(userData);
               // Check for admin role OR admin email (backward compatibility)
-              const newIsAdmin = (userData.role === "admin") || (userData.email === ADMIN_EMAIL);
-              if (isAdmin !== newIsAdmin) {
-                setIsAdmin(newIsAdmin);
-              }
-              // Check for operator role - only update if changed to prevent re-renders
-              const newIsOperator = userData.role === "operator";
-              if (isOperator !== newIsOperator) {
-                setIsOperator(newIsOperator);
-                // Reset loaded flag when operator status changes
-                if (!newIsOperator) {
-                  operatorDataLoadedRef.current = null;
-                } else {
-                  // Reset loaded flag when becoming operator to allow fresh load
+              setIsAdmin((prev) => {
+                const newIsAdmin = (userData.role === "admin") || (userData.email === ADMIN_EMAIL);
+                return prev !== newIsAdmin ? newIsAdmin : prev;
+              });
+              // Check for operator role - use functional update to prevent unnecessary re-renders
+              setIsOperator((prev) => {
+                const newIsOperator = userData.role === "operator";
+                if (prev !== newIsOperator) {
+                  // Reset loaded flag when operator status changes
                   operatorDataLoadedRef.current = null;
                 }
-              }
+                return newIsOperator;
+              });
               
               // If user is an operator, don't check for partner redirects
               if (userData.role === "operator") {
                 // Operator stays on dashboard - no redirect needed
+                redirectingRef.current = false; // Reset redirect flag
               } else {
                 // Check if user is a partner and redirect accordingly (unless admin or operator)
-                try {
-                  const { getDashboardUrl } = await import("@/lib/partner-auth");
-                  const dashboardUrl = await getDashboardUrl(firebaseUser.uid);
-                  
-                  // If user is a partner and not on admin email, redirect to partner dashboard
-                  if (dashboardUrl !== "/dashboard" && firebaseUser.email !== ADMIN_EMAIL) {
-                    if (mounted) {
-                      router.push(dashboardUrl);
+                // Prevent redirect loops by checking if we're already redirecting
+                if (!redirectingRef.current) {
+                  try {
+                    const { getDashboardUrl } = await import("@/lib/partner-auth");
+                    const dashboardUrl = await getDashboardUrl(firebaseUser.uid);
+                    
+                    // If user is a partner and not on admin email, redirect to partner dashboard
+                    if (dashboardUrl !== "/dashboard" && firebaseUser.email !== ADMIN_EMAIL) {
+                      if (mounted) {
+                        redirectingRef.current = true; // Set flag before redirect
+                        router.push(dashboardUrl);
+                      }
+                      return;
+                    } else {
+                      redirectingRef.current = false; // Reset if no redirect needed
                     }
-                    return;
+                  } catch (partnerCheckErr) {
+                    console.warn("[Dashboard] Error checking partner status:", partnerCheckErr);
+                    redirectingRef.current = false; // Reset on error
+                    // Continue with regular dashboard if partner check fails
                   }
-                } catch (partnerCheckErr) {
-                  console.warn("[Dashboard] Error checking partner status:", partnerCheckErr);
-                  // Continue with regular dashboard if partner check fails
                 }
               }
             } else {
@@ -425,11 +443,12 @@ function DashboardPageContent() {
 
     return () => {
       mounted = false;
+      authListenerSetupRef.current = false; // Reset on cleanup
       if (unsubscribe) {
         unsubscribe();
       }
     };
-  }, [router]);
+  }, [router]); // Only depend on router, not on isAdmin/isOperator to prevent loops
 
   // Load admin data
   useEffect(() => {

@@ -7,6 +7,11 @@ service cloud.firestore {
       return "binblastcompany@gmail.com";
     }
     
+    // Operator email
+    function operatorEmail() {
+      return "keyjboone@gmail.com";
+    }
+    
     // Helper function to check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
@@ -17,6 +22,16 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.email == adminEmail();
     }
     
+    // Helper function to check if user is operator
+    function isOperator() {
+      return isAuthenticated() && request.auth.token.email == operatorEmail();
+    }
+    
+    // Helper function to check if user is admin or operator
+    function isAdminOrOperator() {
+      return isAdmin() || isOperator();
+    }
+    
     // Helper function to check if user owns the document
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
@@ -24,8 +39,8 @@ service cloud.firestore {
     
     // Users collection - users can only read/write their own data
     match /users/{userId} {
-      // Users can read their own document, admins can read all, server-side can read all
-      allow read: if isOwner(userId) || isAdmin() || request.auth == null;
+      // Users can read their own document, admins and operators can read all, server-side can read all
+      allow read: if isOwner(userId) || isAdminOrOperator() || request.auth == null;
       
       // Users can create their own document (during registration)
       // Allow creation with required fields and optional fields like role, phone, plan, etc.
@@ -38,10 +53,20 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email;
       
       // Users can update their own document
+      // Operators can update internal notes and service status for operations management
       // Also allow server-side updates (from API routes) that maintain data integrity
       allow update: if (
         // Client-side: user updating their own document (can update referralCode, referralCount)
         (isOwner(userId) && request.resource.data.email == resource.data.email)
+        ||
+        // Operator: can update internalNotes and servicePaused for operations management
+        (isOperator() && 
+         request.resource.data.email == resource.data.email && // Can't change email
+         request.resource.data.firstName == resource.data.firstName && // Can't change name
+         request.resource.data.lastName == resource.data.lastName && // Can't change name
+         request.resource.data.phone == resource.data.phone && // Can't change phone
+         // Only allow updates to operational fields
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['internalNotes', 'servicePaused', 'updatedAt']))
         ||
         // Server-side: API route updating subscription-related or referral-related fields
         // This allows the change-subscription API and referral API to update specific fields
@@ -106,8 +131,8 @@ service cloud.firestore {
     
     // Scheduled cleanings collection - users can manage their own scheduled cleanings
     match /scheduledCleanings/{cleaningId} {
-      // Users can read their own scheduled cleanings, admins can read all
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      // Users can read their own scheduled cleanings, admins and operators can read all
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdminOrOperator();
       
       // Users can create scheduled cleanings for themselves
       allow create: if isAuthenticated() 
@@ -115,9 +140,13 @@ service cloud.firestore {
         && request.resource.data.keys().hasAll(['userId', 'userEmail', 'addressLine1', 'city', 'state', 'zipCode', 'trashDay', 'scheduledDate', 'scheduledTime', 'status']);
       
       // Users can update their own scheduled cleanings (e.g., cancel, reschedule)
-      allow update: if isAuthenticated() 
-        && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == resource.data.userId; // Can't change userId
+      // Operators can update any scheduled cleaning (for operations management)
+      allow update: if (
+        (isAuthenticated() 
+          && resource.data.userId == request.auth.uid
+          && request.resource.data.userId == resource.data.userId) // Can't change userId
+        || isOperator() // Operators can update any cleaning
+      );
       
       // Users can delete their own scheduled cleanings
       allow delete: if isAuthenticated() 
@@ -220,11 +249,11 @@ service cloud.firestore {
     
     // PartnerBookings collection - tracks bookings tied to partners
     match /partnerBookings/{bookingId} {
-      // Partners can read their own bookings, admins can read all
+      // Partners can read their own bookings, admins and operators can read all
       // Server-side can read all (for calculations, etc.)
       allow read: if (
         (isAuthenticated() && resource.data.partnerId != null)
-        || isAdmin() // Allow admin to read all partner bookings
+        || isAdminOrOperator() // Allow admin and operator to read all partner bookings
         || request.auth == null
       );
       
