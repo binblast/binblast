@@ -382,11 +382,13 @@ export default function EmployeeDashboardPage() {
     return (
       <>
         <Navbar />
-        <main style={{ 
-          minHeight: "calc(100vh - 80px)", 
-          padding: "clamp(1rem, 4vw, 2rem)",
-          className: "employee-dashboard"
-        }}>
+        <main 
+          className="employee-dashboard"
+          style={{ 
+            minHeight: "calc(100vh - 80px)", 
+            padding: "clamp(1rem, 4vw, 2rem)"
+          }}
+        >
           <div style={{ textAlign: "center", color: "#6b7280" }}>Loading...</div>
         </main>
       </>
