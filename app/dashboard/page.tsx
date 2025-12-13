@@ -1358,9 +1358,6 @@ function DashboardPageContent() {
                     {/* TAB: Employees */}
                     {operatorActiveTab === "employees" && (
                       <div>
-                        <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
-                          Employee Status
-                        </h2>
                         <EmployeeStatus userId={userId} />
                       </div>
                     )}

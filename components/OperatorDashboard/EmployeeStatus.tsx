@@ -30,6 +30,10 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("name");
+  const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
+  const [editingServiceAreas, setEditingServiceAreas] = useState<string[]>([]);
+  const [newServiceArea, setNewServiceArea] = useState<string>("");
+  const [savingServiceArea, setSavingServiceArea] = useState<string | null>(null);
 
   useEffect(() => {
     loadEmployeeStatus();
@@ -126,40 +130,35 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
 
   return (
     <div style={{ marginBottom: "2rem" }}>
-      <div
+      {/* Header */}
+      <h2
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          fontSize: "1.5rem",
+          fontWeight: "600",
+          color: "#111827",
           marginBottom: "1rem",
-          flexWrap: "wrap",
-          gap: "1rem",
         }}
       >
-        <h2
-          style={{
-            fontSize: "1.5rem",
-            fontWeight: "600",
-            color: "#111827",
-          }}
-        >
-          Employee Status
-        </h2>
+        Employee Status
+      </h2>
 
+      {/* Register New Employee Button - Standalone */}
+      <div style={{ marginBottom: "1.5rem" }}>
         <a
           href="/employee/register"
           style={{
-            padding: "0.5rem 1rem",
+            padding: "0.75rem 1.5rem",
             background: "#16a34a",
             color: "#ffffff",
-            borderRadius: "6px",
-            fontSize: "0.875rem",
+            borderRadius: "8px",
+            fontSize: "0.95rem",
             fontWeight: "600",
             textDecoration: "none",
             display: "inline-flex",
             alignItems: "center",
             gap: "0.5rem",
             transition: "background 0.2s",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "#15803d";
@@ -170,41 +169,49 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
         >
           + Register New Employee
         </a>
+      </div>
 
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            style={{
-              padding: "0.5rem 0.75rem",
-              border: "1px solid #e5e7eb",
-              borderRadius: "6px",
-              fontSize: "0.875rem",
-              background: "#ffffff",
-            }}
-          >
-            <option value="all">All</option>
-            <option value="clocked_in">Clocked In</option>
-            <option value="not_clocked_in">Not Clocked In</option>
-            <option value="clocked_out">Clocked Out</option>
-          </select>
+      {/* Filters */}
+      <div
+        style={{
+          display: "flex",
+          gap: "0.75rem",
+          flexWrap: "wrap",
+          marginBottom: "1rem",
+        }}
+      >
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          style={{
+            padding: "0.5rem 0.75rem",
+            border: "1px solid #e5e7eb",
+            borderRadius: "6px",
+            fontSize: "0.875rem",
+            background: "#ffffff",
+          }}
+        >
+          <option value="all">All</option>
+          <option value="clocked_in">Clocked In</option>
+          <option value="not_clocked_in">Not Clocked In</option>
+          <option value="clocked_out">Clocked Out</option>
+        </select>
 
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            style={{
-              padding: "0.5rem 0.75rem",
-              border: "1px solid #e5e7eb",
-              borderRadius: "6px",
-              fontSize: "0.875rem",
-              background: "#ffffff",
-            }}
-          >
-            <option value="name">Sort by Name</option>
-            <option value="status">Sort by Status</option>
-            <option value="jobs_completed">Sort by Jobs Completed</option>
-          </select>
-        </div>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          style={{
+            padding: "0.5rem 0.75rem",
+            border: "1px solid #e5e7eb",
+            borderRadius: "6px",
+            fontSize: "0.875rem",
+            background: "#ffffff",
+          }}
+        >
+          <option value="name">Sort by Name</option>
+          <option value="status">Sort by Status</option>
+          <option value="jobs_completed">Sort by Jobs Completed</option>
+        </select>
       </div>
 
       {sortedEmployees.length === 0 ? (
@@ -238,6 +245,9 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
             return (
               <div
                 key={employee.id}
+                onClick={() => {
+                  window.location.href = `/operator/employees/${employee.id}`;
+                }}
                 style={{
                   background: "#ffffff",
                   borderRadius: "12px",
@@ -246,6 +256,16 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
                   border: `2px solid ${
                     isNotClockedIn ? "#fee2e2" : isClockedIn ? "#d1fae5" : "#f3f4f6"
                   }`,
+                  cursor: "pointer",
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.06)";
                 }}
               >
                 <div
@@ -343,18 +363,217 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
                   </div>
                 </div>
 
-                {employee.serviceArea.length > 0 && (
-                  <div
-                    style={{
-                      paddingTop: "0.75rem",
-                      borderTop: "1px solid #e5e7eb",
-                      fontSize: "0.875rem",
-                      color: "#6b7280",
-                    }}
-                  >
-                    <strong>Service Area:</strong> {employee.serviceArea.join(", ")}
-                  </div>
-                )}
+                {/* Service Area Section */}
+                <div
+                  style={{
+                    paddingTop: "0.75rem",
+                    borderTop: "1px solid #e5e7eb",
+                    fontSize: "0.875rem",
+                    color: "#6b7280",
+                  }}
+                >
+                  {editingEmployeeId === employee.id ? (
+                    <div>
+                      <div style={{ marginBottom: "0.75rem", fontWeight: "600" }}>
+                        Service Areas:
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "0.5rem",
+                          marginBottom: "0.75rem",
+                        }}
+                      >
+                        {editingServiceAreas.map((area, index) => (
+                          <span
+                            key={index}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "0.25rem",
+                              padding: "0.25rem 0.5rem",
+                              background: "#f3f4f6",
+                              borderRadius: "6px",
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            {area}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingServiceAreas(
+                                  editingServiceAreas.filter((_, i) => i !== index)
+                                );
+                              }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#dc2626",
+                                cursor: "pointer",
+                                fontSize: "0.875rem",
+                                padding: "0",
+                                marginLeft: "0.25rem",
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                        <input
+                          type="text"
+                          value={newServiceArea}
+                          onChange={(e) => setNewServiceArea(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyPress={(e) => {
+                            if (e.key === "Enter" && newServiceArea.trim()) {
+                              setEditingServiceAreas([
+                                ...editingServiceAreas,
+                                newServiceArea.trim(),
+                              ]);
+                              setNewServiceArea("");
+                            }
+                          }}
+                          placeholder="Add service area..."
+                          style={{
+                            flex: 1,
+                            padding: "0.5rem",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "6px",
+                            fontSize: "0.875rem",
+                          }}
+                        />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (newServiceArea.trim()) {
+                              setEditingServiceAreas([
+                                ...editingServiceAreas,
+                                newServiceArea.trim(),
+                              ]);
+                              setNewServiceArea("");
+                            }
+                          }}
+                          disabled={!newServiceArea.trim()}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            background: "#16a34a",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "6px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            cursor: newServiceArea.trim() ? "pointer" : "not-allowed",
+                            opacity: newServiceArea.trim() ? 1 : 0.5,
+                          }}
+                        >
+                          Add
+                        </button>
+                      </div>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setSavingServiceArea(employee.id);
+                            try {
+                              const response = await fetch(
+                                `/api/operator/employees/${employee.id}/service-area`,
+                                {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    serviceArea: editingServiceAreas,
+                                  }),
+                                }
+                              );
+
+                              if (!response.ok) {
+                                const errorData = await response.json();
+                                throw new Error(errorData.message || "Failed to update");
+                              }
+
+                              // Refresh employee list
+                              await loadEmployeeStatus();
+                              setEditingEmployeeId(null);
+                              setEditingServiceAreas([]);
+                              setNewServiceArea("");
+                            } catch (error: any) {
+                              alert(error.message || "Failed to update service area");
+                            } finally {
+                              setSavingServiceArea(null);
+                            }
+                          }}
+                          disabled={savingServiceArea === employee.id}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            background: "#16a34a",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "6px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            cursor: savingServiceArea === employee.id ? "not-allowed" : "pointer",
+                            opacity: savingServiceArea === employee.id ? 0.5 : 1,
+                          }}
+                        >
+                          {savingServiceArea === employee.id ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingEmployeeId(null);
+                            setEditingServiceAreas([]);
+                            setNewServiceArea("");
+                          }}
+                          disabled={savingServiceArea === employee.id}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            background: "#6b7280",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "6px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            cursor: savingServiceArea === employee.id ? "not-allowed" : "pointer",
+                            opacity: savingServiceArea === employee.id ? 0.5 : 1,
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <strong>Service Area:</strong>{" "}
+                        {employee.serviceArea.length > 0
+                          ? employee.serviceArea.join(", ")
+                          : "None"}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingEmployeeId(employee.id);
+                          setEditingServiceAreas([...employee.serviceArea]);
+                          setNewServiceArea("");
+                        }}
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          background: "transparent",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "4px",
+                          fontSize: "0.75rem",
+                          color: "#6b7280",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {/* Progress indicator */}
                 {employee.jobsAssigned > 0 && (

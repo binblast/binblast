@@ -59,14 +59,14 @@ service cloud.firestore {
         // Client-side: user updating their own document (can update referralCode, referralCount)
         (isOwner(userId) && request.resource.data.email == resource.data.email)
         ||
-        // Operator: can update internalNotes and servicePaused for operations management
+        // Operator: can update internalNotes, servicePaused, and serviceArea for operations management
         (isOperator() && 
          request.resource.data.email == resource.data.email && // Can't change email
          request.resource.data.firstName == resource.data.firstName && // Can't change name
          request.resource.data.lastName == resource.data.lastName && // Can't change name
          request.resource.data.phone == resource.data.phone && // Can't change phone
          // Only allow updates to operational fields
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['internalNotes', 'servicePaused', 'updatedAt']))
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['internalNotes', 'servicePaused', 'serviceArea', 'updatedAt']))
         ||
         // Server-side: API route updating subscription-related or referral-related fields
         // This allows the change-subscription API and referral API to update specific fields
