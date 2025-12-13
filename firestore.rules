@@ -364,13 +364,17 @@ service cloud.firestore {
       );
       
       // Only server-side API routes can create quotes (from custom quote wizard)
-      allow create: if request.auth == null;
+      // Allow creates from unauthenticated requests (server-side API routes)
+      // request.auth == null means server-side operation (API route)
+      // Also allow authenticated users to create quotes (public form)
+      allow create: if request.auth == null || isAuthenticated();
       
       // Admins and operators can update quote status
       // Server-side can update any quote
       allow update: if (
         isAdminOrOperator()
         || request.auth == null // Server-side updates
+        || !request.auth.uid
       );
       
       // No deletions allowed
