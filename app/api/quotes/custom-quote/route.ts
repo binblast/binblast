@@ -81,8 +81,11 @@ export async function POST(request: NextRequest) {
       const dumpsterCount = formData.commercialBins || 1;
       
       // Base dumpster cleaning price
+      // First dumpster included in base price, additional dumpsters cost extra
       const dumpsterBasePrice = isRestaurant ? 120 : 95;
-      const dumpsterPrice = dumpsterBasePrice + ((dumpsterCount - 1) * (isRestaurant ? 20 : 15));
+      const additionalDumpsterFee = isRestaurant ? 20 : 15;
+      const additionalDumpsters = Math.max(0, dumpsterCount - 1); // Number of dumpsters beyond the first
+      const dumpsterPrice = dumpsterBasePrice + (additionalDumpsters * additionalDumpsterFee);
       
       // Apply frequency multiplier to dumpster cleaning
       let dumpsterMonthlyPrice = dumpsterPrice;
