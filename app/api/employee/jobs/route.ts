@@ -41,8 +41,10 @@ export async function GET(req: NextRequest) {
     const jobs = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    })).sort((a, b) => {
-      // Sort by address on client side for route planning
+    })) as Array<{ id: string; addressLine1?: string; [key: string]: any }>;
+    
+    // Sort by address on client side for route planning
+    jobs.sort((a, b) => {
       const addressA = (a.addressLine1 || "").toLowerCase();
       const addressB = (b.addressLine1 || "").toLowerCase();
       return addressA.localeCompare(addressB);
