@@ -126,7 +126,7 @@ export function SubscriptionManager({
         const { getDbInstance } = await import("@/lib/firebase");
         const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
         const db = await getDbInstance();
-        if (!db) return;
+        if (!db || !billingPeriodStart) return;
 
         const firestore = await safeImportFirestore();
         const { collection, query, where, getDocs } = firestore;
@@ -143,7 +143,7 @@ export function SubscriptionManager({
           const cleaningDate = cleaningData.scheduledDate?.toDate?.() || new Date(cleaningData.scheduledDate);
           const isCompleted = cleaningData.status === "completed" || cleaningData.jobStatus === "completed";
           
-          if (isCompleted && cleaningDate >= billingPeriodStart && cleaningDate <= billingPeriodEnd) {
+          if (isCompleted && billingPeriodStart && cleaningDate >= billingPeriodStart && cleaningDate <= billingPeriodEnd) {
             used++;
           }
         });
@@ -201,12 +201,14 @@ export function SubscriptionManager({
     const proratedAmountOwed = isUpgrade ? proratedAmountNew - proratedCredit : 0;
 
     // Calculate cleaning credits rollover
-    const cleaningCreditsRollover = calculateCleaningRollover(
-      currentPlanId,
-      billingPeriodStart,
-      billingPeriodEnd,
-      cleaningsUsed
-    );
+    const cleaningCreditsRollover = billingPeriodStart 
+      ? calculateCleaningRollover(
+          currentPlanId,
+          billingPeriodStart,
+          billingPeriodEnd,
+          cleaningsUsed
+        )
+      : 0;
 
     return {
       daysRemaining,
