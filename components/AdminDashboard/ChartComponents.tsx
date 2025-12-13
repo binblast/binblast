@@ -13,9 +13,10 @@ interface LineChartProps {
   data: ChartDataPoint[];
   height?: number;
   title?: string;
+  onClick?: () => void;
 }
 
-export function LineChart({ data, height = 200, title }: LineChartProps) {
+export function LineChart({ data, height = 200, title, onClick }: LineChartProps) {
   if (!data || data.length === 0) {
     return (
       <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
@@ -37,10 +38,28 @@ export function LineChart({ data, height = 200, title }: LineChartProps) {
   }).join(" ");
 
   return (
-    <div style={{ padding: "1rem" }}>
+    <div 
+      style={{ 
+        padding: "1rem",
+        cursor: onClick ? "pointer" : "default",
+        transition: onClick ? "transform 0.2s, box-shadow 0.2s" : "none",
+      }}
+      onClick={onClick}
+      onMouseEnter={onClick ? (e) => {
+        e.currentTarget.style.transform = "scale(1.02)";
+      } : undefined}
+      onMouseLeave={onClick ? (e) => {
+        e.currentTarget.style.transform = "scale(1)";
+      } : undefined}
+    >
       {title && (
         <h4 style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
           {title}
+          {onClick && (
+            <span style={{ fontSize: "0.75rem", color: "#6b7280", marginLeft: "0.5rem", fontWeight: "400" }}>
+              (Click to expand)
+            </span>
+          )}
         </h4>
       )}
       <svg width="100%" height={height} viewBox={`0 0 ${width} ${chartHeight + 20}`} style={{ overflow: "visible" }}>
@@ -107,9 +126,10 @@ interface BarChartProps {
   data: ChartDataPoint[];
   height?: number;
   title?: string;
+  onClick?: () => void;
 }
 
-export function BarChart({ data, height = 200, title }: BarChartProps) {
+export function BarChart({ data, height = 200, title, onClick }: BarChartProps) {
   if (!data || data.length === 0) {
     return (
       <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
@@ -124,10 +144,28 @@ export function BarChart({ data, height = 200, title }: BarChartProps) {
   const actualBarWidth = barWidth - barSpacing;
 
   return (
-    <div style={{ padding: "1rem" }}>
+    <div 
+      style={{ 
+        padding: "1rem",
+        cursor: onClick ? "pointer" : "default",
+        transition: onClick ? "transform 0.2s, box-shadow 0.2s" : "none",
+      }}
+      onClick={onClick}
+      onMouseEnter={onClick ? (e) => {
+        e.currentTarget.style.transform = "scale(1.02)";
+      } : undefined}
+      onMouseLeave={onClick ? (e) => {
+        e.currentTarget.style.transform = "scale(1)";
+      } : undefined}
+    >
       {title && (
         <h4 style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
           {title}
+          {onClick && (
+            <span style={{ fontSize: "0.75rem", color: "#6b7280", marginLeft: "0.5rem", fontWeight: "400" }}>
+              (Click to expand)
+            </span>
+          )}
         </h4>
       )}
       <div style={{ display: "flex", alignItems: "flex-end", gap: "0.5rem", height: `${height}px` }}>
@@ -164,9 +202,10 @@ interface PieChartProps {
   data: ChartDataPoint[];
   size?: number;
   title?: string;
+  onClick?: () => void;
 }
 
-export function PieChart({ data, size = 200, title }: PieChartProps) {
+export function PieChart({ data, size = 200, title, onClick }: PieChartProps) {
   if (!data || data.length === 0) {
     return (
       <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
@@ -223,10 +262,28 @@ export function PieChart({ data, size = 200, title }: PieChartProps) {
   });
 
   return (
-    <div style={{ padding: "1rem" }}>
+    <div 
+      style={{ 
+        padding: "1rem",
+        cursor: onClick ? "pointer" : "default",
+        transition: onClick ? "transform 0.2s, box-shadow 0.2s" : "none",
+      }}
+      onClick={onClick}
+      onMouseEnter={onClick ? (e) => {
+        e.currentTarget.style.transform = "scale(1.02)";
+      } : undefined}
+      onMouseLeave={onClick ? (e) => {
+        e.currentTarget.style.transform = "scale(1)";
+      } : undefined}
+    >
       {title && (
         <h4 style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
           {title}
+          {onClick && (
+            <span style={{ fontSize: "0.75rem", color: "#6b7280", marginLeft: "0.5rem", fontWeight: "400" }}>
+              (Click to expand)
+            </span>
+          )}
         </h4>
       )}
       <div style={{ display: "flex", gap: "2rem", alignItems: "center", flexWrap: "wrap" }}>

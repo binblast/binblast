@@ -23,6 +23,7 @@ import { FinancialAnalytics } from "@/components/OwnerDashboard/FinancialAnalyti
 import { SystemControls } from "@/components/OwnerDashboard/SystemControls";
 import { EmployeeStatus } from "@/components/OperatorDashboard/EmployeeStatus";
 import { LineChart, BarChart, PieChart } from "@/components/AdminDashboard/ChartComponents";
+import { ChartModal } from "@/components/AdminDashboard/ChartModal";
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
@@ -171,6 +172,17 @@ function DashboardPageContent() {
     weeklyCleanings: [] as Array<{ label: string; value: number }>,
     planDistribution: [] as Array<{ label: string; value: number }>,
     revenueByPlan: [] as Array<{ label: string; value: number }>,
+  });
+  const [chartModal, setChartModal] = useState<{
+    isOpen: boolean;
+    chartType: "line" | "bar" | "pie";
+    title: string;
+    data: Array<{ label: string; value: number; color?: string }>;
+  }>({
+    isOpen: false,
+    chartType: "line",
+    title: "",
+    data: [],
   });
   const [allCustomers, setAllCustomers] = useState<any[]>([]);
   const [commercialCustomers, setCommercialCustomers] = useState<any[]>([]);
@@ -2478,12 +2490,29 @@ function DashboardPageContent() {
                           borderRadius: "12px",
                           padding: "1.5rem",
                           border: "1px solid #e5e7eb",
-                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                        }}>
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+                          transition: "box-shadow 0.2s, transform 0.2s",
+                          cursor: "pointer"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
+                          e.currentTarget.style.transform = "translateY(0)";
+                        }}
+                        >
                           <LineChart
                             data={chartData.revenueTrend}
                             height={200}
                             title="Revenue Trend (Last 30 Days)"
+                            onClick={() => setChartModal({
+                              isOpen: true,
+                              chartType: "line",
+                              title: "Revenue Trend (Last 30 Days)",
+                              data: chartData.revenueTrend,
+                            })}
                           />
                         </div>
                       )}
@@ -2495,12 +2524,29 @@ function DashboardPageContent() {
                           borderRadius: "12px",
                           padding: "1.5rem",
                           border: "1px solid #e5e7eb",
-                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                        }}>
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+                          transition: "box-shadow 0.2s, transform 0.2s",
+                          cursor: "pointer"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
+                          e.currentTarget.style.transform = "translateY(0)";
+                        }}
+                        >
                           <LineChart
                             data={chartData.customerGrowth}
                             height={200}
                             title="Customer Growth (Last 6 Months)"
+                            onClick={() => setChartModal({
+                              isOpen: true,
+                              chartType: "line",
+                              title: "Customer Growth (Last 6 Months)",
+                              data: chartData.customerGrowth,
+                            })}
                           />
                         </div>
                       )}
@@ -2512,12 +2558,29 @@ function DashboardPageContent() {
                           borderRadius: "12px",
                           padding: "1.5rem",
                           border: "1px solid #e5e7eb",
-                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                        }}>
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+                          transition: "box-shadow 0.2s, transform 0.2s",
+                          cursor: "pointer"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
+                          e.currentTarget.style.transform = "translateY(0)";
+                        }}
+                        >
                           <BarChart
                             data={chartData.weeklyCleanings}
                             height={200}
                             title="Cleanings Completed (Weekly)"
+                            onClick={() => setChartModal({
+                              isOpen: true,
+                              chartType: "bar",
+                              title: "Cleanings Completed (Weekly)",
+                              data: chartData.weeklyCleanings,
+                            })}
                           />
                         </div>
                       )}
@@ -2529,12 +2592,29 @@ function DashboardPageContent() {
                           borderRadius: "12px",
                           padding: "1.5rem",
                           border: "1px solid #e5e7eb",
-                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                        }}>
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+                          transition: "box-shadow 0.2s, transform 0.2s",
+                          cursor: "pointer"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
+                          e.currentTarget.style.transform = "translateY(0)";
+                        }}
+                        >
                           <PieChart
                             data={chartData.planDistribution}
                             size={200}
                             title="Customers by Plan"
+                            onClick={() => setChartModal({
+                              isOpen: true,
+                              chartType: "pie",
+                              title: "Customers by Plan",
+                              data: chartData.planDistribution,
+                            })}
                           />
                         </div>
                       )}
@@ -2546,12 +2626,29 @@ function DashboardPageContent() {
                           borderRadius: "12px",
                           padding: "1.5rem",
                           border: "1px solid #e5e7eb",
-                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                        }}>
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+                          transition: "box-shadow 0.2s, transform 0.2s",
+                          cursor: "pointer"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
+                          e.currentTarget.style.transform = "translateY(0)";
+                        }}
+                        >
                           <BarChart
                             data={chartData.revenueByPlan.map(p => ({ ...p, color: "#16a34a" }))}
                             height={200}
                             title="Revenue by Plan Type"
+                            onClick={() => setChartModal({
+                              isOpen: true,
+                              chartType: "bar",
+                              title: "Revenue by Plan Type",
+                              data: chartData.revenueByPlan.map(p => ({ ...p, color: "#16a34a" })),
+                            })}
                           />
                         </div>
                       )}
@@ -3100,12 +3197,29 @@ function DashboardPageContent() {
                                 borderRadius: "12px",
                                 padding: "1.5rem",
                                 border: "1px solid #e5e7eb",
-                                marginBottom: "2rem"
-                              }}>
+                                marginBottom: "2rem",
+                                transition: "box-shadow 0.2s, transform 0.2s",
+                                cursor: "pointer"
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                                e.currentTarget.style.transform = "translateY(-2px)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
+                                e.currentTarget.style.transform = "translateY(0)";
+                              }}
+                              >
                                 <BarChart
                                   data={chartData.revenueByPlan.map(p => ({ ...p, color: "#16a34a" }))}
                                   height={250}
                                   title="Revenue by Plan Type"
+                                  onClick={() => setChartModal({
+                                    isOpen: true,
+                                    chartType: "bar",
+                                    title: "Revenue by Plan Type",
+                                    data: chartData.revenueByPlan.map(p => ({ ...p, color: "#16a34a" })),
+                                  })}
                                 />
                               </div>
                             )}
@@ -3116,12 +3230,29 @@ function DashboardPageContent() {
                                 background: "#ffffff",
                                 borderRadius: "12px",
                                 padding: "1.5rem",
-                                border: "1px solid #e5e7eb"
-                              }}>
+                                border: "1px solid #e5e7eb",
+                                transition: "box-shadow 0.2s, transform 0.2s",
+                                cursor: "pointer"
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                                e.currentTarget.style.transform = "translateY(-2px)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
+                                e.currentTarget.style.transform = "translateY(0)";
+                              }}
+                              >
                                 <LineChart
                                   data={chartData.revenueTrend}
                                   height={250}
                                   title="Revenue Trend (Last 30 Days)"
+                                  onClick={() => setChartModal({
+                                    isOpen: true,
+                                    chartType: "line",
+                                    title: "Revenue Trend (Last 30 Days)",
+                                    data: chartData.revenueTrend,
+                                  })}
                                 />
                               </div>
                             )}
@@ -3240,12 +3371,29 @@ function DashboardPageContent() {
                                   borderRadius: "12px",
                                   padding: "1.5rem",
                                   border: "1px solid #e5e7eb",
-                                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                                }}>
+                                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+                                  transition: "box-shadow 0.2s, transform 0.2s",
+                                  cursor: "pointer"
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                                  e.currentTarget.style.transform = "translateY(-2px)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
+                                  e.currentTarget.style.transform = "translateY(0)";
+                                }}
+                                >
                                   <LineChart
                                     data={chartData.customerGrowth}
                                     height={250}
                                     title="Customer Growth Trend (Last 6 Months)"
+                                    onClick={() => setChartModal({
+                                      isOpen: true,
+                                      chartType: "line",
+                                      title: "Customer Growth Trend (Last 6 Months)",
+                                      data: chartData.customerGrowth,
+                                    })}
                                   />
                                 </div>
                               )}
@@ -3257,12 +3405,29 @@ function DashboardPageContent() {
                                   borderRadius: "12px",
                                   padding: "1.5rem",
                                   border: "1px solid #e5e7eb",
-                                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
-                                }}>
+                                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+                                  transition: "box-shadow 0.2s, transform 0.2s",
+                                  cursor: "pointer"
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                                  e.currentTarget.style.transform = "translateY(-2px)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
+                                  e.currentTarget.style.transform = "translateY(0)";
+                                }}
+                                >
                                   <BarChart
                                     data={chartData.weeklyCleanings}
                                     height={250}
                                     title="Cleanings Completed (Weekly Trend)"
+                                    onClick={() => setChartModal({
+                                      isOpen: true,
+                                      chartType: "bar",
+                                      title: "Cleanings Completed (Weekly Trend)",
+                                      data: chartData.weeklyCleanings,
+                                    })}
                                   />
                                 </div>
                               )}
@@ -4112,6 +4277,15 @@ function DashboardPageContent() {
           }}
         />
       )}
+
+      {/* Chart Modal */}
+      <ChartModal
+        isOpen={chartModal.isOpen}
+        onClose={() => setChartModal({ ...chartModal, isOpen: false })}
+        chartType={chartModal.chartType}
+        title={chartModal.title}
+        data={chartModal.data}
+      />
     </>
   );
 }
