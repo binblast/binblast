@@ -213,6 +213,8 @@ function DashboardPageContent() {
   const [operatorTypeFilter, setOperatorTypeFilter] = useState<string>("");
   const [operatorActiveTab, setOperatorActiveTab] = useState<"overview" | "employees" | "customers" | "schedule">("overview");
   const [adminActiveTab, setAdminActiveTab] = useState<"overview" | "customers" | "operations" | "financial" | "partners" | "analytics">("overview");
+  const [newQuotesCount, setNewQuotesCount] = useState(0);
+  const [showQuotesNotification, setShowQuotesNotification] = useState(true);
   
   // Refs for scroll targets
   const scheduleSectionRef = useRef<HTMLDivElement>(null);
@@ -800,15 +802,16 @@ function DashboardPageContent() {
     let unsubscribeUsers: (() => void) | undefined;
     let unsubscribeCleanings: (() => void) | undefined;
     let unsubscribeClockIns: (() => void) | undefined;
+    let unsubscribeQuotes: (() => void) | undefined;
 
     async function setupRealtimeListeners() {
-      if (!isAdmin || !userId || !mounted) return;
+      if ((!isAdmin && !isOperator) || !userId || !mounted) return;
 
       try {
         const { getDbInstance } = await import("@/lib/firebase");
         const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
         const firestore = await safeImportFirestore();
-        const { collection, query, onSnapshot, orderBy } = firestore;
+        const { collection, query, onSnapshot, orderBy, where } = firestore;
 
         const db = await getDbInstance();
         if (!db) return;
@@ -842,6 +845,20 @@ function DashboardPageContent() {
         }, (error) => {
           console.error("[Dashboard] Error listening to clockIns:", error);
         });
+
+        // Listen to customQuotes for new quote notifications
+        const newQuotesQuery = query(
+          collection(db, "customQuotes"),
+          where("status", "in", ["pending", "pending_review"]),
+          orderBy("submittedAt", "desc")
+        );
+        unsubscribeQuotes = onSnapshot(newQuotesQuery, (snapshot) => {
+          if (mounted) {
+            setNewQuotesCount(snapshot.size);
+          }
+        }, (error) => {
+          console.error("[Dashboard] Error listening to customQuotes:", error);
+        });
       } catch (error) {
         console.error("[Dashboard] Error setting up real-time listeners:", error);
       }
@@ -855,8 +872,9 @@ function DashboardPageContent() {
       if (unsubscribeUsers) unsubscribeUsers();
       if (unsubscribeCleanings) unsubscribeCleanings();
       if (unsubscribeClockIns) unsubscribeClockIns();
+      if (unsubscribeQuotes) unsubscribeQuotes();
     };
-  }, [isAdmin, userId]);
+  }, [isAdmin, isOperator, userId]);
 
   // Load operator data
   useEffect(() => {
@@ -1323,6 +1341,107 @@ function DashboardPageContent() {
                 </p>
               </div>
 
+              {/* New Quotes Notification Banner for Operators */}
+              {newQuotesCount > 0 && showQuotesNotification && (
+                <div style={{
+                  marginBottom: "1.5rem",
+                  padding: "1rem 1.25rem",
+                  background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+                  borderRadius: "12px",
+                  border: "2px solid #fbbf24",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  animation: "fadeInUp 0.3s ease-out",
+                  boxShadow: "0 4px 12px rgba(251, 191, 36, 0.2)"
+                }}>
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    flex: 1
+                  }}>
+                    <div style={{
+                      fontSize: "1.5rem"
+                    }}>
+                      🔔
+                    </div>
+                    <div>
+                      <div style={{
+                        fontSize: "0.875rem",
+                        fontWeight: "700",
+                        color: "#92400e",
+                        marginBottom: "0.25rem"
+                      }}>
+                        {newQuotesCount} New Custom Quote Request{newQuotesCount > 1 ? 's' : ''}
+                      </div>
+                      <div style={{
+                        fontSize: "0.75rem",
+                        color: "#78350f"
+                      }}>
+                        Click to view and create offers
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{
+                    display: "flex",
+                    gap: "0.5rem",
+                    alignItems: "center"
+                  }}>
+                    <button
+                      onClick={() => {
+                        setOperatorActiveTab("customers");
+                        setShowQuotesNotification(false);
+                      }}
+                      style={{
+                        padding: "0.5rem 1rem",
+                        background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        color: "#ffffff",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        boxShadow: "0 2px 4px rgba(22, 163, 74, 0.3)"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                        e.currentTarget.style.boxShadow = "0 4px 8px rgba(22, 163, 74, 0.4)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow = "0 2px 4px rgba(22, 163, 74, 0.3)";
+                      }}
+                    >
+                      View Quotes
+                    </button>
+                    <button
+                      onClick={() => setShowQuotesNotification(false)}
+                      style={{
+                        padding: "0.5rem",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "1.25rem",
+                        color: "#92400e",
+                        cursor: "pointer",
+                        lineHeight: 1,
+                        opacity: 0.7,
+                        transition: "opacity 0.2s ease"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = "1";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = "0.7";
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {operatorLoading ? (
                 <div style={{ textAlign: "center", padding: "3rem 0" }}>
                   <p style={{ color: "#6b7280" }}>Loading operator dashboard...</p>
@@ -1516,7 +1635,10 @@ function DashboardPageContent() {
                     {/* TAB: Customers */}
                     {operatorActiveTab === "customers" && (
                       <div>
-                        <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
+                        {/* Custom Quotes Management for Operators */}
+                        <CustomQuotesManagement />
+
+                        <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", marginTop: "2rem", color: "var(--text-dark)" }}>
                       Direct Customers
                     </h2>
                     
@@ -2054,6 +2176,107 @@ function DashboardPageContent() {
               {/* Admin Tab Navigation */}
               {isAdmin && !isOwner && (
                 <>
+                  {/* New Quotes Notification Banner */}
+                  {(isAdmin || isOperator) && newQuotesCount > 0 && showQuotesNotification && (
+                    <div style={{
+                      marginBottom: "1.5rem",
+                      padding: "1rem 1.25rem",
+                      background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+                      borderRadius: "12px",
+                      border: "2px solid #fbbf24",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      animation: "fadeInUp 0.3s ease-out",
+                      boxShadow: "0 4px 12px rgba(251, 191, 36, 0.2)"
+                    }}>
+                      <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        flex: 1
+                      }}>
+                        <div style={{
+                          fontSize: "1.5rem"
+                        }}>
+                          🔔
+                        </div>
+                        <div>
+                          <div style={{
+                            fontSize: "0.875rem",
+                            fontWeight: "700",
+                            color: "#92400e",
+                            marginBottom: "0.25rem"
+                          }}>
+                            {newQuotesCount} New Custom Quote Request{newQuotesCount > 1 ? 's' : ''}
+                          </div>
+                          <div style={{
+                            fontSize: "0.75rem",
+                            color: "#78350f"
+                          }}>
+                            Click to view and create offers
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{
+                        display: "flex",
+                        gap: "0.5rem",
+                        alignItems: "center"
+                      }}>
+                        <button
+                          onClick={() => {
+                            setAdminActiveTab("customers");
+                            setShowQuotesNotification(false);
+                          }}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            color: "#ffffff",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                            boxShadow: "0 2px 4px rgba(22, 163, 74, 0.3)"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-1px)";
+                            e.currentTarget.style.boxShadow = "0 4px 8px rgba(22, 163, 74, 0.4)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "0 2px 4px rgba(22, 163, 74, 0.3)";
+                          }}
+                        >
+                          View Quotes
+                        </button>
+                        <button
+                          onClick={() => setShowQuotesNotification(false)}
+                          style={{
+                            padding: "0.5rem",
+                            background: "transparent",
+                            border: "none",
+                            fontSize: "1.25rem",
+                            color: "#92400e",
+                            cursor: "pointer",
+                            lineHeight: 1,
+                            opacity: 0.7,
+                            transition: "opacity 0.2s ease"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.opacity = "1";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = "0.7";
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Sticky Tab Navigation */}
                   <div style={{
                     position: "sticky",
@@ -2119,6 +2342,19 @@ function DashboardPageContent() {
                       >
                         <span style={{ position: "relative", zIndex: 1, textTransform: "capitalize" }}>
                           {tab}
+                          {tab === "customers" && newQuotesCount > 0 && (
+                            <span style={{
+                              marginLeft: "0.5rem",
+                              padding: "0.125rem 0.5rem",
+                              background: "#dc2626",
+                              color: "#ffffff",
+                              borderRadius: "999px",
+                              fontSize: "0.7rem",
+                              fontWeight: "700"
+                            }}>
+                              {newQuotesCount}
+                            </span>
+                          )}
                         </span>
                         {adminActiveTab === tab && (
                           <div style={{

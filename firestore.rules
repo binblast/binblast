@@ -375,6 +375,22 @@ service cloud.firestore {
       
       // No deletions allowed
       allow delete: if false;
+      
+      // Offers subcollection - stores offers created for quotes
+      match /offers/{offerId} {
+        // Admins and operators can read all offers
+        // Server-side can read all (for API routes)
+        allow read: if (
+          isAdminOrOperator()
+          || request.auth == null // Server-side reads
+        );
+        
+        // Only server-side API routes can create/update offers
+        allow create, update: if request.auth == null;
+        
+        // No deletions allowed
+        allow delete: if false;
+      }
     }
     
     // Default deny all other collections

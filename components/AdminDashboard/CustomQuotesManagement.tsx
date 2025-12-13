@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { CreateOfferModal } from "./CreateOfferModal";
 
 interface CustomQuote {
   id: string;
@@ -29,6 +30,8 @@ export function CustomQuotesManagement() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedQuote, setSelectedQuote] = useState<CustomQuote | null>(null);
+  const [showCreateOfferModal, setShowCreateOfferModal] = useState(false);
+  const [quoteForOffer, setQuoteForOffer] = useState<CustomQuote | null>(null);
 
   useEffect(() => {
     loadQuotes();
@@ -346,6 +349,38 @@ export function CustomQuotesManagement() {
                   gap: "0.5rem",
                   flexWrap: "wrap"
                 }}>
+                  {(quote.status === "pending" || quote.status === "pending_review") && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setQuoteForOffer(quote);
+                        setShowCreateOfferModal(true);
+                      }}
+                      style={{
+                        padding: "0.5rem 1rem",
+                        background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        color: "#ffffff",
+                        cursor: "pointer",
+                        minHeight: "36px",
+                        boxShadow: "0 2px 4px rgba(22, 163, 74, 0.3)",
+                        transition: "all 0.2s ease"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                        e.currentTarget.style.boxShadow = "0 4px 8px rgba(22, 163, 74, 0.4)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow = "0 2px 4px rgba(22, 163, 74, 0.3)";
+                      }}
+                    >
+                      Create Offer
+                    </button>
+                  )}
                   {quote.status !== "converted" && (
                     <select
                       value={quote.status}
@@ -634,6 +669,23 @@ export function CustomQuotesManagement() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Create Offer Modal */}
+      {quoteForOffer && (
+        <CreateOfferModal
+          quote={quoteForOffer}
+          isOpen={showCreateOfferModal}
+          onClose={() => {
+            setShowCreateOfferModal(false);
+            setQuoteForOffer(null);
+          }}
+          onOfferCreated={() => {
+            loadQuotes();
+            setShowCreateOfferModal(false);
+            setQuoteForOffer(null);
+          }}
+        />
       )}
     </div>
   );
