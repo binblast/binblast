@@ -142,6 +142,7 @@ function DashboardPageContent() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [isOperator, setIsOperator] = useState(false);
+  const [roleDetermined, setRoleDetermined] = useState(false); // Track if role has been determined
   
   // Admin state
   const [adminStats, setAdminStats] = useState({
@@ -269,6 +270,8 @@ function DashboardPageContent() {
 
   // Ref to track if auth listener is already set up
   const authListenerSetupRef = useRef(false);
+  // Ref to track current user ID and role to prevent duplicate processing
+  const currentUserRef = useRef<{ uid: string; role: string | undefined } | null>(null);
 
   // Load user data
   useEffect(() => {
@@ -309,12 +312,25 @@ function DashboardPageContent() {
         unsubscribe = await onAuthStateChanged(async (firebaseUser) => {
           if (!firebaseUser) {
             if (mounted) {
+              currentUserRef.current = null; // Clear user ref on logout
+              setRoleDetermined(false); // Reset role determination on logout
+              setIsAdmin(false);
+              setIsOperator(false);
+              setIsOwner(false);
               router.push("/login");
             }
             return;
           }
 
           if (!mounted) return;
+          
+          // CRITICAL: Prevent processing the same user multiple times
+          // This stops the infinite loop by checking if we've already processed this user
+          if (currentUserRef.current?.uid === firebaseUser.uid) {
+            console.log("[Dashboard] User already processed, skipping:", firebaseUser.uid);
+            return;
+          }
+
           setUserId(firebaseUser.uid);
 
           try {
@@ -325,24 +341,42 @@ function DashboardPageContent() {
 
             if (userDoc.exists()) {
               const userData = userDoc.data() as UserData;
+              
+              // CRITICAL: Store user info in ref BEFORE updating state
+              // This prevents the callback from running again for the same user
+              const userRole = userData.role || "customer";
+              currentUserRef.current = {
+                uid: firebaseUser.uid,
+                role: userRole
+              };
+              
               setUser(userData);
-              // Check for admin role OR admin email (backward compatibility)
+              
+              // Determine roles ONCE and update state atomically
+              const newIsAdmin = (userRole === "admin") || (userData.email === ADMIN_EMAIL);
+              const newIsOperator = userRole === "operator";
+              
+              // Only update state if values actually changed
               setIsAdmin((prev) => {
-                const newIsAdmin = (userData.role === "admin") || (userData.email === ADMIN_EMAIL);
-                return prev !== newIsAdmin ? newIsAdmin : prev;
+                if (prev !== newIsAdmin) {
+                  return newIsAdmin;
+                }
+                return prev;
               });
-              // Check for operator role - use functional update to prevent unnecessary re-renders
               setIsOperator((prev) => {
-                const newIsOperator = userData.role === "operator";
                 if (prev !== newIsOperator) {
                   // Reset loaded flag when operator status changes
                   operatorDataLoadedRef.current = null;
+                  return newIsOperator;
                 }
-                return newIsOperator;
+                return prev;
               });
               
+              // Mark role as determined AFTER state updates
+              setRoleDetermined(true);
+              
               // If user is an operator, don't check for partner redirects
-              if (userData.role === "operator") {
+              if (newIsOperator) {
                 // Operator stays on dashboard - no redirect needed
                 redirectingRef.current = false; // Reset redirect flag
               } else {
@@ -371,14 +405,27 @@ function DashboardPageContent() {
                 }
               }
             } else {
+              // User document doesn't exist - set default values
               const userEmail = firebaseUser.email || "";
+              currentUserRef.current = {
+                uid: firebaseUser.uid,
+                role: undefined
+              };
               setUser({
                 firstName: firebaseUser.displayName?.split(" ")[0] || "User",
                 lastName: firebaseUser.displayName?.split(" ")[1] || "",
                 email: userEmail,
               });
               setIsOwner(false);
-              setIsAdmin(userEmail === ADMIN_EMAIL);
+              const defaultIsAdmin = userEmail === ADMIN_EMAIL;
+              setIsAdmin((prev) => {
+                if (prev !== defaultIsAdmin) {
+                  return defaultIsAdmin;
+                }
+                return prev;
+              });
+              // Mark role as determined even if user doc doesn't exist
+              setRoleDetermined(true);
             }
 
             // Load scheduled cleanings
@@ -423,6 +470,7 @@ function DashboardPageContent() {
             if (mounted) {
               setError("Failed to load user data: " + (err.message || "Unknown error"));
               setCleaningsLoading(false);
+              // Don't set roleDetermined on error - let it retry
             }
           } finally {
             if (mounted) {
@@ -444,6 +492,7 @@ function DashboardPageContent() {
     return () => {
       mounted = false;
       authListenerSetupRef.current = false; // Reset on cleanup
+      currentUserRef.current = null; // Clear user ref on cleanup
       if (unsubscribe) {
         unsubscribe();
       }
@@ -1054,9 +1103,23 @@ function DashboardPageContent() {
     return grouped;
   }, [isOperator, filteredCleanings]);
 
+  // Show loading state until role is determined
+  if (loading || !roleDetermined || !userId) {
+    return (
+      <>
+        <Navbar />
+        <main style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
+          <div style={{ textAlign: "center", padding: "3rem 0" }}>
+            <p style={{ color: "#6b7280" }}>Loading dashboard...</p>
+          </div>
+        </main>
+      </>
+    );
+  }
+
   // Operator Dashboard
   // Only render if operator and we have userId (prevents rendering before auth is ready)
-  if (isOperator && userId) {
+  if (isOperator && userId && roleDetermined) {
     return (
       <>
         <Navbar />
