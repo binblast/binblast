@@ -1,7 +1,7 @@
 // app/dashboard/page.tsx
 "use client";
 
-import { useEffect, useState, Component, ErrorInfo, ReactNode, Suspense, useRef, useMemo } from "react";
+import { useEffect, useState, Component, ErrorInfo, ReactNode, Suspense, useRef, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
@@ -948,51 +948,46 @@ function DashboardPageContent() {
     return new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime();
   });
 
-  if (loading) {
-    return (
-      <>
-        <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
-          <div className="container">
-            <div style={{ textAlign: "center", padding: "3rem 0" }}>
-              <p style={{ color: "var(--text-light)" }}>Loading your dashboard...</p>
-            </div>
-          </div>
-        </main>
-      </>
-    );
-  }
+  // Helper function to safely convert scheduledDate to Date object
+  const getCleaningDate = useCallback((cleaning: any): Date => {
+    if (!cleaning || !cleaning.scheduledDate) return new Date();
+    // If it's already a Date object, return it
+    if (cleaning.scheduledDate instanceof Date) {
+      // Check if it's a valid date
+      if (isNaN(cleaning.scheduledDate.getTime())) return new Date();
+      return cleaning.scheduledDate;
+    }
+    // If it has toDate method (Firestore timestamp), use it
+    if (typeof cleaning.scheduledDate.toDate === 'function') {
+      try {
+        const date = cleaning.scheduledDate.toDate();
+        if (isNaN(date.getTime())) return new Date();
+        return date;
+      } catch (e) {
+        return new Date();
+      }
+    }
+    // Otherwise, try to create a Date from it
+    try {
+      const date = new Date(cleaning.scheduledDate);
+      if (isNaN(date.getTime())) return new Date();
+      return date;
+    } catch (e) {
+      return new Date();
+    }
+  }, []);
 
-  if (error || !user) {
-    return (
-      <>
-        <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
-          <div className="container">
-            <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center", padding: "3rem 0" }}>
-              <h1 className="section-title" style={{ marginBottom: "1rem" }}>Error</h1>
-              <p style={{ color: "var(--text-light)", marginBottom: "2rem" }}>
-                {error || "Failed to load your account information"}
-              </p>
-              <Link href="/login" className="btn btn-primary">Go to Login</Link>
-            </div>
-          </div>
-        </main>
-      </>
-    );
-  }
-
-  // Compute subscription manager visibility
+  // Compute subscription manager visibility (must be before early returns)
   const validPlans = ["one-time", "twice-month", "bi-monthly", "quarterly"];
-  const hasValidPlan = Boolean(user.selectedPlan && validPlans.includes(user.selectedPlan));
-  const hasStripeSubscription = Boolean(user.stripeSubscriptionId);
-  const hasPaidStatus = Boolean(user.paymentStatus === "paid" && user.stripeCustomerId);
+  const hasValidPlan = Boolean(user?.selectedPlan && validPlans.includes(user.selectedPlan));
+  const hasStripeSubscription = Boolean(user?.stripeSubscriptionId);
+  const hasPaidStatus = Boolean(user?.paymentStatus === "paid" && user?.stripeCustomerId);
   const hasValidSubscription = Boolean(hasStripeSubscription || hasPaidStatus);
   const hasUserId = Boolean(userId);
   const isFirebaseReady = Boolean(firebaseReady);
   const shouldShowSubscriptionManager = Boolean(hasValidPlan && hasValidSubscription && hasUserId && isFirebaseReady);
 
-  // Compute filtered customers for operator view
+  // Compute filtered customers for operator view (must be before early returns)
   const filteredDirectCustomers = useMemo(() => {
     if (!roleDetermined || !isOperator) return [];
     let filtered = operatorDirectCustomers;
@@ -1023,35 +1018,6 @@ function DashboardPageContent() {
     
     return filtered;
   }, [roleDetermined, isOperator, operatorDirectCustomers, operatorCustomerSearch, operatorCustomerFilter]);
-
-  // Helper function to safely convert scheduledDate to Date object
-  const getCleaningDate = (cleaning: any): Date => {
-    if (!cleaning || !cleaning.scheduledDate) return new Date();
-    // If it's already a Date object, return it
-    if (cleaning.scheduledDate instanceof Date) {
-      // Check if it's a valid date
-      if (isNaN(cleaning.scheduledDate.getTime())) return new Date();
-      return cleaning.scheduledDate;
-    }
-    // If it has toDate method (Firestore timestamp), use it
-    if (typeof cleaning.scheduledDate.toDate === 'function') {
-      try {
-        const date = cleaning.scheduledDate.toDate();
-        if (isNaN(date.getTime())) return new Date();
-        return date;
-      } catch (e) {
-        return new Date();
-      }
-    }
-    // Otherwise, try to create a Date from it
-    try {
-      const date = new Date(cleaning.scheduledDate);
-      if (isNaN(date.getTime())) return new Date();
-      return date;
-    } catch (e) {
-      return new Date();
-    }
-  };
 
   const filteredCleanings = useMemo(() => {
     if (!roleDetermined || !isOperator) return [];
@@ -1087,7 +1053,7 @@ function DashboardPageContent() {
     }
     
     return filtered;
-  }, [roleDetermined, isOperator, operatorAllCleanings, operatorDateFilter, operatorCityFilter, operatorTypeFilter]);
+  }, [roleDetermined, isOperator, operatorAllCleanings, operatorDateFilter, operatorCityFilter, operatorTypeFilter, getCleaningDate]);
 
   const cleaningsByDate = useMemo(() => {
     if (!roleDetermined || !isOperator) return {};
@@ -1101,7 +1067,41 @@ function DashboardPageContent() {
       grouped[dateKey].push(cleaning);
     });
     return grouped;
-  }, [roleDetermined, isOperator, filteredCleanings]);
+  }, [roleDetermined, isOperator, filteredCleanings, getCleaningDate]);
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+          <div className="container">
+            <div style={{ textAlign: "center", padding: "3rem 0" }}>
+              <p style={{ color: "var(--text-light)" }}>Loading your dashboard...</p>
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (error || !user) {
+    return (
+      <>
+        <Navbar />
+        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+          <div className="container">
+            <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center", padding: "3rem 0" }}>
+              <h1 className="section-title" style={{ marginBottom: "1rem" }}>Error</h1>
+              <p style={{ color: "var(--text-light)", marginBottom: "2rem" }}>
+                {error || "Failed to load your account information"}
+              </p>
+              <Link href="/login" className="btn btn-primary">Go to Login</Link>
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   // Show loading state until role is determined
   if (loading || !roleDetermined || !userId) {

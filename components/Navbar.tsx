@@ -39,11 +39,11 @@ export function Navbar() {
         
         if (!mounted) return;
         
-          // Only proceed if auth is available and valid
-          if (auth && typeof auth === "object" && "currentUser" in auth) {
-            // Check current user immediately
-            if (auth.currentUser && mounted) {
-              setIsLoggedIn(true);
+        // Only proceed if auth is available and valid
+        if (auth && typeof auth === "object" && "currentUser" in auth) {
+          // Check current user immediately
+          if (auth.currentUser && mounted) {
+            setIsLoggedIn(true);
               
               // Update account URL based on partner status
               try {
@@ -55,14 +55,14 @@ export function Navbar() {
                 setAccountUrl("/dashboard");
               }
               
-              setLoading(false);
-              console.log("[Navbar] User is logged in:", auth.currentUser.email);
-            } else if (mounted) {
-              setIsLoggedIn(false);
+            setLoading(false);
+            console.log("[Navbar] User is logged in:", auth.currentUser.email);
+          } else if (mounted) {
+            setIsLoggedIn(false);
               setAccountUrl("/dashboard");
-              setLoading(false);
-              console.log("[Navbar] No user logged in");
-            }
+            setLoading(false);
+            console.log("[Navbar] No user logged in");
+          }
           
           // Use safe wrapper function to listen for changes
           unsubscribe = await onAuthStateChanged(async (user) => {

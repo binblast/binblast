@@ -47,8 +47,8 @@ function LoginForm() {
         router.push(callbackUrl);
       } else {
         // Fallback to regular dashboard if user not found
-        const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
-        router.push(callbackUrl);
+      const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+      router.push(callbackUrl);
       }
     } catch (err: any) {
       console.error("Login error:", err);

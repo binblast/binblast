@@ -177,11 +177,11 @@ export async function POST(req: NextRequest) {
                     
                     if (partnersSnapshot.empty) {
                       // User is not a partner - safe to update user document
-                      await updateDoc(doc(db, "users", userId), {
-                        referredBy: referrerId,
-                        referredByCode: session.metadata.referralCode,
-                        updatedAt: serverTimestamp(),
-                      });
+                    await updateDoc(doc(db, "users", userId), {
+                      referredBy: referrerId,
+                      referredByCode: session.metadata.referralCode,
+                      updatedAt: serverTimestamp(),
+                    });
                     } else {
                       console.log("[Webhook] User is a partner, skipping user document update:", userId);
                     }
