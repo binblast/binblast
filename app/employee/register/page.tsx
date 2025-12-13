@@ -214,9 +214,9 @@ export default function EmployeeRegisterPage() {
 
                   <div>
                     <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "#111827" }}>
-                      Pay Rate Per Service <span style={{ color: "#6b7280", fontWeight: "400" }}>(optional)</span>
+                      Pay Rate Per Service
                       <span style={{ display: "block", fontSize: "0.75rem", color: "#6b7280", fontWeight: "400", marginTop: "0.25rem" }}>
-                        $10 flat rate per service per house per visit (regardless of number of trash cans)
+                        Fixed rate: $10 per service per house per visit (regardless of number of trash cans)
                       </span>
                     </label>
                     <input
@@ -224,18 +224,18 @@ export default function EmployeeRegisterPage() {
                       step="0.01"
                       min="0"
                       value={payRatePerJob}
-                      onChange={(e) => setPayRatePerJob(e.target.value)}
-                      placeholder="10.00"
+                      disabled={true}
+                      readOnly
                       style={{
                         width: "100%",
                         padding: "0.75rem 1rem",
                         border: "1px solid #e5e7eb",
                         borderRadius: "8px",
                         fontSize: "0.95rem",
-                        transition: "border-color 0.2s"
+                        background: "#f3f4f6",
+                        color: "#6b7280",
+                        cursor: "not-allowed"
                       }}
-                      onFocus={(e) => e.currentTarget.style.borderColor = "#16a34a"}
-                      onBlur={(e) => e.currentTarget.style.borderColor = "#e5e7eb"}
                     />
                   </div>
 
