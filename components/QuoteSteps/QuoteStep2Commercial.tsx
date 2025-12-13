@@ -164,6 +164,14 @@ export function QuoteStep2Commercial({
           }}>
             Do you need dumpster pad cleaning?
           </label>
+          <p style={{
+            fontSize: "0.75rem",
+            color: "#6b7280",
+            marginBottom: "0.75rem",
+            lineHeight: "1.5"
+          }}>
+            Dumpster pad cleaning is a high-value sanitation service that includes hot water wash, degreasing, and odor control. Pricing varies by frequency and helps ensure health department compliance.
+          </p>
           <div style={{
             display: "flex",
             gap: "1rem"
@@ -209,6 +217,26 @@ export function QuoteStep2Commercial({
               No
             </button>
           </div>
+          {formData.dumpsterPadCleaning && formData.commercialFrequency && (
+            <div style={{
+              marginTop: "0.75rem",
+              padding: "0.75rem",
+              background: "#f0fdf4",
+              borderRadius: "8px",
+              border: "1px solid #bbf7d0",
+              fontSize: "0.75rem",
+              color: "#166534"
+            }}>
+              <div style={{ fontWeight: "600", marginBottom: "0.25rem" }}>
+                {formData.commercialFrequency === "Monthly" && "Package A - Essential Pad Care: $150-$195/month"}
+                {formData.commercialFrequency === "Bi-weekly" && "Package B - Sanitation Plus: $250-$350/month"}
+                {formData.commercialFrequency === "Weekly" && "Package C - Health-Grade Protection: $400-$600/month"}
+              </div>
+              <div style={{ fontSize: "0.7rem", marginTop: "0.25rem" }}>
+                Includes hot water wash, degreasing, odor control, and compliance protection.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Frequency */}

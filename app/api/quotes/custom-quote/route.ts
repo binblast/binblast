@@ -39,56 +39,156 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate estimated price
+    // Calculate estimated price (must match frontend logic exactly)
     let estimatedPrice = 0;
-    let basePrice = 0;
-    let binPrice = 0;
-    let frequencyMultiplier = 1;
-    let dumpsterPadFee = 0;
+    let lowEstimate = 0;
+    let highEstimate = 0;
+    let dumpsterPadPackage: "A" | "B" | "C" | null = null;
+    let recommendedBundle: string | null = null;
+    let minimumPriceEnforced = false;
+    let pricingBreakdown: any = null;
 
     if (formData.propertyType === "residential") {
-      basePrice = 35;
-      binPrice = (formData.residentialBins || 1) * 10;
+      const basePrice = 55;
+      const binPrice = (formData.residentialBins || 1) * 10;
       
+      let frequencyMultiplier = 1;
       if (formData.residentialFrequency === "Weekly") {
         frequencyMultiplier = 4;
       } else if (formData.residentialFrequency === "Bi-weekly") {
         frequencyMultiplier = 2;
-      } else {
-        frequencyMultiplier = 1;
       }
-    } else if (formData.propertyType === "commercial") {
-      basePrice = 50;
-      binPrice = (formData.commercialBins || 1) * 15;
       
-      if (formData.commercialFrequency === "Weekly") {
-        frequencyMultiplier = 4;
-      } else if (formData.commercialFrequency === "Bi-weekly") {
-        frequencyMultiplier = 2;
+      estimatedPrice = (basePrice + binPrice) * frequencyMultiplier;
+      lowEstimate = Math.floor(estimatedPrice * 0.85);
+      highEstimate = Math.ceil(estimatedPrice * 1.15);
+      
+      // Cap residential range to $55-$85/month
+      lowEstimate = Math.max(lowEstimate, 55);
+      highEstimate = Math.min(highEstimate, 85);
+      
+    } else if (formData.propertyType === "commercial") {
+      const isRestaurant = formData.commercialType === "Restaurant";
+      const hasDumpsterPad = formData.dumpsterPadCleaning === true;
+      const frequency = formData.commercialFrequency;
+      const dumpsterCount = formData.commercialBins || 1;
+      
+      // Base dumpster cleaning price
+      const dumpsterBasePrice = isRestaurant ? 120 : 95;
+      const dumpsterPrice = dumpsterBasePrice + ((dumpsterCount - 1) * (isRestaurant ? 20 : 15));
+      
+      // Apply frequency multiplier to dumpster cleaning
+      let dumpsterMonthlyPrice = dumpsterPrice;
+      if (frequency === "Bi-weekly") {
+        dumpsterMonthlyPrice *= 2;
+      } else if (frequency === "Weekly") {
+        dumpsterMonthlyPrice *= 4;
+      }
+      
+      // Dumpster pad package pricing (tiered)
+      let padPackagePrice = 0;
+      if (hasDumpsterPad) {
+        if (frequency === "Monthly") {
+          padPackagePrice = 150; // Package A
+          dumpsterPadPackage = "A";
+        } else if (frequency === "Bi-weekly") {
+          padPackagePrice = 250; // Package B
+          dumpsterPadPackage = "B";
+        } else if (frequency === "Weekly") {
+          padPackagePrice = 400; // Package C
+          dumpsterPadPackage = "C";
+        }
+      }
+      
+      // Calculate total
+      estimatedPrice = dumpsterMonthlyPrice + padPackagePrice;
+      
+      // Bundle detection
+      if (hasDumpsterPad) {
+        if (isRestaurant && frequency === "Weekly") {
+          recommendedBundle = "Premium Property Protection";
+        } else if (isRestaurant && frequency === "Bi-weekly") {
+          recommendedBundle = "Restaurant Compliance Bundle";
+        } else if (frequency === "Bi-weekly") {
+          recommendedBundle = "Commercial Clean Site Bundle";
+        } else if (frequency === "Monthly") {
+          recommendedBundle = "Commercial Clean Site Bundle";
+        }
+      }
+      
+      // Minimum price enforcement
+      if (isRestaurant && hasDumpsterPad && frequency === "Weekly") {
+        if (estimatedPrice < 350) {
+          estimatedPrice = 350;
+          minimumPriceEnforced = true;
+        }
+      } else if (isRestaurant && hasDumpsterPad && frequency === "Bi-weekly") {
+        if (estimatedPrice < 250) {
+          estimatedPrice = 250;
+          minimumPriceEnforced = true;
+        }
+      } else if (isRestaurant && hasDumpsterPad && frequency === "Monthly") {
+        if (estimatedPrice < 150) {
+          estimatedPrice = 150;
+          minimumPriceEnforced = true;
+        }
+      }
+      
+      // Calculate range (±15-20%)
+      lowEstimate = Math.floor(estimatedPrice * 0.85);
+      highEstimate = Math.ceil(estimatedPrice * 1.15);
+      
+      // Cap ranges based on package tiers and frequency
+      if (hasDumpsterPad) {
+        if (frequency === "Monthly") {
+          lowEstimate = Math.max(lowEstimate, 150);
+          highEstimate = Math.min(highEstimate, 195);
+        } else if (frequency === "Bi-weekly") {
+          lowEstimate = Math.max(lowEstimate, 250);
+          highEstimate = Math.min(highEstimate, 350);
+        } else if (frequency === "Weekly") {
+          lowEstimate = Math.max(lowEstimate, 400);
+          highEstimate = Math.min(highEstimate, 600);
+        }
       } else {
-        frequencyMultiplier = 1;
+        // Commercial without pad - cap by frequency
+        if (frequency === "Monthly") {
+          lowEstimate = Math.max(lowEstimate, 95);
+          highEstimate = Math.min(highEstimate, 160);
+        } else if (frequency === "Bi-weekly") {
+          lowEstimate = Math.max(lowEstimate, 160);
+          highEstimate = Math.min(highEstimate, 240);
+        } else if (frequency === "Weekly") {
+          lowEstimate = Math.max(lowEstimate, 280);
+          highEstimate = Math.min(highEstimate, 400);
+        }
       }
-
-      if (formData.dumpsterPadCleaning) {
-        dumpsterPadFee = 25;
-      }
+      
+      // Store pricing breakdown
+      pricingBreakdown = {
+        dumpsterCleaning: dumpsterMonthlyPrice,
+        dumpsterPadCleaning: padPackagePrice,
+        total: estimatedPrice
+      };
+      
     } else if (formData.propertyType === "hoa") {
       const units = formData.hoaUnits || 1;
       const bins = formData.hoaBins || 1;
       
-      basePrice = units * 25;
-      binPrice = bins * 8;
+      const basePrice = units * 25;
+      const binPrice = bins * 8;
       
+      let frequencyMultiplier = 1;
       if (formData.hoaFrequency === "Weekly") {
         frequencyMultiplier = 4;
       } else if (formData.hoaFrequency === "Bi-weekly") {
         frequencyMultiplier = 2;
-      } else {
-        frequencyMultiplier = 1;
       }
+      
+      estimatedPrice = (basePrice + binPrice) * frequencyMultiplier;
+      lowEstimate = Math.floor(estimatedPrice * 0.85);
+      highEstimate = Math.ceil(estimatedPrice * 1.15);
     }
-
-    estimatedPrice = (basePrice + binPrice + dumpsterPadFee) * frequencyMultiplier;
 
     // Create quote document
     const quoteData = {
@@ -123,6 +223,12 @@ export async function POST(request: NextRequest) {
       submittedAt: serverTimestamp(),
       status: "pending",
       estimatedPrice: estimatedPrice,
+      estimatedPriceLow: lowEstimate,
+      estimatedPriceHigh: highEstimate,
+      dumpsterPadPackage: dumpsterPadPackage,
+      recommendedBundle: recommendedBundle,
+      minimumPriceEnforced: minimumPriceEnforced,
+      pricingBreakdown: pricingBreakdown,
     };
 
     const quotesRef = collection(db, "customQuotes");
@@ -144,7 +250,9 @@ export async function POST(request: NextRequest) {
             <p><strong>Phone:</strong> ${formData.phone}</p>
             <p><strong>Property Type:</strong> ${getPropertyTypeLabel(formData.propertyType)}</p>
             <p><strong>Address:</strong> ${formData.address}</p>
-            <p><strong>Estimated Price:</strong> $${estimatedPrice.toLocaleString()}/month</p>
+            <p><strong>Estimated Price Range:</strong> $${lowEstimate.toLocaleString()} - $${highEstimate.toLocaleString()}/month</p>
+            ${recommendedBundle ? `<p><strong>Recommended Bundle:</strong> ${recommendedBundle}</p>` : ''}
+            ${dumpsterPadPackage ? `<p><strong>Dumpster Pad Package:</strong> ${dumpsterPadPackage}</p>` : ''}
             <p><a href="${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/dashboard?tab=customers">View in Dashboard</a></p>
           `
         })
@@ -162,7 +270,8 @@ export async function POST(request: NextRequest) {
             <p>Hi ${formData.name},</p>
             <p>We've received your custom quote request and our team will review it shortly.</p>
             <p><strong>Property Type:</strong> ${getPropertyTypeLabel(formData.propertyType)}</p>
-            <p><strong>Estimated Price Range:</strong> $${Math.floor(estimatedPrice * 0.85).toLocaleString()} - $${Math.ceil(estimatedPrice * 1.15).toLocaleString()}/month</p>
+            <p><strong>Estimated Price Range:</strong> $${lowEstimate.toLocaleString()} - $${highEstimate.toLocaleString()}/month</p>
+            ${recommendedBundle ? `<p><strong>Recommended Bundle:</strong> ${recommendedBundle}</p>` : ''}
             <p>We'll contact you via ${formData.preferredContact || "email"} within 24 hours to discuss your needs and provide a final quote.</p>
             <p>If you have any questions, feel free to reach out to us.</p>
             <p>Best regards,<br>The Bin Blast Team</p>

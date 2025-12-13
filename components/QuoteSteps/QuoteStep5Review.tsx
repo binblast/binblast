@@ -18,60 +18,178 @@ export function QuoteStep5Review({
   isSubmitting,
 }: QuoteStep5ReviewProps) {
   const estimatedPrice = useMemo(() => {
-    let basePrice = 0;
-    let binPrice = 0;
-    let frequencyMultiplier = 1;
-    let dumpsterPadFee = 0;
-
+    // Residential pricing
     if (formData.propertyType === "residential") {
-      basePrice = 35; // Base monthly price
-      binPrice = (formData.residentialBins || 1) * 10; // $10 per bin
+      const basePrice = 55; // Updated base monthly price
+      const binPrice = (formData.residentialBins || 1) * 10; // $10 per bin
       
+      let frequencyMultiplier = 1;
       if (formData.residentialFrequency === "Weekly") {
         frequencyMultiplier = 4;
       } else if (formData.residentialFrequency === "Bi-weekly") {
         frequencyMultiplier = 2;
-      } else {
-        frequencyMultiplier = 1; // Monthly
       }
-    } else if (formData.propertyType === "commercial") {
-      basePrice = 50; // Base commercial price
-      binPrice = (formData.commercialBins || 1) * 15; // $15 per bin/dumpster
       
-      if (formData.commercialFrequency === "Weekly") {
-        frequencyMultiplier = 4;
-      } else if (formData.commercialFrequency === "Bi-weekly") {
-        frequencyMultiplier = 2;
+      const total = (basePrice + binPrice) * frequencyMultiplier;
+      let lowEstimate = Math.floor(total * 0.85);
+      let highEstimate = Math.ceil(total * 1.15);
+      
+      // Cap residential range to $55-$85/month
+      lowEstimate = Math.max(lowEstimate, 55);
+      highEstimate = Math.min(highEstimate, 85);
+      
+      return { 
+        low: lowEstimate, 
+        high: highEstimate, 
+        base: total,
+        recommendedBundle: null,
+        padPackageTier: null
+      };
+    }
+    
+    // Commercial pricing
+    if (formData.propertyType === "commercial") {
+      const isRestaurant = formData.commercialType === "Restaurant";
+      const hasDumpsterPad = formData.dumpsterPadCleaning === true;
+      const frequency = formData.commercialFrequency;
+      const dumpsterCount = formData.commercialBins || 1;
+      
+      // Base dumpster cleaning price
+      const dumpsterBasePrice = isRestaurant ? 120 : 95;
+      const dumpsterPrice = dumpsterBasePrice + ((dumpsterCount - 1) * (isRestaurant ? 20 : 15));
+      
+      // Apply frequency multiplier to dumpster cleaning
+      let dumpsterMonthlyPrice = dumpsterPrice;
+      if (frequency === "Bi-weekly") {
+        dumpsterMonthlyPrice *= 2;
+      } else if (frequency === "Weekly") {
+        dumpsterMonthlyPrice *= 4;
+      }
+      
+      // Dumpster pad package pricing (tiered)
+      let padPackagePrice = 0;
+      let padPackageTier: "A" | "B" | "C" | null = null;
+      
+      if (hasDumpsterPad) {
+        if (frequency === "Monthly") {
+          padPackagePrice = 150; // Package A
+          padPackageTier = "A";
+        } else if (frequency === "Bi-weekly") {
+          padPackagePrice = 250; // Package B
+          padPackageTier = "B";
+        } else if (frequency === "Weekly") {
+          padPackagePrice = 400; // Package C
+          padPackageTier = "C";
+        }
+      }
+      
+      // Calculate total
+      let totalPrice = dumpsterMonthlyPrice + padPackagePrice;
+      
+      // Bundle detection
+      let recommendedBundle: string | null = null;
+      if (hasDumpsterPad) {
+        if (isRestaurant && frequency === "Weekly") {
+          recommendedBundle = "Premium Property Protection";
+        } else if (isRestaurant && frequency === "Bi-weekly") {
+          recommendedBundle = "Restaurant Compliance Bundle";
+        } else if (frequency === "Bi-weekly") {
+          recommendedBundle = "Commercial Clean Site Bundle";
+        } else if (frequency === "Monthly") {
+          recommendedBundle = "Commercial Clean Site Bundle";
+        }
+      }
+      
+      // Minimum price enforcement
+      let minimumPriceEnforced = false;
+      if (isRestaurant && hasDumpsterPad && frequency === "Weekly") {
+        if (totalPrice < 350) {
+          totalPrice = 350;
+          minimumPriceEnforced = true;
+        }
+      } else if (isRestaurant && hasDumpsterPad && frequency === "Bi-weekly") {
+        if (totalPrice < 250) {
+          totalPrice = 250;
+          minimumPriceEnforced = true;
+        }
+      } else if (isRestaurant && hasDumpsterPad && frequency === "Monthly") {
+        if (totalPrice < 150) {
+          totalPrice = 150;
+          minimumPriceEnforced = true;
+        }
+      }
+      
+      // Calculate range (±15-20%)
+      let lowEstimate = Math.floor(totalPrice * 0.85);
+      let highEstimate = Math.ceil(totalPrice * 1.15);
+      
+      // Cap ranges based on package tiers and frequency
+      if (hasDumpsterPad) {
+        if (frequency === "Monthly") {
+          lowEstimate = Math.max(lowEstimate, 150);
+          highEstimate = Math.min(highEstimate, 195);
+        } else if (frequency === "Bi-weekly") {
+          lowEstimate = Math.max(lowEstimate, 250);
+          highEstimate = Math.min(highEstimate, 350);
+        } else if (frequency === "Weekly") {
+          lowEstimate = Math.max(lowEstimate, 400);
+          highEstimate = Math.min(highEstimate, 600);
+        }
       } else {
-        frequencyMultiplier = 1; // Monthly
+        // Commercial without pad - cap by frequency
+        if (frequency === "Monthly") {
+          lowEstimate = Math.max(lowEstimate, 95);
+          highEstimate = Math.min(highEstimate, 160);
+        } else if (frequency === "Bi-weekly") {
+          lowEstimate = Math.max(lowEstimate, 160);
+          highEstimate = Math.min(highEstimate, 240);
+        } else if (frequency === "Weekly") {
+          lowEstimate = Math.max(lowEstimate, 280);
+          highEstimate = Math.min(highEstimate, 400);
+        }
       }
-
-      if (formData.dumpsterPadCleaning) {
-        dumpsterPadFee = 25; // Additional fee for dumpster pad cleaning
-      }
-    } else if (formData.propertyType === "hoa") {
-      // Bulk pricing calculation
+      
+      return {
+        low: lowEstimate,
+        high: highEstimate,
+        base: totalPrice,
+        dumpsterPrice: dumpsterMonthlyPrice,
+        padPrice: padPackagePrice,
+        padPackageTier,
+        recommendedBundle,
+        minimumPriceEnforced
+      };
+    }
+    
+    // HOA pricing (keep existing logic)
+    if (formData.propertyType === "hoa") {
       const units = formData.hoaUnits || 1;
       const bins = formData.hoaBins || 1;
       
-      // Base price per unit (discounted for bulk)
-      basePrice = units * 25; // $25 per unit
-      binPrice = bins * 8; // $8 per bin (bulk discount)
+      const basePrice = units * 25;
+      const binPrice = bins * 8;
       
+      let frequencyMultiplier = 1;
       if (formData.hoaFrequency === "Weekly") {
         frequencyMultiplier = 4;
       } else if (formData.hoaFrequency === "Bi-weekly") {
         frequencyMultiplier = 2;
-      } else {
-        frequencyMultiplier = 1; // Monthly
       }
+      
+      const total = (basePrice + binPrice) * frequencyMultiplier;
+      const lowEstimate = Math.floor(total * 0.85);
+      const highEstimate = Math.ceil(total * 1.15);
+      
+      return { 
+        low: lowEstimate, 
+        high: highEstimate, 
+        base: total,
+        recommendedBundle: null,
+        padPackageTier: null
+      };
     }
-
-    const total = (basePrice + binPrice + dumpsterPadFee) * frequencyMultiplier;
-    const lowEstimate = Math.floor(total * 0.85);
-    const highEstimate = Math.ceil(total * 1.15);
-
-    return { low: lowEstimate, high: highEstimate, base: total };
+    
+    return { low: 0, high: 0, base: 0, recommendedBundle: null, padPackageTier: null };
   }, [formData]);
 
   const getPropertyTypeLabel = () => {
@@ -163,12 +281,49 @@ export function QuoteStep5Review({
         }}>
           ${estimatedPrice.low.toLocaleString()} - ${estimatedPrice.high.toLocaleString()}/month
         </div>
+        
+        {/* Bundle Recommendation */}
+        {estimatedPrice.recommendedBundle && (
+          <div style={{
+            marginTop: "1rem",
+            padding: "0.75rem",
+            background: "#ffffff",
+            borderRadius: "8px",
+            border: "1px solid #86efac"
+          }}>
+            <div style={{
+              fontSize: "0.875rem",
+              fontWeight: "700",
+              color: "#166534",
+              marginBottom: "0.25rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem"
+            }}>
+              ✨ Recommended: {estimatedPrice.recommendedBundle}
+            </div>
+            <div style={{
+              fontSize: "0.75rem",
+              color: "#166534",
+              lineHeight: "1.4"
+            }}>
+              {estimatedPrice.recommendedBundle === "Premium Property Protection" && 
+                "Includes weekly dumpster cleaning, dumpster pad sanitation, grease & odor control, and priority response."}
+              {estimatedPrice.recommendedBundle === "Restaurant Compliance Bundle" && 
+                "Includes bi-weekly dumpster cleaning, dumpster pad sanitation, heavy degreasing, and health-inspection readiness."}
+              {estimatedPrice.recommendedBundle === "Commercial Clean Site Bundle" && 
+                "Includes dumpster cleaning, dumpster pad sanitation, odor treatment, and inspection notes for management."}
+            </div>
+          </div>
+        )}
+        
         <div style={{
           fontSize: "0.75rem",
           color: "#166534",
-          marginTop: "0.5rem"
+          marginTop: "0.75rem",
+          lineHeight: "1.4"
         }}>
-          * Final pricing will be confirmed after review
+          * Final pricing may adjust based on grease levels, access, water availability, and environmental requirements. This is an estimated operational price range for sanitation and compliance services, not a final quote.
         </div>
       </div>
 
