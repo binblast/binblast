@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PlanConfirmationModal } from "./PlanConfirmationModal";
+import { CustomQuoteWizard } from "./CustomQuoteWizard";
 import { useFirebase } from "@/lib/firebase-context";
 
 
@@ -108,6 +109,7 @@ export function PricingSection() {
   const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null);
   const [availableCredit, setAvailableCredit] = useState<number>(0);
   const [loadingCredit, setLoadingCredit] = useState(false);
+  const [showQuoteWizard, setShowQuoteWizard] = useState(false);
   
   // Get referral code and partner code from URL
   const referralCodeFromUrl = searchParams.get("ref") || "";
@@ -188,15 +190,8 @@ export function PricingSection() {
     console.log("[PricingSection] Plan clicked:", planId);
     
     if (planId === "commercial") {
-      // For commercial plans, scroll to contact or handle differently
-      const contactSection = document.getElementById("contact") || document.getElementById("faq");
-      if (contactSection) {
-        const offsetTop = contactSection.offsetTop - 80;
-        window.scrollTo({
-          top: offsetTop,
-          behavior: 'smooth'
-        });
-      }
+      // Open custom quote wizard
+      setShowQuoteWizard(true);
       return;
     }
 
@@ -268,6 +263,10 @@ export function PricingSection() {
           initialReferralCode={referralCodeFromUrl}
         />
       )}
+      <CustomQuoteWizard
+        isOpen={showQuoteWizard}
+        onClose={() => setShowQuoteWizard(false)}
+      />
       <section id="pricing" className="pricing-section">
 
       <div className="container">

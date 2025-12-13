@@ -25,6 +25,7 @@ import { EmployeeStatus } from "@/components/OperatorDashboard/EmployeeStatus";
 import { RevenueTrendSummary, CustomerGrowthSummary, WeeklyCleaningsSummary, PlanDistributionSummary, RevenueByPlanSummary } from "@/components/AdminDashboard/ChartSummaries";
 import { AdminAIChat } from "@/components/AdminDashboard/AdminAIChat";
 import { KPICard } from "@/components/AdminDashboard/KPICard";
+import { CustomQuotesManagement } from "@/components/AdminDashboard/CustomQuotesManagement";
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
@@ -2491,6 +2492,9 @@ function DashboardPageContent() {
                         <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem" }}>
                           Customers
                         </h2>
+
+                        {/* Custom Quotes Management */}
+                        <CustomQuotesManagement />
 
                         {/* Customer Insights */}
                         {!adminLoading && (

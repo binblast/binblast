@@ -354,6 +354,29 @@ service cloud.firestore {
       allow delete: if false;
     }
     
+    // Custom quotes collection - stores custom quote requests
+    match /customQuotes/{quoteId} {
+      // Admins and operators can read all quotes
+      // Server-side can read all (for API routes)
+      allow read: if (
+        isAdminOrOperator()
+        || request.auth == null // Server-side reads
+      );
+      
+      // Only server-side API routes can create quotes (from custom quote wizard)
+      allow create: if request.auth == null;
+      
+      // Admins and operators can update quote status
+      // Server-side can update any quote
+      allow update: if (
+        isAdminOrOperator()
+        || request.auth == null // Server-side updates
+      );
+      
+      // No deletions allowed
+      allow delete: if false;
+    }
+    
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
