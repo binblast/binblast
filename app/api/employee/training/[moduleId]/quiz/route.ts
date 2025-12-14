@@ -82,7 +82,10 @@ export async function POST(
       getDocs,
       addDoc,
       updateDoc,
+      doc,
+      setDoc,
       serverTimestamp,
+      Timestamp,
     } = firestore;
 
     // Get current training progress
@@ -177,19 +180,82 @@ export async function POST(
         };
       }
 
-      modules[moduleId] = {
+      // Update module with completion status
+      const moduleUpdate: any = {
         ...modules[moduleId],
         attempts: attemptNumber,
         score,
         lastAttemptAt: serverTimestamp(),
         failed: !passed,
         lastFailedAt: !passed ? serverTimestamp() : undefined,
-        completedAt: passed ? serverTimestamp() : undefined,
         status: passed ? "passed" : "failed",
       };
 
+      // Only set completedAt if passed and not already set
+      if (passed) {
+        moduleUpdate.completedAt = serverTimestamp();
+        // Calculate expiration (6 months from completion)
+        const completedDate = new Date();
+        const expirationDate = new Date();
+        expirationDate.setMonth(expirationDate.getMonth() + 6);
+        moduleUpdate.expiresAt = Timestamp.fromDate(expirationDate);
+      }
+
+      modules[moduleId] = moduleUpdate;
+
+      // Check if all modules are completed
+      const allModulesRef = collection(db, "trainingModules");
+      const allModulesQuery = query(
+        allModulesRef,
+        where("active", "==", true)
+      );
+      const allModulesSnapshot = await getDocs(allModulesQuery);
+      const totalModules = allModulesSnapshot.size;
+      const completedModules = Object.values(modules).filter(
+        (m: any) => m.completedAt
+      ).length;
+
+      let overallStatus = progressData.overallStatus || "not_started";
+      if (completedModules === totalModules && totalModules > 0) {
+        overallStatus = "completed";
+      } else if (completedModules > 0) {
+        overallStatus = "in_progress";
+      }
+
       await updateDoc(progressDocRef, {
         modules,
+        overallStatus,
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      // Create new progress document if it doesn't exist
+      const progressDocRef = doc(progressRef);
+      const modules: any = {};
+      
+      modules[moduleId] = {
+        startedAt: serverTimestamp(),
+        attempts: attemptNumber,
+        score,
+        lastAttemptAt: serverTimestamp(),
+        pdfViewed: false,
+        failed: !passed,
+        lastFailedAt: !passed ? serverTimestamp() : undefined,
+        status: passed ? "passed" : "failed",
+      };
+
+      if (passed) {
+        modules[moduleId].completedAt = serverTimestamp();
+        const expirationDate = new Date();
+        expirationDate.setMonth(expirationDate.getMonth() + 6);
+        modules[moduleId].expiresAt = Timestamp.fromDate(expirationDate);
+      }
+
+      await setDoc(progressDocRef, {
+        employeeId,
+        currentModuleOrder: 1,
+        modules,
+        certificates: [],
+        overallStatus: passed ? "in_progress" : "not_started",
         updatedAt: serverTimestamp(),
       });
     }

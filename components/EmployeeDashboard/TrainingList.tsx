@@ -23,6 +23,7 @@ interface TrainingModule {
 interface ModuleProgress {
   startedAt?: string;
   completedAt?: string;
+  expiresAt?: string;
   score?: number;
   attempts: number;
   pdfViewed: boolean;
@@ -103,11 +104,19 @@ export function TrainingList({ employeeId }: TrainingListProps) {
       return "locked";
     }
 
-    // Check if expired
-    if (moduleProgress?.completedAt && progress.nextRecertDueAt) {
-      const recertDate = new Date(progress.nextRecertDueAt);
-      if (new Date() > recertDate) {
-        return "expired";
+    // Check if expired (6 months from completion)
+    if (moduleProgress?.completedAt) {
+      if (moduleProgress.expiresAt) {
+        const expirationDate = new Date(moduleProgress.expiresAt);
+        if (new Date() > expirationDate) {
+          return "expired";
+        }
+      } else if (progress.nextRecertDueAt) {
+        // Fallback to overall recert date
+        const recertDate = new Date(progress.nextRecertDueAt);
+        if (new Date() > recertDate) {
+          return "expired";
+        }
       }
     }
 
@@ -176,18 +185,73 @@ export function TrainingList({ employeeId }: TrainingListProps) {
   }
 
   const completedCount = progress
-    ? Object.values(progress.modules).filter((m) => m.completedAt).length
+    ? Object.values(progress.modules).filter((m) => {
+        if (!m.completedAt) return false;
+        // Check if expired (6 months from completion)
+        if (m.expiresAt) {
+          const expirationDate = new Date(m.expiresAt);
+          return new Date() <= expirationDate;
+        }
+        return true;
+      }).length
     : 0;
   const totalCount = modules.length;
+  const allCompleted = completedCount === totalCount && totalCount > 0;
+
+  // Filter modules: if all completed and within 6-month window, hide them
+  // If expired or not all completed, show them
+  const visibleModules = modules.filter((module) => {
+    if (!allCompleted) return true; // Show all if not all completed
+    
+    const moduleProgress = progress?.modules[module.id];
+    if (!moduleProgress?.completedAt) return true; // Show incomplete modules
+    
+    // If all completed, check expiration
+    if (moduleProgress.expiresAt) {
+      const expirationDate = new Date(moduleProgress.expiresAt);
+      const now = new Date();
+      // Show if expired (past 6-month deadline)
+      return now > expirationDate;
+    }
+    
+    // If no expiration date but all completed, hide it
+    return false;
+  });
 
   return (
     <div>
       {/* Training Status Header */}
       <TrainingStatusHeader employeeId={employeeId} />
 
+      {/* Show message if all modules completed and within deadline */}
+      {allCompleted && visibleModules.length === 0 && (
+        <div
+          style={{
+            padding: "2rem",
+            background: "#d1fae5",
+            border: "2px solid #16a34a",
+            borderRadius: "12px",
+            textAlign: "center",
+            marginBottom: "1.5rem",
+          }}
+        >
+          <div style={{ fontSize: "1.25rem", fontWeight: "600", color: "#065f46", marginBottom: "0.5rem" }}>
+            🎉 All Training Complete!
+          </div>
+          <div style={{ fontSize: "0.875rem", color: "#047857" }}>
+            You have completed all required training modules. Your certification is valid for 6 months.
+            {progress?.nextRecertDueAt && (
+              <div style={{ marginTop: "0.5rem", fontWeight: "600" }}>
+                Recertification due: {new Date(progress.nextRecertDueAt).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Module Cards Grid */}
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        {modules.map((module) => {
+        {visibleModules.map((module) => {
           const moduleProgress = progress?.modules[module.id];
           const status = getModuleStatus(module, moduleProgress);
 

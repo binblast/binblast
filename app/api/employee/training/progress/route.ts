@@ -44,11 +44,27 @@ export async function GET(req: NextRequest) {
       const progressDoc = progressSnapshot.docs[0];
       const data = progressDoc.data();
       
+      // Serialize modules with proper date handling
+      const modules: Record<string, any> = {};
+      const rawModules = data.modules || {};
+      
+      for (const [moduleId, moduleData: any] of Object.entries(rawModules)) {
+        modules[moduleId] = {
+          ...moduleData,
+          startedAt: moduleData.startedAt?.toDate?.()?.toISOString(),
+          completedAt: moduleData.completedAt?.toDate?.()?.toISOString(),
+          expiresAt: moduleData.expiresAt?.toDate?.()?.toISOString(),
+          lastAttemptAt: moduleData.lastAttemptAt?.toDate?.()?.toISOString(),
+          lastFailedAt: moduleData.lastFailedAt?.toDate?.()?.toISOString(),
+          updatedAt: moduleData.updatedAt?.toDate?.()?.toISOString(),
+        };
+      }
+      
       return NextResponse.json({
         id: progressDoc.id,
         employeeId: data.employeeId,
         currentModuleOrder: data.currentModuleOrder || 1,
-        modules: data.modules || {},
+        modules,
         certificates: data.certificates || [],
         nextRecertDueAt: data.nextRecertDueAt?.toDate?.()?.toISOString(),
         overallStatus: data.overallStatus || "not_started",
