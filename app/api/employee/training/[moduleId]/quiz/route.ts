@@ -124,15 +124,20 @@ export async function POST(
     const attemptNumber = attemptsSnapshot.size + 1;
 
     // Store quiz attempt
-    await addDoc(quizAttemptsRef, {
-      employeeId,
-      moduleId,
-      attemptNumber,
-      answers,
-      score,
-      passed,
-      completedAt: serverTimestamp(),
-    });
+    try {
+      await addDoc(quizAttemptsRef, {
+        employeeId,
+        moduleId,
+        attemptNumber,
+        answers,
+        score,
+        passed,
+        completedAt: serverTimestamp(),
+      });
+    } catch (attemptError: any) {
+      console.error("[Quiz API] Error storing quiz attempt:", attemptError);
+      throw new Error(`Failed to store quiz attempt: ${attemptError.message}`);
+    }
 
     // Get existing progress
     let existingProgress = 0;
@@ -167,18 +172,23 @@ export async function POST(
       updateData.lastFailedAt = serverTimestamp();
     }
 
-    if (!trainingSnapshot.empty) {
-      // Update existing record
-      const docRef = trainingSnapshot.docs[0].ref;
-      const existingData = trainingSnapshot.docs[0].data();
-      updateData.progress = passed ? 100 : Math.max(existingData.progress || 0, score);
-      await updateDoc(docRef, updateData);
-    } else {
-      // Create new record
-      await addDoc(trainingRef, {
-        ...updateData,
-        pdfViewed: false,
-      });
+    try {
+      if (!trainingSnapshot.empty) {
+        // Update existing record
+        const docRef = trainingSnapshot.docs[0].ref;
+        const existingData = trainingSnapshot.docs[0].data();
+        updateData.progress = passed ? 100 : Math.max(existingData.progress || 0, score);
+        await updateDoc(docRef, updateData);
+      } else {
+        // Create new record
+        await addDoc(trainingRef, {
+          ...updateData,
+          pdfViewed: false,
+        });
+      }
+    } catch (trainingError: any) {
+      console.error("[Quiz API] Error updating employeeTraining:", trainingError);
+      throw new Error(`Failed to update training progress: ${trainingError.message}`);
     }
 
     // Also update trainingProgress collection
@@ -241,42 +251,52 @@ export async function POST(
         overallStatus = "in_progress";
       }
 
-      await updateDoc(progressDocRef, {
-        modules,
-        overallStatus,
-        updatedAt: serverTimestamp(),
-      });
+      try {
+        await updateDoc(progressDocRef, {
+          modules,
+          overallStatus,
+          updatedAt: serverTimestamp(),
+        });
+      } catch (updateError: any) {
+        console.error("[Quiz API] Error updating trainingProgress:", updateError);
+        throw new Error(`Failed to update training progress: ${updateError.message}`);
+      }
     } else {
       // Create new progress document if it doesn't exist
-      const progressDocRef = doc(progressRef);
-      const modules: any = {};
-      
-      modules[moduleId] = {
-        startedAt: serverTimestamp(),
-        attempts: attemptNumber,
-        score,
-        lastAttemptAt: serverTimestamp(),
-        pdfViewed: false,
-        failed: !passed,
-        lastFailedAt: !passed ? serverTimestamp() : undefined,
-        status: passed ? "passed" : "failed",
-      };
+      try {
+        const progressDocRef = doc(progressRef);
+        const modules: any = {};
+        
+        modules[moduleId] = {
+          startedAt: serverTimestamp(),
+          attempts: attemptNumber,
+          score,
+          lastAttemptAt: serverTimestamp(),
+          pdfViewed: false,
+          failed: !passed,
+          lastFailedAt: !passed ? serverTimestamp() : undefined,
+          status: passed ? "passed" : "failed",
+        };
 
-      if (passed) {
-        modules[moduleId].completedAt = serverTimestamp();
-        const expirationDate = new Date();
-        expirationDate.setMonth(expirationDate.getMonth() + 6);
-        modules[moduleId].expiresAt = Timestamp.fromDate(expirationDate);
+        if (passed) {
+          modules[moduleId].completedAt = serverTimestamp();
+          const expirationDate = new Date();
+          expirationDate.setMonth(expirationDate.getMonth() + 6);
+          modules[moduleId].expiresAt = Timestamp.fromDate(expirationDate);
+        }
+
+        await setDoc(progressDocRef, {
+          employeeId,
+          currentModuleOrder: 1,
+          modules,
+          certificates: [],
+          overallStatus: passed ? "in_progress" : "not_started",
+          updatedAt: serverTimestamp(),
+        });
+      } catch (createError: any) {
+        console.error("[Quiz API] Error creating trainingProgress:", createError);
+        throw new Error(`Failed to create training progress: ${createError.message}`);
       }
-
-      await setDoc(progressDocRef, {
-        employeeId,
-        currentModuleOrder: 1,
-        modules,
-        certificates: [],
-        overallStatus: passed ? "in_progress" : "not_started",
-        updatedAt: serverTimestamp(),
-      });
     }
 
     return NextResponse.json({
@@ -286,9 +306,20 @@ export async function POST(
       attemptNumber,
     });
   } catch (error: any) {
-    console.error("Error submitting quiz:", error);
+    console.error("[Quiz API] Error submitting quiz:", error);
+    console.error("[Quiz API] Error stack:", error?.stack);
+    console.error("[Quiz API] Error details:", {
+      message: error?.message,
+      code: error?.code,
+      name: error?.name,
+      moduleId,
+      employeeId: body?.employeeId,
+    });
     return NextResponse.json(
-      { error: error.message || "Failed to submit quiz" },
+      { 
+        error: error.message || "Failed to submit quiz",
+        details: process.env.NODE_ENV === "development" ? error.stack : undefined
+      },
       { status: 500 }
     );
   }

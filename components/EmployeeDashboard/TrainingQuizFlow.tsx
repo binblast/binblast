@@ -120,24 +120,49 @@ export function TrainingQuizFlow({
       setSubmitted(true);
 
       // Submit to API
-      const response = await fetch(`/api/employee/training/${moduleId}/quiz`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          employeeId,
-          answers: Object.entries(answers).map(([index, selectedAnswer]) => ({
-            questionId: `q-${index}`,
-            selectedAnswer,
-            isCorrect: results[Number(index)],
-          })),
-          score: calculatedScore,
-          passed,
-        }),
-      });
+      let response;
+      try {
+        response = await fetch(`/api/employee/training/${moduleId}/quiz`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            employeeId,
+            answers: Object.entries(answers).map(([index, selectedAnswer]) => ({
+              questionId: `q-${index}`,
+              selectedAnswer,
+              isCorrect: results[Number(index)],
+            })),
+            score: calculatedScore,
+            passed,
+          }),
+        });
+      } catch (fetchError: any) {
+        console.error("[Quiz Flow] Network error during fetch:", fetchError);
+        throw new Error(`Network error: ${fetchError.message || "Failed to connect to server"}`);
+      }
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(errorData.error || `Failed to save quiz results: ${response.status} ${response.statusText}`);
+        let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.details || errorMessage;
+          console.error("[Quiz Flow] API error response:", errorData);
+        } catch (parseError) {
+          console.error("[Quiz Flow] Failed to parse error response:", parseError);
+          const text = await response.text().catch(() => "");
+          console.error("[Quiz Flow] Raw error response:", text);
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Verify response is valid JSON
+      const result = await response.json().catch((parseError) => {
+        console.error("[Quiz Flow] Failed to parse success response:", parseError);
+        throw new Error("Invalid response from server");
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Quiz submission failed");
       }
 
       // Mark module as complete if passed
