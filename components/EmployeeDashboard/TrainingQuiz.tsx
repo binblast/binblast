@@ -308,7 +308,7 @@ export function TrainingQuiz({
 
           {/* Action Buttons */}
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-            {score < passingScore && (
+            {score < passingScore ? (
               <button
                 onClick={handleRetake}
                 style={{
@@ -322,8 +322,22 @@ export function TrainingQuiz({
                   cursor: "pointer",
                 }}
               >
-                Retake Quiz
+                Retake Quiz (Unlimited Retries)
               </button>
+            ) : (
+              <div
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  background: "#d1fae5",
+                  color: "#065f46",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                }}
+              >
+                ✅ Training Complete! You can return to the training list.
+              </div>
             )}
           </div>
         </div>

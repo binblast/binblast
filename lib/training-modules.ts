@@ -69,10 +69,34 @@ export const TRAINING_MODULES: TrainingModuleConfig[] = [
           ],
           correctAnswer: 1,
           explanation: "Your primary responsibility is to provide excellent cleaning service and maintain professional conduct at all times."
+        },
+        {
+          id: "welcome-4",
+          question: "What should you prioritize when completing cleanings?",
+          options: [
+            "Speed over quality",
+            "Quality over speed - take time to do the job right",
+            "Skipping difficult stops",
+            "Avoiding photo documentation"
+          ],
+          correctAnswer: 1,
+          explanation: "Always prioritize quality over speed. Take the time to do the job right, following all safety and quality standards."
+        },
+        {
+          id: "welcome-5",
+          question: "What must you complete before being assigned routes?",
+          options: [
+            "Nothing, routes are assigned immediately",
+            "All required training modules",
+            "Only safety training",
+            "Only photo documentation training"
+          ],
+          correctAnswer: 1,
+          explanation: "You must complete all required training modules before being assigned routes. Training ensures you understand safety, quality, and company standards."
         }
       ],
       passingScore: 80,
-      minQuestions: 3
+      minQuestions: 5
     },
     required: true,
     requiredForPayment: false,
@@ -134,10 +158,22 @@ export const TRAINING_MODULES: TrainingModuleConfig[] = [
           ],
           correctAnswer: 1,
           explanation: "Always treat customer property with respect and care. This includes bins, gates, driveways, and any other property."
+        },
+        {
+          id: "safety-5",
+          question: "What should you do if you encounter needles or medical waste?",
+          options: [
+            "Clean it carefully",
+            "Do not touch it, stop immediately, document with photos if safe, and contact your operator",
+            "Move it to a different location",
+            "Ignore it and continue"
+          ],
+          correctAnswer: 1,
+          explanation: "Never handle needles or medical waste. Stop immediately, document the situation with photos if safe to do so, and contact your operator immediately."
         }
       ],
       passingScore: 80,
-      minQuestions: 4
+      minQuestions: 5
     },
     required: true,
     requiredForPayment: false,
@@ -199,10 +235,22 @@ export const TRAINING_MODULES: TrainingModuleConfig[] = [
           ],
           correctAnswer: 2,
           explanation: "Always document significant damage, flag the issue, and notify your operator. Do not attempt repairs yourself."
+        },
+        {
+          id: "cleaning-5",
+          question: "What quality standards must be met before marking a stop complete?",
+          options: [
+            "No residue at bottom, no visible grime on exterior, clean lid, and area left neat",
+            "Just spray the bin",
+            "Only clean if it looks dirty",
+            "Quick rinse is sufficient"
+          ],
+          correctAnswer: 0,
+          explanation: "Quality standards require: no residue at bottom, no visible grime on exterior, clean lid, and area left neat before marking complete."
         }
       ],
       passingScore: 80,
-      minQuestions: 4
+      minQuestions: 5
     },
     required: true,
     requiredForPayment: false,
@@ -406,10 +454,22 @@ export const TRAINING_MODULES: TrainingModuleConfig[] = [
           ],
           correctAnswer: 1,
           explanation: "Always acknowledge route changes, update your route accordingly, and proceed as directed by your operator."
+        },
+        {
+          id: "route-5",
+          question: "What should you do before starting your route?",
+          options: [
+            "Start immediately without checking",
+            "Review assigned stops, check route order, verify equipment, and contact operator if you have questions",
+            "Skip difficult stops",
+            "Work in any order you prefer"
+          ],
+          correctAnswer: 1,
+          explanation: "Before starting: review your assigned stops, check the route order, verify you have all necessary equipment, and contact your operator if you have questions."
         }
       ],
       passingScore: 80,
-      minQuestions: 4
+      minQuestions: 5
     },
     required: true,
     requiredForPayment: false,

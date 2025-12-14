@@ -13,6 +13,33 @@ interface TrainingModuleViewerProps {
   pdfViewed: boolean;
 }
 
+// Simple Markdown to HTML converter
+function markdownToHtml(markdown: string): string {
+  let html = markdown
+    // Headers
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    // Bold
+    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+    // Lists
+    .replace(/^- (.*$)/gim, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+    // Line breaks
+    .replace(/\n\n/gim, '</p><p>')
+    .replace(/\n/gim, '<br>');
+  
+  // Wrap in paragraphs
+  html = '<p>' + html + '</p>';
+  
+  // Clean up empty paragraphs
+  html = html.replace(/<p><\/p>/gim, '');
+  html = html.replace(/<p>(<[h|u])/gim, '$1');
+  html = html.replace(/(<\/[h|u]>)<\/p>/gim, '$1');
+  
+  return html;
+}
+
 export function TrainingModuleViewer({
   moduleId,
   moduleName,
@@ -26,18 +53,37 @@ export function TrainingModuleViewer({
   const [viewed, setViewed] = useState(pdfViewed);
   const [loading, setLoading] = useState(true);
   const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [markdownContent, setMarkdownContent] = useState<string | null>(null);
+  const [showMarkdown, setShowMarkdown] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  // Fetch Markdown content as fallback
+  useEffect(() => {
+    const fetchMarkdownContent = async () => {
+      try {
+        const response = await fetch(`/api/employee/training/${moduleId}/content`);
+        if (response.ok) {
+          const data = await response.json();
+          setMarkdownContent(data.content);
+        }
+      } catch (err) {
+        console.error("Error fetching Markdown content:", err);
+      }
+    };
+    
+    fetchMarkdownContent();
+  }, [moduleId]);
 
   useEffect(() => {
     // Mark as viewed after a delay (user has had time to view)
-    if (!viewed && pdfUrl && pdfLoaded) {
+    if (!viewed && (pdfLoaded || showMarkdown)) {
       const timer = setTimeout(() => {
         setViewed(true);
         onPdfViewed();
       }, 5000); // Mark as viewed after 5 seconds of viewing
       return () => clearTimeout(timer);
     }
-  }, [pdfUrl, viewed, pdfLoaded, onPdfViewed]);
+  }, [pdfUrl, viewed, pdfLoaded, showMarkdown, onPdfViewed]);
 
   // Reset loading state when PDF URL changes
   useEffect(() => {
@@ -70,16 +116,33 @@ export function TrainingModuleViewer({
         const iframeDoc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
         const bodyText = iframeDoc?.body?.innerText || "";
         if (bodyText.includes("404") || bodyText.includes("not found") || bodyText.includes("could not be found")) {
-          setError("The PDF file could not be found. Please contact support if this issue persists.");
-          setPdfLoaded(false);
+          // PDF not found, show Markdown fallback if available
+          if (markdownContent) {
+            setShowMarkdown(true);
+            setPdfLoaded(false);
+            setError(null);
+          } else {
+            setError("The PDF file could not be found. Please contact support if this issue persists.");
+            setPdfLoaded(false);
+          }
         } else {
           setPdfLoaded(true);
+          setShowMarkdown(false);
           setError(null);
         }
       } catch (e) {
-        // Cross-origin restrictions may prevent access, but PDF likely loaded if no error thrown
-        setPdfLoaded(true);
-        setError(null);
+        // Cross-origin restrictions may prevent access
+        // Wait a bit to see if PDF loads, otherwise show Markdown
+        setTimeout(() => {
+          if (!pdfLoaded && markdownContent) {
+            setShowMarkdown(true);
+            setPdfLoaded(false);
+            setError(null);
+          } else {
+            setPdfLoaded(true);
+            setError(null);
+          }
+        }, 2000);
       }
     } else {
       setPdfLoaded(true);
@@ -90,7 +153,13 @@ export function TrainingModuleViewer({
   const handleIframeError = () => {
     setLoading(false);
     setPdfLoaded(false);
-    setError("Failed to load PDF. The file may not be available. Please try downloading it instead or contact support.");
+    // Show Markdown fallback if available
+    if (markdownContent) {
+      setShowMarkdown(true);
+      setError(null);
+    } else {
+      setError("Failed to load PDF. The file may not be available. Please try downloading it instead or contact support.");
+    }
   };
 
   const handleMarkViewed = () => {
@@ -154,7 +223,7 @@ export function TrainingModuleViewer({
         </button>
       </div>
 
-      {/* PDF Viewer */}
+      {/* PDF Viewer or Markdown Content */}
       <div
         style={{
           border: "2px solid #e5e7eb",
@@ -165,7 +234,7 @@ export function TrainingModuleViewer({
           position: "relative",
         }}
       >
-        {loading && (
+        {loading && !showMarkdown && (
           <div
             style={{
               position: "absolute",
@@ -196,24 +265,38 @@ export function TrainingModuleViewer({
             <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>Loading PDF...</span>
           </div>
         )}
-        <iframe
-          ref={iframeRef}
-          src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
-          style={{
-            width: "100%",
-            height: "calc(100vh - 300px)",
-            minHeight: "700px",
-            border: "none",
-            display: loading && error ? "none" : "block",
-          }}
-          onLoad={handleIframeLoad}
-          onError={handleIframeError}
-          title={moduleName}
-          allow="fullscreen"
-        />
+        {showMarkdown && markdownContent ? (
+          <div
+            style={{
+              padding: "2rem",
+              maxHeight: "calc(100vh - 300px)",
+              minHeight: "700px",
+              overflowY: "auto",
+              lineHeight: "1.6",
+              color: "#111827",
+            }}
+            dangerouslySetInnerHTML={{ __html: markdownToHtml(markdownContent) }}
+          />
+        ) : (
+          <iframe
+            ref={iframeRef}
+            src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
+            style={{
+              width: "100%",
+              height: "calc(100vh - 300px)",
+              minHeight: "700px",
+              border: "none",
+              display: loading && error ? "none" : "block",
+            }}
+            onLoad={handleIframeLoad}
+            onError={handleIframeError}
+            title={moduleName}
+            allow="fullscreen"
+          />
+        )}
       </div>
 
-      {error && (
+      {error && !showMarkdown && (
         <div
           style={{
             padding: "1rem",
@@ -229,6 +312,21 @@ export function TrainingModuleViewer({
           <div style={{ marginTop: "0.75rem", fontSize: "0.875rem" }}>
             You can still try downloading the PDF using the button above, or contact support if the issue persists.
           </div>
+        </div>
+      )}
+      {showMarkdown && (
+        <div
+          style={{
+            padding: "0.75rem",
+            background: "#dbeafe",
+            border: "1px solid #93c5fd",
+            borderRadius: "6px",
+            fontSize: "0.875rem",
+            color: "#1e40af",
+            marginBottom: "1rem",
+          }}
+        >
+          ℹ️ PDF not yet available. Displaying training content from Markdown.
         </div>
       )}
 
@@ -292,7 +390,7 @@ export function TrainingModuleViewer({
             color: "#92400e",
           }}
         >
-          ⚠️ Please review the PDF material before taking the quiz.
+          ⚠️ Please review the training material before taking the quiz.
         </div>
       )}
     </div>

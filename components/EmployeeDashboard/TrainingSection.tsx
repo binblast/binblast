@@ -336,8 +336,17 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
           employeeId={employeeId}
           questions={moduleConfig.quiz.questions}
           passingScore={moduleConfig.quiz.passingScore}
-          onQuizComplete={(passed, score) => handleQuizComplete(selectedModuleId, passed, score)}
-          onRetake={handleBackToList}
+          onQuizComplete={(passed, score) => {
+            handleQuizComplete(selectedModuleId, passed, score);
+            // If passed, go back to list. If failed, stay on quiz for retry.
+            if (passed) {
+              handleBackToList();
+            }
+          }}
+          onRetake={() => {
+            // Reset quiz state - allows unlimited retries
+            // The TrainingQuiz component handles the reset internally
+          }}
         />
       </div>
     );
