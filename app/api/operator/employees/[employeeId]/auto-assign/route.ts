@@ -6,6 +6,7 @@ import {
   findMatchingCustomers,
   balanceWorkload,
   calculateWorkload,
+  clusterCustomersByProximity,
   AssignmentResult,
 } from "@/lib/zone-assignment";
 
@@ -83,13 +84,13 @@ export async function POST(
       employeeCounties
     );
 
-    // Determine how many to assign
+    // Cluster customers by proximity
+    const clusters = clusterCustomersByProximity(matchingCustomers, 5); // 5 mile threshold
+
+    // Determine how many customers to assign
     const targetAssignments = maxAssignments
       ? Math.min(maxAssignments, workloadBalance.canAssign)
       : workloadBalance.canAssign;
-
-    // Limit to available customers
-    const customersToAssign = matchingCustomers.slice(0, targetAssignments);
 
     const result: AssignmentResult = {
       assigned: 0,
@@ -99,46 +100,75 @@ export async function POST(
       details: [],
     };
 
-    // Assign customers
-    for (const customer of customersToAssign) {
-      try {
-        const customerRef = doc(db, "scheduledCleanings", customer.id);
-        await updateDoc(customerRef, {
-          assignedEmployeeId: employeeId,
-          assignedEmployeeName: employeeName,
-          assignmentSource: "auto",
-          assignedAt: serverTimestamp(),
-          jobStatus: "pending",
-          updatedAt: serverTimestamp(),
-        });
+    // Assign customers by cluster (ensuring nearby customers are assigned together)
+    let assignedCount = 0;
+    const assignedCustomerIds = new Set<string>();
 
-        result.assigned++;
-        result.details.push({
-          customerId: customer.id,
-          action: "assigned",
+    for (const cluster of clusters) {
+      // Check if we can assign this entire cluster
+      if (assignedCount + cluster.length > targetAssignments) {
+        // Can't fit entire cluster, skip it
+        cluster.forEach((customer) => {
+          result.skipped++;
+          result.details.push({
+            customerId: customer.id,
+            action: "skipped",
+            reason: "Workload balance limit reached - cluster too large",
+          });
         });
-      } catch (error: any) {
-        result.errors.push(`Failed to assign customer ${customer.id}: ${error.message}`);
-        result.details.push({
-          customerId: customer.id,
-          action: "error",
-          reason: error.message,
-        });
+        continue;
+      }
+
+      // Assign entire cluster
+      for (const customer of cluster) {
+        try {
+          const customerRef = doc(db, "scheduledCleanings", customer.id);
+          await updateDoc(customerRef, {
+            assignedEmployeeId: employeeId,
+            assignedEmployeeName: employeeName,
+            assignmentSource: "auto",
+            assignedAt: serverTimestamp(),
+            jobStatus: "pending",
+            updatedAt: serverTimestamp(),
+          });
+
+          result.assigned++;
+          assignedCount++;
+          assignedCustomerIds.add(customer.id);
+          result.details.push({
+            customerId: customer.id,
+            action: "assigned",
+          });
+        } catch (error: any) {
+          result.errors.push(`Failed to assign customer ${customer.id}: ${error.message}`);
+          result.details.push({
+            customerId: customer.id,
+            action: "error",
+            reason: error.message,
+          });
+        }
+      }
+
+      // Stop if we've reached the target
+      if (assignedCount >= targetAssignments) {
+        break;
       }
     }
 
-    // Add skipped customers to details
-    const skippedCount = matchingCustomers.length - customersToAssign.length;
-    if (skippedCount > 0) {
-      result.skipped = skippedCount;
-      matchingCustomers.slice(targetAssignments).forEach((customer) => {
-        result.details.push({
-          customerId: customer.id,
-          action: "skipped",
-          reason: "Workload balance limit reached",
-        });
-      });
-    }
+    // Add remaining unassigned customers to skipped
+    matchingCustomers.forEach((customer) => {
+      if (!assignedCustomerIds.has(customer.id)) {
+        const detail = result.details.find(d => d.customerId === customer.id);
+        if (!detail) {
+          result.skipped++;
+          result.details.push({
+            customerId: customer.id,
+            action: "skipped",
+            reason: "Workload balance limit reached",
+          });
+        }
+      }
+    });
 
     return NextResponse.json({
       success: true,

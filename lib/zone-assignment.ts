@@ -31,6 +31,22 @@ const MAX_CUSTOMERS_PER_EMPLOYEE = 40;
 const ESTIMATED_HOURS_PER_CUSTOMER = 0.5; // 30 minutes per customer
 
 /**
+ * Calculate distance between two coordinates using Haversine formula
+ * Returns distance in miles
+ */
+export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959; // Earth's radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
  * Get all employees covering the same zones
  */
 export async function getEmployeesInSameZones(
@@ -234,5 +250,89 @@ export async function balanceWorkload(
   const canAssign = Math.max(0, targetCount - currentCount);
 
   return { targetCount, currentCount, canAssign };
+}
+
+/**
+ * Cluster customers by geographic proximity
+ * Groups customers within a threshold distance together
+ */
+export function clusterCustomersByProximity(
+  customers: Array<{ id: string; latitude?: number; longitude?: number; city?: string; county?: string; [key: string]: any }>,
+  maxDistance: number = 5 // miles
+): Array<Array<{ id: string; [key: string]: any }>> {
+  // Separate customers with and without coordinates
+  const customersWithCoords = customers.filter(c => c.latitude && c.longitude);
+  const customersWithoutCoords = customers.filter(c => !c.latitude || !c.longitude);
+
+  const clusters: Array<Array<{ id: string; [key: string]: any }>> = [];
+
+  // Cluster customers with coordinates using nearest neighbor approach
+  const unassigned = [...customersWithCoords];
+  
+  while (unassigned.length > 0) {
+    // Start a new cluster with the first unassigned customer
+    const cluster: Array<{ id: string; [key: string]: any }> = [];
+    const seed = unassigned.shift()!;
+    cluster.push(seed);
+
+    // Find all customers within maxDistance of any customer in the cluster
+    let foundMore = true;
+    while (foundMore) {
+      foundMore = false;
+      for (let i = unassigned.length - 1; i >= 0; i--) {
+        const candidate = unassigned[i];
+        if (!candidate.latitude || !candidate.longitude) continue;
+
+        // Check if candidate is within maxDistance of any customer in cluster
+        let isNearby = false;
+        for (const clusterMember of cluster) {
+          if (!clusterMember.latitude || !clusterMember.longitude) continue;
+          
+          const distance = calculateDistance(
+            clusterMember.latitude,
+            clusterMember.longitude,
+            candidate.latitude,
+            candidate.longitude
+          );
+
+          if (distance <= maxDistance) {
+            isNearby = true;
+            break;
+          }
+        }
+
+        if (isNearby) {
+          cluster.push(candidate);
+          unassigned.splice(i, 1);
+          foundMore = true;
+        }
+      }
+    }
+
+    clusters.push(cluster);
+  }
+
+  // Group customers without coordinates by city/county
+  const locationGroups = new Map<string, Array<{ id: string; [key: string]: any }>>();
+  
+  customersWithoutCoords.forEach((customer) => {
+    const locationKey = `${customer.city || ""}_${customer.county || ""}`.trim() || "unknown";
+    if (!locationGroups.has(locationKey)) {
+      locationGroups.set(locationKey, []);
+    }
+    locationGroups.get(locationKey)!.push(customer);
+  });
+
+  // Add location-based groups as clusters
+  locationGroups.forEach((group) => {
+    if (group.length > 0) {
+      clusters.push(group);
+    }
+  });
+
+  // Sort clusters by size (larger clusters first for efficiency)
+  clusters.sort((a, b) => b.length - a.length);
+
+  return clusters;
 }
 
