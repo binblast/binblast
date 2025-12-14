@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 
+export const dynamic = 'force-dynamic';
+
 function getWeekStartDate(date: Date): string {
   const d = new Date(date);
   const day = d.getDay();
