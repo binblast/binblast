@@ -18,6 +18,8 @@ interface Stop {
   operatorNotes?: string;
   binCount?: number;
   completedAt?: any;
+  status?: string;
+  jobStatus?: string;
 }
 
 interface ViewProofModalProps {
