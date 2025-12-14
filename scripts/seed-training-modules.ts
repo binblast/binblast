@@ -61,7 +61,7 @@ async function seedTrainingModules() {
     }
 
     const firestore = await safeImportFirestore();
-    const { collection, doc, setDoc, serverTimestamp } = firestore;
+    const { collection, doc, setDoc, getDoc, serverTimestamp } = firestore;
 
     const trainingModulesRef = collection(db, "trainingModules");
 
@@ -98,7 +98,7 @@ async function seedTrainingModules() {
         const moduleRef = doc(trainingModulesRef, module.id);
         
         // Check if module already exists
-        const existingDoc = await moduleRef.get();
+        const existingDoc = await getDoc(moduleRef);
         
         if (existingDoc.exists()) {
           // Update existing module but preserve pdfUrl if it exists
