@@ -162,62 +162,95 @@ export async function GET(
       });
     }
 
-    // Process stops to add coordinates
+    // Process stops to add coordinates (non-blocking - don't wait for geocoding)
     const processStops = async (stops: any[]): Promise<any[]> => {
-      const processedStops = await Promise.all(
+      const processedStops = await Promise.allSettled(
         stops.map(async (stop) => {
-          const coords = extractCoordinates(stop);
-          
-          // If coordinates exist, return stop with coordinates
-          if (coords.latitude && coords.longitude) {
-            return {
-              ...stop,
-              latitude: coords.latitude,
-              longitude: coords.longitude,
-            };
-          }
-
-          // Try to geocode the address
-          const address = buildAddressString(stop);
-          if (address) {
-            const geocoded = await geocodeAddress(address);
-            if (geocoded) {
-              // Store coordinates in Firestore for future use
-              try {
-                const stopRef = doc(db, "scheduledCleanings", stop.id);
-                await updateDoc(stopRef, {
-                  latitude: geocoded.latitude,
-                  longitude: geocoded.longitude,
-                });
-              } catch (error) {
-                console.error("Error storing coordinates:", error);
-              }
-              
+          try {
+            const coords = extractCoordinates(stop);
+            
+            // If coordinates exist, return stop with coordinates
+            if (coords.latitude && coords.longitude) {
               return {
                 ...stop,
-                latitude: geocoded.latitude,
-                longitude: geocoded.longitude,
+                latitude: coords.latitude,
+                longitude: coords.longitude,
               };
             }
-          }
 
-          // Return stop without coordinates if geocoding failed
-          return stop;
+            // Try to geocode the address (with timeout to prevent blocking)
+            const address = buildAddressString(stop);
+            if (address && address.trim().length > 0) {
+              try {
+                // Set a timeout for geocoding (5 seconds max per address)
+                const geocodePromise = geocodeAddress(address);
+                const timeoutPromise = new Promise<null>((resolve) => 
+                  setTimeout(() => resolve(null), 5000)
+                );
+                
+                const geocoded = await Promise.race([geocodePromise, timeoutPromise]);
+                
+                if (geocoded) {
+                  // Store coordinates in Firestore for future use (don't wait for this)
+                  const stopRef = doc(db, "scheduledCleanings", stop.id);
+                  updateDoc(stopRef, {
+                    latitude: geocoded.latitude,
+                    longitude: geocoded.longitude,
+                  }).catch((error) => {
+                    console.error("Error storing coordinates:", error);
+                  });
+                  
+                  return {
+                    ...stop,
+                    latitude: geocoded.latitude,
+                    longitude: geocoded.longitude,
+                  };
+                }
+              } catch (geocodeError) {
+                console.error("Error geocoding address:", geocodeError);
+                // Continue without coordinates
+              }
+            }
+
+            // Return stop without coordinates if geocoding failed or not attempted
+            return stop;
+          } catch (error) {
+            console.error("Error processing stop:", error);
+            // Return original stop on error
+            return stop;
+          }
         })
       );
 
-      return processedStops;
+      // Extract successful results, fallback to original stop on failure
+      return processedStops.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          console.error("Failed to process stop:", result.reason);
+          return stops[index]; // Return original stop
+        }
+      });
     };
 
     // Process both today's and upcoming stops
-    const [processedTodayStops, processedUpcomingStops] = await Promise.all([
+    // Use Promise.allSettled to ensure we return even if some geocoding fails
+    const [processedTodayStops, processedUpcomingStops] = await Promise.allSettled([
       processStops(todayStops),
       processStops(upcomingStops),
     ]);
 
+    // Extract results, fallback to original arrays on failure
+    const finalTodayStops = processedTodayStops.status === 'fulfilled' 
+      ? processedTodayStops.value 
+      : todayStops;
+    const finalUpcomingStops = processedUpcomingStops.status === 'fulfilled'
+      ? processedUpcomingStops.value
+      : upcomingStops;
+
     return NextResponse.json({
-      todayStops: processedTodayStops,
-      upcomingStops: processedUpcomingStops,
+      todayStops: finalTodayStops,
+      upcomingStops: finalUpcomingStops,
     });
   } catch (error: any) {
     console.error("Error getting stops:", error);
