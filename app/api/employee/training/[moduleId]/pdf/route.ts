@@ -24,7 +24,11 @@ export async function GET(
       );
     }
 
-    // For now, return a placeholder URL. In production, this would be a Firebase Storage URL
+    // Return PDF URL - can be:
+    // 1. module.pdfUrl (if set in training-modules.ts) - e.g., Firebase Storage URL
+    // 2. Relative path to public folder: /training-modules/${moduleId}/${pdfFileName}
+    // Note: If PDFs are stored in Firebase Storage, update module.pdfUrl in training-modules.ts
+    // If PDFs are in public/training-modules/, ensure the files exist at that path
     const pdfUrl = module.pdfUrl || `/training-modules/${moduleId}/${module.pdfFileName || `${moduleId}.pdf`}`;
 
     // Mark as viewed if requested
