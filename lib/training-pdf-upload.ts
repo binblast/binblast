@@ -88,7 +88,8 @@ export async function uploadTrainingPDF(
 export async function verifyPDFURL(url: string): Promise<boolean> {
   try {
     const response = await fetch(url, { method: "HEAD" });
-    return response.ok && response.headers.get("content-type")?.includes("application/pdf");
+    const contentType = response.headers.get("content-type");
+    return response.ok && (contentType?.includes("application/pdf") ?? false);
   } catch (error) {
     console.error("[Training PDF Upload] Error verifying PDF URL:", error);
     return false;
