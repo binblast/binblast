@@ -275,42 +275,83 @@ export async function getAuthInstance(): Promise<any> {
  * Get Firestore instance
  */
 export async function getDbInstance(): Promise<any> {
-  await initializeFirebase();
+  try {
+    await initializeFirebase();
+  } catch (initError: any) {
+    const errorMsg = typeof window !== 'undefined' 
+      ? "Firebase initialization failed (client-side)"
+      : `Firebase initialization failed (server-side): ${initError?.message || String(initError)}. Check NEXT_PUBLIC_FIREBASE_* environment variables on Vercel.`;
+    console.error("[Firebase Client]", errorMsg);
+    if (typeof window === 'undefined') {
+      // On server, log which env vars are missing
+      const missing: string[] = [];
+      if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) missing.push("NEXT_PUBLIC_FIREBASE_API_KEY");
+      if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) missing.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID");
+      if (!process.env.NEXT_PUBLIC_FIREBASE_APP_ID) missing.push("NEXT_PUBLIC_FIREBASE_APP_ID");
+      if (missing.length > 0) {
+        console.error("[Firebase Client] Missing environment variables:", missing.join(", "));
+      }
+    }
+    return null;
+  }
   
   // CRITICAL: Lazy-load firebase/firestore only when actually needed
   // This prevents webpack from code-splitting it into page chunks
   if (!db) {
-    if (!firebaseFirestoreModule) {
-      // On client side, verify Firebase is ready before importing
-      if (typeof window !== 'undefined') {
-      if (!(window as any).__firebaseAppInitialized) {
-        throw new Error("Firebase app not initialized - cannot import firebase/firestore");
+    try {
+      if (!firebaseFirestoreModule) {
+        // On client side, verify Firebase is ready before importing
+        if (typeof window !== 'undefined') {
+          if (!(window as any).__firebaseAppInitialized) {
+            throw new Error("Firebase app not initialized - cannot import firebase/firestore");
+          }
         }
+        
+        // Now safe to import - app is guaranteed to exist
+        firebaseFirestoreModule = await import("firebase/firestore");
+      }
+        
+      // Get Firestore instance (works for both client and server)
+      const app = await getFirebaseApp();
+      if (!app) {
+        const errorMsg = typeof window !== 'undefined' 
+          ? "Firebase app not available (client-side)"
+          : "Firebase app not available (server-side). Check NEXT_PUBLIC_FIREBASE_* environment variables.";
+        console.error("[Firebase Client]", errorMsg);
+        if (typeof window === 'undefined') {
+          // On server, log which env vars are missing
+          const missing: string[] = [];
+          if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) missing.push("NEXT_PUBLIC_FIREBASE_API_KEY");
+          if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) missing.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID");
+          if (!process.env.NEXT_PUBLIC_FIREBASE_APP_ID) missing.push("NEXT_PUBLIC_FIREBASE_APP_ID");
+          if (missing.length > 0) {
+            console.error("[Firebase Client] Missing environment variables:", missing.join(", "));
+          }
+        }
+        return null;
       }
       
-      // Now safe to import - app is guaranteed to exist
-      firebaseFirestoreModule = await import("firebase/firestore");
-    }
-      
-    // Get Firestore instance (works for both client and server)
-      const app = await getFirebaseApp();
-    if (!app) {
-      const errorMsg = typeof window !== 'undefined' 
-        ? "Firebase app not available (client-side)"
-        : "Firebase app not available (server-side). Check NEXT_PUBLIC_FIREBASE_* environment variables.";
-      console.error("[Firebase Client]", errorMsg);
-      return null;
-    }
-    
-    try {
+      try {
         db = firebaseFirestoreModule.getFirestore(app);
-      if (typeof window !== 'undefined') {
-        console.log("[Firebase Client] Firestore initialized (lazy-loaded)");
-      } else {
-        console.log("[Firebase Client] Firestore initialized (server-side)");
+        if (typeof window !== 'undefined') {
+          console.log("[Firebase Client] Firestore initialized (lazy-loaded)");
+        } else {
+          console.log("[Firebase Client] Firestore initialized (server-side)");
+        }
+      } catch (firestoreError: any) {
+        console.error("[Firebase Client] Failed to initialize Firestore:", firestoreError?.message || firestoreError);
+        console.error("[Firebase Client] Firestore error stack:", firestoreError?.stack);
+        if (typeof window === 'undefined') {
+          console.error("[Firebase Client] This is a server-side error. Check Vercel environment variables.");
+        }
+        return null;
       }
     } catch (error: any) {
-      console.error("[Firebase Client] Failed to initialize Firestore:", error.message);
+      console.error("[Firebase Client] Error in getDbInstance:", error?.message || String(error));
+      console.error("[Firebase Client] Error stack:", error?.stack);
+      if (typeof window === 'undefined') {
+        console.error("[Firebase Client] This is a server-side error. Check Vercel environment variables.");
+      }
       return null;
     }
   }

@@ -23,10 +23,17 @@ export async function GET(req: NextRequest) {
       if (!db) {
         console.error("[Training API] Database instance returned null");
         console.error("[Training API] Check Firebase environment variables: NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_APP_ID");
+        // Log which env vars are actually set (without values)
+        const envCheck = {
+          hasApiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          hasProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          hasAppId: !!process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        };
+        console.error("[Training API] Environment variable check:", envCheck);
         return NextResponse.json(
           { 
             error: "Database not available",
-            details: process.env.NODE_ENV === "development" ? "Firebase initialization failed. Check server logs." : undefined
+            details: process.env.NODE_ENV === "development" ? "Firebase initialization failed. Check server logs." : "Firebase initialization failed. Check Vercel environment variables."
           },
           { status: 500 }
         );
@@ -34,10 +41,17 @@ export async function GET(req: NextRequest) {
     } catch (dbError: any) {
       console.error("[Training API] Error getting database instance:", dbError?.message || dbError);
       console.error("[Training API] Database error stack:", dbError?.stack);
+      // Log which env vars are actually set (without values)
+      const envCheck = {
+        hasApiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        hasProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        hasAppId: !!process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      };
+      console.error("[Training API] Environment variable check:", envCheck);
       return NextResponse.json(
         { 
           error: "Database initialization failed",
-          details: process.env.NODE_ENV === "development" ? dbError?.message : undefined
+          details: process.env.NODE_ENV === "development" ? dbError?.message : "Check Vercel environment variables: NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_APP_ID"
         },
         { status: 500 }
       );
@@ -213,11 +227,18 @@ export async function POST(req: NextRequest) {
       db = await getDbInstance();
       if (!db) {
         console.error("[Training API POST] Database instance returned null");
-        console.error("[Training API POST] Check Firebase environment variables");
+        console.error("[Training API POST] Check Firebase environment variables: NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_APP_ID");
+        // Log which env vars are actually set (without values)
+        const envCheck = {
+          hasApiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          hasProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          hasAppId: !!process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        };
+        console.error("[Training API POST] Environment variable check:", envCheck);
         return NextResponse.json(
           { 
             error: "Database not available",
-            details: process.env.NODE_ENV === "development" ? "Firebase initialization failed. Check server logs." : undefined
+            details: process.env.NODE_ENV === "development" ? "Firebase initialization failed. Check server logs." : "Firebase initialization failed. Check Vercel environment variables."
           },
           { status: 500 }
         );
@@ -225,10 +246,17 @@ export async function POST(req: NextRequest) {
     } catch (dbError: any) {
       console.error("[Training API POST] Error getting database instance:", dbError?.message || dbError);
       console.error("[Training API POST] Database error stack:", dbError?.stack);
+      // Log which env vars are actually set (without values)
+      const envCheck = {
+        hasApiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        hasProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        hasAppId: !!process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      };
+      console.error("[Training API POST] Environment variable check:", envCheck);
       return NextResponse.json(
         { 
           error: "Database initialization failed",
-          details: process.env.NODE_ENV === "development" ? dbError?.message : undefined
+          details: process.env.NODE_ENV === "development" ? dbError?.message : "Check Vercel environment variables: NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_APP_ID"
         },
         { status: 500 }
       );
