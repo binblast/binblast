@@ -11,7 +11,7 @@ export interface TrainingModuleConfig {
   id: string;
   name: string;
   description: string;
-  type: "welcome" | "safety" | "cleaning" | "photo" | "route";
+  type: "welcome" | "safety" | "cleaning" | "sticker" | "photo" | "route" | "policies";
   pdfUrl?: string;
   pdfFileName?: string;
   quiz: {
@@ -210,6 +210,71 @@ export const TRAINING_MODULES: TrainingModuleConfig[] = [
     duration: "15 min"
   },
   {
+    id: "sticker-placement",
+    name: "Sticker Placement",
+    description: "How to properly place Bin Blast stickers",
+    type: "sticker",
+    pdfFileName: "sticker-placement.pdf",
+    quiz: {
+      questions: [
+        {
+          id: "sticker-1",
+          question: "Where should the Bin Blast sticker be placed?",
+          options: [
+            "On the lid",
+            "On the front-facing side of the bin",
+            "Anywhere on the bin",
+            "On damaged surfaces"
+          ],
+          correctAnswer: 1,
+          explanation: "The sticker should be placed on the front-facing side of the bin, at eye-level when possible, for maximum visibility."
+        },
+        {
+          id: "sticker-2",
+          question: "What should you ensure before applying the sticker?",
+          options: [
+            "The bin is dirty",
+            "The surface is clean and dry",
+            "The sticker is old",
+            "The bin is damaged"
+          ],
+          correctAnswer: 1,
+          explanation: "Always ensure the bin surface is clean and dry before applying the sticker to ensure proper adhesion."
+        },
+        {
+          id: "sticker-3",
+          question: "What should you avoid when placing stickers?",
+          options: [
+            "Placing on front-facing side",
+            "Placing on lid, damaged surfaces, or covering existing labels",
+            "Ensuring sticker is visible",
+            "Applying to clean, dry surface"
+          ],
+          correctAnswer: 1,
+          explanation: "Do not place stickers on the lid, damaged surfaces, or cover existing labels. Place on front-facing side at eye-level."
+        },
+        {
+          id: "sticker-4",
+          question: "What should you verify before leaving a stop?",
+          options: [
+            "Sticker is not needed",
+            "Sticker is properly placed, visible, secure, and not covering important information",
+            "Sticker can fall off later",
+            "Sticker placement doesn't matter"
+          ],
+          correctAnswer: 1,
+          explanation: "Before leaving, verify the sticker is properly placed, visible, secure, and not covering any important information."
+        }
+      ],
+      passingScore: 80,
+      minQuestions: 4
+    },
+    required: true,
+    requiredForPayment: false,
+    order: 4,
+    duration: "5 min"
+  },
+  {
     id: "photo-documentation",
     name: "Photo Documentation",
     description: "How to take quality completion photos (REQUIRED for payment)",
@@ -283,7 +348,7 @@ export const TRAINING_MODULES: TrainingModuleConfig[] = [
     },
     required: true,
     requiredForPayment: true,
-    order: 4,
+    order: 5,
     duration: "5 min"
   },
   {
@@ -348,7 +413,84 @@ export const TRAINING_MODULES: TrainingModuleConfig[] = [
     },
     required: true,
     requiredForPayment: false,
-    order: 5,
+    order: 6,
+    duration: "10 min"
+  },
+  {
+    id: "company-policies",
+    name: "Company Policies & Accountability",
+    description: "Employee accountability, payment rules, and company policies",
+    type: "policies",
+    pdfFileName: "company-policies.pdf",
+    quiz: {
+      questions: [
+        {
+          id: "policies-1",
+          question: "What is required to receive payment for a stop?",
+          options: [
+            "Just completing the cleaning",
+            "Proper cleaning, required photos, and marking stop complete",
+            "Only photos",
+            "Automatic payment"
+          ],
+          correctAnswer: 1,
+          explanation: "Payment requires proper cleaning following SOP, required photos (inside and outside), and marking the stop complete in the system."
+        },
+        {
+          id: "policies-2",
+          question: "How often must you complete re-certification training?",
+          options: [
+            "Never",
+            "Every 6 months",
+            "Every year",
+            "Only when asked"
+          ],
+          correctAnswer: 1,
+          explanation: "Re-certification training is required every 6 months to maintain your certification and eligibility for route assignments."
+        },
+        {
+          id: "policies-3",
+          question: "What happens if your training certification expires?",
+          options: [
+            "Nothing",
+            "You can still work",
+            "You cannot receive route assignments until re-certified",
+            "You get a warning"
+          ],
+          correctAnswer: 2,
+          explanation: "Expired training certification means you cannot receive route assignments until you complete re-certification training."
+        },
+        {
+          id: "policies-4",
+          question: "What may result from repeated policy violations?",
+          options: [
+            "Nothing",
+            "Route removal, retraining, or termination",
+            "Automatic promotion",
+            "Extra pay"
+          ],
+          correctAnswer: 1,
+          explanation: "Repeated policy violations may result in route removal, retraining requirements, or termination depending on the severity."
+        },
+        {
+          id: "policies-5",
+          question: "What are you accountable for as a Bin Blast employee?",
+          options: [
+            "Nothing specific",
+            "Quality of work, following safety protocols, submitting documentation, and maintaining certification",
+            "Only showing up",
+            "Only completing routes"
+          ],
+          correctAnswer: 1,
+          explanation: "You are accountable for the quality of your work, following all safety protocols, submitting required documentation, communicating issues, and maintaining your certification."
+        }
+      ],
+      passingScore: 80,
+      minQuestions: 5
+    },
+    required: true,
+    requiredForPayment: false,
+    order: 7,
     duration: "10 min"
   }
 ];
