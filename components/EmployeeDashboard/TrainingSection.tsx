@@ -60,6 +60,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
   const loadTrainingModules = async () => {
     try {
       setLoading(true);
+      setError(null);
       const requiredModules = getRequiredModules();
       
       // Load progress for each module
@@ -87,11 +88,16 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                 certificationStatus: data.certificationStatus || "not_started",
                 requiredForPayment: module.requiredForPayment || false,
               };
+            } else {
+              // API returned an error, but we'll still show the module with default values
+              console.warn(`API error for module ${module.id}:`, response.status, response.statusText);
             }
           } catch (error) {
+            // Network or other error - still show module with defaults
             console.error(`Error loading module ${module.id}:`, error);
           }
           
+          // Return default module data even if API call failed
           return {
             id: module.id,
             name: module.name,
@@ -111,7 +117,22 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
       setModules(modulesWithProgress);
     } catch (error) {
       console.error("Error loading training modules:", error);
-      setError("Failed to load training modules");
+      setError("Failed to load training modules. Please try refreshing the page.");
+      // Still show modules with default values so user can interact
+      const requiredModules = getRequiredModules();
+      setModules(requiredModules.map(module => ({
+        id: module.id,
+        name: module.name,
+        description: module.description,
+        type: module.type,
+        duration: module.duration,
+        completed: false,
+        progress: 0,
+        quizAttempts: 0,
+        pdfViewed: false,
+        certificationStatus: "not_started" as CertificationStatus,
+        requiredForPayment: module.requiredForPayment || false,
+      })));
     } finally {
       setLoading(false);
     }

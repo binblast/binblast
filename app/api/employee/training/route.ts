@@ -19,14 +19,28 @@ export async function GET(req: NextRequest) {
     const { getFirebaseApp } = await import("@/lib/firebase-client");
     const app = await getFirebaseApp();
     if (!app) {
+      console.error("[Training API] Firebase app not initialized");
       return NextResponse.json(
         { error: "Firebase app not initialized" },
         { status: 500 }
       );
     }
 
+    // Verify app is in Firebase registry before importing Firestore
+    const { getApps } = await import("firebase/app");
+    const apps = getApps();
+    const appInRegistry = apps.find((a: any) => a === app);
+    if (!appInRegistry) {
+      console.error("[Training API] Firebase app not found in registry");
+      return NextResponse.json(
+        { error: "Firebase app not properly initialized" },
+        { status: 500 }
+      );
+    }
+
     const db = await getDbInstance();
     if (!db) {
+      console.error("[Training API] Database instance not available");
       return NextResponse.json(
         { error: "Database not available" },
         { status: 500 }
@@ -177,14 +191,28 @@ export async function POST(req: NextRequest) {
     const { getFirebaseApp } = await import("@/lib/firebase-client");
     const app = await getFirebaseApp();
     if (!app) {
+      console.error("[Training API POST] Firebase app not initialized");
       return NextResponse.json(
         { error: "Firebase app not initialized" },
         { status: 500 }
       );
     }
 
+    // Verify app is in Firebase registry before importing Firestore
+    const { getApps } = await import("firebase/app");
+    const apps = getApps();
+    const appInRegistry = apps.find((a: any) => a === app);
+    if (!appInRegistry) {
+      console.error("[Training API POST] Firebase app not found in registry");
+      return NextResponse.json(
+        { error: "Firebase app not properly initialized" },
+        { status: 500 }
+      );
+    }
+
     const db = await getDbInstance();
     if (!db) {
+      console.error("[Training API POST] Database instance not available");
       return NextResponse.json(
         { error: "Database not available" },
         { status: 500 }
