@@ -37,31 +37,36 @@ export function CertificateWidget({ employeeId, employeeName }: CertificateWidge
   };
 
   const handleDownloadPDF = async () => {
-    // TODO: Implement PDF download
-    // For now, open certificate in new window for printing
-    const printWindow = window.open("", "_blank");
-    if (printWindow && certificate) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Training Certificate</title>
-            <style>
-              body { margin: 0; padding: 20px; }
-              @media print {
-                body { margin: 0; }
-              }
-            </style>
-          </head>
-          <body>
-            <div id="certificate"></div>
-            <script>
-              // Render certificate component
-              // This is a simplified version - full implementation would use React rendering
-              document.getElementById('certificate').innerHTML = 'Certificate rendering...';
-            </script>
-          </body>
-        </html>
-      `);
+    if (!certificate) return;
+
+    try {
+      // Generate certificate HTML
+      const { generateCertificateHTML } = await import("@/lib/certificate-pdf");
+      const html = generateCertificateHTML({
+        employeeName,
+        certificateId: certificate.certId,
+        issueDate: certificate.issuedAt,
+        expiryDate: certificate.expiresAt,
+        scoreSummary: certificate.scoreSummary,
+      });
+
+      // Open in new window for printing/downloading
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(html);
+        printWindow.document.close();
+        
+        // Wait for content to load, then trigger print dialog
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+          }, 250);
+        };
+      }
+    } catch (error) {
+      console.error("Error generating certificate PDF:", error);
+      // Fallback: open certificate view
+      setShowCertificate(true);
     }
   };
 

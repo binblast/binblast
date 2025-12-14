@@ -4,6 +4,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { TrainingModuleViewer } from "./TrainingModuleViewer";
 import { TrainingQuiz } from "./TrainingQuiz";
+import { TrainingList } from "./TrainingList";
+import { LessonReader } from "./LessonReader";
+import { TrainingQuizFlow } from "./TrainingQuizFlow";
 import { getRequiredModules, getModuleById } from "@/lib/training-modules";
 import { CertificationStatus } from "@/lib/training-certification";
 
@@ -28,7 +31,48 @@ interface TrainingSectionProps {
   employeeId: string;
 }
 
-type ViewMode = "list" | "pdf" | "quiz";
+type ViewMode = "list" | "pdf" | "quiz" | "lesson" | "quiz-flow";
+
+// Wrapper component for quiz flow to handle module loading
+function QuizFlowWrapper({ moduleId, employeeId }: { moduleId: string; employeeId: string }) {
+  const [moduleData, setModuleData] = useState<any>(null);
+  const [loadingModule, setLoadingModule] = useState(true);
+
+  useEffect(() => {
+    const loadModule = async () => {
+      try {
+        const response = await fetch(`/api/training/modules/${moduleId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setModuleData(data);
+        }
+      } catch (err) {
+        console.error("Error loading module:", err);
+      } finally {
+        setLoadingModule(false);
+      }
+    };
+    loadModule();
+  }, [moduleId]);
+
+  if (loadingModule || !moduleData) {
+    return (
+      <div style={{ padding: "2rem", textAlign: "center" }}>
+        Loading quiz...
+      </div>
+    );
+  }
+
+  return (
+    <TrainingQuizFlow
+      moduleId={moduleId}
+      moduleName={moduleData.title}
+      employeeId={employeeId}
+      questions={moduleData.quiz || []}
+      passingScore={80}
+    />
+  );
+}
 
 export function TrainingSection({ employeeId }: TrainingSectionProps) {
   const [modules, setModules] = useState<TrainingModuleProgress[]>([]);
@@ -39,6 +83,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | undefined>(undefined);
   const [loadingPdf, setLoadingPdf] = useState(false);
+  const [useFirestore, setUseFirestore] = useState<boolean | null>(null); // null = checking, true = use Firestore, false = use legacy
   const isMountedRef = useRef(true);
   const isLoadingRef = useRef(false);
 
@@ -144,15 +189,39 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
     }
   }, [employeeId]);
 
+  // Check if Firestore modules are available
+  useEffect(() => {
+    const checkFirestoreAvailability = async () => {
+      try {
+        const response = await fetch("/api/training/modules?active=true");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.modules && data.modules.length > 0) {
+            setUseFirestore(true);
+            return;
+          }
+        }
+      } catch (err) {
+        console.log("Firestore modules not available, using legacy system");
+      }
+      setUseFirestore(false);
+    };
+
+    checkFirestoreAvailability();
+  }, []);
+
   useEffect(() => {
     isMountedRef.current = true;
-    loadTrainingModules();
+    if (useFirestore === false) {
+      // Only load legacy modules if Firestore is not available
+      loadTrainingModules();
+    }
     loadCertificationStatus();
     
     return () => {
       isMountedRef.current = false;
     };
-  }, [employeeId, loadTrainingModules, loadCertificationStatus]);
+  }, [employeeId, useFirestore, loadTrainingModules, loadCertificationStatus]);
 
   // Fetch PDF URL when PDF viewer is opened - MUST be before early returns
   useEffect(() => {
@@ -249,7 +318,22 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
     }
   };
 
-  if (loading) {
+  // Show new Firestore-based components if available
+  if (useFirestore === true) {
+    if (viewMode === "lesson" && selectedModuleId) {
+      return <LessonReader moduleId={selectedModuleId} employeeId={employeeId} />;
+    }
+
+    if (viewMode === "quiz-flow" && selectedModuleId) {
+      return <QuizFlowWrapper moduleId={selectedModuleId} employeeId={employeeId} />;
+    }
+
+    // Default to list view
+    return <TrainingList employeeId={employeeId} />;
+  }
+
+  // Legacy system fallback
+  if (loading || useFirestore === null) {
     return (
       <div
         style={{
@@ -265,7 +349,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
     );
   }
 
-  // Show PDF viewer or quiz if module selected
+  // Show PDF viewer or quiz if module selected (legacy)
   if (viewMode === "pdf" && selectedModuleId) {
     const module = modules.find((m) => m.id === selectedModuleId);
     const moduleConfig = getModuleById(selectedModuleId);
