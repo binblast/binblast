@@ -1553,73 +1553,342 @@ function DashboardPageContent() {
                     </h2>
                     <div style={{ 
                       display: "grid", 
-                      gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
-                      gap: "1rem",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", 
+                      gap: "1.5rem",
                           marginBottom: "1.5rem"
                     }}>
+                      {/* Direct Customers Summary */}
                       <div style={{
                         background: "#ffffff",
                         borderRadius: "12px",
                         padding: "1.5rem",
                         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                        border: "1px solid #e5e7eb"
+                        border: "1px solid #e5e7eb",
+                        display: "flex",
+                        flexDirection: "column"
                       }}>
-                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>Direct Customers</div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600" }}>Direct Customers</div>
+                        <div style={{ fontSize: "2.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1rem" }}>
                           {operatorStats.totalDirectCustomers}
                         </div>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Active:</span>
+                            <span style={{ fontWeight: "600", color: "#16a34a" }}>
+                              {operatorDirectCustomers.filter(c => c.subscriptionStatus === "active" && !c.servicePaused).length}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Paused:</span>
+                            <span style={{ fontWeight: "600", color: "#f59e0b" }}>
+                              {operatorDirectCustomers.filter(c => c.servicePaused).length}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Inactive:</span>
+                            <span style={{ fontWeight: "600", color: "#ef4444" }}>
+                              {operatorDirectCustomers.filter(c => c.subscriptionStatus !== "active" && !c.servicePaused).length}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setOperatorActiveTab("customers")}
+                          style={{
+                            marginTop: "auto",
+                            padding: "0.75rem 1rem",
+                            background: "#16a34a",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            transition: "background 0.2s"
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = "#15803d"}
+                          onMouseOut={(e) => e.currentTarget.style.background = "#16a34a"}
+                        >
+                          View All Customers →
+                        </button>
                       </div>
                       
+                      {/* Commercial Accounts Summary */}
                       <div style={{
                         background: "#ffffff",
                         borderRadius: "12px",
                         padding: "1.5rem",
                         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                        border: "1px solid #e5e7eb"
+                        border: "1px solid #e5e7eb",
+                        display: "flex",
+                        flexDirection: "column"
                       }}>
-                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>Commercial Accounts</div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600" }}>Commercial Accounts</div>
+                        <div style={{ fontSize: "2.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1rem" }}>
                           {operatorStats.totalCommercialCustomers}
                         </div>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Active Accounts:</span>
+                            <span style={{ fontWeight: "600", color: "#16a34a" }}>
+                              {operatorCommercialCustomers.filter(c => c.subscriptionStatus === "active" && !c.servicePaused).length}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Total Bins:</span>
+                            <span style={{ fontWeight: "600", color: "#111827" }}>
+                              {operatorCommercialCustomers.reduce((sum, c) => sum + (c.binsCount || 1), 0)}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Upcoming Services:</span>
+                            <span style={{ fontWeight: "600", color: "#2563eb" }}>
+                              {(() => {
+                                const today = new Date();
+                                const next7Days = new Date();
+                                next7Days.setDate(next7Days.getDate() + 7);
+                                return operatorAllCleanings.filter(c => {
+                                  const cleaningDate = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
+                                  return cleaningDate >= today && cleaningDate <= next7Days && 
+                                         c.status !== "cancelled" && 
+                                         c.status !== "completed" &&
+                                         operatorCommercialCustomers.some(ac => ac.email === c.customerEmail);
+                                }).length;
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setOperatorActiveTab("customers");
+                            // Scroll to commercial section - handled by tab switch
+                          }}
+                          style={{
+                            marginTop: "auto",
+                            padding: "0.75rem 1rem",
+                            background: "#16a34a",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            transition: "background 0.2s"
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = "#15803d"}
+                          onMouseOut={(e) => e.currentTarget.style.background = "#16a34a"}
+                        >
+                          View Commercial Accounts →
+                        </button>
                       </div>
                       
+                      {/* Upcoming Cleanings Summary */}
                       <div style={{
                         background: "#ffffff",
                         borderRadius: "12px",
                         padding: "1.5rem",
                         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                        border: "1px solid #e5e7eb"
+                        border: "1px solid #e5e7eb",
+                        display: "flex",
+                        flexDirection: "column"
                       }}>
-                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>Upcoming Cleanings</div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600" }}>Upcoming Cleanings</div>
+                        <div style={{ fontSize: "2.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1rem" }}>
                           {operatorStats.upcomingCleanings}
                         </div>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Today:</span>
+                            <span style={{ fontWeight: "600", color: "#dc2626" }}>
+                              {(() => {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const tomorrow = new Date(today);
+                                tomorrow.setDate(tomorrow.getDate() + 1);
+                                return operatorAllCleanings.filter(c => {
+                                  const cleaningDate = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
+                                  return cleaningDate >= today && cleaningDate < tomorrow && 
+                                         c.status !== "cancelled" && 
+                                         c.status !== "completed";
+                                }).length;
+                              })()}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Tomorrow:</span>
+                            <span style={{ fontWeight: "600", color: "#f59e0b" }}>
+                              {(() => {
+                                const tomorrow = new Date();
+                                tomorrow.setDate(tomorrow.getDate() + 1);
+                                tomorrow.setHours(0, 0, 0, 0);
+                                const dayAfter = new Date(tomorrow);
+                                dayAfter.setDate(dayAfter.getDate() + 1);
+                                return operatorAllCleanings.filter(c => {
+                                  const cleaningDate = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
+                                  return cleaningDate >= tomorrow && cleaningDate < dayAfter && 
+                                         c.status !== "cancelled" && 
+                                         c.status !== "completed";
+                                }).length;
+                              })()}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>This Week:</span>
+                            <span style={{ fontWeight: "600", color: "#2563eb" }}>
+                              {operatorStats.upcomingCleanings}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setOperatorActiveTab("schedule")}
+                          style={{
+                            marginTop: "auto",
+                            padding: "0.75rem 1rem",
+                            background: "#16a34a",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            transition: "background 0.2s"
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = "#15803d"}
+                          onMouseOut={(e) => e.currentTarget.style.background = "#16a34a"}
+                        >
+                          View Schedule →
+                        </button>
                       </div>
                       
+                      {/* Completed This Week Summary */}
                       <div style={{
                         background: "#ffffff",
                         borderRadius: "12px",
                         padding: "1.5rem",
                         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                        border: "1px solid #e5e7eb"
+                        border: "1px solid #e5e7eb",
+                        display: "flex",
+                        flexDirection: "column"
                       }}>
-                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>Completed This Week</div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600" }}>Completed This Week</div>
+                        <div style={{ fontSize: "2.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1rem" }}>
                           {operatorStats.cleaningsCompletedThisWeek}
                         </div>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Completion Rate:</span>
+                            <span style={{ fontWeight: "600", color: "#16a34a" }}>
+                              {(() => {
+                                const weekStart = new Date();
+                                weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                                weekStart.setHours(0, 0, 0, 0);
+                                const weekEnd = new Date(weekStart);
+                                weekEnd.setDate(weekEnd.getDate() + 7);
+                                const totalScheduled = operatorAllCleanings.filter(c => {
+                                  const cleaningDate = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
+                                  return cleaningDate >= weekStart && cleaningDate < weekEnd;
+                                }).length;
+                                if (totalScheduled === 0) return "0%";
+                                return Math.round((operatorStats.cleaningsCompletedThisWeek / totalScheduled) * 100) + "%";
+                              })()}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Avg per Day:</span>
+                            <span style={{ fontWeight: "600", color: "#111827" }}>
+                              {Math.round(operatorStats.cleaningsCompletedThisWeek / 7 * 10) / 10}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Total Scheduled:</span>
+                            <span style={{ fontWeight: "600", color: "#6b7280" }}>
+                              {(() => {
+                                const weekStart = new Date();
+                                weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                                weekStart.setHours(0, 0, 0, 0);
+                                const weekEnd = new Date(weekStart);
+                                weekEnd.setDate(weekEnd.getDate() + 7);
+                                return operatorAllCleanings.filter(c => {
+                                  const cleaningDate = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
+                                  return cleaningDate >= weekStart && cleaningDate < weekEnd;
+                                }).length;
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setOperatorActiveTab("schedule")}
+                          style={{
+                            marginTop: "auto",
+                            padding: "0.75rem 1rem",
+                            background: "#16a34a",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            transition: "background 0.2s"
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = "#15803d"}
+                          onMouseOut={(e) => e.currentTarget.style.background = "#16a34a"}
+                        >
+                          View Schedule →
+                        </button>
                       </div>
                       
+                      {/* Open Issues Summary */}
                       <div style={{
                         background: "#ffffff",
                         borderRadius: "12px",
                         padding: "1.5rem",
                         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                        border: "1px solid #e5e7eb"
+                        border: "1px solid #e5e7eb",
+                        display: "flex",
+                        flexDirection: "column"
                       }}>
-                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>Open Issues</div>
-                        <div style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600" }}>Open Issues</div>
+                        <div style={{ fontSize: "2.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1rem" }}>
                           {operatorStats.openIssues}
                         </div>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Customer Notes:</span>
+                            <span style={{ fontWeight: "600", color: "#f59e0b" }}>
+                              {operatorDirectCustomers.filter(c => c.internalNotes && c.internalNotes.trim().length > 0).length}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Commercial Notes:</span>
+                            <span style={{ fontWeight: "600", color: "#f59e0b" }}>
+                              {operatorCommercialCustomers.filter(c => c.specialInstructions && c.specialInstructions.trim().length > 0).length}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Total Issues:</span>
+                            <span style={{ fontWeight: "600", color: "#ef4444" }}>
+                              {operatorStats.openIssues}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setOperatorActiveTab("customers")}
+                          style={{
+                            marginTop: "auto",
+                            padding: "0.75rem 1rem",
+                            background: "#16a34a",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            transition: "background 0.2s"
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = "#15803d"}
+                          onMouseOut={(e) => e.currentTarget.style.background = "#16a34a"}
+                        >
+                          View All Issues →
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2010,9 +2279,29 @@ function DashboardPageContent() {
                       <>
                         {/* Customer Loyalty & Rankings */}
                         <div style={{ marginTop: "2rem", paddingTop: "2rem", borderTop: "1px solid #e5e7eb" }}>
-                          <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                      Customer Loyalty & Rankings
-                          </h3>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                            <h3 style={{ fontSize: "1.25rem", fontWeight: "600", color: "var(--text-dark)" }}>
+                              Customer Loyalty & Rankings
+                            </h3>
+                            <button
+                              onClick={() => setOperatorActiveTab("customers")}
+                              style={{
+                                padding: "0.5rem 1rem",
+                                background: "#16a34a",
+                                color: "#ffffff",
+                                border: "none",
+                                borderRadius: "8px",
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                cursor: "pointer",
+                                transition: "background 0.2s"
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = "#15803d"}
+                              onMouseOut={(e) => e.currentTarget.style.background = "#16a34a"}
+                            >
+                              View All Customers →
+                            </button>
+                          </div>
                     
                     <div style={{
                             background: "#f9fafb",
@@ -2020,55 +2309,126 @@ function DashboardPageContent() {
                       padding: "1.5rem",
                       border: "1px solid #e5e7eb"
                     }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "1rem" }}>
-                        {operatorDirectCustomers
-                          .filter(c => c.loyaltyRanking && c.loyaltyRanking !== "Getting Started")
-                          .sort((a, b) => {
-                            const levels = ["Bin Royalty", "Sanitation Superstar", "Sparkle Specialist", "Bin Boss", "Clean Freak", "Getting Started"];
-                            return levels.indexOf(a.loyaltyRanking || "Getting Started") - levels.indexOf(b.loyaltyRanking || "Getting Started");
-                          })
-                          .slice(0, 20)
-                          .map(customer => {
-                            const customerEmailLower = (customer.email || "").toLowerCase();
-                            const completedCount = operatorAllCleanings.filter(c => {
-                              const cleaningEmailLower = (c.customerEmail || "").toLowerCase();
-                                    const isCompleted = c.status === "completed" || (c as any).jobStatus === "completed";
-                                    return cleaningEmailLower === customerEmailLower && isCompleted;
-                            }).length;
-                            
+                      {/* Loyalty Tier Distribution */}
+                      {(() => {
+                        const loyaltyTiers = ["Bin Royalty", "Sanitation Superstar", "Sparkle Specialist", "Bin Boss", "Clean Freak", "Getting Started"];
+                        const tierCounts: Record<string, number> = {};
+                        operatorDirectCustomers.forEach(customer => {
+                          const tier = customer.loyaltyRanking || "Getting Started";
+                          tierCounts[tier] = (tierCounts[tier] || 0) + 1;
+                        });
+                        
+                        return (
+                          <div style={{ marginBottom: "1.5rem" }}>
+                            <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                              Tier Distribution
+                            </h4>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0.75rem" }}>
+                              {loyaltyTiers.map(tier => (
+                                <div key={tier} style={{
+                                  padding: "0.75rem",
+                                  background: "#ffffff",
+                                  borderRadius: "8px",
+                                  border: "1px solid #e5e7eb"
+                                }}>
+                                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem" }}>{tier}</div>
+                                  <div style={{ fontSize: "1.25rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                                    {tierCounts[tier] || 0}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      
+                      {/* Top Loyal Customers */}
+                      <div>
+                        <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                          Top Loyal Customers
+                        </h4>
+                        {(() => {
+                          const topCustomers = operatorDirectCustomers
+                            .filter(c => c.loyaltyRanking && c.loyaltyRanking !== "Getting Started")
+                            .map(customer => {
+                              const customerEmailLower = (customer.email || "").toLowerCase();
+                              const completedCount = operatorAllCleanings.filter(c => {
+                                const cleaningEmailLower = (c.customerEmail || "").toLowerCase();
+                                const isCompleted = c.status === "completed" || (c as any).jobStatus === "completed";
+                                return cleaningEmailLower === customerEmailLower && isCompleted;
+                              }).length;
+                              return { ...customer, completedCount };
+                            })
+                            .sort((a, b) => {
+                              const levels = ["Bin Royalty", "Sanitation Superstar", "Sparkle Specialist", "Bin Boss", "Clean Freak", "Getting Started"];
+                              const levelDiff = levels.indexOf(a.loyaltyRanking || "Getting Started") - levels.indexOf(b.loyaltyRanking || "Getting Started");
+                              if (levelDiff !== 0) return levelDiff;
+                              return b.completedCount - a.completedCount;
+                            })
+                            .slice(0, 5);
+                          
+                          if (topCustomers.length === 0) {
                             return (
-                              <div key={customer.id} style={{
-                                padding: "1rem",
-                                      background: "#ffffff",
-                                borderRadius: "8px",
-                                border: "1px solid #e5e7eb"
-                              }}>
-                                <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>
-                                  {customer.firstName} {customer.lastName}
-                                </div>
-                                <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
-                                  {customer.loyaltyRanking}
-                                </div>
-                                <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
-                                  {completedCount} completed cleanings
-                                </div>
+                              <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+                                No loyalty rankings available.
                               </div>
                             );
-                          })}
+                          }
+                          
+                          return (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "1rem" }}>
+                              {topCustomers.map(customer => (
+                                <div key={customer.id} style={{
+                                  padding: "1rem",
+                                  background: "#ffffff",
+                                  borderRadius: "8px",
+                                  border: "1px solid #e5e7eb"
+                                }}>
+                                  <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>
+                                    {customer.firstName} {customer.lastName}
+                                  </div>
+                                  <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+                                    {customer.loyaltyRanking}
+                                  </div>
+                                  <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+                                    {customer.completedCount} completed cleanings
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </div>
-                      {filteredDirectCustomers.filter(c => c.loyaltyRanking && c.loyaltyRanking !== "Getting Started").length === 0 && (
-                        <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
-                          No loyalty rankings available.
-                        </div>
-                      )}
                     </div>
                   </div>
 
                         {/* Internal Issues & Notes */}
                         <div style={{ marginTop: "2rem", paddingTop: "2rem", borderTop: "1px solid #e5e7eb" }}>
-                          <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                      Internal Issues & Notes
-                          </h3>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                            <h3 style={{ fontSize: "1.25rem", fontWeight: "600", color: "var(--text-dark)" }}>
+                              Internal Issues & Notes
+                            </h3>
+                            {operatorStats.openIssues > 0 && (
+                              <button
+                                onClick={() => setOperatorActiveTab("customers")}
+                                style={{
+                                  padding: "0.5rem 1rem",
+                                  background: "#16a34a",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  borderRadius: "8px",
+                                  fontSize: "0.875rem",
+                                  fontWeight: "600",
+                                  cursor: "pointer",
+                                  transition: "background 0.2s"
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.background = "#15803d"}
+                                onMouseOut={(e) => e.currentTarget.style.background = "#16a34a"}
+                              >
+                                View All Issues →
+                              </button>
+                            )}
+                          </div>
                     
                     <div style={{
                             background: "#f9fafb",
@@ -2081,42 +2441,94 @@ function DashboardPageContent() {
                           No open issues or notes.
                         </div>
                       ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                          {operatorDirectCustomers
-                            .filter(c => c.internalNotes && c.internalNotes.trim().length > 0)
-                            .map(customer => (
-                              <div key={customer.id} style={{
-                                padding: "1rem",
-                                background: "#fef3c7",
+                        <>
+                          {/* Issue Summary */}
+                          <div style={{ marginBottom: "1.5rem" }}>
+                            <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                              Issue Summary
+                            </h4>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem" }}>
+                              <div style={{
+                                padding: "0.75rem",
+                                background: "#ffffff",
                                 borderRadius: "8px",
-                                border: "1px solid #fde68a"
+                                border: "1px solid #e5e7eb"
                               }}>
-                                <div style={{ fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                                  {customer.firstName} {customer.lastName} ({customer.email})
-                                </div>
-                                <div style={{ fontSize: "0.875rem", color: "#92400e" }}>
-                                  {customer.internalNotes}
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem" }}>Customer Notes</div>
+                                <div style={{ fontSize: "1.25rem", fontWeight: "700", color: "#f59e0b" }}>
+                                  {operatorDirectCustomers.filter(c => c.internalNotes && c.internalNotes.trim().length > 0).length}
                                 </div>
                               </div>
-                            ))}
-                          {operatorCommercialCustomers
-                            .filter(c => c.specialInstructions && c.specialInstructions.trim().length > 0)
-                            .map(account => (
-                              <div key={account.id} style={{
-                                padding: "1rem",
-                                background: "#fef3c7",
+                              <div style={{
+                                padding: "0.75rem",
+                                background: "#ffffff",
                                 borderRadius: "8px",
-                                border: "1px solid #fde68a"
+                                border: "1px solid #e5e7eb"
                               }}>
-                                <div style={{ fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                                  {account.businessName} ({account.email})
-                                </div>
-                                <div style={{ fontSize: "0.875rem", color: "#92400e" }}>
-                                  {account.specialInstructions}
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem" }}>Commercial Notes</div>
+                                <div style={{ fontSize: "1.25rem", fontWeight: "700", color: "#f59e0b" }}>
+                                  {operatorCommercialCustomers.filter(c => c.specialInstructions && c.specialInstructions.trim().length > 0).length}
                                 </div>
                               </div>
-                            ))}
-                        </div>
+                              <div style={{
+                                padding: "0.75rem",
+                                background: "#ffffff",
+                                borderRadius: "8px",
+                                border: "1px solid #e5e7eb"
+                              }}>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem" }}>Total Issues</div>
+                                <div style={{ fontSize: "1.25rem", fontWeight: "700", color: "#ef4444" }}>
+                                  {operatorStats.openIssues}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Recent Issues */}
+                          <div>
+                            <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                              Recent Issues & Notes
+                            </h4>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                              {operatorDirectCustomers
+                                .filter(c => c.internalNotes && c.internalNotes.trim().length > 0)
+                                .slice(0, 5)
+                                .map(customer => (
+                                  <div key={customer.id} style={{
+                                    padding: "1rem",
+                                    background: "#fef3c7",
+                                    borderRadius: "8px",
+                                    border: "1px solid #fde68a"
+                                  }}>
+                                    <div style={{ fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                                      {customer.firstName} {customer.lastName} ({customer.email})
+                                    </div>
+                                    <div style={{ fontSize: "0.875rem", color: "#92400e" }}>
+                                      {customer.internalNotes}
+                                    </div>
+                                  </div>
+                                ))}
+                              {operatorCommercialCustomers
+                                .filter(c => c.specialInstructions && c.specialInstructions.trim().length > 0)
+                                .slice(0, 5)
+                                .map(account => (
+                                  <div key={account.id} style={{
+                                    padding: "1rem",
+                                    background: "#fef3c7",
+                                    borderRadius: "8px",
+                                    border: "1px solid #fde68a"
+                                  }}>
+                                    <div style={{ fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                                      {account.businessName} ({account.email})
+                                    </div>
+                                    <div style={{ fontSize: "0.875rem", color: "#92400e" }}>
+                                      {account.specialInstructions}
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        </>
                       )}
                     </div>
                         </div>
