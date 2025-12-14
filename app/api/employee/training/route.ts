@@ -1,7 +1,6 @@
 // app/api/employee/training/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,6 +15,16 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Ensure Firebase app is initialized first
+    const { getFirebaseApp } = await import("@/lib/firebase-client");
+    const app = await getFirebaseApp();
+    if (!app) {
+      return NextResponse.json(
+        { error: "Firebase app not initialized" },
+        { status: 500 }
+      );
+    }
+
     const db = await getDbInstance();
     if (!db) {
       return NextResponse.json(
@@ -24,8 +33,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Use safeImportFirestore to ensure Firebase is initialized before importing Firestore
-    const firestore = await safeImportFirestore();
+    // Import Firestore functions directly after ensuring app is initialized
+    const firestore = await import("firebase/firestore");
     const { collection, query, where, getDocs } = firestore;
 
     // If moduleId provided, return single module progress
@@ -164,6 +173,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Ensure Firebase app is initialized first
+    const { getFirebaseApp } = await import("@/lib/firebase-client");
+    const app = await getFirebaseApp();
+    if (!app) {
+      return NextResponse.json(
+        { error: "Firebase app not initialized" },
+        { status: 500 }
+      );
+    }
+
     const db = await getDbInstance();
     if (!db) {
       return NextResponse.json(
@@ -172,8 +191,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Use safeImportFirestore to ensure Firebase is initialized before importing Firestore
-    const firestore = await safeImportFirestore();
+    // Import Firestore functions directly after ensuring app is initialized
+    const firestore = await import("firebase/firestore");
     const { collection, query, where, getDocs, addDoc, updateDoc, serverTimestamp } = firestore;
 
     const trainingRef = collection(db, "employeeTraining");
