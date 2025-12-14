@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { FirebaseGate } from "@/components/FirebaseGate";
 import { FirebaseErrorBoundary } from "@/components/FirebaseErrorBoundary";
@@ -10,11 +10,16 @@ import { FirebaseErrorBoundary } from "@/components/FirebaseErrorBoundary";
 export const metadata: Metadata = {
   title: "Bin Blast Co. - Professional Trash Bin Cleaning Service",
   description: "Professional trash bin cleaning service that keeps your bins fresh, sanitized, and odor-free.",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=5",
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
@@ -25,7 +30,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
         <link rel="icon" href="/logo.png" type="image/png" />
       </head>
       <body>
