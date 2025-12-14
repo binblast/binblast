@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getModuleById } from "@/lib/training-modules";
-import { calculateExpiration } from "@/lib/training-certification";
 
 export async function GET(
   req: NextRequest,
@@ -67,26 +66,6 @@ export async function POST(
     }
 
     const firestore = await safeImportFirestore();
-    const { collection, doc, getDoc } = firestore;
-
-    // Fetch module from Firestore
-    const modulesRef = collection(db, "trainingModules");
-    const moduleRef = doc(modulesRef, moduleId);
-    const moduleDoc = await getDoc(moduleRef);
-
-    if (!moduleDoc.exists()) {
-      // Fallback to hardcoded modules
-      const module = getModuleById(moduleId);
-      if (!module) {
-        return NextResponse.json(
-          { error: "Module not found" },
-          { status: 404 }
-        );
-      }
-    }
-
-    const moduleData = moduleDoc.exists() ? moduleDoc.data() : getModuleById(moduleId);
-    const moduleName = moduleData?.title || moduleData?.name || "Unknown Module";
     const {
       collection,
       query,
@@ -95,10 +74,33 @@ export async function POST(
       addDoc,
       updateDoc,
       doc,
+      getDoc,
       setDoc,
       serverTimestamp,
       Timestamp,
     } = firestore;
+
+    // Fetch module from Firestore (optional - we don't strictly need it for quiz submission)
+    // But we'll try to get the module name for better logging
+    let moduleName = "Training Module";
+    try {
+      const modulesRef = collection(db, "trainingModules");
+      const moduleRef = doc(modulesRef, moduleId);
+      const moduleDoc = await getDoc(moduleRef);
+      if (moduleDoc.exists()) {
+        const moduleData = moduleDoc.data();
+        moduleName = moduleData.title || moduleData.name || moduleName;
+      } else {
+        // Fallback to hardcoded modules
+        const module = getModuleById(moduleId);
+        if (module) {
+          moduleName = module.name;
+        }
+      }
+    } catch (moduleError) {
+      console.warn("Could not fetch module name, using default:", moduleError);
+      // Continue anyway - module name is not critical for quiz submission
+    }
 
     // Get current training progress
     const trainingRef = collection(db, "employeeTraining");
