@@ -170,6 +170,32 @@ export function TrainingQuizFlow({
     router.push("/employee/dashboard");
   };
 
+  const handleClaimCertificate = async () => {
+    setClaimingCertificate(true);
+    try {
+      const response = await fetch("/api/employee/training/certificate/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employeeId,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to claim certificate");
+      }
+
+      // Redirect to training list with success message
+      router.push("/employee/dashboard?tab=training&certificateClaimed=true");
+    } catch (err: any) {
+      console.error("Error claiming certificate:", err);
+      alert(err.message || "Failed to claim certificate. Please try again.");
+    } finally {
+      setClaimingCertificate(false);
+    }
+  };
+
   if (submitted && score !== null) {
     const passed = score >= passingScore;
     return (
