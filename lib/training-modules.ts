@@ -1,4 +1,9 @@
 // lib/training-modules.ts
+/**
+ * @deprecated This file is kept for backward compatibility during migration.
+ * New code should use Firestore API routes (/api/training/modules) instead.
+ * This file will be removed after full migration to Firestore is complete.
+ */
 export interface QuizQuestion {
   id: string;
   question: string;

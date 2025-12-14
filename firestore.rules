@@ -426,6 +426,51 @@ service cloud.firestore {
       allow delete: if false; // Issues cannot be deleted
     }
 
+    // Training modules collection - stores training module definitions
+    match /trainingModules/{moduleId} {
+      // Everyone can read active modules
+      // Employees can read all modules (for training)
+      // Server-side can read/write all
+      allow read: if true; // Public read for training materials
+      allow create, update, delete: if isAdminOrOperator() || request.auth == null; // Only admin/operator/server can modify
+    }
+
+    // Training progress collection - tracks employee training progress
+    match /trainingProgress/{progressId} {
+      // Employees can read their own progress
+      // Admins and operators can read all progress
+      // Server-side can read/write all
+      allow read: if (
+        (isAuthenticated() && resource.data.employeeId == request.auth.uid)
+        || isAdminOrOperator()
+        || request.auth == null
+      );
+      allow create, update: if (
+        (isAuthenticated() && request.resource.data.employeeId == request.auth.uid)
+        || isAdminOrOperator()
+        || request.auth == null
+      );
+      allow delete: if false; // Progress records should not be deleted
+    }
+
+    // Legacy employeeTraining collection - keep for backward compatibility during migration
+    match /employeeTraining/{trainingId} {
+      // Employees can read their own training records
+      // Admins and operators can read all
+      // Server-side can read/write all
+      allow read: if (
+        (isAuthenticated() && resource.data.employeeId == request.auth.uid)
+        || isAdminOrOperator()
+        || request.auth == null
+      );
+      allow create, update: if (
+        (isAuthenticated() && request.resource.data.employeeId == request.auth.uid)
+        || isAdminOrOperator()
+        || request.auth == null
+      );
+      allow delete: if false; // Training records should not be deleted
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

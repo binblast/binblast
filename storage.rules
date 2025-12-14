@@ -1,0 +1,41 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email == "binblastcompany@gmail.com";
+    }
+    
+    // Helper function to check if user is operator
+    function isOperator() {
+      return isAuthenticated() && request.auth.token.email == "keyjboone@gmail.com";
+    }
+    
+    // Helper function to check if user is admin or operator
+    function isAdminOrOperator() {
+      return isAdmin() || isOperator();
+    }
+    
+    // Training modules - public read access, authenticated write for admin/operator
+    match /training-modules/{fileName} {
+      // Public read access for all training PDFs
+      allow read: if true;
+      
+      // Only admin/operator can upload/update training PDFs
+      allow write: if isAdminOrOperator();
+      
+      // Delete only by admin/operator
+      allow delete: if isAdminOrOperator();
+    }
+    
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

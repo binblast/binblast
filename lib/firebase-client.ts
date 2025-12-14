@@ -209,6 +209,8 @@ export async function getFirebaseApp(): Promise<any> {
 // Lazy-loaded Firebase modules (imported only when needed)
 let firebaseAuthModule: any = null;
 let firebaseFirestoreModule: any = null;
+let firebaseStorageModule: any = null;
+let storage: any = undefined;
 
 /**
  * Get Firebase auth instance
@@ -357,6 +359,65 @@ export async function getDbInstance(): Promise<any> {
   }
   
   return db;
+}
+
+/**
+ * Get Firebase Storage instance
+ */
+export async function getStorageInstance(): Promise<any> {
+  try {
+    await initializeFirebase();
+  } catch (initError: any) {
+    const errorMsg = typeof window !== 'undefined' 
+      ? "Firebase initialization failed (client-side)"
+      : `Firebase initialization failed (server-side): ${initError?.message || String(initError)}. Check NEXT_PUBLIC_FIREBASE_* environment variables on Vercel.`;
+    console.error("[Firebase Client]", errorMsg);
+    return null;
+  }
+  
+  // CRITICAL: Lazy-load firebase/storage only when actually needed
+  if (!storage) {
+    try {
+      if (!firebaseStorageModule) {
+        // On client side, verify Firebase is ready before importing
+        if (typeof window !== 'undefined') {
+          if (!(window as any).__firebaseAppInitialized) {
+            throw new Error("Firebase app not initialized - cannot import firebase/storage");
+          }
+        }
+        
+        // Now safe to import - app is guaranteed to exist
+        firebaseStorageModule = await import("firebase/storage");
+      }
+        
+      // Get Storage instance
+      const app = await getFirebaseApp();
+      if (!app) {
+        const errorMsg = typeof window !== 'undefined' 
+          ? "Firebase app not available (client-side)"
+          : "Firebase app not available (server-side). Check NEXT_PUBLIC_FIREBASE_* environment variables.";
+        console.error("[Firebase Client]", errorMsg);
+        return null;
+      }
+      
+      try {
+        storage = firebaseStorageModule.getStorage(app);
+        if (typeof window !== 'undefined') {
+          console.log("[Firebase Client] Storage initialized (lazy-loaded)");
+        } else {
+          console.log("[Firebase Client] Storage initialized (server-side)");
+        }
+      } catch (storageError: any) {
+        console.error("[Firebase Client] Failed to initialize Storage:", storageError?.message || storageError);
+        return null;
+      }
+    } catch (error: any) {
+      console.error("[Firebase Client] Error in getStorageInstance:", error?.message || String(error));
+      return null;
+    }
+  }
+  
+  return storage;
 }
 
 /**
