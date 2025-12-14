@@ -58,14 +58,6 @@ export async function POST(
       );
     }
 
-    const module = getModuleById(moduleId);
-    if (!module) {
-      return NextResponse.json(
-        { error: "Module not found" },
-        { status: 404 }
-      );
-    }
-
     const db = await getDbInstance();
     if (!db) {
       return NextResponse.json(
@@ -75,6 +67,26 @@ export async function POST(
     }
 
     const firestore = await safeImportFirestore();
+    const { collection, doc, getDoc } = firestore;
+
+    // Fetch module from Firestore
+    const modulesRef = collection(db, "trainingModules");
+    const moduleRef = doc(modulesRef, moduleId);
+    const moduleDoc = await getDoc(moduleRef);
+
+    if (!moduleDoc.exists()) {
+      // Fallback to hardcoded modules
+      const module = getModuleById(moduleId);
+      if (!module) {
+        return NextResponse.json(
+          { error: "Module not found" },
+          { status: 404 }
+        );
+      }
+    }
+
+    const moduleData = moduleDoc.exists() ? moduleDoc.data() : getModuleById(moduleId);
+    const moduleName = moduleData?.title || moduleData?.name || "Unknown Module";
     const {
       collection,
       query,
@@ -128,7 +140,7 @@ export async function POST(
     const updateData: any = {
       employeeId,
       moduleId,
-      moduleName: module.name,
+      moduleName: moduleName,
       quizScore: score,
       quizAttempts: attemptNumber,
       lastQuizAttempt: serverTimestamp(),
@@ -139,7 +151,10 @@ export async function POST(
       const completedAt = new Date();
       updateData.completed = true;
       updateData.completedAt = serverTimestamp();
-      updateData.expiresAt = calculateExpiration(completedAt);
+      // Calculate expiration (6 months from completion)
+      const expirationDate = new Date();
+      expirationDate.setMonth(expirationDate.getMonth() + 6);
+      updateData.expiresAt = Timestamp.fromDate(expirationDate);
       updateData.certificationStatus = "completed";
       updateData.failed = false;
     } else {

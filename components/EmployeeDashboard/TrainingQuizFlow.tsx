@@ -136,7 +136,8 @@ export function TrainingQuizFlow({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save quiz results");
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || `Failed to save quiz results: ${response.status} ${response.statusText}`);
       }
 
       // Mark module as complete if passed
@@ -167,6 +168,11 @@ export function TrainingQuizFlow({
       }
     } catch (err: any) {
       console.error("Error submitting quiz:", err);
+      // Show error to user
+      alert(err.message || "Failed to save quiz results. Please try again.");
+      // Reset submitted state so user can retry
+      setSubmitted(false);
+      setScore(null);
     } finally {
       setSubmitting(false);
     }
