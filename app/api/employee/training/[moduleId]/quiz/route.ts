@@ -129,7 +129,9 @@ export async function POST(
       );
     }
 
-    const firestore = await safeImportFirestore();
+    // Ensure Firebase is initialized, then import Firestore functions directly
+    await getDbInstance();
+    const firestore = await import("firebase/firestore");
     const {
       collection,
       query,
