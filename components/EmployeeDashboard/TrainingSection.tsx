@@ -2,125 +2,157 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { TrainingModuleViewer } from "./TrainingModuleViewer";
+import { TrainingQuiz } from "./TrainingQuiz";
+import { getRequiredModules, getModuleById } from "@/lib/training-modules";
+import { CertificationStatus } from "@/lib/training-certification";
 
-interface TrainingModule {
+interface TrainingModuleProgress {
   id: string;
   name: string;
   description: string;
-  type: "video" | "guide" | "safety" | "best-practices";
-  content: string; // URL or text content
-  duration?: string;
+  type: string;
+  duration: string;
   completed: boolean;
   progress: number;
+  completedAt?: Date;
+  expiresAt?: Date;
+  quizScore?: number;
+  quizAttempts: number;
+  pdfViewed: boolean;
+  certificationStatus: CertificationStatus;
+  requiredForPayment: boolean;
 }
 
 interface TrainingSectionProps {
   employeeId: string;
 }
 
+type ViewMode = "list" | "pdf" | "quiz";
+
 export function TrainingSection({ employeeId }: TrainingSectionProps) {
-  const [modules, setModules] = useState<TrainingModule[]>([]);
+  const [modules, setModules] = useState<TrainingModuleProgress[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedModule, setSelectedModule] = useState<TrainingModule | null>(null);
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [certificationStatus, setCertificationStatus] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | undefined>(undefined);
+  const [loadingPdf, setLoadingPdf] = useState(false);
 
   useEffect(() => {
     loadTrainingModules();
+    loadCertificationStatus();
   }, [employeeId]);
+
+  const loadCertificationStatus = async () => {
+    try {
+      const response = await fetch(`/api/employee/certification-status?employeeId=${employeeId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCertificationStatus(data);
+      }
+    } catch (error) {
+      console.error("Error loading certification status:", error);
+    }
+  };
 
   const loadTrainingModules = async () => {
     try {
-      const response = await fetch(`/api/employee/training?employeeId=${employeeId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setModules(data.modules || getDefaultModules());
-      } else {
-        setModules(getDefaultModules());
-      }
+      setLoading(true);
+      const requiredModules = getRequiredModules();
+      
+      // Load progress for each module
+      const modulesWithProgress = await Promise.all(
+        requiredModules.map(async (module) => {
+          try {
+            const response = await fetch(
+              `/api/employee/training?employeeId=${employeeId}&moduleId=${module.id}`
+            );
+            if (response.ok) {
+              const data = await response.json();
+              return {
+                id: module.id,
+                name: module.name,
+                description: module.description,
+                type: module.type,
+                duration: module.duration,
+                completed: data.completed || false,
+                progress: data.progress || 0,
+                completedAt: data.completedAt ? new Date(data.completedAt) : undefined,
+                expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
+                quizScore: data.quizScore,
+                quizAttempts: data.quizAttempts || 0,
+                pdfViewed: data.pdfViewed || false,
+                certificationStatus: data.certificationStatus || "not_started",
+                requiredForPayment: module.requiredForPayment || false,
+              };
+            }
+          } catch (error) {
+            console.error(`Error loading module ${module.id}:`, error);
+          }
+          
+          return {
+            id: module.id,
+            name: module.name,
+            description: module.description,
+            type: module.type,
+            duration: module.duration,
+            completed: false,
+            progress: 0,
+            quizAttempts: 0,
+            pdfViewed: false,
+            certificationStatus: "not_started" as CertificationStatus,
+            requiredForPayment: module.requiredForPayment || false,
+          };
+        })
+      );
+
+      setModules(modulesWithProgress);
     } catch (error) {
       console.error("Error loading training modules:", error);
-      setModules(getDefaultModules());
+      setError("Failed to load training modules");
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultModules = (): TrainingModule[] => {
-    return [
-      {
-        id: "welcome",
-        name: "Welcome to Bin Blast Co.",
-        description: "Introduction to Bin Blast Co. and your role",
-        type: "guide",
-        content: "Welcome! This guide will help you understand your role and responsibilities.",
-        duration: "5 min",
-        completed: false,
-        progress: 0,
-      },
-      {
-        id: "safety-basics",
-        name: "Safety Basics",
-        description: "Essential safety protocols and procedures",
-        type: "safety",
-        content: "Always wear protective gloves and follow safety guidelines when handling bins.",
-        duration: "10 min",
-        completed: false,
-        progress: 0,
-      },
-      {
-        id: "cleaning-process",
-        name: "Cleaning Process",
-        description: "Step-by-step guide to cleaning bins effectively",
-        type: "guide",
-        content: "1. Inspect bins for damage\n2. Apply cleaning solution\n3. Scrub thoroughly\n4. Rinse completely\n5. Apply Bin Blast sticker",
-        duration: "15 min",
-        completed: false,
-        progress: 0,
-      },
-      {
-        id: "sticker-placement",
-        name: "Sticker Placement",
-        description: "How to properly place Bin Blast stickers",
-        type: "best-practices",
-        content: "Place sticker on the front of the bin, ensuring it's visible and secure.",
-        duration: "5 min",
-        completed: false,
-        progress: 0,
-      },
-      {
-        id: "photo-documentation",
-        name: "Photo Documentation",
-        description: "How to take quality completion photos",
-        type: "best-practices",
-        content: "Take clear photos showing the cleaned bins and sticker placement.",
-        duration: "5 min",
-        completed: false,
-        progress: 0,
-      },
-    ];
+  const handlePdfViewed = async (moduleId: string) => {
+    try {
+      await fetch(`/api/employee/training/${moduleId}/pdf?employeeId=${employeeId}&markViewed=true`);
+      setModules((prev) =>
+        prev.map((m) =>
+          m.id === moduleId ? { ...m, pdfViewed: true } : m
+        )
+      );
+    } catch (error) {
+      console.error("Error marking PDF as viewed:", error);
+    }
   };
 
-  const markModuleComplete = async (moduleId: string) => {
-    try {
-      const response = await fetch(`/api/employee/training`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          employeeId,
-          moduleId,
-          completed: true,
-        }),
-      });
-
-      if (response.ok) {
-        setModules((prev) =>
-          prev.map((m) =>
-            m.id === moduleId ? { ...m, completed: true, progress: 100 } : m
-          )
-        );
-      }
-    } catch (error) {
-      console.error("Error marking module complete:", error);
+  const handleQuizComplete = async (moduleId: string, passed: boolean, score: number) => {
+    if (passed) {
+      await loadTrainingModules();
+      await loadCertificationStatus();
+      // Return to list view after successful completion
+      setViewMode("list");
+      setSelectedModuleId(null);
     }
+  };
+
+  const handleStartTraining = async (moduleId: string) => {
+    setSelectedModuleId(moduleId);
+    setViewMode("pdf");
+  };
+
+  const handleStartQuiz = async (moduleId: string) => {
+    setSelectedModuleId(moduleId);
+    setViewMode("quiz");
+  };
+
+  const handleBackToList = () => {
+    setViewMode("list");
+    setSelectedModuleId(null);
   };
 
   const getTypeColor = (type: string) => {
@@ -128,11 +160,30 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
       case "safety":
         return { bg: "#fef2f2", text: "#dc2626", border: "#fecaca" };
       case "guide":
+      case "welcome":
         return { bg: "#eff6ff", text: "#2563eb", border: "#bfdbfe" };
       case "best-practices":
+      case "photo":
         return { bg: "#f0fdf4", text: "#16a34a", border: "#bbf7d0" };
+      case "cleaning":
+        return { bg: "#fef3c7", text: "#d97706", border: "#fde68a" };
+      case "route":
+        return { bg: "#e0e7ff", text: "#6366f1", border: "#c7d2fe" };
       default:
         return { bg: "#f9fafb", text: "#6b7280", border: "#e5e7eb" };
+    }
+  };
+
+  const getCertificationBadge = (status: CertificationStatus) => {
+    switch (status) {
+      case "completed":
+        return { icon: "✅", text: "Certified", color: "#065f46", bg: "#d1fae5" };
+      case "expired":
+        return { icon: "⚠️", text: "Expired", color: "#991b1b", bg: "#fee2e2" };
+      case "in_progress":
+        return { icon: "🔄", text: "In Progress", color: "#92400e", bg: "#fef3c7" };
+      default:
+        return { icon: "❌", text: "Not Started", color: "#6b7280", bg: "#f3f4f6" };
     }
   };
 
@@ -152,8 +203,188 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
     );
   }
 
+  // Fetch PDF URL when PDF viewer is opened
+  useEffect(() => {
+    if (viewMode === "pdf" && selectedModuleId) {
+      setLoadingPdf(true);
+      const fetchPdfUrl = async () => {
+        try {
+          const response = await fetch(`/api/employee/training/${selectedModuleId}/pdf?employeeId=${employeeId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setPdfUrl(data.pdfUrl);
+          }
+        } catch (error) {
+          console.error("Error fetching PDF URL:", error);
+        } finally {
+          setLoadingPdf(false);
+        }
+      };
+      fetchPdfUrl();
+    } else {
+      setPdfUrl(undefined);
+    }
+  }, [viewMode, selectedModuleId, employeeId]);
+
+  // Show PDF viewer or quiz if module selected
+  if (viewMode === "pdf" && selectedModuleId) {
+    const module = modules.find((m) => m.id === selectedModuleId);
+    const moduleConfig = getModuleById(selectedModuleId);
+    if (!module || !moduleConfig) return null;
+
+    return (
+      <div>
+        <button
+          onClick={handleBackToList}
+          style={{
+            marginBottom: "1rem",
+            padding: "0.5rem 1rem",
+            background: "#f3f4f6",
+            color: "#111827",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            cursor: "pointer",
+          }}
+        >
+          ← Back to Training List
+        </button>
+        {loadingPdf ? (
+          <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
+            Loading PDF...
+          </div>
+        ) : (
+          <TrainingModuleViewer
+            moduleId={selectedModuleId}
+            moduleName={module.name}
+            pdfUrl={pdfUrl}
+            pdfFileName={moduleConfig.pdfFileName}
+            onPdfViewed={() => handlePdfViewed(selectedModuleId)}
+            onStartQuiz={() => handleStartQuiz(selectedModuleId)}
+            pdfViewed={module.pdfViewed}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (viewMode === "quiz" && selectedModuleId) {
+    const moduleConfig = getModuleById(selectedModuleId);
+    if (!moduleConfig) return null;
+
+    return (
+      <div>
+        <button
+          onClick={handleBackToList}
+          style={{
+            marginBottom: "1rem",
+            padding: "0.5rem 1rem",
+            background: "#f3f4f6",
+            color: "#111827",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            cursor: "pointer",
+          }}
+        >
+          ← Back to Training List
+        </button>
+        <TrainingQuiz
+          moduleId={selectedModuleId}
+          moduleName={moduleConfig.name}
+          employeeId={employeeId}
+          questions={moduleConfig.quiz.questions}
+          passingScore={moduleConfig.quiz.passingScore}
+          onQuizComplete={(passed, score) => handleQuizComplete(selectedModuleId, passed, score)}
+          onRetake={handleBackToList}
+        />
+      </div>
+    );
+  }
+
+  // Show certification status banner
+  const showCertificationBanner = certificationStatus && !certificationStatus.isCertified;
+
   return (
     <div>
+      {/* Certification Status Banner */}
+      {showCertificationBanner && (
+        <div
+          style={{
+            padding: "1rem",
+            background: certificationStatus.status === "expired" ? "#fee2e2" : "#fef3c7",
+            border: `1px solid ${certificationStatus.status === "expired" ? "#fecaca" : "#fde68a"}`,
+            borderRadius: "8px",
+            marginBottom: "1.5rem",
+            color: certificationStatus.status === "expired" ? "#991b1b" : "#92400e",
+          }}
+        >
+          <div style={{ fontWeight: "700", marginBottom: "0.5rem", fontSize: "1rem" }}>
+            {certificationStatus.status === "expired" ? "⚠️ Certification Expired" : "🔄 Certification In Progress"}
+          </div>
+          <div style={{ fontSize: "0.875rem" }}>
+            {certificationStatus.status === "expired"
+              ? `Your certification has expired. Please complete re-certification training. ${certificationStatus.expiredModules.length} module(s) need to be retaken.`
+              : `Complete all ${certificationStatus.totalModules} required modules to become certified. ${certificationStatus.completedModules}/${certificationStatus.totalModules} completed.`}
+          </div>
+          {certificationStatus.status === "expired" && (
+            <div style={{ fontSize: "0.75rem", marginTop: "0.5rem", fontWeight: "600" }}>
+              You cannot clock in or receive route assignments until re-certified.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Overall Progress */}
+      {certificationStatus && (
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "12px",
+            padding: "1.5rem",
+            marginBottom: "1.5rem",
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+            <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "#111827" }}>
+              Overall Certification Progress
+            </div>
+            <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+              {certificationStatus.completedModules} / {certificationStatus.totalModules} modules
+            </div>
+          </div>
+          <div
+            style={{
+              width: "100%",
+              height: "12px",
+              background: "#e5e7eb",
+              borderRadius: "6px",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: `${(certificationStatus.completedModules / certificationStatus.totalModules) * 100}%`,
+                height: "100%",
+                background: certificationStatus.isCertified ? "#16a34a" : "#f59e0b",
+                transition: "width 0.3s",
+              }}
+            />
+          </div>
+          {certificationStatus.expiresAt && (
+            <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.5rem" }}>
+              Certification expires: {new Date(certificationStatus.expiresAt).toLocaleDateString()}
+              {certificationStatus.daysUntilExpiration !== undefined && (
+                <span> ({certificationStatus.daysUntilExpiration} days remaining)</span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ marginBottom: "1.5rem" }}>
         <h2
           style={{
@@ -166,13 +397,31 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
           Training Materials
         </h2>
         <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-          Complete training modules to improve your skills and knowledge
+          Complete all modules and pass quizzes (80%+) to become certified. Re-certification required every 6 months.
         </p>
       </div>
+
+      {error && (
+        <div
+          style={{
+            padding: "1rem",
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: "8px",
+            color: "#dc2626",
+            marginBottom: "1rem",
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         {modules.map((module) => {
           const typeColors = getTypeColor(module.type);
+          const badge = getCertificationBadge(module.certificationStatus);
+          const moduleConfig = getModuleById(module.id);
+
           return (
             <div
               key={module.id}
@@ -180,7 +429,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                 background: "#ffffff",
                 borderRadius: "12px",
                 padding: "1.5rem",
-                border: `1px solid ${typeColors.border}`,
+                border: `2px solid ${typeColors.border}`,
                 boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
               }}
             >
@@ -199,6 +448,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                       alignItems: "center",
                       gap: "0.5rem",
                       marginBottom: "0.5rem",
+                      flexWrap: "wrap",
                     }}
                   >
                     <h3
@@ -210,20 +460,32 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                     >
                       {module.name}
                     </h3>
-                    {module.completed && (
+                    {module.requiredForPayment && (
                       <span
                         style={{
                           padding: "0.25rem 0.5rem",
                           borderRadius: "999px",
                           fontSize: "0.75rem",
-                          fontWeight: "600",
-                          background: "#d1fae5",
-                          color: "#065f46",
+                          fontWeight: "700",
+                          background: "#fef3c7",
+                          color: "#92400e",
                         }}
                       >
-                        Completed
+                        REQUIRED FOR PAYMENT
                       </span>
                     )}
+                    <span
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        borderRadius: "999px",
+                        fontSize: "0.75rem",
+                        fontWeight: "600",
+                        background: badge.bg,
+                        color: badge.color,
+                      }}
+                    >
+                      {badge.icon} {badge.text}
+                    </span>
                   </div>
                   <p
                     style={{
@@ -240,6 +502,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                       gap: "1rem",
                       fontSize: "0.75rem",
                       color: "#9ca3af",
+                      flexWrap: "wrap",
                     }}
                   >
                     <span
@@ -255,11 +518,25 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                       {module.type.replace("-", " ")}
                     </span>
                     {module.duration && <span>Duration: {module.duration}</span>}
+                    {module.quizScore !== undefined && (
+                      <span style={{ fontWeight: "600", color: "#111827" }}>
+                        Quiz Score: {module.quizScore}%
+                      </span>
+                    )}
+                    {module.quizAttempts > 0 && (
+                      <span>Attempts: {module.quizAttempts}</span>
+                    )}
+                    {module.expiresAt && module.completed && (
+                      <span>
+                        Expires: {new Date(module.expiresAt).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {module.progress > 0 && module.progress < 100 && (
+              {/* Progress Bar */}
+              {module.progress > 0 && (
                 <div style={{ marginBottom: "0.75rem" }}>
                   <div
                     style={{
@@ -274,7 +551,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                       style={{
                         width: `${module.progress}%`,
                         height: "100%",
-                        background: "#16a34a",
+                        background: module.completed ? "#16a34a" : "#f59e0b",
                         transition: "width 0.3s",
                       }}
                     />
@@ -291,34 +568,52 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: "0.75rem" }}>
-                <button
-                  onClick={() => setSelectedModule(module)}
-                  style={{
-                    flex: 1,
-                    padding: "0.75rem 1rem",
-                    background: "#16a34a",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    transition: "background 0.2s",
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = "#15803d";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = "#16a34a";
-                  }}
-                >
-                  {module.completed ? "Review" : "Start Training"}
-                </button>
-                {!module.completed && (
+              {/* Action Buttons */}
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                {!module.pdfViewed && (
                   <button
-                    onClick={() => markModuleComplete(module.id)}
+                    onClick={() => handleStartTraining(module.id)}
                     style={{
+                      flex: 1,
+                      minWidth: "150px",
+                      padding: "0.75rem 1rem",
+                      background: "#2563eb",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                    }}
+                  >
+                    📄 View PDF
+                  </button>
+                )}
+                {module.pdfViewed && !module.completed && (
+                  <button
+                    onClick={() => handleStartQuiz(module.id)}
+                    style={{
+                      flex: 1,
+                      minWidth: "150px",
+                      padding: "0.75rem 1rem",
+                      background: "#16a34a",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                    }}
+                  >
+                    📝 Take Quiz
+                  </button>
+                )}
+                {module.completed && (
+                  <button
+                    onClick={() => handleStartTraining(module.id)}
+                    style={{
+                      flex: 1,
+                      minWidth: "150px",
                       padding: "0.75rem 1rem",
                       background: "#f3f4f6",
                       color: "#111827",
@@ -329,42 +624,29 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                       cursor: "pointer",
                     }}
                   >
-                    Mark Complete
+                    📄 Review PDF
                   </button>
                 )}
-              </div>
-
-              {selectedModule?.id === module.id && (
-                <div
-                  style={{
-                    marginTop: "1rem",
-                    padding: "1rem",
-                    background: "#f9fafb",
-                    borderRadius: "8px",
-                    whiteSpace: "pre-line",
-                    fontSize: "0.875rem",
-                    color: "#374151",
-                  }}
-                >
-                  {module.content}
+                {module.certificationStatus === "expired" && (
                   <button
-                    onClick={() => markModuleComplete(module.id)}
+                    onClick={() => handleStartTraining(module.id)}
                     style={{
-                      marginTop: "1rem",
-                      padding: "0.5rem 1rem",
-                      background: "#16a34a",
+                      flex: 1,
+                      minWidth: "150px",
+                      padding: "0.75rem 1rem",
+                      background: "#dc2626",
                       color: "#ffffff",
                       border: "none",
-                      borderRadius: "6px",
+                      borderRadius: "8px",
                       fontSize: "0.875rem",
                       fontWeight: "600",
                       cursor: "pointer",
                     }}
                   >
-                    Mark as Complete
+                    🔄 Re-certify
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           );
         })}

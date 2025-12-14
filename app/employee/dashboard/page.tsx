@@ -56,6 +56,7 @@ export default function EmployeeDashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isClockInLoading, setIsClockInLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>("home");
+  const [certificationStatus, setCertificationStatus] = useState<any>(null);
   const [payPreview, setPayPreview] = useState({
     completedJobs: 0,
     payRatePerJob: 0,
@@ -102,11 +103,25 @@ export default function EmployeeDashboardPage() {
 
   useEffect(() => {
     if (employee?.id) {
+      loadCertificationStatus();
       loadClockInStatus();
       loadJobs();
       loadPayPreview();
     }
   }, [employee?.id]);
+
+  const loadCertificationStatus = async () => {
+    if (!employee?.id) return;
+    try {
+      const response = await fetch(`/api/employee/certification-status?employeeId=${employee.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCertificationStatus(data);
+      }
+    } catch (error) {
+      console.error("Error loading certification status:", error);
+    }
+  };
 
   useEffect(() => {
     if (!clockInStatus?.isActive || !employee?.id) return;
@@ -237,6 +252,17 @@ export default function EmployeeDashboardPage() {
   const handleClockIn = async () => {
     if (!employee) return;
 
+    // Check certification before clock-in
+    if (certificationStatus && !certificationStatus.canClockIn) {
+      if (certificationStatus.status === "expired") {
+        alert(`Your certification has expired. Please complete re-certification training before clocking in.\n\nExpired modules: ${certificationStatus.expiredModules.join(", ")}`);
+      } else {
+        alert(`You must complete all required training modules before clocking in.\n\nCompleted: ${certificationStatus.completedModules}/${certificationStatus.totalModules}\nMissing: ${certificationStatus.missingModules.join(", ")}`);
+      }
+      setActiveTab("training");
+      return;
+    }
+
     setIsClockInLoading(true);
     try {
       const response = await fetch("/api/employee/clock-in", {
@@ -250,10 +276,15 @@ export default function EmployeeDashboardPage() {
 
       if (!response.ok) {
         const error = await response.json();
+        if (error.certificationStatus) {
+          // Certification issue - reload status
+          await loadCertificationStatus();
+        }
         throw new Error(error.message || "Failed to clock in");
       }
 
       // Refresh all data after clock-in
+      await loadCertificationStatus();
       await loadClockInStatus();
       await loadJobs();
       await loadPayPreview();
@@ -328,6 +359,8 @@ export default function EmployeeDashboardPage() {
     jobId: string,
     data: {
       completionPhotoUrl?: string;
+      insidePhotoUrl?: string;
+      outsidePhotoUrl?: string;
       employeeNotes?: string;
       binCount?: number;
       stickerStatus?: "existing" | "placed" | "none";
@@ -429,6 +462,50 @@ export default function EmployeeDashboardPage() {
           width: "100%",
           boxSizing: "border-box"
         }}>
+          {/* Certification Warning Banner */}
+          {certificationStatus && !certificationStatus.isCertified && (
+            <div
+              style={{
+                padding: "1rem",
+                background: certificationStatus.status === "expired" ? "#fee2e2" : "#fef3c7",
+                border: `2px solid ${certificationStatus.status === "expired" ? "#fecaca" : "#fde68a"}`,
+                borderRadius: "8px",
+                marginBottom: "1rem",
+                color: certificationStatus.status === "expired" ? "#991b1b" : "#92400e",
+              }}
+            >
+              <div style={{ fontWeight: "700", marginBottom: "0.5rem", fontSize: "1rem" }}>
+                {certificationStatus.status === "expired" ? "⚠️ Certification Expired" : "🔄 Certification Required"}
+              </div>
+              <div style={{ fontSize: "0.875rem", marginBottom: "0.5rem" }}>
+                {certificationStatus.status === "expired"
+                  ? `Your certification has expired. ${certificationStatus.expiredModules.length} module(s) need to be retaken.`
+                  : `Complete all ${certificationStatus.totalModules} required training modules to become certified. ${certificationStatus.completedModules}/${certificationStatus.totalModules} completed.`}
+              </div>
+              <div style={{ fontSize: "0.75rem", fontWeight: "600" }}>
+                {certificationStatus.status === "expired"
+                  ? "You cannot clock in or receive route assignments until re-certified."
+                  : "You cannot clock in or receive route assignments until certified."}
+              </div>
+              <button
+                onClick={() => setActiveTab("training")}
+                style={{
+                  marginTop: "0.75rem",
+                  padding: "0.5rem 1rem",
+                  background: certificationStatus.status === "expired" ? "#dc2626" : "#f59e0b",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "6px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                {certificationStatus.status === "expired" ? "Go to Training →" : "Complete Training →"}
+              </button>
+            </div>
+          )}
+
           <TodayStatusBar
             employeeName={`${employee.firstName} ${employee.lastName}`}
             clockInStatus={clockInStatus}

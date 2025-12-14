@@ -31,10 +31,12 @@ interface JobDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onStartJob: (jobId: string) => Promise<void>;
-  onCompleteJob: (
+        onCompleteJob: (
     jobId: string,
     data: {
       completionPhotoUrl?: string;
+      insidePhotoUrl?: string;
+      outsidePhotoUrl?: string;
       employeeNotes?: string;
       binCount?: number;
       stickerStatus?: StickerStatus;
@@ -60,23 +62,41 @@ export function JobDetailModal({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [insidePhoto, setInsidePhoto] = useState<string | null>(null);
+  const [insidePhotoFile, setInsidePhotoFile] = useState<File | null>(null);
+  const [outsidePhoto, setOutsidePhoto] = useState<string | null>(null);
+  const [outsidePhotoFile, setOutsidePhotoFile] = useState<File | null>(null);
   const [stickerStatus, setStickerStatus] = useState<StickerStatus>("none");
   const [completionStep, setCompletionStep] = useState<1 | 2 | 3>(1);
+  const [photoDocumentationCompleted, setPhotoDocumentationCompleted] = useState(false);
 
   // Reset state when job changes or modal closes
   React.useEffect(() => {
     if (isOpen && job) {
       setBinCount(job.binCount || undefined);
       setEmployeeNotes("");
-      setSelectedPhoto(null);
-      setPhotoFile(null);
+      setInsidePhoto(null);
+      setInsidePhotoFile(null);
+      setOutsidePhoto(null);
+      setOutsidePhotoFile(null);
       setStickerStatus("none");
       setCompletionStep(1);
       setError(null);
+      checkPhotoDocumentationTraining();
     }
-  }, [isOpen, job?.id]);
+  }, [isOpen, job?.id, employeeId]);
+
+  const checkPhotoDocumentationTraining = async () => {
+    try {
+      const response = await fetch(`/api/employee/training?employeeId=${employeeId}&moduleId=photo-documentation`);
+      if (response.ok) {
+        const data = await response.json();
+        setPhotoDocumentationCompleted(data.completed || false);
+      }
+    } catch (error) {
+      console.error("Error checking photo documentation training:", error);
+    }
+  };
 
   if (!isOpen || !job) return null;
 
@@ -102,18 +122,33 @@ export function JobDetailModal({
     }
   };
 
-  const handlePhotoSelect = (file: File, dataUrl: string) => {
-    setPhotoFile(file);
-    setSelectedPhoto(dataUrl);
+  const handleInsidePhotoSelect = (file: File, dataUrl: string) => {
+    setInsidePhotoFile(file);
+    setInsidePhoto(dataUrl);
+    setError(null);
+  };
+
+  const handleOutsidePhotoSelect = (file: File, dataUrl: string) => {
+    setOutsidePhotoFile(file);
+    setOutsidePhoto(dataUrl);
     setError(null);
   };
 
   const handleCompleteJob = async () => {
-    // Validate step 1: Photo
-    if (!selectedPhoto) {
-      setError("Please take a photo of the cleaned bins");
-      setCompletionStep(1);
-      return;
+    // Validate step 1: Photos (2 required if photo documentation training completed)
+    if (photoDocumentationCompleted) {
+      if (!insidePhoto || !outsidePhoto) {
+        setError("Photo Documentation training requires exactly 2 photos: one inside the bin and one outside the bin");
+        setCompletionStep(1);
+        return;
+      }
+    } else {
+      // If training not completed, at least one photo recommended
+      if (!insidePhoto && !outsidePhoto) {
+        setError("Please take at least one photo of the cleaned bins");
+        setCompletionStep(1);
+        return;
+      }
     }
 
     // Validate step 2: Sticker status
@@ -126,23 +161,26 @@ export function JobDetailModal({
     setIsSubmitting(true);
     setError(null);
     try {
-      // Upload photo if we have a file
-      let photoUrl = selectedPhoto;
-      if (photoFile) {
-        // For now, use data URL. In production, upload to Firebase Storage
-        photoUrl = selectedPhoto;
-      }
+      // Combine photos (inside first, then outside)
+      const photos = [];
+      if (insidePhoto) photos.push(insidePhoto);
+      if (outsidePhoto) photos.push(outsidePhoto);
+      const photoUrl = photos.length > 0 ? photos.join("|") : undefined; // Use | as separator
 
       await onCompleteJob(job.id, {
         employeeNotes: employeeNotes.trim() || undefined,
         binCount,
-        completionPhotoUrl: photoUrl || undefined,
+        completionPhotoUrl: photoUrl,
+        insidePhotoUrl: insidePhoto || undefined,
+        outsidePhotoUrl: outsidePhoto || undefined,
         stickerStatus,
         stickerPlaced: stickerStatus === "placed",
       });
       setEmployeeNotes("");
-      setSelectedPhoto(null);
-      setPhotoFile(null);
+      setInsidePhoto(null);
+      setInsidePhotoFile(null);
+      setOutsidePhoto(null);
+      setOutsidePhotoFile(null);
       setStickerStatus("none");
       setCompletionStep(1);
       onClose();
@@ -155,9 +193,17 @@ export function JobDetailModal({
 
   const handleNextStep = () => {
     if (completionStep === 1) {
-      if (!selectedPhoto) {
-        setError("Please take a photo before continuing");
-        return;
+      // Validate photos based on training status
+      if (photoDocumentationCompleted) {
+        if (!insidePhoto || !outsidePhoto) {
+          setError("Photo Documentation training requires exactly 2 photos: inside and outside");
+          return;
+        }
+      } else {
+        if (!insidePhoto && !outsidePhoto) {
+          setError("Please take at least one photo before continuing");
+          return;
+        }
       }
       setCompletionStep(2);
       setError(null);
@@ -380,23 +426,82 @@ export function JobDetailModal({
                     color: "#111827",
                   }}
                 >
-                  Step 1: Take Photo
+                  Step 1: Take Photos
                 </h3>
-                <p
-                  style={{
-                    fontSize: "0.875rem",
-                    color: "#6b7280",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  Take a clear photo of the cleaned bins showing your work
-                </p>
-                <PhotoUpload
-                  onPhotoSelect={handlePhotoSelect}
-                  currentPhoto={selectedPhoto}
-                  required={true}
-                  label="Completion Photo"
-                />
+                {photoDocumentationCompleted ? (
+                  <>
+                    <div
+                      style={{
+                        padding: "1rem",
+                        background: "#eff6ff",
+                        border: "1px solid #bfdbfe",
+                        borderRadius: "8px",
+                        marginBottom: "1rem",
+                        fontSize: "0.875rem",
+                        color: "#1e40af",
+                      }}
+                    >
+                      <strong>Photo Documentation Training Completed:</strong> You must provide exactly 2 photos:
+                      <ul style={{ marginTop: "0.5rem", paddingLeft: "1.5rem" }}>
+                        <li>Inside photo: Camera angled downward showing clean base + walls</li>
+                        <li>Outside photo: Full bin visible with sticker and clean exterior</li>
+                      </ul>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                      <PhotoUpload
+                        onPhotoSelect={handleInsidePhotoSelect}
+                        currentPhoto={insidePhoto}
+                        required={true}
+                        label="Inside Photo (Required)"
+                      />
+                      <PhotoUpload
+                        onPhotoSelect={handleOutsidePhotoSelect}
+                        currentPhoto={outsidePhoto}
+                        required={true}
+                        label="Outside Photo (Required)"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "#6b7280",
+                        marginBottom: "1rem",
+                      }}
+                    >
+                      Take clear photos of the cleaned bins showing your work
+                    </p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                      <PhotoUpload
+                        onPhotoSelect={handleInsidePhotoSelect}
+                        currentPhoto={insidePhoto}
+                        required={false}
+                        label="Inside Photo (Recommended)"
+                      />
+                      <PhotoUpload
+                        onPhotoSelect={handleOutsidePhotoSelect}
+                        currentPhoto={outsidePhoto}
+                        required={false}
+                        label="Outside Photo (Recommended)"
+                      />
+                    </div>
+                    <div
+                      style={{
+                        marginTop: "1rem",
+                        padding: "0.75rem",
+                        background: "#fef3c7",
+                        border: "1px solid #fde68a",
+                        borderRadius: "6px",
+                        fontSize: "0.75rem",
+                        color: "#92400e",
+                      }}
+                    >
+                      💡 Complete Photo Documentation training to enable payment eligibility. 2 photos (inside + outside) will be required after training.
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -533,7 +638,15 @@ export function JobDetailModal({
                     Review Summary:
                   </div>
                   <div style={{ fontSize: "0.8125rem", color: "#6b7280" }}>
-                    ✓ Photo: {selectedPhoto ? "Uploaded" : "Missing"}
+                    {photoDocumentationCompleted ? (
+                      <>
+                        ✓ Inside Photo: {insidePhoto ? "Uploaded" : "Missing"}
+                        <br />
+                        ✓ Outside Photo: {outsidePhoto ? "Uploaded" : "Missing"}
+                      </>
+                    ) : (
+                      <>✓ Photo: {(insidePhoto || outsidePhoto) ? "Uploaded" : "Missing"}</>
+                    )}
                     <br />
                     ✓ Sticker:{" "}
                     {stickerStatus === "existing"

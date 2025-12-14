@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getTodayDateString } from "@/lib/employee-utils";
+import { checkCertificationStatus } from "@/lib/training-certification";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,6 +15,34 @@ export async function GET(req: NextRequest) {
         { message: "Missing employeeId" },
         { status: 400 }
       );
+    }
+
+    // Check certification status
+    const certification = await checkCertificationStatus(employeeId);
+    if (!certification.canWorkRoutes) {
+      if (certification.status === "expired") {
+        return NextResponse.json(
+          {
+            message: "Your certification has expired. Please complete re-certification training.",
+            certificationStatus: certification.status,
+            expiredModules: certification.expiredModules,
+            jobs: [],
+          },
+          { status: 403 }
+        );
+      } else {
+        return NextResponse.json(
+          {
+            message: "You must complete all required training modules before receiving route assignments.",
+            certificationStatus: certification.status,
+            missingModules: certification.missingModules,
+            completedModules: certification.completedModules,
+            totalModules: certification.totalModules,
+            jobs: [],
+          },
+          { status: 403 }
+        );
+      }
     }
 
     const db = await getDbInstance();

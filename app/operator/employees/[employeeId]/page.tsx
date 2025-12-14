@@ -13,6 +13,7 @@ import { StopList } from "@/components/OperatorDashboard/EmployeeDetail/StopList
 import { ProofOfWorkSection } from "@/components/OperatorDashboard/EmployeeDetail/ProofOfWorkSection";
 import { MessageEmployeeModal } from "@/components/OperatorDashboard/EmployeeDetail/MessageEmployeeModal";
 import { FlagIssueModal } from "@/components/OperatorDashboard/EmployeeDetail/FlagIssueModal";
+import { TrainingStatus } from "@/components/OperatorDashboard/EmployeeDetail/TrainingStatus";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
   ssr: false,
@@ -378,7 +379,7 @@ export default function EmployeeDetailPage() {
               borderBottom: "2px solid #e5e7eb",
               overflowX: "auto",
             }}>
-              {["overview", "assignment", "schedule", "stops", "proof"].map((tab) => (
+              {["overview", "assignment", "schedule", "stops", "training", "proof"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -398,7 +399,9 @@ export default function EmployeeDetailPage() {
                   {tab === "overview" ? "Overview" :
                    tab === "assignment" ? "Assignment & Zones" :
                    tab === "schedule" ? "Schedule" :
-                   tab === "stops" ? "Stops" : "Proof of Work"}
+                   tab === "stops" ? "Stops" :
+                   tab === "training" ? "Training" :
+                   "Proof of Work"}
                 </button>
               ))}
             </div>
@@ -428,6 +431,10 @@ export default function EmployeeDetailPage() {
 
               {activeTab === "stops" && (
                 <StopList employeeId={employeeId} />
+              )}
+
+              {activeTab === "training" && (
+                <TrainingStatus employeeId={employeeId} />
               )}
 
               {activeTab === "proof" && (

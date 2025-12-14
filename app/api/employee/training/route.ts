@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
     const employeeId = searchParams.get("employeeId");
+    const moduleId = searchParams.get("moduleId");
 
     if (!employeeId) {
       return NextResponse.json(
@@ -26,7 +27,40 @@ export async function GET(req: NextRequest) {
     const firestore = await safeImportFirestore();
     const { collection, query, where, getDocs } = firestore;
 
-    // Get training progress for this employee
+    // If moduleId provided, return single module progress
+    if (moduleId) {
+      const trainingRef = collection(db, "employeeTraining");
+      const trainingQuery = query(
+        trainingRef,
+        where("employeeId", "==", employeeId),
+        where("moduleId", "==", moduleId)
+      );
+      const snapshot = await getDocs(trainingQuery);
+
+      if (snapshot.empty) {
+        return NextResponse.json({
+          completed: false,
+          progress: 0,
+          quizAttempts: 0,
+          pdfViewed: false,
+          certificationStatus: "not_started",
+        });
+      }
+
+      const data = snapshot.docs[0].data();
+      return NextResponse.json({
+        completed: data.completed || false,
+        progress: data.progress || 0,
+        completedAt: data.completedAt?.toDate ? data.completedAt.toDate().toISOString() : data.completedAt,
+        expiresAt: data.expiresAt?.toDate ? data.expiresAt.toDate().toISOString() : data.expiresAt,
+        quizScore: data.quizScore,
+        quizAttempts: data.quizAttempts || 0,
+        pdfViewed: data.pdfViewed || false,
+        certificationStatus: data.certificationStatus || "not_started",
+      });
+    }
+
+    // Get training progress for all modules
     const trainingRef = collection(db, "employeeTraining");
     const trainingQuery = query(
       trainingRef,
@@ -40,7 +74,12 @@ export async function GET(req: NextRequest) {
       progress[data.moduleId] = {
         completed: data.completed || false,
         progress: data.progress || 0,
-        completedAt: data.completedAt,
+        completedAt: data.completedAt?.toDate ? data.completedAt.toDate().toISOString() : data.completedAt,
+        expiresAt: data.expiresAt?.toDate ? data.expiresAt.toDate().toISOString() : data.expiresAt,
+        quizScore: data.quizScore,
+        quizAttempts: data.quizAttempts || 0,
+        pdfViewed: data.pdfViewed || false,
+        certificationStatus: data.certificationStatus || "in_progress",
       };
     });
 

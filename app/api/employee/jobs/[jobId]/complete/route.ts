@@ -10,7 +10,7 @@ export async function POST(
   try {
     const { jobId } = params;
     const body = await req.json();
-    const { employeeId, completionPhotoUrl, employeeNotes, binCount, stickerStatus, stickerPlaced } = body;
+    const { employeeId, completionPhotoUrl, insidePhotoUrl, outsidePhotoUrl, employeeNotes, binCount, stickerStatus, stickerPlaced } = body;
 
     if (!jobId || !employeeId) {
       return NextResponse.json(
@@ -59,6 +59,34 @@ export async function POST(
 
     if (completionPhotoUrl) {
       updateData.completionPhotoUrl = completionPhotoUrl;
+    }
+
+    if (insidePhotoUrl) {
+      updateData.insidePhotoUrl = insidePhotoUrl;
+    }
+
+    if (outsidePhotoUrl) {
+      updateData.outsidePhotoUrl = outsidePhotoUrl;
+    }
+
+    // Check photo documentation training completion
+    try {
+      const { getModuleProgress } = await import("@/lib/training-certification");
+      const photoTraining = await getModuleProgress(employeeId, "photo-documentation");
+      
+      if (photoTraining.completed && photoTraining.certificationStatus === "completed") {
+        // Require 2 photos if photo documentation training is completed
+        if (!insidePhotoUrl || !outsidePhotoUrl) {
+          return NextResponse.json(
+            { message: "Photo Documentation training requires exactly 2 photos: inside and outside of bin" },
+            { status: 400 }
+          );
+        }
+        updateData.photoDocumentationCompliant = true;
+      }
+    } catch (error) {
+      console.error("Error checking photo documentation training:", error);
+      // Don't fail the completion if check fails
     }
 
     if (employeeNotes) {

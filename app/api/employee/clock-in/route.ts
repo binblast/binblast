@@ -4,6 +4,7 @@ import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getTodayDateString, getActiveClockIn, getEmployeeData } from "@/lib/employee-utils";
 import { assignJobsToEmployeeOnClockIn } from "@/lib/job-assignment";
+import { checkCertificationStatus } from "@/lib/training-certification";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,6 +16,32 @@ export async function POST(req: NextRequest) {
         { message: "Missing employeeId or employeeEmail" },
         { status: 400 }
       );
+    }
+
+    // Check certification status
+    const certification = await checkCertificationStatus(employeeId);
+    if (!certification.canClockIn) {
+      if (certification.status === "expired") {
+        return NextResponse.json(
+          {
+            message: "Your certification has expired. Please complete re-certification training before clocking in.",
+            certificationStatus: certification.status,
+            expiredModules: certification.expiredModules,
+          },
+          { status: 403 }
+        );
+      } else {
+        return NextResponse.json(
+          {
+            message: "You must complete all required training modules before clocking in.",
+            certificationStatus: certification.status,
+            missingModules: certification.missingModules,
+            completedModules: certification.completedModules,
+            totalModules: certification.totalModules,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // Check if employee already has an active clock-in
