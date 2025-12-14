@@ -27,15 +27,31 @@ export function calculateExpiration(completedAt: Date): Date {
   return expiration;
 }
 
-export function isExpired(completedAt: Date | null | undefined): boolean {
+export function isExpired(completedAt: Date | null | undefined | any): boolean {
   if (!completedAt) return true;
-  const expiration = calculateExpiration(completedAt instanceof Date ? completedAt : completedAt.toDate());
+  let date: Date;
+  if (completedAt instanceof Date) {
+    date = completedAt;
+  } else if (completedAt && typeof completedAt === 'object' && 'toDate' in completedAt && typeof completedAt.toDate === 'function') {
+    date = completedAt.toDate();
+  } else {
+    return true;
+  }
+  const expiration = calculateExpiration(date);
   return new Date() > expiration;
 }
 
-export function daysUntilExpiration(completedAt: Date | null | undefined): number | null {
+export function daysUntilExpiration(completedAt: Date | null | undefined | any): number | null {
   if (!completedAt) return null;
-  const expiration = calculateExpiration(completedAt instanceof Date ? completedAt : completedAt.toDate());
+  let date: Date;
+  if (completedAt instanceof Date) {
+    date = completedAt;
+  } else if (completedAt && typeof completedAt === 'object' && 'toDate' in completedAt && typeof completedAt.toDate === 'function') {
+    date = completedAt.toDate();
+  } else {
+    return null;
+  }
+  const expiration = calculateExpiration(date);
   const now = new Date();
   const diff = expiration.getTime() - now.getTime();
   if (diff < 0) return 0; // Already expired
@@ -94,7 +110,15 @@ export async function checkCertificationStatus(employeeId: string): Promise<Cert
 
       // Check if expired
       const completedAt = progress.completedAt;
-      if (!completedAt || isExpired(completedAt) || progress.forcedRetraining) {
+      let completedDate: Date | null = null;
+      if (completedAt) {
+        if (completedAt instanceof Date) {
+          completedDate = completedAt;
+        } else if (typeof completedAt === 'object' && 'toDate' in completedAt) {
+          completedDate = (completedAt as any).toDate();
+        }
+      }
+      if (!completedDate || isExpired(completedDate) || progress.forcedRetraining) {
         expiredModules.push(module.id);
         continue;
       }
@@ -107,7 +131,7 @@ export async function checkCertificationStatus(employeeId: string): Promise<Cert
       }
 
       // Track earliest expiration
-      const expiration = calculateExpiration(completedAt);
+      const expiration = calculateExpiration(completedDate);
       if (!earliestExpiration || expiration < earliestExpiration) {
         earliestExpiration = expiration;
       }
@@ -202,8 +226,24 @@ export async function getModuleProgress(employeeId: string, moduleId: string): P
     }
 
     const data = snapshot.docs[0].data();
-    const completedAt = data.completedAt?.toDate ? data.completedAt.toDate() : data.completedAt;
-    const expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate() : data.expiresAt;
+    let completedAt: Date | undefined;
+    let expiresAt: Date | undefined;
+    
+    if (data.completedAt) {
+      if (data.completedAt instanceof Date) {
+        completedAt = data.completedAt;
+      } else if (typeof data.completedAt === 'object' && 'toDate' in data.completedAt) {
+        completedAt = (data.completedAt as any).toDate();
+      }
+    }
+    
+    if (data.expiresAt) {
+      if (data.expiresAt instanceof Date) {
+        expiresAt = data.expiresAt;
+      } else if (typeof data.expiresAt === 'object' && 'toDate' in data.expiresAt) {
+        expiresAt = (data.expiresAt as any).toDate();
+      }
+    }
 
     let certificationStatus: CertificationStatus = "in_progress";
     if (data.completed) {
