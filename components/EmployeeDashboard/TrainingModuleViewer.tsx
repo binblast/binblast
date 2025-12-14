@@ -69,6 +69,11 @@ export function TrainingModuleViewer({
         if (response.ok) {
           const data = await response.json();
           setMarkdownContent(data.content);
+          // If no PDF URL, show Markdown immediately
+          if (!pdfUrl) {
+            setShowMarkdown(true);
+            setLoading(false);
+          }
         }
       } catch (err) {
         console.error("Error fetching Markdown content:", err);
@@ -76,7 +81,7 @@ export function TrainingModuleViewer({
     };
     
     fetchMarkdownContent();
-  }, [moduleId]);
+  }, [moduleId, pdfUrl]);
 
   useEffect(() => {
     // Mark as viewed after a delay (user has had time to view)
@@ -89,14 +94,31 @@ export function TrainingModuleViewer({
     }
   }, [pdfUrl, viewed, pdfLoaded, showMarkdown, onPdfViewed]);
 
-  // Reset loading state when PDF URL changes
+  // Reset loading state when PDF URL changes and check if we should show Markdown
   useEffect(() => {
     if (pdfUrl) {
-      setLoading(true);
-      setError(null);
+      // If PDF URL is a relative path (not Firebase Storage), it likely doesn't exist yet
+      // Proactively show Markdown if available instead of trying to load non-existent PDF
+      if (!pdfUrl.startsWith('http') && markdownContent) {
+        // Relative path - PDF doesn't exist yet, show Markdown immediately
+        setShowMarkdown(true);
+        setPdfLoaded(false);
+        setLoading(false);
+        setError(null);
+      } else {
+        // Firebase Storage URL or absolute URL - try to load PDF
+        setLoading(true);
+        setError(null);
+        setPdfLoaded(false);
+        setShowMarkdown(false);
+      }
+    } else if (markdownContent) {
+      // No PDF URL but we have Markdown - show it
+      setShowMarkdown(true);
+      setLoading(false);
       setPdfLoaded(false);
     }
-  }, [pdfUrl]);
+  }, [pdfUrl, markdownContent]);
 
   const handleDownload = () => {
     if (pdfUrl) {
@@ -130,27 +152,44 @@ export function TrainingModuleViewer({
             setPdfLoaded(false);
           }
         } else {
+          // PDF loaded successfully
           setPdfLoaded(true);
           setShowMarkdown(false);
           setError(null);
         }
       } catch (e) {
         // Cross-origin restrictions may prevent access
-        // Wait a bit to see if PDF loads, otherwise show Markdown
-        setTimeout(() => {
-          if (!pdfLoaded && markdownContent) {
+        // If we have Markdown and PDF hasn't loaded after timeout, show Markdown
+        const checkTimeout = setTimeout(() => {
+          if (!pdfLoaded && markdownContent && !showMarkdown) {
             setShowMarkdown(true);
             setPdfLoaded(false);
             setError(null);
-          } else {
+            setLoading(false);
+          } else if (!showMarkdown) {
+            // Assume PDF loaded if we can't check
             setPdfLoaded(true);
             setError(null);
+            setLoading(false);
           }
-        }, 2000);
+        }, 3000);
+        
+        // Clean up timeout if component unmounts
+        return () => clearTimeout(checkTimeout);
       }
     } else {
-      setPdfLoaded(true);
-      setError(null);
+      // Can't access iframe, assume PDF loaded after delay
+      setTimeout(() => {
+        if (!showMarkdown && markdownContent) {
+          // If we still haven't shown Markdown and PDF seems to not be loading, show Markdown
+          setShowMarkdown(true);
+          setPdfLoaded(false);
+          setLoading(false);
+        } else {
+          setPdfLoaded(true);
+          setLoading(false);
+        }
+      }, 2000);
     }
   };
 
@@ -171,7 +210,8 @@ export function TrainingModuleViewer({
     onPdfViewed();
   };
 
-  if (!pdfUrl) {
+  // If no PDF URL and no Markdown, show message
+  if (!pdfUrl && !markdownContent && !loading) {
     return (
       <div
         style={{
@@ -182,7 +222,7 @@ export function TrainingModuleViewer({
           color: "#6b7280",
         }}
       >
-        PDF material not yet available for this module.
+        Training material not yet available for this module.
       </div>
     );
   }
