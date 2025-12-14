@@ -56,7 +56,22 @@ export async function POST(
 
     if (!employeeId || !answers || score === undefined || passed === undefined) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields", details: { employeeId: !!employeeId, answers: !!answers, score, passed } },
+        { status: 400 }
+      );
+    }
+
+    // Validate data types
+    if (typeof score !== 'number' || score < 0 || score > 100) {
+      return NextResponse.json(
+        { error: "Invalid score value", details: { score } },
+        { status: 400 }
+      );
+    }
+
+    if (typeof passed !== 'boolean') {
+      return NextResponse.json(
+        { error: "Invalid passed value", details: { passed } },
         { status: 400 }
       );
     }
@@ -193,12 +208,13 @@ export async function POST(
       throw new Error(`Failed to update training progress: ${trainingError.message}`);
     }
 
-    // Also update trainingProgress collection
-    const progressRef = collection(db, "trainingProgress");
-    const progressQuery = query(progressRef, where("employeeId", "==", employeeId));
-    const progressSnapshot = await getDocs(progressQuery);
+    // Also update trainingProgress collection (non-blocking - don't fail quiz if this fails)
+    try {
+      const progressRef = collection(db, "trainingProgress");
+      const progressQuery = query(progressRef, where("employeeId", "==", employeeId));
+      const progressSnapshot = await getDocs(progressQuery);
 
-    if (!progressSnapshot.empty) {
+      if (!progressSnapshot.empty) {
       const progressDocRef = progressSnapshot.docs[0].ref;
       const progressData = progressSnapshot.docs[0].data();
       const modules = progressData.modules || {};
@@ -218,9 +234,18 @@ export async function POST(
         score,
         lastAttemptAt: serverTimestamp(),
         failed: !passed,
-        lastFailedAt: !passed ? serverTimestamp() : undefined,
         status: passed ? "passed" : "failed",
       };
+
+      // Only set lastFailedAt if failed (Firestore doesn't accept undefined)
+      if (!passed) {
+        moduleUpdate.lastFailedAt = serverTimestamp();
+      } else {
+        // Remove lastFailedAt if it exists and quiz is now passed
+        if (moduleUpdate.lastFailedAt !== undefined) {
+          delete moduleUpdate.lastFailedAt;
+        }
+      }
 
       // Only set completedAt if passed and not already set
       if (passed) {
@@ -235,16 +260,27 @@ export async function POST(
       modules[moduleId] = moduleUpdate;
 
       // Check if all modules are completed
-      const allModulesRef = collection(db, "trainingModules");
-      const allModulesQuery = query(
-        allModulesRef,
-        where("active", "==", true)
-      );
-      const allModulesSnapshot = await getDocs(allModulesQuery);
-      const totalModules = allModulesSnapshot.size;
-      const completedModules = Object.values(modules).filter(
-        (m: any) => m.completedAt
-      ).length;
+      let totalModules = 0;
+      let completedModules = 0;
+      try {
+        const allModulesRef = collection(db, "trainingModules");
+        const allModulesQuery = query(
+          allModulesRef,
+          where("active", "==", true)
+        );
+        const allModulesSnapshot = await getDocs(allModulesQuery);
+        totalModules = allModulesSnapshot.size;
+        completedModules = Object.values(modules).filter(
+          (m: any) => m.completedAt && (m.completedAt.toDate || typeof m.completedAt === 'string')
+        ).length;
+      } catch (modulesError: any) {
+        console.warn("[Quiz API] Could not fetch total modules count:", modulesError);
+        // Continue with default values - this is not critical for quiz submission
+        totalModules = 0;
+        completedModules = Object.values(modules).filter(
+          (m: any) => m.completedAt
+        ).length;
+      }
 
       let overallStatus = progressData.overallStatus || "not_started";
       if (completedModules === totalModules && totalModules > 0) {
@@ -299,6 +335,17 @@ export async function POST(
         console.error("[Quiz API] Error creating trainingProgress:", createError);
         throw new Error(`Failed to create training progress: ${createError.message}`);
       }
+      }
+    } catch (progressError: any) {
+      // Log but don't fail the quiz submission - the main quiz attempt and employeeTraining are already saved
+      console.error("[Quiz API] Warning: Failed to update trainingProgress collection:", progressError);
+      console.error("[Quiz API] Progress error details:", {
+        message: progressError?.message,
+        code: progressError?.code,
+        employeeId,
+        moduleId,
+      });
+      // Continue - quiz attempt and employeeTraining are already saved successfully
     }
 
     return NextResponse.json({
