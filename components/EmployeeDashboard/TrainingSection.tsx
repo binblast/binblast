@@ -40,6 +40,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
   const [pdfUrl, setPdfUrl] = useState<string | undefined>(undefined);
   const [loadingPdf, setLoadingPdf] = useState(false);
   const isMountedRef = useRef(true);
+  const isLoadingRef = useRef(false);
 
   const loadCertificationStatus = useCallback(async () => {
     try {
@@ -136,6 +137,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
         })));
       }
     } finally {
+      isLoadingRef.current = false;
       if (isMountedRef.current) {
         setLoading(false);
       }
@@ -151,6 +153,31 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
       isMountedRef.current = false;
     };
   }, [employeeId, loadTrainingModules, loadCertificationStatus]);
+
+  // Fetch PDF URL when PDF viewer is opened - MUST be before early returns
+  useEffect(() => {
+    if (viewMode === "pdf" && selectedModuleId && isMountedRef.current) {
+      setLoadingPdf(true);
+      const fetchPdfUrl = async () => {
+        try {
+          const response = await fetch(`/api/employee/training/${selectedModuleId}/pdf?employeeId=${employeeId}`);
+          if (response.ok && isMountedRef.current) {
+            const data = await response.json();
+            setPdfUrl(data.pdfUrl);
+          }
+        } catch (error) {
+          console.error("Error fetching PDF URL:", error);
+        } finally {
+          if (isMountedRef.current) {
+            setLoadingPdf(false);
+          }
+        }
+      };
+      fetchPdfUrl();
+    } else {
+      setPdfUrl(undefined);
+    }
+  }, [viewMode, selectedModuleId, employeeId]);
 
   const handlePdfViewed = async (moduleId: string) => {
     try {
@@ -237,29 +264,6 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
       </div>
     );
   }
-
-  // Fetch PDF URL when PDF viewer is opened
-  useEffect(() => {
-    if (viewMode === "pdf" && selectedModuleId) {
-      setLoadingPdf(true);
-      const fetchPdfUrl = async () => {
-        try {
-          const response = await fetch(`/api/employee/training/${selectedModuleId}/pdf?employeeId=${employeeId}`);
-          if (response.ok) {
-            const data = await response.json();
-            setPdfUrl(data.pdfUrl);
-          }
-        } catch (error) {
-          console.error("Error fetching PDF URL:", error);
-        } finally {
-          setLoadingPdf(false);
-        }
-      };
-      fetchPdfUrl();
-    } else {
-      setPdfUrl(undefined);
-    }
-  }, [viewMode, selectedModuleId, employeeId]);
 
   // Show PDF viewer or quiz if module selected
   if (viewMode === "pdf" && selectedModuleId) {
