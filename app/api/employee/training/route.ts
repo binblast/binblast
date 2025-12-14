@@ -1,7 +1,6 @@
 // app/api/employee/training/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { getDbInstance, getFirebaseApp } from "@/lib/firebase";
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,6 +15,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Ensure Firebase app is initialized before importing Firestore
+    await getFirebaseApp();
     const db = await getDbInstance();
     if (!db) {
       return NextResponse.json(
@@ -24,7 +25,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const firestore = await safeImportFirestore();
+    // Import Firestore functions directly for server-side use
+    const firestore = await import("firebase/firestore");
     const { collection, query, where, getDocs } = firestore;
 
     // If moduleId provided, return single module progress
@@ -140,8 +142,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ modules: defaultModules });
   } catch (error: any) {
     console.error("Error loading training:", error);
+    console.error("Error stack:", error.stack);
     return NextResponse.json(
-      { error: error.message || "Failed to load training" },
+      { 
+        error: error.message || "Failed to load training",
+        details: process.env.NODE_ENV === "development" ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
@@ -159,6 +165,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Ensure Firebase app is initialized before importing Firestore
+    await getFirebaseApp();
     const db = await getDbInstance();
     if (!db) {
       return NextResponse.json(
@@ -167,7 +175,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const firestore = await safeImportFirestore();
+    // Import Firestore functions directly for server-side use
+    const firestore = await import("firebase/firestore");
     const { collection, query, where, getDocs, addDoc, updateDoc, serverTimestamp } = firestore;
 
     const trainingRef = collection(db, "employeeTraining");
@@ -211,8 +220,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Error updating training:", error);
+    console.error("Error stack:", error.stack);
     return NextResponse.json(
-      { error: error.message || "Failed to update training" },
+      { 
+        error: error.message || "Failed to update training",
+        details: process.env.NODE_ENV === "development" ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
