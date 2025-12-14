@@ -40,10 +40,23 @@ export async function GET(req: NextRequest) {
         ...doc.data(),
       }))
       .filter((c: any) => {
-        // Filter out admin accounts
-        const role = c.role || "";
+        // Filter out admin accounts - check role, email, and name
+        const role = (c.role || "").toLowerCase();
         const email = (c.email || "").toLowerCase();
-        return role !== "admin" && !email.includes("admin");
+        const firstName = (c.firstName || "").toLowerCase();
+        const lastName = (c.lastName || "").toLowerCase();
+        const fullName = `${firstName} ${lastName}`.toLowerCase();
+        
+        // Exclude if role is admin, or if admin appears in email/name
+        if (role === "admin" || role === "operator") {
+          return false;
+        }
+        if (email.includes("admin") || fullName.includes("admin") || 
+            firstName.includes("admin") || lastName.includes("admin")) {
+          return false;
+        }
+        
+        return true;
       });
 
     // Get assignment status from scheduledCleanings
