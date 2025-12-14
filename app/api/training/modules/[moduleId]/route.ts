@@ -125,6 +125,13 @@ export async function PUT(
     const updatedDoc = await getDoc(moduleRef);
     const data = updatedDoc.data();
 
+    if (!data) {
+      return NextResponse.json(
+        { error: "Failed to retrieve updated module" },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       module: {
