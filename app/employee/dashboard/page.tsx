@@ -1,4 +1,5 @@
 // app/employee/dashboard/page.tsx
+// Employee dashboard with training, clock-in, and job management
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
