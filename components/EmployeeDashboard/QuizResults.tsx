@@ -25,6 +25,8 @@ export function QuizResults({
   correctAnswers,
   onNextLesson,
   onRetake,
+  isLastModule = false,
+  onClaimCertificate,
 }: QuizResultsProps) {
   return (
     <div>
