@@ -1,7 +1,6 @@
 // app/api/employee/training/[moduleId]/quiz/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getModuleById } from "@/lib/training-modules";
 
 export const dynamic = 'force-dynamic';
@@ -28,7 +27,9 @@ export async function GET(
     try {
       const db = await getDbInstance();
       if (db) {
-        const firestore = await safeImportFirestore();
+        // Ensure Firebase is initialized, then import Firestore functions directly
+        await getDbInstance();
+        const firestore = await import("firebase/firestore");
         const { collection, doc, getDoc } = firestore;
         const modulesRef = collection(db, "trainingModules");
         const moduleRef = doc(modulesRef, moduleId);

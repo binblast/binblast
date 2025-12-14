@@ -3,7 +3,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
 
 // Mark as dynamic to prevent static generation
 export const dynamic = 'force-dynamic';
@@ -22,7 +21,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const firestore = await safeImportFirestore();
+    // Ensure Firebase is initialized by getting db instance first
+    // Then import Firestore functions directly
+    await getDbInstance();
+    const firestore = await import("firebase/firestore");
     const { collection, query, where, orderBy, getDocs } = firestore;
 
     const searchParams = req.nextUrl.searchParams;
@@ -116,7 +118,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const firestore = await safeImportFirestore();
+    // Ensure Firebase is initialized by getting db instance first
+    // Then import Firestore functions directly
+    await getDbInstance();
+    const firestore = await import("firebase/firestore");
     const { collection, doc, setDoc, serverTimestamp } = firestore;
 
     const modulesRef = collection(db, "trainingModules");

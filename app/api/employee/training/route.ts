@@ -58,7 +58,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const firestore = await safeImportFirestore();
+    // Ensure Firebase is initialized by getting db instance first
+    // Then import Firestore functions directly
+    await getDbInstance();
+    const firestore = await import("firebase/firestore");
     const { collection, query, where, getDocs } = firestore;
 
     // If moduleId provided, return single module progress
@@ -263,7 +266,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const firestore = await safeImportFirestore();
+    // Ensure Firebase is initialized by getting db instance first
+    // Then import Firestore functions directly
+    await getDbInstance();
+    const firestore = await import("firebase/firestore");
     const { collection, query, where, getDocs, addDoc, updateDoc, serverTimestamp } = firestore;
 
     const trainingRef = collection(db, "employeeTraining");
