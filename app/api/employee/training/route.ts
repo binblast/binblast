@@ -17,51 +17,40 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Ensure Firebase app is initialized first
-    const { getFirebaseApp } = await import("@/lib/firebase-client");
-    const app = await getFirebaseApp();
-    if (!app) {
-      console.error("[Training API] Firebase app not initialized");
-      return NextResponse.json(
-        { error: "Firebase app not initialized" },
-        { status: 500 }
-      );
-    }
-
-    // Verify app is in Firebase registry before importing Firestore
-    const { getApps } = await import("firebase/app");
-    const apps = getApps();
-    const appInRegistry = apps.find((a: any) => a === app);
-    if (!appInRegistry) {
-      console.error("[Training API] Firebase app not found in registry");
-      return NextResponse.json(
-        { error: "Firebase app not properly initialized" },
-        { status: 500 }
-      );
-    }
-
     const db = await getDbInstance();
     if (!db) {
-      console.error("[Training API] Database instance not available");
+      console.error("[Training API] Database instance returned null");
       return NextResponse.json(
         { error: "Database not available" },
         { status: 500 }
       );
     }
 
-    // Import Firestore functions directly after ensuring app is initialized
     const firestore = await import("firebase/firestore");
     const { collection, query, where, getDocs } = firestore;
 
     // If moduleId provided, return single module progress
     if (moduleId) {
-      const trainingRef = collection(db, "employeeTraining");
-      const trainingQuery = query(
-        trainingRef,
-        where("employeeId", "==", employeeId),
-        where("moduleId", "==", moduleId)
-      );
-      const snapshot = await getDocs(trainingQuery);
+      let trainingRef, trainingQuery, snapshot;
+      try {
+        trainingRef = collection(db, "employeeTraining");
+        trainingQuery = query(
+          trainingRef,
+          where("employeeId", "==", employeeId),
+          where("moduleId", "==", moduleId)
+        );
+        snapshot = await getDocs(trainingQuery);
+      } catch (queryError: any) {
+        console.error("[Training API] Error querying Firestore:", queryError?.message || queryError);
+        console.error("[Training API] Query error stack:", queryError?.stack);
+        return NextResponse.json(
+          { 
+            error: "Failed to query training data",
+            details: process.env.NODE_ENV === "development" ? queryError?.message : undefined
+          },
+          { status: 500 }
+        );
+      }
 
       if (snapshot.empty) {
         return NextResponse.json({
@@ -87,12 +76,25 @@ export async function GET(req: NextRequest) {
     }
 
     // Get training progress for all modules
-    const trainingRef = collection(db, "employeeTraining");
-    const trainingQuery = query(
-      trainingRef,
-      where("employeeId", "==", employeeId)
-    );
-    const snapshot = await getDocs(trainingQuery);
+    let trainingRef, trainingQuery, snapshot;
+    try {
+      trainingRef = collection(db, "employeeTraining");
+      trainingQuery = query(
+        trainingRef,
+        where("employeeId", "==", employeeId)
+      );
+      snapshot = await getDocs(trainingQuery);
+    } catch (queryError: any) {
+      console.error("[Training API] Error querying all training data:", queryError?.message || queryError);
+      console.error("[Training API] Query error stack:", queryError?.stack);
+      return NextResponse.json(
+        { 
+          error: "Failed to query training data",
+          details: process.env.NODE_ENV === "development" ? queryError?.message : undefined
+        },
+        { status: 500 }
+      );
+    }
 
     const progress: Record<string, any> = {};
     snapshot.forEach((doc) => {
@@ -189,39 +191,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Ensure Firebase app is initialized first
-    const { getFirebaseApp } = await import("@/lib/firebase-client");
-    const app = await getFirebaseApp();
-    if (!app) {
-      console.error("[Training API POST] Firebase app not initialized");
-      return NextResponse.json(
-        { error: "Firebase app not initialized" },
-        { status: 500 }
-      );
-    }
-
-    // Verify app is in Firebase registry before importing Firestore
-    const { getApps } = await import("firebase/app");
-    const apps = getApps();
-    const appInRegistry = apps.find((a: any) => a === app);
-    if (!appInRegistry) {
-      console.error("[Training API POST] Firebase app not found in registry");
-      return NextResponse.json(
-        { error: "Firebase app not properly initialized" },
-        { status: 500 }
-      );
-    }
-
     const db = await getDbInstance();
     if (!db) {
-      console.error("[Training API POST] Database instance not available");
+      console.error("[Training API POST] Database instance returned null");
       return NextResponse.json(
         { error: "Database not available" },
         { status: 500 }
       );
     }
 
-    // Import Firestore functions directly after ensuring app is initialized
     const firestore = await import("firebase/firestore");
     const { collection, query, where, getDocs, addDoc, updateDoc, serverTimestamp } = firestore;
 

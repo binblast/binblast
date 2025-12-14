@@ -1,7 +1,7 @@
 // app/employee/dashboard/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { TodayStatusBar } from "@/components/EmployeeDashboard/TodayStatusBar";
@@ -128,17 +128,24 @@ export default function EmployeeDashboardPage() {
     
     // Set up real-time listener for jobs
     let unsubscribe: (() => void) | undefined;
+    let isMounted = true;
     
     setupJobsListener().then((cleanup) => {
-      unsubscribe = cleanup;
+      if (isMounted) {
+        unsubscribe = cleanup;
+      } else if (cleanup) {
+        // Component unmounted before listener was set up, clean up immediately
+        cleanup();
+      }
     });
     
     return () => {
+      isMounted = false;
       if (unsubscribe) {
         unsubscribe();
       }
     };
-  }, [clockInStatus?.isActive, employee?.id]);
+  }, [clockInStatus?.isActive, employee?.id, setupJobsListener]);
 
   const loadEmployeeData = async (userId: string) => {
     try {
@@ -195,7 +202,7 @@ export default function EmployeeDashboardPage() {
     }
   };
 
-  const loadPayPreview = async () => {
+  const loadPayPreview = useCallback(async () => {
     if (!employee?.id) return;
     try {
       const response = await fetch(
@@ -212,9 +219,9 @@ export default function EmployeeDashboardPage() {
     } catch (error) {
       console.error("Error loading pay preview:", error);
     }
-  };
+  }, [employee?.id]);
 
-  const setupJobsListener = async (): Promise<(() => void) | undefined> => {
+  const setupJobsListener = useCallback(async (): Promise<(() => void) | undefined> => {
     if (!employee?.id || !clockInStatus?.isActive) return;
 
     try {
@@ -247,7 +254,7 @@ export default function EmployeeDashboardPage() {
       console.error("Error setting up jobs listener:", error);
       return undefined;
     }
-  };
+  }, [employee?.id, clockInStatus?.isActive, loadPayPreview]);
 
   const handleClockIn = async () => {
     if (!employee) return;

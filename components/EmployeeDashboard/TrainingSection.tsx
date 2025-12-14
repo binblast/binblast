@@ -1,7 +1,7 @@
 // components/EmployeeDashboard/TrainingSection.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { TrainingModuleViewer } from "./TrainingModuleViewer";
 import { TrainingQuiz } from "./TrainingQuiz";
 import { getRequiredModules, getModuleById } from "@/lib/training-modules";
@@ -39,25 +39,23 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | undefined>(undefined);
   const [loadingPdf, setLoadingPdf] = useState(false);
+  const isMountedRef = useRef(true);
 
-  useEffect(() => {
-    loadTrainingModules();
-    loadCertificationStatus();
-  }, [employeeId]);
-
-  const loadCertificationStatus = async () => {
+  const loadCertificationStatus = useCallback(async () => {
     try {
       const response = await fetch(`/api/employee/certification-status?employeeId=${employeeId}`);
       if (response.ok) {
         const data = await response.json();
-        setCertificationStatus(data);
+        if (isMountedRef.current) {
+          setCertificationStatus(data);
+        }
       }
     } catch (error) {
       console.error("Error loading certification status:", error);
     }
-  };
+  }, [employeeId]);
 
-  const loadTrainingModules = async () => {
+  const loadTrainingModules = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -114,29 +112,45 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
         })
       );
 
-      setModules(modulesWithProgress);
+      if (isMountedRef.current) {
+        setModules(modulesWithProgress);
+      }
     } catch (error) {
       console.error("Error loading training modules:", error);
-      setError("Failed to load training modules. Please try refreshing the page.");
-      // Still show modules with default values so user can interact
-      const requiredModules = getRequiredModules();
-      setModules(requiredModules.map(module => ({
-        id: module.id,
-        name: module.name,
-        description: module.description,
-        type: module.type,
-        duration: module.duration,
-        completed: false,
-        progress: 0,
-        quizAttempts: 0,
-        pdfViewed: false,
-        certificationStatus: "not_started" as CertificationStatus,
-        requiredForPayment: module.requiredForPayment || false,
-      })));
+      if (isMountedRef.current) {
+        setError("Failed to load training modules. Please try refreshing the page.");
+        // Still show modules with default values so user can interact
+        const requiredModules = getRequiredModules();
+        setModules(requiredModules.map(module => ({
+          id: module.id,
+          name: module.name,
+          description: module.description,
+          type: module.type,
+          duration: module.duration,
+          completed: false,
+          progress: 0,
+          quizAttempts: 0,
+          pdfViewed: false,
+          certificationStatus: "not_started" as CertificationStatus,
+          requiredForPayment: module.requiredForPayment || false,
+        })));
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [employeeId]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    loadTrainingModules();
+    loadCertificationStatus();
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [employeeId, loadTrainingModules, loadCertificationStatus]);
 
   const handlePdfViewed = async (moduleId: string) => {
     try {
