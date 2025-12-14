@@ -74,17 +74,8 @@ export async function GET(
       return parts.join(", ");
     };
 
-    // Import geocoding utility
-    const { geocodeAddress: geocodeAddressUtil } = await import("@/lib/geocoding");
-    
-    // Helper function to geocode an address
-    const geocodeAddress = async (address: string): Promise<{ latitude: number; longitude: number } | null> => {
-      const result = await geocodeAddressUtil(address);
-      if (result) {
-        return { latitude: result.latitude, longitude: result.longitude };
-      }
-      return null;
-    };
+    // Geocoding is disabled to prevent API timeouts
+    // Coordinates should be added via separate geocoding process
 
     // Get today's stops
     let todayStops: any[];
