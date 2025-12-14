@@ -34,10 +34,17 @@ export async function GET(req: NextRequest) {
     let usersQuery = query(usersRef, where("role", "==", "customer"), limit(500));
 
     const snapshot = await getDocs(usersQuery);
-    let customers = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    let customers = snapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .filter((c: any) => {
+        // Filter out admin accounts
+        const role = c.role || "";
+        const email = (c.email || "").toLowerCase();
+        return role !== "admin" && !email.includes("admin");
+      });
 
     // Get assignment status from scheduledCleanings
     const cleaningsRef = collection(db, "scheduledCleanings");
