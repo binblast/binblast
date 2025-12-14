@@ -125,31 +125,33 @@ export async function POST(req: NextRequest) {
     }
 
     const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs, doc, setDoc, serverTimestamp } = firestore;
+    const { collection, query, where, getDocs, doc, setDoc, getDoc, serverTimestamp } = firestore;
 
     const progressRef = collection(db, "trainingProgress");
     const progressQuery = query(progressRef, where("employeeId", "==", employeeId));
     const progressSnapshot = await getDocs(progressQuery);
 
     let progressDocRef;
+    let progressData: any;
+    
     if (progressSnapshot.empty) {
       // Create new progress document
       progressDocRef = doc(progressRef);
-      await setDoc(progressDocRef, {
+      progressData = {
         employeeId,
         currentModuleOrder: 1,
         modules: {},
         certificates: [],
         overallStatus: "not_started",
         updatedAt: serverTimestamp(),
-      });
+      };
+      await setDoc(progressDocRef, progressData);
     } else {
       progressDocRef = progressSnapshot.docs[0].ref;
+      progressData = progressSnapshot.docs[0].data();
     }
 
     // Update module progress
-    const progressDoc = await progressDocRef.get();
-    const progressData = progressDoc.data();
     const modules = progressData?.modules || {};
 
     if (!modules[moduleId]) {
