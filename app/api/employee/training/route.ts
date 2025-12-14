@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const firestore = await import("firebase/firestore");
+    const firestore = await safeImportFirestore();
     const { collection, query, where, getDocs } = firestore;
 
     // If moduleId provided, return single module progress

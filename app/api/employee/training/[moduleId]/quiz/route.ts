@@ -12,32 +12,76 @@ export async function GET(
 ) {
   try {
     const { moduleId } = params;
-    const module = getModuleById(moduleId);
 
-    if (!module) {
+    if (!moduleId) {
       return NextResponse.json(
-        { error: "Module not found" },
+        { error: "Missing moduleId" },
+        { status: 400 }
+      );
+    }
+
+    // Try to fetch from Firestore first
+    let module: any = null;
+    let moduleName = "Training Module";
+    let quizData: any = null;
+
+    try {
+      const db = await getDbInstance();
+      if (db) {
+        const firestore = await safeImportFirestore();
+        const { collection, doc, getDoc } = firestore;
+        const modulesRef = collection(db, "trainingModules");
+        const moduleRef = doc(modulesRef, moduleId);
+        const moduleDoc = await getDoc(moduleRef);
+        
+        if (moduleDoc.exists()) {
+          const data = moduleDoc.data();
+          moduleName = data.title || data.name || moduleName;
+          quizData = data.quiz;
+        }
+      }
+    } catch (firestoreError: any) {
+      console.warn("[Quiz GET] Could not fetch from Firestore, trying hardcoded:", firestoreError?.message);
+    }
+
+    // Fallback to hardcoded modules if Firestore fetch failed or no quiz data
+    if (!quizData || !quizData.questions || !Array.isArray(quizData.questions)) {
+      const hardcodedModule = getModuleById(moduleId);
+      if (hardcodedModule) {
+        module = hardcodedModule;
+        moduleName = module.name;
+        quizData = module.quiz;
+      }
+    }
+
+    if (!quizData || !quizData.questions || !Array.isArray(quizData.questions)) {
+      return NextResponse.json(
+        { error: "Module not found or quiz not available" },
         { status: 404 }
       );
     }
 
     // Return quiz questions (without correct answers for security)
-    const questions = module.quiz.questions.map((q) => ({
-      id: q.id,
+    const questions = quizData.questions.map((q: any) => ({
+      id: q.id || `q-${Math.random()}`,
       question: q.question,
-      options: q.options,
+      options: q.options || [],
     }));
 
     return NextResponse.json({
       moduleId,
-      moduleName: module.name,
+      moduleName,
       questions,
-      passingScore: module.quiz.passingScore,
+      passingScore: quizData.passingScore || 80,
     });
   } catch (error: any) {
-    console.error("Error fetching quiz:", error);
+    console.error("[Quiz GET] Error fetching quiz:", error);
+    console.error("[Quiz GET] Error stack:", error?.stack);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch quiz" },
+      { 
+        error: error.message || "Failed to fetch quiz",
+        details: process.env.NODE_ENV === "development" ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
