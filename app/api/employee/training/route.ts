@@ -17,11 +17,28 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      console.error("[Training API] Database instance returned null");
+    let db;
+    try {
+      db = await getDbInstance();
+      if (!db) {
+        console.error("[Training API] Database instance returned null");
+        console.error("[Training API] Check Firebase environment variables: NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_APP_ID");
+        return NextResponse.json(
+          { 
+            error: "Database not available",
+            details: process.env.NODE_ENV === "development" ? "Firebase initialization failed. Check server logs." : undefined
+          },
+          { status: 500 }
+        );
+      }
+    } catch (dbError: any) {
+      console.error("[Training API] Error getting database instance:", dbError?.message || dbError);
+      console.error("[Training API] Database error stack:", dbError?.stack);
       return NextResponse.json(
-        { error: "Database not available" },
+        { 
+          error: "Database initialization failed",
+          details: process.env.NODE_ENV === "development" ? dbError?.message : undefined
+        },
         { status: 500 }
       );
     }
@@ -191,11 +208,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      console.error("[Training API POST] Database instance returned null");
+    let db;
+    try {
+      db = await getDbInstance();
+      if (!db) {
+        console.error("[Training API POST] Database instance returned null");
+        console.error("[Training API POST] Check Firebase environment variables");
+        return NextResponse.json(
+          { 
+            error: "Database not available",
+            details: process.env.NODE_ENV === "development" ? "Firebase initialization failed. Check server logs." : undefined
+          },
+          { status: 500 }
+        );
+      }
+    } catch (dbError: any) {
+      console.error("[Training API POST] Error getting database instance:", dbError?.message || dbError);
+      console.error("[Training API POST] Database error stack:", dbError?.stack);
       return NextResponse.json(
-        { error: "Database not available" },
+        { 
+          error: "Database initialization failed",
+          details: process.env.NODE_ENV === "development" ? dbError?.message : undefined
+        },
         { status: 500 }
       );
     }
