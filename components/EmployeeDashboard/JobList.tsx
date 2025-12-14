@@ -1,6 +1,8 @@
 // components/EmployeeDashboard/JobList.tsx
 "use client";
 
+import { useState } from "react";
+
 interface Job {
   id: string;
   customerName?: string;
@@ -24,6 +26,7 @@ interface JobListProps {
 }
 
 export function JobList({ jobs, onJobClick, isClockedIn }: JobListProps) {
+  const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all");
   if (!isClockedIn) {
     return (
       <div
@@ -96,15 +99,100 @@ export function JobList({ jobs, onJobClick, isClockedIn }: JobListProps) {
     window.open(mapUrl, "_blank");
   };
 
+  const filteredJobs = filter === "all" 
+    ? jobs 
+    : jobs.filter((job) => job.jobStatus === filter);
+
+  const pendingCount = jobs.filter((j) => j.jobStatus === "pending" || !j.jobStatus).length;
+  const inProgressCount = jobs.filter((j) => j.jobStatus === "in_progress").length;
+  const completedCount = jobs.filter((j) => j.jobStatus === "completed").length;
+
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "1rem",
-      }}
-    >
-      {jobs.map((job) => {
+    <div>
+      {/* Filter Tabs */}
+      <div
+        style={{
+          display: "flex",
+          gap: "0.5rem",
+          marginBottom: "1rem",
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          onClick={() => setFilter("all")}
+          style={{
+            padding: "0.5rem 1rem",
+            borderRadius: "8px",
+            border: "none",
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            cursor: "pointer",
+            background: filter === "all" ? "#16a34a" : "#f3f4f6",
+            color: filter === "all" ? "#ffffff" : "#6b7280",
+            transition: "all 0.2s",
+          }}
+        >
+          All ({jobs.length})
+        </button>
+        <button
+          onClick={() => setFilter("pending")}
+          style={{
+            padding: "0.5rem 1rem",
+            borderRadius: "8px",
+            border: "none",
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            cursor: "pointer",
+            background: filter === "pending" ? "#f59e0b" : "#f3f4f6",
+            color: filter === "pending" ? "#ffffff" : "#6b7280",
+            transition: "all 0.2s",
+          }}
+        >
+          Pending ({pendingCount})
+        </button>
+        <button
+          onClick={() => setFilter("in_progress")}
+          style={{
+            padding: "0.5rem 1rem",
+            borderRadius: "8px",
+            border: "none",
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            cursor: "pointer",
+            background: filter === "in_progress" ? "#2563eb" : "#f3f4f6",
+            color: filter === "in_progress" ? "#ffffff" : "#6b7280",
+            transition: "all 0.2s",
+          }}
+        >
+          In Progress ({inProgressCount})
+        </button>
+        <button
+          onClick={() => setFilter("completed")}
+          style={{
+            padding: "0.5rem 1rem",
+            borderRadius: "8px",
+            border: "none",
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            cursor: "pointer",
+            background: filter === "completed" ? "#16a34a" : "#f3f4f6",
+            color: filter === "completed" ? "#ffffff" : "#6b7280",
+            transition: "all 0.2s",
+          }}
+        >
+          Completed ({completedCount})
+        </button>
+      </div>
+
+      {/* Load Board Grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+          gap: "1rem",
+        }}
+      >
+        {filteredJobs.map((job) => {
         const statusColors = getStatusColor(job.jobStatus);
         const fullAddress = `${job.addressLine1}${
           job.addressLine2 ? `, ${job.addressLine2}` : ""
@@ -117,109 +205,181 @@ export function JobList({ jobs, onJobClick, isClockedIn }: JobListProps) {
             style={{
               background: "#ffffff",
               borderRadius: "12px",
-              padding: "1.5rem",
+              padding: "1.25rem",
               boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-              border: `1px solid ${statusColors.border}`,
+              border: `2px solid ${statusColors.border}`,
+              borderLeft: `4px solid ${statusColors.text}`,
               cursor: "pointer",
               transition: "transform 0.2s, box-shadow 0.2s",
+              position: "relative",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
+              e.currentTarget.style.transform = "translateY(-4px)";
+              e.currentTarget.style.boxShadow = "0 8px 16px rgba(0, 0, 0, 0.12)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
               e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.06)";
             }}
           >
-            <div
+            {/* Status Badge - Top Right */}
+            <span
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "start",
-                marginBottom: "0.75rem",
+                position: "absolute",
+                top: "0.75rem",
+                right: "0.75rem",
+                padding: "0.25rem 0.75rem",
+                borderRadius: "999px",
+                fontSize: "0.75rem",
+                fontWeight: "700",
+                textTransform: "uppercase",
+                background: statusColors.bg,
+                color: statusColors.text,
+                letterSpacing: "0.5px",
               }}
             >
-              <div style={{ flex: 1 }}>
-                <div
-                  style={{
-                    fontSize: "1.125rem",
-                    fontWeight: "600",
-                    marginBottom: "0.25rem",
-                    color: "#111827",
-                  }}
-                >
-                  {job.customerName || job.userEmail || "Customer"}
-                </div>
-                <div
-                  onClick={(e) => openMap(fullAddress, e)}
-                  style={{
-                    fontSize: "0.875rem",
-                    color: "#2563eb",
-                    marginBottom: "0.5rem",
-                    textDecoration: "underline",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
-                  title="Tap to open in maps"
-                >
-                  {fullAddress}
-                </div>
-              </div>
-              <span
+              {job.jobStatus || "pending"}
+            </span>
+
+            <div style={{ marginBottom: "0.75rem", paddingRight: "4rem" }}>
+              <div
                 style={{
-                  padding: "0.25rem 0.75rem",
-                  borderRadius: "999px",
-                  fontSize: "0.75rem",
-                  fontWeight: "600",
-                  textTransform: "capitalize",
-                  background: statusColors.bg,
-                  color: statusColors.text,
+                  fontSize: "1rem",
+                  fontWeight: "700",
+                  marginBottom: "0.5rem",
+                  color: "#111827",
+                  lineHeight: "1.3",
                 }}
               >
-                {job.jobStatus || "pending"}
-              </span>
+                {job.customerName || job.userEmail || "Customer"}
+              </div>
+              <div
+                onClick={(e) => openMap(fullAddress, e)}
+                style={{
+                  fontSize: "0.8125rem",
+                  color: "#2563eb",
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                  fontWeight: "500",
+                  lineHeight: "1.4",
+                }}
+                title="Tap to open in maps"
+              >
+                📍 {fullAddress}
+              </div>
             </div>
 
+            {/* Quick Info Grid */}
             <div
               style={{
-                display: "flex",
-                gap: "1rem",
-                fontSize: "0.875rem",
-                color: "#6b7280",
-                flexWrap: "wrap",
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "0.5rem",
+                marginBottom: "0.75rem",
+                fontSize: "0.8125rem",
               }}
             >
-              <div>
-                <strong>Bins:</strong> {job.binCount || "N/A"}
-              </div>
-              <div>
-                <strong>Type:</strong> {getPlanTypeLabel(job.planType)}
-              </div>
-              {job.flags && job.flags.length > 0 && (
-                <div style={{ color: "#dc2626" }}>
-                  <strong>Flags:</strong> {job.flags.length}
+              <div
+                style={{
+                  padding: "0.5rem",
+                  background: "#f9fafb",
+                  borderRadius: "6px",
+                  textAlign: "center",
+                }}
+              >
+                <div style={{ fontWeight: "600", color: "#6b7280", fontSize: "0.75rem" }}>
+                  BINS
                 </div>
-              )}
+                <div style={{ fontWeight: "700", color: "#111827", fontSize: "1rem" }}>
+                  {job.binCount || "?"}
+                </div>
+              </div>
+              <div
+                style={{
+                  padding: "0.5rem",
+                  background: "#f9fafb",
+                  borderRadius: "6px",
+                  textAlign: "center",
+                }}
+              >
+                <div style={{ fontWeight: "600", color: "#6b7280", fontSize: "0.75rem" }}>
+                  TYPE
+                </div>
+                <div style={{ fontWeight: "700", color: "#111827", fontSize: "0.875rem" }}>
+                  {getPlanTypeLabel(job.planType)}
+                </div>
+              </div>
             </div>
+
+            {job.flags && job.flags.length > 0 && (
+              <div
+                style={{
+                  padding: "0.5rem",
+                  background: "#fef2f2",
+                  borderRadius: "6px",
+                  fontSize: "0.75rem",
+                  color: "#dc2626",
+                  fontWeight: "600",
+                  textAlign: "center",
+                  marginBottom: "0.5rem",
+                }}
+              >
+                ⚠️ {job.flags.length} Flag{job.flags.length > 1 ? "s" : ""}
+              </div>
+            )}
 
             {job.notes && (
               <div
                 style={{
-                  marginTop: "0.75rem",
-                  padding: "0.75rem",
-                  background: "#f9fafb",
+                  padding: "0.5rem",
+                  background: "#fef3c7",
                   borderRadius: "6px",
-                  fontSize: "0.875rem",
-                  color: "#6b7280",
+                  fontSize: "0.75rem",
+                  color: "#92400e",
+                  lineHeight: "1.4",
+                  maxHeight: "60px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
                 }}
+                title={job.notes}
               >
-                <strong>Notes:</strong> {job.notes}
+                📝 {job.notes.length > 50 ? job.notes.substring(0, 50) + "..." : job.notes}
               </div>
             )}
+
+            {/* Action Hint */}
+            <div
+              style={{
+                marginTop: "0.75rem",
+                paddingTop: "0.75rem",
+                borderTop: "1px solid #e5e7eb",
+                fontSize: "0.75rem",
+                color: "#9ca3af",
+                textAlign: "center",
+                fontWeight: "500",
+              }}
+            >
+              Tap to {job.jobStatus === "completed" ? "view details" : job.jobStatus === "in_progress" ? "complete" : "start"}
+            </div>
           </div>
         );
       })}
+      </div>
+
+      {filteredJobs.length === 0 && (
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "12px",
+            padding: "2rem",
+            textAlign: "center",
+            color: "#6b7280",
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          No {filter === "all" ? "" : filter.replace("_", " ")} jobs found
+        </div>
+      )}
     </div>
   );
 }

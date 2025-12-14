@@ -1,8 +1,11 @@
 // components/EmployeeDashboard/JobDetailModal.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import * as React from "react";
 import { IssueFlags } from "./IssueFlags";
+import { PhotoUpload } from "./PhotoUpload";
+import { StickerConfirmation, StickerStatus } from "./StickerConfirmation";
 
 interface Job {
   id: string;
@@ -34,6 +37,8 @@ interface JobDetailModalProps {
       completionPhotoUrl?: string;
       employeeNotes?: string;
       binCount?: number;
+      stickerStatus?: StickerStatus;
+      stickerPlaced?: boolean;
     }
   ) => Promise<void>;
   onFlagJob: (jobId: string, flag: string) => Promise<void>;
@@ -57,6 +62,21 @@ export function JobDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [stickerStatus, setStickerStatus] = useState<StickerStatus>("none");
+  const [completionStep, setCompletionStep] = useState<1 | 2 | 3>(1);
+
+  // Reset state when job changes or modal closes
+  React.useEffect(() => {
+    if (isOpen && job) {
+      setBinCount(job.binCount || undefined);
+      setEmployeeNotes("");
+      setSelectedPhoto(null);
+      setPhotoFile(null);
+      setStickerStatus("none");
+      setCompletionStep(1);
+      setError(null);
+    }
+  }, [isOpen, job?.id]);
 
   if (!isOpen || !job) return null;
 
@@ -82,45 +102,79 @@ export function JobDetailModal({
     }
   };
 
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
-        setError("Please select an image file");
-        return;
-      }
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setError("Image must be less than 5MB");
-        return;
-      }
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedPhoto(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handlePhotoSelect = (file: File, dataUrl: string) => {
+    setPhotoFile(file);
+    setSelectedPhoto(dataUrl);
+    setError(null);
   };
 
   const handleCompleteJob = async () => {
+    // Validate step 1: Photo
+    if (!selectedPhoto) {
+      setError("Please take a photo of the cleaned bins");
+      setCompletionStep(1);
+      return;
+    }
+
+    // Validate step 2: Sticker status
+    if (stickerStatus === "none") {
+      setError("Please confirm sticker status");
+      setCompletionStep(2);
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
     try {
+      // Upload photo if we have a file
+      let photoUrl = selectedPhoto;
+      if (photoFile) {
+        // For now, use data URL. In production, upload to Firebase Storage
+        photoUrl = selectedPhoto;
+      }
+
       await onCompleteJob(job.id, {
         employeeNotes: employeeNotes.trim() || undefined,
         binCount,
-        completionPhotoUrl: selectedPhoto || undefined,
+        completionPhotoUrl: photoUrl || undefined,
+        stickerStatus,
+        stickerPlaced: stickerStatus === "placed",
       });
       setEmployeeNotes("");
       setSelectedPhoto(null);
       setPhotoFile(null);
+      setStickerStatus("none");
+      setCompletionStep(1);
       onClose();
     } catch (err: any) {
       setError(err.message || "Failed to complete job");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleNextStep = () => {
+    if (completionStep === 1) {
+      if (!selectedPhoto) {
+        setError("Please take a photo before continuing");
+        return;
+      }
+      setCompletionStep(2);
+      setError(null);
+    } else if (completionStep === 2) {
+      if (stickerStatus === "none") {
+        setError("Please select a sticker status");
+        return;
+      }
+      setCompletionStep(3);
+      setError(null);
+    }
+  };
+
+  const handlePreviousStep = () => {
+    if (completionStep > 1) {
+      setCompletionStep((completionStep - 1) as 1 | 2 | 3);
+      setError(null);
     }
   };
 
@@ -264,8 +318,240 @@ export function JobDetailModal({
           )}
         </div>
 
-        {/* Form Fields (if not completed) */}
-        {!isCompleted && (
+        {/* Multi-Step Completion Form (if not completed) */}
+        {!isCompleted && isInProgress && (
+          <>
+            {/* Progress Indicator */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "0.5rem",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    color: "#111827",
+                  }}
+                >
+                  Step {completionStep} of 3
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "#6b7280",
+                  }}
+                >
+                  {Math.round((completionStep / 3) * 100)}% Complete
+                </span>
+              </div>
+              <div
+                style={{
+                  width: "100%",
+                  height: "8px",
+                  background: "#e5e7eb",
+                  borderRadius: "4px",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${(completionStep / 3) * 100}%`,
+                    height: "100%",
+                    background: "#16a34a",
+                    transition: "width 0.3s",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Step 1: Photo Upload */}
+            {completionStep === 1 && (
+              <div>
+                <h3
+                  style={{
+                    fontSize: "1.125rem",
+                    fontWeight: "600",
+                    marginBottom: "1rem",
+                    color: "#111827",
+                  }}
+                >
+                  Step 1: Take Photo
+                </h3>
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "#6b7280",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  Take a clear photo of the cleaned bins showing your work
+                </p>
+                <PhotoUpload
+                  onPhotoSelect={handlePhotoSelect}
+                  currentPhoto={selectedPhoto}
+                  required={true}
+                  label="Completion Photo"
+                />
+              </div>
+            )}
+
+            {/* Step 2: Sticker Confirmation */}
+            {completionStep === 2 && (
+              <div>
+                <h3
+                  style={{
+                    fontSize: "1.125rem",
+                    fontWeight: "600",
+                    marginBottom: "1rem",
+                    color: "#111827",
+                  }}
+                >
+                  Step 2: Sticker Status
+                </h3>
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "#6b7280",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  Confirm the Bin Blast sticker status for this bin
+                </p>
+                <StickerConfirmation
+                  onStatusChange={setStickerStatus}
+                  currentStatus={stickerStatus}
+                />
+              </div>
+            )}
+
+            {/* Step 3: Final Details */}
+            {completionStep === 3 && (
+              <div>
+                <h3
+                  style={{
+                    fontSize: "1.125rem",
+                    fontWeight: "600",
+                    marginBottom: "1rem",
+                    color: "#111827",
+                  }}
+                >
+                  Step 3: Final Details
+                </h3>
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "#6b7280",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  Add any additional notes or update bin count
+                </p>
+
+                <div style={{ marginBottom: "1rem" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      marginBottom: "0.5rem",
+                      color: "#111827",
+                    }}
+                  >
+                    Number of Bins
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={binCount || ""}
+                    onChange={(e) =>
+                      setBinCount(
+                        e.target.value ? parseInt(e.target.value, 10) : undefined
+                      )
+                    }
+                    style={{
+                      width: "100%",
+                      minHeight: "44px",
+                      padding: "0.75rem",
+                      border: "2px solid #e5e7eb",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "1rem" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      marginBottom: "0.5rem",
+                      color: "#111827",
+                    }}
+                  >
+                    Job Notes (optional)
+                  </label>
+                  <textarea
+                    value={employeeNotes}
+                    onChange={(e) => setEmployeeNotes(e.target.value)}
+                    placeholder="Add any notes about this job..."
+                    rows={4}
+                    style={{
+                      width: "100%",
+                      minHeight: "120px",
+                      padding: "0.75rem",
+                      border: "2px solid #e5e7eb",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </div>
+
+                {/* Review Summary */}
+                <div
+                  style={{
+                    padding: "1rem",
+                    background: "#f9fafb",
+                    borderRadius: "8px",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      marginBottom: "0.5rem",
+                      color: "#111827",
+                    }}
+                  >
+                    Review Summary:
+                  </div>
+                  <div style={{ fontSize: "0.8125rem", color: "#6b7280" }}>
+                    ✓ Photo: {selectedPhoto ? "Uploaded" : "Missing"}
+                    <br />
+                    ✓ Sticker:{" "}
+                    {stickerStatus === "existing"
+                      ? "Customer has sticker"
+                      : stickerStatus === "placed"
+                      ? "Sticker placed"
+                      : "No sticker"}
+                    <br />
+                    ✓ Bins: {binCount || "Not specified"}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Simple form for pending jobs */}
+        {!isCompleted && canStart && (
           <>
             <div style={{ marginBottom: "1rem" }}>
               <label
@@ -288,7 +574,6 @@ export function JobDetailModal({
                     e.target.value ? parseInt(e.target.value, 10) : undefined
                   )
                 }
-                disabled={isCompleted}
                 style={{
                   width: "100%",
                   minHeight: "44px",
@@ -298,111 +583,6 @@ export function JobDetailModal({
                   fontSize: "0.875rem",
                 }}
               />
-            </div>
-
-            <div style={{ marginBottom: "1rem" }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.875rem",
-                  fontWeight: "600",
-                  marginBottom: "0.5rem",
-                  color: "#111827",
-                }}
-              >
-                Job Notes (optional)
-              </label>
-              <textarea
-                value={employeeNotes}
-                onChange={(e) => setEmployeeNotes(e.target.value)}
-                disabled={isCompleted}
-                placeholder="Add any notes about this job..."
-                rows={4}
-                style={{
-                  width: "100%",
-                  minHeight: "120px",
-                  padding: "0.75rem",
-                  border: "2px solid #e5e7eb",
-                  borderRadius: "8px",
-                  fontSize: "0.875rem",
-                  fontFamily: "inherit",
-                }}
-              />
-            </div>
-
-            {/* Photo Upload */}
-            <div style={{ marginBottom: "1rem" }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.875rem",
-                  fontWeight: "600",
-                  marginBottom: "0.5rem",
-                  color: "#111827",
-                }}
-              >
-                Completion Photo (optional but recommended)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoSelect}
-                disabled={isCompleted}
-                style={{
-                  width: "100%",
-                  minHeight: "44px",
-                  padding: "0.75rem",
-                  border: "2px solid #e5e7eb",
-                  borderRadius: "8px",
-                  fontSize: "0.875rem",
-                  cursor: isCompleted ? "not-allowed" : "pointer",
-                }}
-              />
-              {selectedPhoto && (
-                <div style={{ marginTop: "0.75rem" }}>
-                  <img
-                    src={selectedPhoto}
-                    alt="Completion preview"
-                    style={{
-                      width: "100%",
-                      maxHeight: "300px",
-                      objectFit: "contain",
-                      borderRadius: "6px",
-                      border: "1px solid #e5e7eb",
-                    }}
-                  />
-                  <button
-                    onClick={() => {
-                      setSelectedPhoto(null);
-                      setPhotoFile(null);
-                    }}
-                    style={{
-                      marginTop: "0.5rem",
-                      minHeight: "44px",
-                      padding: "0.75rem 1rem",
-                      background: "#fee2e2",
-                      color: "#991b1b",
-                      border: "2px solid #fecaca",
-                      borderRadius: "8px",
-                      fontSize: "0.875rem",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                    }}
-                    onMouseDown={(e) => {
-                      e.currentTarget.style.transform = "scale(0.98)";
-                    }}
-                    onMouseUp={(e) => {
-                      e.currentTarget.style.transform = "scale(1)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "scale(1)";
-                    }}
-                  >
-                    Remove Photo
-                  </button>
-                </div>
-              )}
             </div>
           </>
         )}
@@ -502,38 +682,72 @@ export function JobDetailModal({
             </button>
           )}
 
-          {canComplete && !isCompleted && (
-            <button
-              onClick={handleCompleteJob}
-              disabled={isSubmitting}
-              style={{
-                flex: 1,
-                minHeight: "48px",
-                padding: "0.75rem 1rem",
-                borderRadius: "8px",
-                border: "none",
-                fontSize: "1rem",
-                fontWeight: "700",
-                color: "#ffffff",
-                background: "#16a34a",
-                cursor: isSubmitting ? "not-allowed" : "pointer",
-                opacity: isSubmitting ? 0.6 : 1,
-                transition: "opacity 0.2s, transform 0.1s",
-              }}
-              onMouseDown={(e) => {
-                if (!isSubmitting) {
-                  e.currentTarget.style.transform = "scale(0.98)";
-                }
-              }}
-              onMouseUp={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-              }}
-            >
-              {isSubmitting ? "Completing..." : "Complete Job"}
-            </button>
+          {canComplete && !isCompleted && isInProgress && (
+            <>
+              {completionStep > 1 && (
+                <button
+                  onClick={handlePreviousStep}
+                  disabled={isSubmitting}
+                  style={{
+                    minHeight: "48px",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    border: "2px solid #e5e7eb",
+                    fontSize: "1rem",
+                    fontWeight: "600",
+                    color: "#111827",
+                    background: "#ffffff",
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                    transition: "all 0.2s",
+                  }}
+                >
+                  ← Back
+                </button>
+              )}
+              {completionStep < 3 ? (
+                <button
+                  onClick={handleNextStep}
+                  disabled={isSubmitting}
+                  style={{
+                    flex: 1,
+                    minHeight: "48px",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    border: "none",
+                    fontSize: "1rem",
+                    fontWeight: "700",
+                    color: "#ffffff",
+                    background: "#2563eb",
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                    opacity: isSubmitting ? 0.6 : 1,
+                    transition: "opacity 0.2s, transform 0.1s",
+                  }}
+                >
+                  Next →
+                </button>
+              ) : (
+                <button
+                  onClick={handleCompleteJob}
+                  disabled={isSubmitting}
+                  style={{
+                    flex: 1,
+                    minHeight: "48px",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    border: "none",
+                    fontSize: "1rem",
+                    fontWeight: "700",
+                    color: "#ffffff",
+                    background: "#16a34a",
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                    opacity: isSubmitting ? 0.6 : 1,
+                    transition: "opacity 0.2s, transform 0.1s",
+                  }}
+                >
+                  {isSubmitting ? "Completing..." : "✓ Complete Job"}
+                </button>
+              )}
+            </>
           )}
 
           {isCompleted && (

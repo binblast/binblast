@@ -10,7 +10,7 @@ export async function POST(
   try {
     const { jobId } = params;
     const body = await req.json();
-    const { employeeId, completionPhotoUrl, employeeNotes, binCount } = body;
+    const { employeeId, completionPhotoUrl, employeeNotes, binCount, stickerStatus, stickerPlaced } = body;
 
     if (!jobId || !employeeId) {
       return NextResponse.json(
@@ -67,6 +67,14 @@ export async function POST(
 
     if (binCount !== undefined && binCount !== null) {
       updateData.binCount = parseInt(binCount.toString(), 10);
+    }
+
+    if (stickerStatus) {
+      updateData.stickerStatus = stickerStatus;
+    }
+
+    if (stickerPlaced !== undefined) {
+      updateData.stickerPlaced = stickerPlaced;
     }
 
     await updateDoc(jobRef, updateData);

@@ -9,6 +9,8 @@ import { JobList } from "@/components/EmployeeDashboard/JobList";
 import { JobDetailModal } from "@/components/EmployeeDashboard/JobDetailModal";
 import { ProgressTracker } from "@/components/EmployeeDashboard/ProgressTracker";
 import { PayPreview } from "@/components/EmployeeDashboard/PayPreview";
+import { TrainingSection } from "@/components/EmployeeDashboard/TrainingSection";
+import { EquipmentChecklist } from "@/components/EmployeeDashboard/EquipmentChecklist";
 import {
   getEmployeeData,
   ClockInRecord,
@@ -42,6 +44,8 @@ interface Job {
   completedAt?: any;
 }
 
+type DashboardTab = "home" | "training" | "equipment";
+
 export default function EmployeeDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -51,6 +55,7 @@ export default function EmployeeDashboardPage() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isClockInLoading, setIsClockInLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<DashboardTab>("home");
   const [payPreview, setPayPreview] = useState({
     completedJobs: 0,
     payRatePerJob: 0,
@@ -325,6 +330,8 @@ export default function EmployeeDashboardPage() {
       completionPhotoUrl?: string;
       employeeNotes?: string;
       binCount?: number;
+      stickerStatus?: "existing" | "placed" | "none";
+      stickerPlaced?: boolean;
     }
   ) => {
     if (!employee) return;
@@ -431,43 +438,122 @@ export default function EmployeeDashboardPage() {
             isClockInLoading={isClockInLoading}
           />
 
-          {isClockedIn && (
-            <>
-              <ProgressTracker
-                completed={completedJobs}
-                remaining={remainingJobs}
-                total={jobs.length}
-              />
+          {/* Tab Navigation */}
+          <div
+            style={{
+              display: "flex",
+              gap: "0.5rem",
+              marginTop: "1.5rem",
+              marginBottom: "1.5rem",
+              borderBottom: "2px solid #e5e7eb",
+            }}
+          >
+            <button
+              onClick={() => setActiveTab("home")}
+              style={{
+                padding: "0.75rem 1.5rem",
+                border: "none",
+                background: "transparent",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                color: activeTab === "home" ? "#16a34a" : "#6b7280",
+                cursor: "pointer",
+                borderBottom: activeTab === "home" ? "2px solid #16a34a" : "2px solid transparent",
+                marginBottom: "-2px",
+                transition: "all 0.2s",
+              }}
+            >
+              Home
+            </button>
+            <button
+              onClick={() => setActiveTab("training")}
+              style={{
+                padding: "0.75rem 1.5rem",
+                border: "none",
+                background: "transparent",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                color: activeTab === "training" ? "#16a34a" : "#6b7280",
+                cursor: "pointer",
+                borderBottom: activeTab === "training" ? "2px solid #16a34a" : "2px solid transparent",
+                marginBottom: "-2px",
+                transition: "all 0.2s",
+              }}
+            >
+              Training
+            </button>
+            <button
+              onClick={() => setActiveTab("equipment")}
+              style={{
+                padding: "0.75rem 1.5rem",
+                border: "none",
+                background: "transparent",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                color: activeTab === "equipment" ? "#16a34a" : "#6b7280",
+                cursor: "pointer",
+                borderBottom: activeTab === "equipment" ? "2px solid #16a34a" : "2px solid transparent",
+                marginBottom: "-2px",
+                transition: "all 0.2s",
+              }}
+            >
+              Equipment
+            </button>
+          </div>
 
-              <PayPreview
-                completedJobs={payPreview.completedJobs}
-                payRatePerJob={payPreview.payRatePerJob}
-                estimatedPay={payPreview.estimatedPay}
-                isClockedIn={isClockedIn}
-              />
+          {/* Tab Content */}
+          {activeTab === "home" && (
+            <>
+              {isClockedIn && (
+                <>
+                  <ProgressTracker
+                    completed={completedJobs}
+                    remaining={remainingJobs}
+                    total={jobs.length}
+                  />
+
+                  <PayPreview
+                    completedJobs={payPreview.completedJobs}
+                    payRatePerJob={payPreview.payRatePerJob}
+                    estimatedPay={payPreview.estimatedPay}
+                    isClockedIn={isClockedIn}
+                  />
+                </>
+              )}
+
+              <div style={{ marginBottom: "1.5rem" }}>
+                <h2
+                  style={{
+                    fontSize: "1.25rem",
+                    fontWeight: "600",
+                    marginBottom: "1rem",
+                    color: "#111827",
+                  }}
+                >
+                  Today&apos;s Route
+                </h2>
+                <JobList
+                  jobs={jobs}
+                  onJobClick={(job) => {
+                    setSelectedJob(job);
+                    setIsModalOpen(true);
+                  }}
+                  isClockedIn={isClockedIn}
+                />
+              </div>
             </>
           )}
 
-          <div style={{ marginBottom: "1.5rem" }}>
-            <h2
-              style={{
-                fontSize: "1.25rem",
-                fontWeight: "600",
-                marginBottom: "1rem",
-                color: "#111827",
-              }}
-            >
-              Today&apos;s Route
-            </h2>
-            <JobList
-              jobs={jobs}
-              onJobClick={(job) => {
-                setSelectedJob(job);
-                setIsModalOpen(true);
-              }}
+          {activeTab === "training" && (
+            <TrainingSection employeeId={employee.id} />
+          )}
+
+          {activeTab === "equipment" && (
+            <EquipmentChecklist 
+              employeeId={employee.id}
               isClockedIn={isClockedIn}
             />
-          </div>
+          )}
         </div>
       </main>
 
