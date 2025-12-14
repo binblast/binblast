@@ -344,7 +344,13 @@ export async function POST(
         });
       } catch (updateError: any) {
         console.error("[Quiz API] Error updating trainingProgress:", updateError);
-        throw new Error(`Failed to update training progress: ${updateError.message}`);
+        console.error("[Quiz API] Update error details:", {
+          message: updateError?.message,
+          code: updateError?.code,
+          employeeId,
+          moduleId,
+        });
+        // Don't throw - this is non-blocking
       }
     } else {
       // Create new progress document if it doesn't exist
@@ -380,7 +386,13 @@ export async function POST(
         });
       } catch (createError: any) {
         console.error("[Quiz API] Error creating trainingProgress:", createError);
-        throw new Error(`Failed to create training progress: ${createError.message}`);
+        console.error("[Quiz API] Create error details:", {
+          message: createError?.message,
+          code: createError?.code,
+          employeeId,
+          moduleId,
+        });
+        // Don't throw - this is non-blocking
       }
       }
     } catch (progressError: any) {
