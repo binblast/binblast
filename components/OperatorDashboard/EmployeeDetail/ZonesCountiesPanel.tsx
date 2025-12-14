@@ -14,6 +14,13 @@ export function ZonesCountiesPanel({ employeeId }: ZonesCountiesPanelProps) {
   const [zones, setZones] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoAssignOnSave, setAutoAssignOnSave] = useState(false);
+  const [autoAssigning, setAutoAssigning] = useState(false);
+  const [assignmentResult, setAssignmentResult] = useState<{
+    assigned: number;
+    skipped: number;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     loadCoverage();
@@ -36,22 +43,77 @@ export function ZonesCountiesPanel({ employeeId }: ZonesCountiesPanelProps) {
 
   const handleSave = async () => {
     setSaving(true);
+    setAssignmentResult(null);
     try {
       const response = await fetch(`/api/operator/employees/${employeeId}/coverage`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ counties, zones }),
+        body: JSON.stringify({ 
+          counties, 
+          zones,
+          autoAssign: autoAssignOnSave,
+        }),
       });
 
       if (!response.ok) {
         throw new Error("Failed to save coverage");
       }
 
-      alert("Coverage updated successfully");
+      const data = await response.json();
+      
+      if (autoAssignOnSave && data.assignmentResult) {
+        setAssignmentResult({
+          assigned: data.assignmentResult.result?.assigned || 0,
+          skipped: data.assignmentResult.result?.skipped || 0,
+          message: data.assignmentResult.message || "Coverage updated successfully",
+        });
+      } else {
+        setAssignmentResult({
+          assigned: 0,
+          skipped: 0,
+          message: "Coverage updated successfully",
+        });
+      }
     } catch (error: any) {
-      alert(error.message || "Failed to save coverage");
+      setAssignmentResult({
+        assigned: 0,
+        skipped: 0,
+        message: error.message || "Failed to save coverage",
+      });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAutoAssign = async () => {
+    setAutoAssigning(true);
+    setAssignmentResult(null);
+    try {
+      const response = await fetch(`/api/operator/employees/${employeeId}/auto-assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zones, counties }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to auto-assign customers");
+      }
+
+      const data = await response.json();
+      setAssignmentResult({
+        assigned: data.result?.assigned || 0,
+        skipped: data.result?.skipped || 0,
+        message: data.message || "Auto-assignment completed",
+      });
+    } catch (error: any) {
+      setAssignmentResult({
+        assigned: 0,
+        skipped: 0,
+        message: error.message || "Failed to auto-assign customers",
+      });
+    } finally {
+      setAutoAssigning(false);
     }
   };
 
@@ -229,24 +291,87 @@ export function ZonesCountiesPanel({ employeeId }: ZonesCountiesPanelProps) {
         </div>
       </div>
 
-      {/* Save Button */}
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        style={{
-          padding: "0.75rem 1.5rem",
-          background: saving ? "#9ca3af" : "#16a34a",
-          color: "#ffffff",
-          border: "none",
+      {/* Assignment Result */}
+      {assignmentResult && (
+        <div style={{
+          padding: "1rem",
           borderRadius: "6px",
-          fontSize: "0.95rem",
-          fontWeight: "600",
-          cursor: saving ? "not-allowed" : "pointer",
-          opacity: saving ? 0.5 : 1,
-        }}
-      >
-        {saving ? "Saving..." : "Save Coverage"}
-      </button>
+          marginBottom: "1rem",
+          background: assignmentResult.assigned > 0 ? "#d1fae5" : assignmentResult.message.includes("Failed") ? "#fee2e2" : "#f0f9ff",
+          border: `1px solid ${assignmentResult.assigned > 0 ? "#10b981" : assignmentResult.message.includes("Failed") ? "#ef4444" : "#3b82f6"}`,
+          color: assignmentResult.assigned > 0 ? "#065f46" : assignmentResult.message.includes("Failed") ? "#991b1b" : "#1e40af",
+        }}>
+          <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>
+            {assignmentResult.message}
+          </div>
+          {assignmentResult.assigned > 0 && (
+            <div style={{ fontSize: "0.875rem" }}>
+              Assigned: {assignmentResult.assigned} customer(s)
+              {assignmentResult.skipped > 0 && ` • Skipped: ${assignmentResult.skipped} (workload balance)`}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Auto-Assign on Save Checkbox */}
+      <div style={{ marginBottom: "1rem" }}>
+        <label style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          cursor: "pointer",
+          fontSize: "0.875rem",
+          color: "#374151",
+        }}>
+          <input
+            type="checkbox"
+            checked={autoAssignOnSave}
+            onChange={(e) => setAutoAssignOnSave(e.target.checked)}
+            style={{ cursor: "pointer" }}
+          />
+          <span>Auto-assign customers when saving coverage</span>
+        </label>
+      </div>
+
+      {/* Action Buttons */}
+      <div style={{ display: "flex", gap: "1rem" }}>
+        <button
+          onClick={handleAutoAssign}
+          disabled={autoAssigning || zones.length === 0 && counties.length === 0}
+          style={{
+            padding: "0.75rem 1.5rem",
+            background: (autoAssigning || zones.length === 0 && counties.length === 0) ? "#9ca3af" : "#3b82f6",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "0.95rem",
+            fontWeight: "600",
+            cursor: (autoAssigning || zones.length === 0 && counties.length === 0) ? "not-allowed" : "pointer",
+            opacity: (autoAssigning || zones.length === 0 && counties.length === 0) ? 0.5 : 1,
+            flex: 1,
+          }}
+        >
+          {autoAssigning ? "Auto-Assigning..." : "Auto-Assign Customers"}
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            padding: "0.75rem 1.5rem",
+            background: saving ? "#9ca3af" : "#16a34a",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "0.95rem",
+            fontWeight: "600",
+            cursor: saving ? "not-allowed" : "pointer",
+            opacity: saving ? 0.5 : 1,
+            flex: 1,
+          }}
+        >
+          {saving ? "Saving..." : "Save Coverage"}
+        </button>
+      </div>
     </div>
   );
 }

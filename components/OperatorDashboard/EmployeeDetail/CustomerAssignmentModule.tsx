@@ -20,6 +20,13 @@ interface CustomerAssignmentModuleProps {
   onAssign?: () => void;
 }
 
+interface CustomerWithAssignment extends Customer {
+  assignedTo?: string;
+  assignedToName?: string;
+  assignmentSource?: string;
+  matchesZone?: boolean;
+}
+
 export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssignmentModuleProps) {
   const [search, setSearch] = useState("");
   const [filterCounty, setFilterCounty] = useState("");
@@ -27,7 +34,8 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
   const [filterPlan, setFilterPlan] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterServiceType, setFilterServiceType] = useState("");
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filterByZone, setFilterByZone] = useState(true);
+  const [customers, setCustomers] = useState<CustomerWithAssignment[]>([]);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [assigning, setAssigning] = useState(false);
@@ -35,12 +43,104 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
   const [priority, setPriority] = useState<"normal" | "priority" | "urgent">("normal");
   const [recurringDays, setRecurringDays] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [workload, setWorkload] = useState<{
+    totalCustomers: number;
+    capacityUtilization: number;
+  } | null>(null);
+  const [employeeZones, setEmployeeZones] = useState<string[]>([]);
+  const [employeeCounties, setEmployeeCounties] = useState<string[]>([]);
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [availableEmployees, setAvailableEmployees] = useState<Array<{
+    id: string;
+    name: string;
+    currentCustomers: number;
+    availableCapacity: number;
+  }>>([]);
+  const [reassigning, setReassigning] = useState(false);
 
   useEffect(() => {
-    if (search || filterCounty || filterCity || filterPlan || filterStatus) {
+    loadEmployeeCoverage();
+    loadWorkload();
+  }, [employeeId]);
+
+  useEffect(() => {
+    if (search || filterCounty || filterCity || filterPlan || filterStatus || filterByZone) {
       searchCustomers();
     }
-  }, [search, filterCounty, filterCity, filterPlan, filterStatus, filterServiceType]);
+  }, [search, filterCounty, filterCity, filterPlan, filterStatus, filterServiceType, filterByZone, employeeZones, employeeCounties]);
+
+  const loadEmployeeCoverage = async () => {
+    try {
+      const response = await fetch(`/api/operator/employees/${employeeId}/coverage`);
+      if (response.ok) {
+        const data = await response.json();
+        setEmployeeZones(data.zones || []);
+        setEmployeeCounties(data.counties || []);
+      }
+    } catch (error) {
+      console.error("Error loading employee coverage:", error);
+    }
+  };
+
+  const loadWorkload = async () => {
+    try {
+      const response = await fetch(`/api/operator/employees/${employeeId}/workload`);
+      if (response.ok) {
+        const data = await response.json();
+        setWorkload(data.workload);
+      }
+    } catch (error) {
+      console.error("Error loading workload:", error);
+    }
+  };
+
+  const loadAvailableEmployees = async () => {
+    try {
+      const response = await fetch(`/api/operator/employees/${employeeId}/reassign`);
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableEmployees(data.availableEmployees || []);
+      }
+    } catch (error) {
+      console.error("Error loading available employees:", error);
+    }
+  };
+
+  const handleReassign = async (targetEmployeeId: string) => {
+    if (selectedCustomers.length === 0) {
+      alert("Please select customers to reassign");
+      return;
+    }
+
+    setReassigning(true);
+    try {
+      const response = await fetch(`/api/operator/employees/${employeeId}/reassign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerIds: selectedCustomers,
+          targetEmployeeId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to reassign customers");
+      }
+
+      const data = await response.json();
+      alert(`Successfully reassigned ${data.reassigned.length} customer(s)`);
+      setSelectedCustomers([]);
+      setShowReassignModal(false);
+      loadWorkload();
+      searchCustomers();
+      if (onAssign) onAssign();
+    } catch (error: any) {
+      alert(error.message || "Failed to reassign customers");
+    } finally {
+      setReassigning(false);
+    }
+  };
 
   const searchCustomers = async () => {
     setLoading(true);
@@ -52,6 +152,14 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
       if (filterPlan) params.append("plan", filterPlan);
       if (filterStatus) params.append("status", filterStatus);
       if (filterServiceType) params.append("serviceType", filterServiceType);
+      
+      // Add zone/county filtering if enabled
+      if (filterByZone && employeeZones.length > 0) {
+        params.append("zones", employeeZones.join(","));
+      }
+      if (filterByZone && employeeCounties.length > 0) {
+        params.append("counties", employeeCounties.join(","));
+      }
 
       const response = await fetch(`/api/operator/customers/search?${params.toString()}`);
       if (response.ok) {
@@ -69,6 +177,18 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
     const warnings: string[] = [];
     const selectedCustomerData = customers.filter(c => selectedCustomers.includes(c.id));
     
+    // Check workload capacity
+    if (workload) {
+      const newTotal = workload.totalCustomers + selectedCustomers.length;
+      const newUtilization = (newTotal / 40) * 100;
+      
+      if (newTotal > 40) {
+        warnings.push(`⚠️ Overload Warning: This will assign ${newTotal} customers (${newUtilization.toFixed(0)}% capacity). Consider reassigning some customers.`);
+      } else if (newUtilization > 80) {
+        warnings.push(`⚠️ High Capacity: This will reach ${newUtilization.toFixed(0)}% capacity. Monitor workload closely.`);
+      }
+    }
+
     // Check county spread
     const uniqueCounties = new Set(selectedCustomerData.map(c => c.county));
     if (uniqueCounties.size > 5) {
@@ -78,6 +198,12 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
     // Check if too many stops
     if (selectedCustomers.length > 30) {
       warnings.push(`Assigning ${selectedCustomers.length} stops. Estimated drive time may exceed 8 hours.`);
+    }
+
+    // Check for customers not matching zones
+    const nonMatchingCustomers = selectedCustomerData.filter(c => c.matchesZone === false);
+    if (nonMatchingCustomers.length > 0 && filterByZone) {
+      warnings.push(`${nonMatchingCustomers.length} customer(s) don't match assigned zones. Consider adjusting coverage.`);
     }
 
     setWarnings(warnings);
@@ -108,6 +234,7 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
           body: JSON.stringify({
             cleaningId: customerId,
             priority,
+            assignmentSource: "manual",
           }),
         });
 
@@ -115,6 +242,9 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
           throw new Error(`Failed to assign customer ${customerId}`);
         }
       }
+      
+      // Refresh workload after assignment
+      loadWorkload();
 
       alert(`Successfully assigned ${selectedCustomers.length} customer(s)`);
       setSelectedCustomers([]);
@@ -146,6 +276,25 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
         Assign Customers / Stops
       </h3>
 
+      {/* Workload Indicator */}
+      {workload && (
+        <div style={{
+          padding: "0.75rem 1rem",
+          background: workload.capacityUtilization > 80 ? "#fef3c7" : workload.capacityUtilization > 60 ? "#f0f9ff" : "#f0fdf4",
+          border: `1px solid ${workload.capacityUtilization > 80 ? "#f59e0b" : workload.capacityUtilization > 60 ? "#3b82f6" : "#10b981"}`,
+          borderRadius: "6px",
+          marginBottom: "1rem",
+          fontSize: "0.875rem",
+        }}>
+          <div style={{ fontWeight: "600", marginBottom: "0.25rem" }}>
+            Current Workload: {workload.totalCustomers} customers ({workload.capacityUtilization.toFixed(0)}% capacity)
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+            Capacity: {workload.totalCustomers}/40 customers
+          </div>
+        </div>
+      )}
+
       {/* Search and Filters */}
       <div style={{ marginBottom: "1.5rem" }}>
         <input
@@ -162,6 +311,27 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
             marginBottom: "1rem",
           }}
         />
+
+        {/* Filter by Zone Checkbox */}
+        {(employeeZones.length > 0 || employeeCounties.length > 0) && (
+          <label style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            marginBottom: "1rem",
+            fontSize: "0.875rem",
+            color: "#374151",
+            cursor: "pointer",
+          }}>
+            <input
+              type="checkbox"
+              checked={filterByZone}
+              onChange={(e) => setFilterByZone(e.target.checked)}
+              style={{ cursor: "pointer" }}
+            />
+            <span>Show only customers matching assigned zones/counties</span>
+          </label>
+        )}
 
         <div style={{
           display: "grid",
@@ -322,8 +492,43 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
                 onClick={(e) => e.stopPropagation()}
               />
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
-                  {customer.name}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                  <span style={{ fontWeight: "600", color: "#111827" }}>
+                    {customer.name}
+                  </span>
+                  {customer.assignmentSource && (
+                    <span style={{
+                      fontSize: "0.75rem",
+                      padding: "0.125rem 0.5rem",
+                      borderRadius: "4px",
+                      background: customer.assignmentSource === "auto" ? "#dbeafe" : "#f3f4f6",
+                      color: customer.assignmentSource === "auto" ? "#1e40af" : "#6b7280",
+                    }}>
+                      {customer.assignmentSource === "auto" ? "Auto" : "Manual"}
+                    </span>
+                  )}
+                  {customer.matchesZone === false && (
+                    <span style={{
+                      fontSize: "0.75rem",
+                      padding: "0.125rem 0.5rem",
+                      borderRadius: "4px",
+                      background: "#fee2e2",
+                      color: "#991b1b",
+                    }}>
+                      Outside Zone
+                    </span>
+                  )}
+                  {customer.assignedTo && customer.assignedTo !== employeeId && (
+                    <span style={{
+                      fontSize: "0.75rem",
+                      padding: "0.125rem 0.5rem",
+                      borderRadius: "4px",
+                      background: "#fef3c7",
+                      color: "#92400e",
+                    }}>
+                      Assigned to {customer.assignedToName || "Another Employee"}
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
                   {customer.county || customer.city} — {customer.address} — {customer.plan}
@@ -334,24 +539,130 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
         </div>
       )}
 
-      {/* Assign Button */}
-      <button
-        onClick={handleAssign}
-        disabled={selectedCustomers.length === 0 || assigning}
-        style={{
-          padding: "0.75rem 1.5rem",
-          background: selectedCustomers.length === 0 || assigning ? "#9ca3af" : "#16a34a",
-          color: "#ffffff",
-          border: "none",
-          borderRadius: "6px",
-          fontSize: "0.95rem",
-          fontWeight: "600",
-          cursor: selectedCustomers.length === 0 || assigning ? "not-allowed" : "pointer",
-          opacity: assigning ? 0.5 : 1,
-        }}
-      >
-        {assigning ? "Assigning..." : `Assign ${selectedCustomers.length} Customer(s)`}
-      </button>
+      {/* Action Buttons */}
+      <div style={{ display: "flex", gap: "1rem" }}>
+        {workload && workload.capacityUtilization > 80 && selectedCustomers.length > 0 && (
+          <button
+            onClick={() => {
+              loadAvailableEmployees();
+              setShowReassignModal(true);
+            }}
+            disabled={selectedCustomers.length === 0}
+            style={{
+              padding: "0.75rem 1.5rem",
+              background: selectedCustomers.length === 0 ? "#9ca3af" : "#f59e0b",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "6px",
+              fontSize: "0.95rem",
+              fontWeight: "600",
+              cursor: selectedCustomers.length === 0 ? "not-allowed" : "pointer",
+            }}
+          >
+            Reassign {selectedCustomers.length} Customer(s)
+          </button>
+        )}
+        <button
+          onClick={handleAssign}
+          disabled={selectedCustomers.length === 0 || assigning}
+          style={{
+            padding: "0.75rem 1.5rem",
+            background: selectedCustomers.length === 0 || assigning ? "#9ca3af" : "#16a34a",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "0.95rem",
+            fontWeight: "600",
+            cursor: selectedCustomers.length === 0 || assigning ? "not-allowed" : "pointer",
+            opacity: assigning ? 0.5 : 1,
+            flex: 1,
+          }}
+        >
+          {assigning ? "Assigning..." : `Assign ${selectedCustomers.length} Customer(s)`}
+        </button>
+      </div>
+
+      {/* Reassign Modal */}
+      {showReassignModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "12px",
+            padding: "2rem",
+            maxWidth: "500px",
+            width: "90%",
+            maxHeight: "80vh",
+            overflowY: "auto",
+          }}>
+            <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
+              Reassign {selectedCustomers.length} Customer(s)
+            </h3>
+            <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "1.5rem" }}>
+              Select an employee to reassign these customers to:
+            </p>
+            {availableEmployees.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+                No available employees found in same zones
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.5rem" }}>
+                {availableEmployees.map((emp) => (
+                  <button
+                    key={emp.id}
+                    onClick={() => handleReassign(emp.id)}
+                    disabled={reassigning || emp.availableCapacity < selectedCustomers.length}
+                    style={{
+                      padding: "1rem",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "6px",
+                      background: emp.availableCapacity < selectedCustomers.length ? "#f3f4f6" : "#ffffff",
+                      textAlign: "left",
+                      cursor: reassigning || emp.availableCapacity < selectedCustomers.length ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    <div style={{ fontWeight: "600", marginBottom: "0.25rem" }}>{emp.name}</div>
+                    <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                      {emp.currentCustomers} customers • {emp.availableCapacity} available capacity
+                      {emp.availableCapacity < selectedCustomers.length && (
+                        <span style={{ color: "#ef4444", marginLeft: "0.5rem" }}>
+                          (Insufficient capacity)
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowReassignModal(false)}
+              style={{
+                padding: "0.75rem 1.5rem",
+                background: "#6b7280",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "6px",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                cursor: "pointer",
+                width: "100%",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
