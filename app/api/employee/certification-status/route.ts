@@ -18,7 +18,11 @@ export async function GET(req: NextRequest) {
 
     const certification = await checkCertificationStatus(employeeId);
 
-    return NextResponse.json(certification);
+    // Convert Date objects to ISO strings for JSON serialization
+    return NextResponse.json({
+      ...certification,
+      expiresAt: certification.expiresAt?.toISOString(),
+    });
   } catch (error: any) {
     console.error("Error checking certification status:", error);
     return NextResponse.json(

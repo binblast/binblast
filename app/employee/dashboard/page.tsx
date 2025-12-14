@@ -527,6 +527,8 @@ export default function EmployeeDashboardPage() {
             onClockIn={handleClockIn}
             onClockOut={handleClockOut}
             isClockInLoading={isClockInLoading}
+            canClockIn={certificationStatus?.canClockIn ?? false}
+            certificationStatus={certificationStatus?.status}
           />
 
           {/* Tab Navigation */}

@@ -11,6 +11,7 @@ interface PDFViewerProps {
   employeeId: string;
   onPageChange?: (page: number) => void;
   initialPage?: number;
+  onLoad?: () => void;
 }
 
 export function PDFViewer({
@@ -19,6 +20,7 @@ export function PDFViewer({
   employeeId,
   initialPage = 1,
   onPageChange,
+  onLoad,
 }: PDFViewerProps) {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [loading, setLoading] = useState(true);
@@ -66,12 +68,39 @@ export function PDFViewer({
   const handleIframeLoad = () => {
     setLoading(false);
     setError(null);
+    onLoad?.();
   };
 
   const handleIframeError = () => {
     setLoading(false);
-    setError("Failed to load PDF. Please check if the PDF URL is valid.");
+    setError("Failed to load PDF. The PDF may not be available or the URL is invalid.");
   };
+
+  // Check for 404 errors
+  useEffect(() => {
+    const checkPDFAvailability = async () => {
+      if (!pdfUrl) {
+        setError("PDF URL is not available for this module.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(pdfUrl, { method: "HEAD" });
+        if (!response.ok && response.status === 404) {
+          setError("PDF not found. The PDF for this module is not yet available.");
+          setLoading(false);
+        }
+      } catch (err) {
+        // If HEAD request fails, the iframe will handle the error
+        // Don't set error here as it might be a CORS issue
+      }
+    };
+
+    if (pdfUrl) {
+      checkPDFAvailability();
+    }
+  }, [pdfUrl]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -101,7 +130,7 @@ export function PDFViewer({
         <button
           onClick={() => {
             // Notify admin functionality
-            window.location.href = `mailto:binblastcompany@gmail.com?subject=PDF Missing: ${moduleId}&body=The PDF for module ${moduleId} is not available.`;
+            window.location.href = `mailto:binblastcompany@gmail.com?subject=PDF Missing: ${moduleId}&body=The PDF for module ${moduleId} is not available. Please upload it to Firebase Storage.`;
           }}
           style={{
             padding: "0.5rem 1rem",
@@ -112,6 +141,7 @@ export function PDFViewer({
             fontSize: "0.875rem",
             fontWeight: "600",
             cursor: "pointer",
+            marginRight: "0.5rem",
           }}
         >
           Notify Admin

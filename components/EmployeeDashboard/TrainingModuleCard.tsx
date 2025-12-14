@@ -23,7 +23,7 @@ interface TrainingModuleCardProps {
     pdfViewed: boolean;
     lastPagePosition?: number;
   };
-  status: "locked" | "in_progress" | "passed" | "expired";
+  status: "locked" | "in_progress" | "passed" | "failed" | "not_started" | "expired";
   onStart: () => void;
   onContinue: () => void;
   onReview: () => void;
@@ -58,8 +58,12 @@ export function TrainingModuleCard({
         return { icon: "🔄", text: "In Progress", color: "#92400e", bg: "#fef3c7" };
       case "passed":
         return { icon: "✅", text: "Passed", color: "#065f46", bg: "#d1fae5" };
+      case "failed":
+        return { icon: "❌", text: "Failed", color: "#991b1b", bg: "#fee2e2" };
       case "expired":
         return { icon: "⚠️", text: "Expired", color: "#991b1b", bg: "#fee2e2" };
+      case "not_started":
+        return { icon: "❌", text: "Not Started", color: "#6b7280", bg: "#f3f4f6" };
       default:
         return { icon: "❌", text: "Not Started", color: "#6b7280", bg: "#f3f4f6" };
     }
@@ -205,10 +209,12 @@ export function TrainingModuleCard({
       )}
 
       {/* Action Buttons */}
-      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
+        {/* Locked State */}
         {isLocked && (
           <button
             disabled
+            title="Complete previous modules to unlock"
             style={{
               flex: 1,
               minWidth: "150px",
@@ -225,7 +231,9 @@ export function TrainingModuleCard({
             🔒 Locked
           </button>
         )}
-        {!isLocked && !progress?.pdfViewed && (
+
+        {/* Not Started State */}
+        {!isLocked && isNotStarted && (
           <button
             onClick={onStart}
             style={{
@@ -241,17 +249,78 @@ export function TrainingModuleCard({
               cursor: "pointer",
             }}
           >
-            📄 Start Lesson
+            Start Lesson
           </button>
         )}
-        {!isLocked && progress?.pdfViewed && !progress?.completedAt && (
+
+        {/* In Progress State */}
+        {!isLocked && isInProgress && !progress?.completedAt && (
+          <>
+            {progress?.pdfViewed && !progress?.materialReviewed && (
+              <button
+                onClick={onStart}
+                style={{
+                  flex: 1,
+                  minWidth: "150px",
+                  padding: "0.75rem 1rem",
+                  background: "#2563eb",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                Resume Lesson
+              </button>
+            )}
+            {progress?.materialReviewed && (
+              <button
+                onClick={onContinue}
+                style={{
+                  flex: 1,
+                  minWidth: "150px",
+                  padding: "0.75rem 1rem",
+                  background: "#16a34a",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                Take Quiz
+              </button>
+            )}
+            <button
+              onClick={onReview}
+              style={{
+                padding: "0.75rem 1rem",
+                background: "#ffffff",
+                color: "#6b7280",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                cursor: "pointer",
+              }}
+            >
+              Review PDF
+            </button>
+          </>
+        )}
+
+        {/* Failed State */}
+        {isFailed && (
           <button
             onClick={onContinue}
             style={{
               flex: 1,
               minWidth: "150px",
               padding: "0.75rem 1rem",
-              background: "#16a34a",
+              background: "#f97316",
               color: "#ffffff",
               border: "none",
               borderRadius: "8px",
@@ -260,9 +329,11 @@ export function TrainingModuleCard({
               cursor: "pointer",
             }}
           >
-            📝 Take Quiz
+            Retry Quiz
           </button>
         )}
+
+        {/* Passed State */}
         {isCompleted && (
           <button
             onClick={onReview}
@@ -279,9 +350,11 @@ export function TrainingModuleCard({
               cursor: "pointer",
             }}
           >
-            📄 Review
+            Review Lesson
           </button>
         )}
+
+        {/* Expired State */}
         {isExpired && (
           <button
             onClick={onStart}

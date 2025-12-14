@@ -11,6 +11,8 @@ interface TodayStatusBarProps {
   onClockIn: () => void;
   onClockOut: () => void;
   isClockInLoading?: boolean;
+  canClockIn?: boolean;
+  certificationStatus?: "completed" | "expired" | "in_progress" | "not_started";
 }
 
 export function TodayStatusBar({
@@ -20,6 +22,8 @@ export function TodayStatusBar({
   onClockIn,
   onClockOut,
   isClockInLoading = false,
+  canClockIn = true,
+  certificationStatus,
 }: TodayStatusBarProps) {
   const currentDate = new Date().toLocaleDateString("en-US", {
     month: "2-digit",
@@ -112,7 +116,8 @@ export function TodayStatusBar({
       {/* Clock In/Out Button */}
       <button
         onClick={isClockedIn ? onClockOut : onClockIn}
-        disabled={isClockInLoading}
+        disabled={isClockInLoading || (!isClockedIn && !canClockIn)}
+        title={!isClockedIn && !canClockIn ? "Complete training to unlock Clock In" : undefined}
         style={{
           width: "100%",
           minHeight: "60px",
@@ -122,13 +127,13 @@ export function TodayStatusBar({
           fontSize: "1.25rem",
           fontWeight: "700",
           color: "#ffffff",
-          background: isClockedIn ? "#dc2626" : "#16a34a",
-          cursor: isClockInLoading ? "not-allowed" : "pointer",
-          opacity: isClockInLoading ? 0.6 : 1,
+          background: isClockedIn ? "#dc2626" : !canClockIn ? "#9ca3af" : "#16a34a",
+          cursor: isClockInLoading || (!isClockedIn && !canClockIn) ? "not-allowed" : "pointer",
+          opacity: isClockInLoading || (!isClockedIn && !canClockIn) ? 0.6 : 1,
           transition: "opacity 0.2s, transform 0.1s",
         }}
         onMouseDown={(e) => {
-          if (!isClockInLoading) {
+          if (!isClockInLoading && (isClockedIn || canClockIn)) {
             e.currentTarget.style.transform = "scale(0.98)";
           }
         }}
@@ -143,6 +148,8 @@ export function TodayStatusBar({
           ? "Processing..."
           : isClockedIn
           ? "CLOCK OUT - End Shift"
+          : !canClockIn
+          ? "CLOCK IN - Training Required"
           : `CLOCK IN - ${new Date().toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
@@ -156,10 +163,45 @@ export function TodayStatusBar({
             marginTop: "0.5rem",
             textAlign: "center",
             fontSize: "0.875rem",
-            color: "#6b7280",
+            color: !canClockIn ? "#dc2626" : "#6b7280",
+            fontWeight: !canClockIn ? "600" : "400",
           }}
         >
-          Clock in to view today&apos;s route
+          {!canClockIn
+            ? "Complete training to unlock Clock In"
+            : "Clock in to view today's route"}
+        </div>
+      )}
+
+      {/* Certification Status Badge */}
+      {certificationStatus && (
+        <div
+          style={{
+            marginTop: "0.75rem",
+            padding: "0.5rem",
+            borderRadius: "6px",
+            fontSize: "0.75rem",
+            fontWeight: "600",
+            textAlign: "center",
+            background:
+              certificationStatus === "completed"
+                ? "#d1fae5"
+                : certificationStatus === "expired"
+                ? "#fee2e2"
+                : "#fef3c7",
+            color:
+              certificationStatus === "completed"
+                ? "#065f46"
+                : certificationStatus === "expired"
+                ? "#991b1b"
+                : "#92400e",
+          }}
+        >
+          {certificationStatus === "completed"
+            ? "✅ Certified"
+            : certificationStatus === "expired"
+            ? "❌ Certification Expired"
+            : "🔄 Training In Progress"}
         </div>
       )}
     </div>

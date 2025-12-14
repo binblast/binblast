@@ -138,8 +138,11 @@ export async function POST(
       updateData.completedAt = serverTimestamp();
       updateData.expiresAt = calculateExpiration(completedAt);
       updateData.certificationStatus = "completed";
+      updateData.failed = false;
     } else {
       updateData.certificationStatus = "in_progress";
+      updateData.failed = true;
+      updateData.lastFailedAt = serverTimestamp();
     }
 
     if (!trainingSnapshot.empty) {
@@ -153,6 +156,41 @@ export async function POST(
       await addDoc(trainingRef, {
         ...updateData,
         pdfViewed: false,
+      });
+    }
+
+    // Also update trainingProgress collection
+    const progressRef = collection(db, "trainingProgress");
+    const progressQuery = query(progressRef, where("employeeId", "==", employeeId));
+    const progressSnapshot = await getDocs(progressQuery);
+
+    if (!progressSnapshot.empty) {
+      const progressDocRef = progressSnapshot.docs[0].ref;
+      const progressData = progressSnapshot.docs[0].data();
+      const modules = progressData.modules || {};
+
+      if (!modules[moduleId]) {
+        modules[moduleId] = {
+          startedAt: serverTimestamp(),
+          attempts: 0,
+          pdfViewed: false,
+        };
+      }
+
+      modules[moduleId] = {
+        ...modules[moduleId],
+        attempts: attemptNumber,
+        score,
+        lastAttemptAt: serverTimestamp(),
+        failed: !passed,
+        lastFailedAt: !passed ? serverTimestamp() : undefined,
+        completedAt: passed ? serverTimestamp() : undefined,
+        status: passed ? "passed" : "failed",
+      };
+
+      await updateDoc(progressDocRef, {
+        modules,
+        updatedAt: serverTimestamp(),
       });
     }
 

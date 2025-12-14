@@ -18,6 +18,9 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [materialReviewed, setMaterialReviewed] = useState(false);
+  const [allModules, setAllModules] = useState<any[]>([]);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -52,6 +55,40 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
       }
     } catch (err) {
       console.error("Error loading progress:", err);
+    }
+  };
+
+  const loadAllModules = async () => {
+    try {
+      const response = await fetch("/api/training/modules?active=true");
+      if (response.ok) {
+        const data = await response.json();
+        setAllModules(data.modules || []);
+      }
+    } catch (err) {
+      console.error("Error loading modules:", err);
+    }
+  };
+
+  const handleMaterialReviewedChange = async (checked: boolean) => {
+    setMaterialReviewed(checked);
+    if (checked) {
+      // Save to progress
+      try {
+        await fetch("/api/employee/training/progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            employeeId,
+            moduleId,
+            updates: {
+              materialReviewed: true,
+            },
+          }),
+        });
+      } catch (err) {
+        console.error("Error saving material reviewed:", err);
+      }
     }
   };
 
@@ -115,19 +152,38 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
         >
           ← Back to Training
         </button>
-        <h1
-          style={{
-            fontSize: "1.5rem",
-            fontWeight: "600",
-            color: "#111827",
-            marginBottom: "0.5rem",
-          }}
-        >
-          {module.title}
-        </h1>
-        <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-          {module.description}
-        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "0.5rem" }}>
+          <div>
+            <h1
+              style={{
+                fontSize: "1.5rem",
+                fontWeight: "600",
+                color: "#111827",
+                marginBottom: "0.5rem",
+              }}
+            >
+              {module.title}
+            </h1>
+            <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+              {module.description}
+            </p>
+          </div>
+          {totalModules > 0 && (
+            <div
+              style={{
+                padding: "0.5rem 1rem",
+                background: "#eff6ff",
+                border: "1px solid #bfdbfe",
+                borderRadius: "8px",
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                color: "#2563eb",
+              }}
+            >
+              Lesson {lessonNumber} of {totalModules}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Two-column layout (desktop) */}
@@ -148,6 +204,7 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
               employeeId={employeeId}
               initialPage={progress?.lastPagePosition || 1}
               onPageChange={setCurrentPage}
+              onLoad={() => setPdfLoaded(true)}
             />
           ) : (
             <div
@@ -250,25 +307,72 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
             </li>
           </ul>
 
+          {/* Material Reviewed Checkbox */}
+          {hasPDF && (
+            <div style={{ marginBottom: "1rem" }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  fontSize: "0.875rem",
+                  color: "#111827",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={materialReviewed}
+                  onChange={(e) => handleMaterialReviewedChange(e.target.checked)}
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    cursor: "pointer",
+                  }}
+                />
+                <span>I've reviewed the material</span>
+              </label>
+            </div>
+          )}
+
           {/* Start Quiz Button (sticky at bottom) */}
           {hasPDF && (
-            <button
-              onClick={handleStartQuiz}
-              style={{
-                width: "100%",
-                padding: "0.75rem 1rem",
-                background: "#16a34a",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-                cursor: "pointer",
-                marginTop: "auto",
-              }}
-            >
-              Start Quiz
-            </button>
+            <>
+              <button
+                onClick={handleStartQuiz}
+                disabled={!materialReviewed || !pdfLoaded || loading}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem 1rem",
+                  background: materialReviewed && pdfLoaded ? "#16a34a" : "#9ca3af",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: materialReviewed && pdfLoaded ? "pointer" : "not-allowed",
+                  marginTop: "auto",
+                  opacity: materialReviewed && pdfLoaded ? 1 : 0.6,
+                }}
+              >
+                Start Quiz
+              </button>
+              <a
+                href={module.pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "block",
+                  marginTop: "0.75rem",
+                  textAlign: "center",
+                  fontSize: "0.75rem",
+                  color: "#2563eb",
+                  textDecoration: "underline",
+                }}
+              >
+                Open PDF in new tab
+              </a>
+            </>
           )}
         </div>
       </div>

@@ -12,6 +12,8 @@ interface QuizResultsProps {
   correctAnswers: number;
   onNextLesson: () => void;
   onRetake: () => void;
+  isLastModule?: boolean;
+  onClaimCertificate?: () => void;
 }
 
 export function QuizResults({
@@ -98,21 +100,39 @@ export function QuizResults({
         {/* Actions */}
         <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
           {passed ? (
-            <button
-              onClick={onNextLesson}
-              style={{
-                padding: "0.75rem 1.5rem",
-                background: "#16a34a",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              Continue Training
-            </button>
+            isLastModule && onClaimCertificate ? (
+              <button
+                onClick={onClaimCertificate}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  background: "#16a34a",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                🎓 Claim Certificate
+              </button>
+            ) : (
+              <button
+                onClick={onNextLesson}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  background: "#16a34a",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                Continue Training
+              </button>
+            )
           ) : (
             <button
               onClick={onRetake}
@@ -127,7 +147,7 @@ export function QuizResults({
                 cursor: "pointer",
               }}
             >
-              Retake Quiz
+              Retry Quiz
             </button>
           )}
         </div>

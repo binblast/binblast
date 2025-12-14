@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { TrainingModuleCard } from "./TrainingModuleCard";
+import { TrainingStatusHeader } from "./TrainingStatusHeader";
 import { useRouter } from "next/navigation";
 
 interface TrainingModule {
@@ -25,7 +26,11 @@ interface ModuleProgress {
   score?: number;
   attempts: number;
   pdfViewed: boolean;
+  materialReviewed?: boolean;
   lastPagePosition?: number;
+  failed?: boolean;
+  lastFailedAt?: string;
+  status?: "not_started" | "in_progress" | "passed" | "failed" | "locked";
 }
 
 interface TrainingProgress {
@@ -84,8 +89,8 @@ export function TrainingList({ employeeId }: TrainingListProps) {
   const getModuleStatus = (
     module: TrainingModule,
     moduleProgress?: ModuleProgress
-  ): "locked" | "in_progress" | "passed" | "expired" => {
-    if (!progress) return "locked";
+  ): "locked" | "in_progress" | "passed" | "failed" | "not_started" | "expired" => {
+    if (!progress) return "not_started";
 
     // Check if module is locked (previous modules not completed)
     const previousModules = modules.filter((m) => m.order < module.order);
@@ -106,15 +111,23 @@ export function TrainingList({ employeeId }: TrainingListProps) {
       }
     }
 
-    // Check status
-    if (moduleProgress?.completedAt) {
+    // Check if failed (quiz failed)
+    if (moduleProgress?.failed || (moduleProgress?.completedAt && moduleProgress?.score !== undefined && moduleProgress.score < 80)) {
+      return "failed";
+    }
+
+    // Check if passed
+    if (moduleProgress?.completedAt && moduleProgress?.score !== undefined && moduleProgress.score >= 80) {
       return "passed";
     }
-    if (moduleProgress?.startedAt || moduleProgress?.pdfViewed) {
+
+    // Check if in progress
+    if (moduleProgress?.startedAt || moduleProgress?.pdfViewed || moduleProgress?.materialReviewed) {
       return "in_progress";
     }
 
-    return allPreviousCompleted ? "in_progress" : "locked";
+    // Not started
+    return "not_started";
   };
 
   const handleStart = (moduleId: string) => {
@@ -169,62 +182,8 @@ export function TrainingList({ employeeId }: TrainingListProps) {
 
   return (
     <div>
-      {/* Progress Bar */}
-      <div
-        style={{
-          background: "#ffffff",
-          borderRadius: "12px",
-          padding: "1.5rem",
-          marginBottom: "1.5rem",
-          border: "1px solid #e5e7eb",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "0.75rem",
-          }}
-        >
-          <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "#111827" }}>
-            Training Progress
-          </div>
-          <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-            {completedCount} / {totalCount} completed
-          </div>
-        </div>
-        <div
-          style={{
-            width: "100%",
-            height: "12px",
-            background: "#e5e7eb",
-            borderRadius: "6px",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%`,
-              height: "100%",
-              background:
-                progress?.overallStatus === "completed" ? "#16a34a" : "#f59e0b",
-              transition: "width 0.3s",
-            }}
-          />
-        </div>
-        {progress?.nextRecertDueAt && (
-          <div
-            style={{
-              fontSize: "0.75rem",
-              color: "#6b7280",
-              marginTop: "0.5rem",
-            }}
-          >
-            Recertification due: {new Date(progress.nextRecertDueAt).toLocaleDateString()}
-          </div>
-        )}
-      </div>
+      {/* Training Status Header */}
+      <TrainingStatusHeader employeeId={employeeId} />
 
       {/* Module Cards Grid */}
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>

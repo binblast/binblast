@@ -37,7 +37,31 @@ export function TrainingQuizFlow({
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isLastModule, setIsLastModule] = useState(false);
+  const [claimingCertificate, setClaimingCertificate] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    checkIfLastModule();
+  }, [moduleId]);
+
+  const checkIfLastModule = async () => {
+    try {
+      const response = await fetch("/api/training/modules?active=true");
+      if (response.ok) {
+        const data = await response.json();
+        const modules = data.modules || [];
+        const sortedModules = modules.sort((a: any, b: any) => a.order - b.order);
+        const currentModule = sortedModules.find((m: any) => m.id === moduleId);
+        if (currentModule) {
+          const isLast = currentModule.order === sortedModules.length;
+          setIsLastModule(isLast);
+        }
+      }
+    } catch (err) {
+      console.error("Error checking if last module:", err);
+    }
+  };
 
   const currentQuestion = questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
@@ -127,6 +151,14 @@ export function TrainingQuizFlow({
           }),
         });
       }
+
+      // Auto-scroll to results
+      setTimeout(() => {
+        const resultsElement = document.getElementById("quiz-results");
+        if (resultsElement) {
+          resultsElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
     } catch (err: any) {
       console.error("Error submitting quiz:", err);
     } finally {
@@ -141,24 +173,28 @@ export function TrainingQuizFlow({
   if (submitted && score !== null) {
     const passed = score >= passingScore;
     return (
-      <QuizResults
-        moduleId={moduleId}
-        moduleName={moduleName}
-        score={score}
-        passed={passed}
-        totalQuestions={questions.length}
-        correctAnswers={Object.values(results).filter((r) => r).length}
-        onNextLesson={() => router.push("/employee/dashboard")}
-        onRetake={() => {
-          setCurrentQuestionIndex(0);
-          setSelectedAnswer(null);
-          setShowFeedback(false);
-          setAnswers({});
-          setResults({});
-          setSubmitted(false);
-          setScore(null);
-        }}
-      />
+      <div id="quiz-results">
+        <QuizResults
+          moduleId={moduleId}
+          moduleName={moduleName}
+          score={score}
+          passed={passed}
+          totalQuestions={questions.length}
+          correctAnswers={Object.values(results).filter((r) => r).length}
+          isLastModule={isLastModule && passed}
+          onNextLesson={() => router.push("/employee/dashboard")}
+          onRetake={() => {
+            setCurrentQuestionIndex(0);
+            setSelectedAnswer(null);
+            setShowFeedback(false);
+            setAnswers({});
+            setResults({});
+            setSubmitted(false);
+            setScore(null);
+          }}
+          onClaimCertificate={isLastModule && passed ? handleClaimCertificate : undefined}
+        />
+      </div>
     );
   }
 
