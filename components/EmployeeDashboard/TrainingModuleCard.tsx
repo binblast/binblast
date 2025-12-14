@@ -74,6 +74,9 @@ export function TrainingModuleCard({
   const isLocked = status === "locked";
   const isCompleted = status === "passed";
   const isExpired = status === "expired";
+  const isFailed = status === "failed";
+  const isNotStarted = status === "not_started";
+  const isInProgress = status === "in_progress";
 
   return (
     <div
