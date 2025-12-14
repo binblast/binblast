@@ -4,6 +4,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyModulePDFs } from "@/lib/training-verification";
 
+// Mark as dynamic to prevent static generation
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/admin/training/verify-pdfs
  * Verify all active modules have valid PDF URLs
