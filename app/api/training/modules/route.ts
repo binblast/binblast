@@ -29,16 +29,32 @@ export async function GET(req: NextRequest) {
     const activeOnly = searchParams.get("active") !== "false"; // Default to true
 
     const modulesRef = collection(db, "trainingModules");
-    let modulesQuery = query(modulesRef);
+    let modulesQuery;
 
     if (activeOnly) {
-      modulesQuery = query(modulesRef, where("active", "==", true));
+      // Try to order by order field - if index doesn't exist, fall back to no ordering
+      modulesQuery = query(
+        modulesRef,
+        where("active", "==", true),
+        orderBy("order", "asc")
+      );
+    } else {
+      modulesQuery = query(modulesRef, orderBy("order", "asc"));
     }
 
-    // Order by order field
-    modulesQuery = query(modulesQuery, orderBy("order", "asc"));
-
-    const snapshot = await getDocs(modulesQuery);
+    let snapshot;
+    try {
+      snapshot = await getDocs(modulesQuery);
+    } catch (queryError: any) {
+      // If query fails (likely due to missing composite index), try without orderBy
+      console.warn("[Training Modules API] Query with orderBy failed, retrying without orderBy:", queryError?.message);
+      if (activeOnly) {
+        modulesQuery = query(modulesRef, where("active", "==", true));
+      } else {
+        modulesQuery = query(modulesRef);
+      }
+      snapshot = await getDocs(modulesQuery);
+    }
 
     const modules = snapshot.docs.map((doc) => {
       const data = doc.data();

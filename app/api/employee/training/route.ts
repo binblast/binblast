@@ -1,6 +1,7 @@
 // app/api/employee/training/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
+import { safeImportFirestore } from "@/lib/firebase-module-loader";
 
 export const dynamic = 'force-dynamic';
 
@@ -262,7 +263,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const firestore = await import("firebase/firestore");
+    const firestore = await safeImportFirestore();
     const { collection, query, where, getDocs, addDoc, updateDoc, serverTimestamp } = firestore;
 
     const trainingRef = collection(db, "employeeTraining");
