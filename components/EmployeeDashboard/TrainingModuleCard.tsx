@@ -21,6 +21,7 @@ interface TrainingModuleCardProps {
     score?: number;
     attempts: number;
     pdfViewed: boolean;
+    materialReviewed?: boolean;
     lastPagePosition?: number;
   };
   status: "locked" | "in_progress" | "passed" | "failed" | "not_started" | "expired";
