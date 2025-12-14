@@ -201,14 +201,17 @@ export function AddNoteModal({
               </select>
             </div>
 
-            {selectedStopId && (
-              <div style={{ marginBottom: "1rem", padding: "0.75rem", background: "#f9fafb", borderRadius: "6px" }}>
-                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem" }}>Selected Stop:</div>
-                <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "#111827" }}>
-                  {formatAddress(stops.find(s => s.id === selectedStopId) || {})}
+            {selectedStopId && (() => {
+              const selectedStop = stops.find(s => s.id === selectedStopId);
+              return selectedStop ? (
+                <div style={{ marginBottom: "1rem", padding: "0.75rem", background: "#f9fafb", borderRadius: "6px" }}>
+                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem" }}>Selected Stop:</div>
+                  <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "#111827" }}>
+                    {formatAddress(selectedStop)}
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : null;
+            })()}
 
             <div style={{ marginBottom: "1.5rem" }}>
               <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", color: "#374151", marginBottom: "0.5rem" }}>
