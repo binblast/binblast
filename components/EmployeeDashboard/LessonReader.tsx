@@ -132,6 +132,11 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
 
   const hasPDF = module.pdfUrl && module.pdfUrl.trim() !== "";
 
+  // Calculate lesson number and total
+  const totalModules = allModules.length;
+  const currentModuleOrder = module.order || 0;
+  const lessonNumber = currentModuleOrder;
+
   return (
     <div>
       {/* Header */}
