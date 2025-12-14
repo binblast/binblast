@@ -1,6 +1,7 @@
 // app/api/employee/training/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance, getFirebaseApp } from "@/lib/firebase";
+import { getDbInstance } from "@/lib/firebase";
+import { safeImportFirestore } from "@/lib/firebase-module-loader";
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,8 +16,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Ensure Firebase app is initialized before importing Firestore
-    await getFirebaseApp();
     const db = await getDbInstance();
     if (!db) {
       return NextResponse.json(
@@ -25,8 +24,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Import Firestore functions directly for server-side use
-    const firestore = await import("firebase/firestore");
+    // Use safeImportFirestore to ensure Firebase is initialized before importing Firestore
+    const firestore = await safeImportFirestore();
     const { collection, query, where, getDocs } = firestore;
 
     // If moduleId provided, return single module progress
@@ -165,8 +164,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Ensure Firebase app is initialized before importing Firestore
-    await getFirebaseApp();
     const db = await getDbInstance();
     if (!db) {
       return NextResponse.json(
@@ -175,8 +172,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Import Firestore functions directly for server-side use
-    const firestore = await import("firebase/firestore");
+    // Use safeImportFirestore to ensure Firebase is initialized before importing Firestore
+    const firestore = await safeImportFirestore();
     const { collection, query, where, getDocs, addDoc, updateDoc, serverTimestamp } = firestore;
 
     const trainingRef = collection(db, "employeeTraining");
