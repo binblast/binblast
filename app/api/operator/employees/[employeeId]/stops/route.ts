@@ -42,15 +42,52 @@ export async function GET(
     }
 
     const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs, orderBy } = firestore;
+    const { collection, query, where, getDocs, orderBy, doc, updateDoc } = firestore;
 
     const today = getTodayDateString();
     const next7Days = getNext7Days();
 
     const cleaningsRef = collection(db, "scheduledCleanings");
 
+    // Helper function to extract coordinates from Firestore data
+    const extractCoordinates = (data: any): { latitude?: number; longitude?: number } => {
+      // Check if coordinates exist as direct properties
+      if (data.latitude && data.longitude) {
+        return { latitude: data.latitude, longitude: data.longitude };
+      }
+      
+      // Check if coordinates exist as GeoPoint
+      if (data.location && typeof data.location.latitude === 'number' && typeof data.location.longitude === 'number') {
+        return { latitude: data.location.latitude, longitude: data.location.longitude };
+      }
+      
+      return {};
+    };
+
+    // Helper function to build address string
+    const buildAddressString = (stop: any): string => {
+      const parts: string[] = [];
+      if (stop.addressLine1) parts.push(stop.addressLine1);
+      if (stop.city) parts.push(stop.city);
+      if (stop.state) parts.push(stop.state);
+      if (stop.zipCode) parts.push(stop.zipCode);
+      return parts.join(", ");
+    };
+
+    // Import geocoding utility
+    const { geocodeAddress: geocodeAddressUtil } = await import("@/lib/geocoding");
+    
+    // Helper function to geocode an address
+    const geocodeAddress = async (address: string): Promise<{ latitude: number; longitude: number } | null> => {
+      const result = await geocodeAddressUtil(address);
+      if (result) {
+        return { latitude: result.latitude, longitude: result.longitude };
+      }
+      return null;
+    };
+
     // Get today's stops
-    let todayStops;
+    let todayStops: any[];
     try {
       const todayStopsQuery = query(
         cleaningsRef,
@@ -85,24 +122,102 @@ export async function GET(
     }
 
     // Get next 7 days stops
-    const upcomingStopsQuery = query(
-      cleaningsRef,
-      where("assignedEmployeeId", "==", employeeId),
-      where("scheduledDate", ">=", next7Days[1]),
-      where("scheduledDate", "<=", next7Days[6]),
-      orderBy("scheduledDate", "asc"),
-      orderBy("scheduledTime", "asc")
-    );
+    let upcomingStops: any[];
+    try {
+      const upcomingStopsQuery = query(
+        cleaningsRef,
+        where("assignedEmployeeId", "==", employeeId),
+        where("scheduledDate", ">=", next7Days[1]),
+        where("scheduledDate", "<=", next7Days[6]),
+        orderBy("scheduledDate", "asc"),
+        orderBy("scheduledTime", "asc")
+      );
+      const upcomingSnapshot = await getDocs(upcomingStopsQuery);
+      upcomingStops = upcomingSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+    } catch (error: any) {
+      // Fallback without orderBy
+      console.warn("OrderBy query failed for upcoming stops:", error.message);
+      const upcomingStopsQuery = query(
+        cleaningsRef,
+        where("assignedEmployeeId", "==", employeeId),
+        where("scheduledDate", ">=", next7Days[1]),
+        where("scheduledDate", "<=", next7Days[6])
+      );
+      const upcomingSnapshot = await getDocs(upcomingStopsQuery);
+      upcomingStops = upcomingSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      // Sort manually
+      upcomingStops.sort((a: any, b: any) => {
+        const dateA = a.scheduledDate || "";
+        const dateB = b.scheduledDate || "";
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        const timeA = a.scheduledTime || "";
+        const timeB = b.scheduledTime || "";
+        return timeA.localeCompare(timeB);
+      });
+    }
 
-    const upcomingSnapshot = await getDocs(upcomingStopsQuery);
-    const upcomingStops = upcomingSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Array<{ id: string; scheduledDate?: string; scheduledTime?: string; [key: string]: any }>;
+    // Process stops to add coordinates
+    const processStops = async (stops: any[]): Promise<any[]> => {
+      const processedStops = await Promise.all(
+        stops.map(async (stop) => {
+          const coords = extractCoordinates(stop);
+          
+          // If coordinates exist, return stop with coordinates
+          if (coords.latitude && coords.longitude) {
+            return {
+              ...stop,
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+            };
+          }
+
+          // Try to geocode the address
+          const address = buildAddressString(stop);
+          if (address) {
+            const geocoded = await geocodeAddress(address);
+            if (geocoded) {
+              // Store coordinates in Firestore for future use
+              try {
+                const stopRef = doc(db, "scheduledCleanings", stop.id);
+                await updateDoc(stopRef, {
+                  latitude: geocoded.latitude,
+                  longitude: geocoded.longitude,
+                });
+              } catch (error) {
+                console.error("Error storing coordinates:", error);
+              }
+              
+              return {
+                ...stop,
+                latitude: geocoded.latitude,
+                longitude: geocoded.longitude,
+              };
+            }
+          }
+
+          // Return stop without coordinates if geocoding failed
+          return stop;
+        })
+      );
+
+      return processedStops;
+    };
+
+    // Process both today's and upcoming stops
+    const [processedTodayStops, processedUpcomingStops] = await Promise.all([
+      processStops(todayStops),
+      processStops(upcomingStops),
+    ]);
 
     return NextResponse.json({
-      todayStops,
-      upcomingStops,
+      todayStops: processedTodayStops,
+      upcomingStops: processedUpcomingStops,
     });
   } catch (error: any) {
     console.error("Error getting stops:", error);

@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     let lastLat: number | null = null;
     let lastLon: number | null = null;
 
-    sortedCounties.forEach(county => {
+    sortedCounties.forEach((county, countyIndex) => {
       const countyStops = stopsByCounty.get(county) || [];
       
       // If we have coordinates, sort by proximity
@@ -53,21 +53,52 @@ export async function POST(req: NextRequest) {
       const stopsWithoutCoords = countyStops.filter((s: any) => !s.latitude || !s.longitude);
 
       if (stopsWithCoords.length > 0) {
-        // Sort by proximity to last stop
-        stopsWithCoords.sort((a: any, b: any) => {
-          if (lastLat === null || lastLon === null) return 0;
+        // For the first county, start with the stop closest to the center of all stops
+        if (countyIndex === 0 && lastLat === null && lastLon === null) {
+          // Calculate center of all stops
+          const avgLat = stopsWithCoords.reduce((sum: number, s: any) => sum + s.latitude, 0) / stopsWithCoords.length;
+          const avgLon = stopsWithCoords.reduce((sum: number, s: any) => sum + s.longitude, 0) / stopsWithCoords.length;
           
-          const distA = calculateDistance(lastLat, lastLon, a.latitude, a.longitude);
-          const distB = calculateDistance(lastLat, lastLon, b.latitude, b.longitude);
-          return distA - distB;
-        });
-
-        // Add sorted stops
-        stopsWithCoords.forEach((stop: any) => {
-          optimizedStops.push(stop);
-          lastLat = stop.latitude;
-          lastLon = stop.longitude;
-        });
+          // Find stop closest to center
+          let closestStop = stopsWithCoords[0];
+          let closestDist = calculateDistance(avgLat, avgLon, closestStop.latitude, closestStop.longitude);
+          
+          stopsWithCoords.forEach((stop: any) => {
+            const dist = calculateDistance(avgLat, avgLon, stop.latitude, stop.longitude);
+            if (dist < closestDist) {
+              closestDist = dist;
+              closestStop = stop;
+            }
+          });
+          
+          // Remove closest stop from array and add it first
+          const closestIndex = stopsWithCoords.indexOf(closestStop);
+          stopsWithCoords.splice(closestIndex, 1);
+          optimizedStops.push(closestStop);
+          lastLat = closestStop.latitude;
+          lastLon = closestStop.longitude;
+        }
+        
+        // Sort remaining stops by proximity to last stop using nearest neighbor algorithm
+        while (stopsWithCoords.length > 0) {
+          let nearestStop = stopsWithCoords[0];
+          let nearestDist = calculateDistance(lastLat!, lastLon!, nearestStop.latitude, nearestStop.longitude);
+          
+          stopsWithCoords.forEach((stop: any) => {
+            const dist = calculateDistance(lastLat!, lastLon!, stop.latitude, stop.longitude);
+            if (dist < nearestDist) {
+              nearestDist = dist;
+              nearestStop = stop;
+            }
+          });
+          
+          // Remove nearest stop from array and add it
+          const nearestIndex = stopsWithCoords.indexOf(nearestStop);
+          stopsWithCoords.splice(nearestIndex, 1);
+          optimizedStops.push(nearestStop);
+          lastLat = nearestStop.latitude;
+          lastLon = nearestStop.longitude;
+        }
       }
 
       // Add stops without coordinates at the end of county group
