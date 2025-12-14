@@ -101,16 +101,7 @@ export default function EmployeeDashboardPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (employee?.id) {
-      loadCertificationStatus();
-      loadClockInStatus();
-      loadJobs();
-      loadPayPreview();
-    }
-  }, [employee?.id]);
-
-  const loadCertificationStatus = async () => {
+  const loadCertificationStatus = useCallback(async () => {
     if (!employee?.id) return;
     try {
       const response = await fetch(`/api/employee/certification-status?employeeId=${employee.id}`);
@@ -121,57 +112,9 @@ export default function EmployeeDashboardPage() {
     } catch (error) {
       console.error("Error loading certification status:", error);
     }
-  };
+  }, [employee?.id]);
 
-  useEffect(() => {
-    if (!clockInStatus?.isActive || !employee?.id) return;
-    
-    // Set up real-time listener for jobs
-    let unsubscribe: (() => void) | undefined;
-    let isMounted = true;
-    
-    setupJobsListener().then((cleanup) => {
-      if (isMounted) {
-        unsubscribe = cleanup;
-      } else if (cleanup) {
-        // Component unmounted before listener was set up, clean up immediately
-        cleanup();
-      }
-    });
-    
-    return () => {
-      isMounted = false;
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, [clockInStatus?.isActive, employee?.id, setupJobsListener]);
-
-  const loadEmployeeData = async (userId: string) => {
-    try {
-      const { getEmployeeData } = await import("@/lib/employee-utils");
-      const employeeData = await getEmployeeData(userId);
-      
-      if (!employeeData) {
-        router.push("/login");
-        return;
-      }
-
-      if (employeeData.role !== "employee") {
-        router.push("/dashboard");
-        return;
-      }
-
-      setEmployee(employeeData);
-    } catch (error) {
-      console.error("Error loading employee data:", error);
-      router.push("/login");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadClockInStatus = async () => {
+  const loadClockInStatus = useCallback(async () => {
     if (!employee?.id) return;
     try {
       // Use API route instead of direct Firestore query to avoid permission issues
@@ -185,9 +128,9 @@ export default function EmployeeDashboardPage() {
     } catch (error) {
       console.error("Error loading clock-in status:", error);
     }
-  };
+  }, [employee?.id]);
 
-  const loadJobs = async () => {
+  const loadJobs = useCallback(async () => {
     if (!employee?.id) return;
     try {
       const response = await fetch(
@@ -200,7 +143,7 @@ export default function EmployeeDashboardPage() {
     } catch (error) {
       console.error("Error loading jobs:", error);
     }
-  };
+  }, [employee?.id]);
 
   const loadPayPreview = useCallback(async () => {
     if (!employee?.id) return;
@@ -255,6 +198,64 @@ export default function EmployeeDashboardPage() {
       return undefined;
     }
   }, [employee?.id, clockInStatus?.isActive, loadPayPreview]);
+
+  useEffect(() => {
+    if (employee?.id) {
+      loadCertificationStatus();
+      loadClockInStatus();
+      loadJobs();
+      loadPayPreview();
+    }
+  }, [employee?.id, loadCertificationStatus, loadClockInStatus, loadJobs, loadPayPreview]);
+
+  useEffect(() => {
+    if (!clockInStatus?.isActive || !employee?.id) return;
+    
+    // Set up real-time listener for jobs
+    let unsubscribe: (() => void) | undefined;
+    let isMounted = true;
+    
+    setupJobsListener().then((cleanup) => {
+      if (isMounted) {
+        unsubscribe = cleanup;
+      } else if (cleanup) {
+        // Component unmounted before listener was set up, clean up immediately
+        cleanup();
+      }
+    });
+    
+    return () => {
+      isMounted = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [clockInStatus?.isActive, employee?.id, setupJobsListener]);
+
+  const loadEmployeeData = async (userId: string) => {
+    try {
+      const { getEmployeeData } = await import("@/lib/employee-utils");
+      const employeeData = await getEmployeeData(userId);
+      
+      if (!employeeData) {
+        router.push("/login");
+        return;
+      }
+
+      if (employeeData.role !== "employee") {
+        router.push("/dashboard");
+        return;
+      }
+
+      setEmployee(employeeData);
+    } catch (error) {
+      console.error("Error loading employee data:", error);
+      router.push("/login");
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleClockIn = async () => {
     if (!employee) return;
