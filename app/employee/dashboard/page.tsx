@@ -488,7 +488,12 @@ export default function EmployeeDashboardPage() {
                   : "You cannot clock in or receive route assignments until certified."}
               </div>
               <button
-                onClick={() => setActiveTab("training")}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setActiveTab("training");
+                }}
+                type="button"
                 style={{
                   marginTop: "0.75rem",
                   padding: "0.5rem 1rem",
@@ -526,7 +531,12 @@ export default function EmployeeDashboardPage() {
             }}
           >
             <button
-              onClick={() => setActiveTab("home")}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveTab("home");
+              }}
+              type="button"
               style={{
                 padding: "0.75rem 1.5rem",
                 border: "none",
@@ -543,7 +553,12 @@ export default function EmployeeDashboardPage() {
               Home
             </button>
             <button
-              onClick={() => setActiveTab("training")}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveTab("training");
+              }}
+              type="button"
               style={{
                 padding: "0.75rem 1.5rem",
                 border: "none",
@@ -560,7 +575,12 @@ export default function EmployeeDashboardPage() {
               Training
             </button>
             <button
-              onClick={() => setActiveTab("equipment")}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveTab("equipment");
+              }}
+              type="button"
               style={{
                 padding: "0.75rem 1.5rem",
                 border: "none",
@@ -621,7 +641,7 @@ export default function EmployeeDashboardPage() {
             </>
           )}
 
-          {activeTab === "training" && (
+          {activeTab === "training" && employee && (
             <TrainingSection employeeId={employee.id} />
           )}
 
