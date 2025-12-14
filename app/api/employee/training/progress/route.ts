@@ -48,15 +48,16 @@ export async function GET(req: NextRequest) {
       const modules: Record<string, any> = {};
       const rawModules = data.modules || {};
       
-      for (const [moduleId, moduleData: any] of Object.entries(rawModules)) {
+      for (const [moduleId, moduleData] of Object.entries(rawModules)) {
+        const modData = moduleData as any;
         modules[moduleId] = {
-          ...moduleData,
-          startedAt: moduleData.startedAt?.toDate?.()?.toISOString(),
-          completedAt: moduleData.completedAt?.toDate?.()?.toISOString(),
-          expiresAt: moduleData.expiresAt?.toDate?.()?.toISOString(),
-          lastAttemptAt: moduleData.lastAttemptAt?.toDate?.()?.toISOString(),
-          lastFailedAt: moduleData.lastFailedAt?.toDate?.()?.toISOString(),
-          updatedAt: moduleData.updatedAt?.toDate?.()?.toISOString(),
+          ...modData,
+          startedAt: modData.startedAt?.toDate?.()?.toISOString(),
+          completedAt: modData.completedAt?.toDate?.()?.toISOString(),
+          expiresAt: modData.expiresAt?.toDate?.()?.toISOString(),
+          lastAttemptAt: modData.lastAttemptAt?.toDate?.()?.toISOString(),
+          lastFailedAt: modData.lastFailedAt?.toDate?.()?.toISOString(),
+          updatedAt: modData.updatedAt?.toDate?.()?.toISOString(),
         };
       }
       
