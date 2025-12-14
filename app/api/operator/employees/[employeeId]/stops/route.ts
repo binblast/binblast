@@ -50,18 +50,39 @@ export async function GET(
     const cleaningsRef = collection(db, "scheduledCleanings");
 
     // Get today's stops
-    const todayStopsQuery = query(
-      cleaningsRef,
-      where("assignedEmployeeId", "==", employeeId),
-      where("scheduledDate", "==", today),
-      orderBy("scheduledTime", "asc")
-    );
-
-    const todaySnapshot = await getDocs(todayStopsQuery);
-    const todayStops = todaySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    let todayStops;
+    try {
+      const todayStopsQuery = query(
+        cleaningsRef,
+        where("assignedEmployeeId", "==", employeeId),
+        where("scheduledDate", "==", today),
+        orderBy("scheduledTime", "asc")
+      );
+      const todaySnapshot = await getDocs(todayStopsQuery);
+      todayStops = todaySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+    } catch (error: any) {
+      // If orderBy fails (missing index), try without orderBy and sort manually
+      console.warn("OrderBy query failed, trying without orderBy:", error.message);
+      const todayStopsQuery = query(
+        cleaningsRef,
+        where("assignedEmployeeId", "==", employeeId),
+        where("scheduledDate", "==", today)
+      );
+      const todaySnapshot = await getDocs(todayStopsQuery);
+      todayStops = todaySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      // Sort manually by scheduledTime
+      todayStops.sort((a: any, b: any) => {
+        const timeA = a.scheduledTime || "";
+        const timeB = b.scheduledTime || "";
+        return timeA.localeCompare(timeB);
+      });
+    }
 
     // Get next 7 days stops
     const upcomingStopsQuery = query(
