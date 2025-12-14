@@ -384,23 +384,18 @@ export function CurrentShiftCard({ employeeId }: CurrentShiftCardProps) {
         </button>
         <button
           onClick={() => setShowViewProofModal(true)}
-          disabled={!earnings || earnings.completedStopsCount === 0}
           style={{
             padding: "0.5rem 1rem",
-            background: (!earnings || earnings.completedStopsCount === 0) ? "#9ca3af" : "#6b7280",
+            background: "#6b7280",
             color: "#ffffff",
             border: "none",
             borderRadius: "6px",
             fontSize: "0.875rem",
             fontWeight: "600",
-            cursor: (!earnings || earnings.completedStopsCount === 0) ? "not-allowed" : "pointer",
+            cursor: "pointer",
             transition: "opacity 0.2s",
           }}
-          onMouseEnter={(e) => {
-            if (earnings && earnings.completedStopsCount > 0) {
-              e.currentTarget.style.opacity = "0.9";
-            }
-          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
           onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
         >
           View Proof
