@@ -22,10 +22,14 @@ function markdownToHtml(markdown: string): string {
     .replace(/^# (.*$)/gim, '<h1>$1</h1>')
     // Bold
     .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-    // Lists
-    .replace(/^- (.*$)/gim, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-    // Line breaks
+    // Lists - convert list items first, then wrap consecutive items in ul tags
+    .replace(/^- (.*$)/gim, '<li>$1</li>');
+  
+  // Wrap consecutive list items in ul tags (using [\s\S] instead of . to match newlines in ES5)
+  html = html.replace(/(<li>[\s\S]*?<\/li>)/gim, '<ul>$1</ul>');
+  
+  // Line breaks
+  html = html
     .replace(/\n\n/gim, '</p><p>')
     .replace(/\n/gim, '<br>');
   
