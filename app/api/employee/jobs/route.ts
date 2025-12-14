@@ -5,6 +5,8 @@ import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getTodayDateString } from "@/lib/employee-utils";
 import { checkCertificationStatus } from "@/lib/training-certification";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;

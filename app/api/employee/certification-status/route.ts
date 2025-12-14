@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkCertificationStatus } from "@/lib/training-certification";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
