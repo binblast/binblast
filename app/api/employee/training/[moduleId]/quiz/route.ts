@@ -47,10 +47,12 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { moduleId: string } }
 ) {
+  const { moduleId } = params;
+  let body: any = null;
+  
   try {
-    const { moduleId } = params;
-    const body = await req.json();
-    const { employeeId, answers, score, passed } = body;
+    body = await req.json();
+    const { employeeId, answers, score, passed } = body || {};
 
     if (!employeeId || !answers || score === undefined || passed === undefined) {
       return NextResponse.json(
