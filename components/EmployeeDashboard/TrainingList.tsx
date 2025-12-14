@@ -87,6 +87,18 @@ export function TrainingList({ employeeId }: TrainingListProps) {
     loadModules();
   }, [loadModules]);
 
+  // Listen for training progress updates
+  useEffect(() => {
+    const handleProgressUpdate = () => {
+      loadModules();
+    };
+
+    window.addEventListener('trainingProgressUpdated', handleProgressUpdate);
+    return () => {
+      window.removeEventListener('trainingProgressUpdated', handleProgressUpdate);
+    };
+  }, [loadModules]);
+
   const getModuleStatus = (
     module: TrainingModule,
     moduleProgress?: ModuleProgress

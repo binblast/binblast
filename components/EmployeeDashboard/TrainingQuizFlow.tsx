@@ -159,6 +159,12 @@ export function TrainingQuizFlow({
           resultsElement.scrollIntoView({ behavior: "smooth", block: "start" });
         }
       }, 100);
+
+      // Refresh training list if passed to show updated status
+      if (passed) {
+        // Trigger a custom event that TrainingList can listen to
+        window.dispatchEvent(new CustomEvent('trainingProgressUpdated'));
+      }
     } catch (err: any) {
       console.error("Error submitting quiz:", err);
     } finally {
