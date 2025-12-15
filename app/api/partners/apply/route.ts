@@ -89,8 +89,66 @@ export async function POST(req: NextRequest) {
 
     await setDoc(applicationRef, applicationData, { merge: true });
 
-    // TODO: Send confirmation email to applicant
-    // For now, just log it
+    // Send email notification via EmailJS
+    try {
+      const emailjsServiceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || "service_rok6u9h";
+      const emailjsTemplateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID || "template_aabpctf";
+      const emailjsPublicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
+      const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+
+      if (emailjsTemplateId && emailjsPublicKey && adminEmail) {
+        const emailjsUrl = `https://api.emailjs.com/api/v1.0/email/send`;
+        
+        const emailData = {
+          service_id: emailjsServiceId,
+          template_id: emailjsTemplateId,
+          user_id: emailjsPublicKey,
+          template_params: {
+            businessName: businessName,
+            ownerName: ownerName,
+            email: email,
+            phone: phone,
+            websiteOrInstagram: websiteOrInstagram || "Not provided",
+            serviceAreas: Array.isArray(serviceAreas) ? serviceAreas.join(", ") : serviceAreas,
+            businessType: businessType,
+            hasInsurance: hasInsurance ? "Yes" : "No",
+            promotionMethod: promotionMethod,
+            heardAboutUs: heardAboutUs || "Not specified",
+            applicationId: applicationId,
+            userId: userId || "Not logged in",
+            submittedAt: new Date().toLocaleString("en-US", {
+              dateStyle: "full",
+              timeStyle: "short",
+            }),
+            to_email: adminEmail,
+          },
+        };
+
+        const emailResponse = await fetch(emailjsUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(emailData),
+        });
+
+        if (!emailResponse.ok) {
+          console.error("[Partner Application] EmailJS error:", await emailResponse.text());
+        } else {
+          console.log("[Partner Application] Email notification sent successfully");
+        }
+      } else {
+        console.warn("[Partner Application] EmailJS not configured. Missing:", {
+          templateId: !emailjsTemplateId,
+          publicKey: !emailjsPublicKey,
+          adminEmail: !adminEmail,
+        });
+      }
+    } catch (emailError: any) {
+      // Don't fail the application if email fails
+      console.error("[Partner Application] Email sending error:", emailError);
+    }
+
     console.log("[Partner Application] Application submitted:", {
       applicationId,
       email,
