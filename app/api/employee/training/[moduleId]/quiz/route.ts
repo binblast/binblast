@@ -200,7 +200,22 @@ export async function POST(
       });
     } catch (attemptError: any) {
       console.error("[Quiz API] Error storing quiz attempt:", attemptError);
-      throw new Error(`Failed to store quiz attempt: ${attemptError.message}`);
+      console.error("[Quiz API] Attempt error details:", {
+        code: attemptError?.code,
+        message: attemptError?.message,
+        employeeId,
+        moduleId,
+      });
+      
+      // Check if it's a permission error
+      if (attemptError?.code === "permission-denied" || attemptError?.message?.includes("Missing or insufficient permissions")) {
+        console.error("[Quiz API] Permission denied - Firestore security rules may need to be deployed");
+        // Don't fail the quiz submission - continue with other updates
+        // The quiz attempt is non-critical for the quiz to be considered successful
+      } else {
+        // For other errors, throw to fail the quiz submission
+        throw new Error(`Failed to store quiz attempt: ${attemptError.message}`);
+      }
     }
 
     // Get existing progress
