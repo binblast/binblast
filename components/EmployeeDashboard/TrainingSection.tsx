@@ -718,7 +718,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                       cursor: "pointer",
                     }}
                   >
-                    📄 View PDF
+                    📄 Start Lesson
                   </button>
                 )}
                 {module.pdfViewed && !module.completed && (
@@ -756,7 +756,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                       cursor: "pointer",
                     }}
                   >
-                    📄 Review PDF
+                    📄 Review Lesson
                   </button>
                 )}
                 {module.certificationStatus === "expired" && (

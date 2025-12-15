@@ -418,7 +418,7 @@ export function TrainingModuleViewer({
             }
           }}
         >
-          {viewed ? "Take Quiz →" : "View PDF First"}
+          {viewed ? "Take Quiz →" : "Start Lesson First"}
         </button>
       </div>
 

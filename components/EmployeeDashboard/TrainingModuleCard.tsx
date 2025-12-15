@@ -311,7 +311,7 @@ export function TrainingModuleCard({
                 cursor: "pointer",
               }}
             >
-              Review PDF
+              Review Lesson
             </button>
           </>
         )}
