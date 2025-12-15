@@ -230,36 +230,150 @@ export function TrainingList({ employeeId }: TrainingListProps) {
     return false;
   });
 
+  // If all modules are completed and not expired, show only certificate view
+  if (allCompleted && visibleModules.length === 0) {
+    // Find the earliest expiration date from all completed modules
+    let expirationDate: Date | null = null;
+    let daysRemaining: number | null = null;
+    
+    if (progress) {
+      const completedModules = Object.values(progress.modules).filter((m) => m.completedAt && m.expiresAt);
+      if (completedModules.length > 0) {
+        const expirationDates = completedModules
+          .map((m) => m.expiresAt ? new Date(m.expiresAt) : null)
+          .filter((d): d is Date => d !== null);
+        
+        if (expirationDates.length > 0) {
+          expirationDate = new Date(Math.min(...expirationDates.map(d => d.getTime())));
+          const now = new Date();
+          const diffTime = expirationDate.getTime() - now.getTime();
+          daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+      }
+      
+      // Fallback to nextRecertDueAt if no module expiration dates
+      if (!expirationDate && progress.nextRecertDueAt) {
+        expirationDate = new Date(progress.nextRecertDueAt);
+        const now = new Date();
+        const diffTime = expirationDate.getTime() - now.getTime();
+        daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      }
+    }
+
+    return (
+      <div>
+        {/* Certificate View - Only show when all modules completed */}
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "16px",
+            padding: "3rem 2rem",
+            border: "2px solid #16a34a",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+            textAlign: "center",
+            maxWidth: "600px",
+            margin: "0 auto",
+          }}
+        >
+          {/* Certificate Icon/Header */}
+          <div
+            style={{
+              fontSize: "3rem",
+              marginBottom: "1rem",
+            }}
+          >
+            ✓
+          </div>
+          
+          <h2
+            style={{
+              fontSize: "1.75rem",
+              fontWeight: "700",
+              color: "#065f46",
+              marginBottom: "0.5rem",
+            }}
+          >
+            Certification Complete
+          </h2>
+          
+          <p
+            style={{
+              fontSize: "1rem",
+              color: "#047857",
+              marginBottom: "2rem",
+            }}
+          >
+            You have successfully completed all required training modules.
+          </p>
+
+          {/* Expiration Date */}
+          {expirationDate && (
+            <div
+              style={{
+                padding: "1.5rem",
+                background: "#f0fdf4",
+                borderRadius: "12px",
+                border: "1px solid #bbf7d0",
+                marginTop: "1.5rem",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.875rem",
+                  color: "#6b7280",
+                  marginBottom: "0.5rem",
+                  fontWeight: "600",
+                }}
+              >
+                Certification Expires
+              </div>
+              <div
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: "700",
+                  color: "#065f46",
+                  marginBottom: "0.25rem",
+                }}
+              >
+                {expirationDate.toLocaleDateString('en-US', { 
+                  month: 'long', 
+                  day: 'numeric', 
+                  year: 'numeric' 
+                })}
+              </div>
+              {daysRemaining !== null && daysRemaining > 0 && (
+                <div
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "#047857",
+                    fontWeight: "600",
+                  }}
+                >
+                  {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} remaining
+                </div>
+              )}
+              {daysRemaining !== null && daysRemaining <= 0 && (
+                <div
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "#dc2626",
+                    fontWeight: "600",
+                  }}
+                >
+                  Certification has expired
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Training Status Header */}
       <TrainingStatusHeader employeeId={employeeId} />
-
-      {/* Show message if all modules completed and within deadline */}
-      {allCompleted && visibleModules.length === 0 && (
-        <div
-          style={{
-            padding: "2rem",
-            background: "#d1fae5",
-            border: "2px solid #16a34a",
-            borderRadius: "12px",
-            textAlign: "center",
-            marginBottom: "1.5rem",
-          }}
-        >
-          <div style={{ fontSize: "1.25rem", fontWeight: "600", color: "#065f46", marginBottom: "0.5rem" }}>
-            All Training Complete!
-          </div>
-          <div style={{ fontSize: "0.875rem", color: "#047857" }}>
-            You have completed all required training modules. Your certification is valid for 6 months.
-            {progress?.nextRecertDueAt && (
-              <div style={{ marginTop: "0.5rem", fontWeight: "600" }}>
-                Recertification due: {new Date(progress.nextRecertDueAt).toLocaleDateString()}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Module Cards Grid */}
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
