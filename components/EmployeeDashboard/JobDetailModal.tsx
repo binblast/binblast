@@ -78,6 +78,8 @@ export function JobDetailModal({
   const [stickerPlacementPhotoId, setStickerPlacementPhotoId] = useState<string | null>(null);
   const [stickerStatus, setStickerStatus] = useState<StickerStatus>("none");
   const [photoDocumentationCompleted, setPhotoDocumentationCompleted] = useState(false);
+  const photoSectionRef = React.useRef<HTMLDivElement>(null);
+  const completionSectionRef = React.useRef<HTMLDivElement>(null);
 
   // Reset state when job changes or modal closes
   React.useEffect(() => {
@@ -469,7 +471,7 @@ export function JobDetailModal({
             </div>
 
             {/* Photo Upload Section - REQUIRED */}
-            <div style={{ marginBottom: "1.5rem" }}>
+            <div ref={photoSectionRef} style={{ marginBottom: "1.5rem" }}>
               <h3
                 style={{
                   fontSize: "1.125rem",
