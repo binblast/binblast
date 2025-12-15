@@ -261,50 +261,95 @@ export async function POST(
       const progressQuery = query(progressRef, where("employeeId", "==", employeeId));
       const progressSnapshot = await getDocs(progressQuery);
 
+      let progressDocRef;
+      let progressData: any;
+      let modules: any = {};
+
       if (!progressSnapshot.empty) {
-      const progressDocRef = progressSnapshot.docs[0].ref;
-      const progressData = progressSnapshot.docs[0].data();
-      const modules = progressData.modules || {};
+        // Update existing progress document
+        progressDocRef = progressSnapshot.docs[0].ref;
+        progressData = progressSnapshot.docs[0].data();
+        modules = progressData.modules || {};
 
-      if (!modules[moduleId]) {
-        modules[moduleId] = {
-          startedAt: serverTimestamp(),
-          attempts: 0,
-          pdfViewed: false,
-        };
-      }
-
-      // Update module with completion status
-      const moduleUpdate: any = {
-        ...modules[moduleId],
-        attempts: attemptNumber,
-        score,
-        lastAttemptAt: serverTimestamp(),
-        failed: !passed,
-        status: passed ? "passed" : "failed",
-      };
-
-      // Only set lastFailedAt if failed (Firestore doesn't accept undefined)
-      if (!passed) {
-        moduleUpdate.lastFailedAt = serverTimestamp();
-      } else {
-        // Remove lastFailedAt if it exists and quiz is now passed
-        if (moduleUpdate.lastFailedAt !== undefined) {
-          delete moduleUpdate.lastFailedAt;
+        if (!modules[moduleId]) {
+          modules[moduleId] = {
+            startedAt: serverTimestamp(),
+            attempts: 0,
+            pdfViewed: false,
+          };
         }
-      }
 
-      // Only set completedAt if passed and not already set
-      if (passed) {
-        moduleUpdate.completedAt = serverTimestamp();
-        // Calculate expiration (6 months from completion)
-        const completedDate = new Date();
-        const expirationDate = new Date();
-        expirationDate.setMonth(expirationDate.getMonth() + 6);
-        moduleUpdate.expiresAt = Timestamp.fromDate(expirationDate);
-      }
+        // Update module with completion status
+        const moduleUpdate: any = {
+          ...modules[moduleId],
+          attempts: attemptNumber,
+          score,
+          lastAttemptAt: serverTimestamp(),
+          failed: !passed,
+          status: passed ? "passed" : "failed",
+        };
 
-      modules[moduleId] = moduleUpdate;
+        // Only set lastFailedAt if failed (Firestore doesn't accept undefined)
+        if (!passed) {
+          moduleUpdate.lastFailedAt = serverTimestamp();
+        } else {
+          // Remove lastFailedAt if it exists and quiz is now passed
+          if (moduleUpdate.lastFailedAt !== undefined) {
+            delete moduleUpdate.lastFailedAt;
+          }
+        }
+
+        // Always set completedAt if passed
+        if (passed) {
+          moduleUpdate.completedAt = serverTimestamp();
+          // Calculate expiration (6 months from completion)
+          const expirationDate = new Date();
+          expirationDate.setMonth(expirationDate.getMonth() + 6);
+          moduleUpdate.expiresAt = Timestamp.fromDate(expirationDate);
+        }
+
+        modules[moduleId] = moduleUpdate;
+      } else {
+        // Create new progress document if it doesn't exist
+        progressDocRef = doc(progressRef);
+        progressData = {
+          employeeId,
+          currentModuleOrder: 1,
+          modules: {},
+          certificates: [],
+          overallStatus: "not_started",
+          updatedAt: serverTimestamp(),
+        };
+        
+        // Build module data without undefined values
+        const newModuleData: any = {
+          startedAt: serverTimestamp(),
+          attempts: attemptNumber,
+          score,
+          lastAttemptAt: serverTimestamp(),
+          pdfViewed: false,
+          failed: !passed,
+          status: passed ? "passed" : "failed",
+        };
+
+        // Only include lastFailedAt if failed (Firestore doesn't accept undefined)
+        if (!passed) {
+          newModuleData.lastFailedAt = serverTimestamp();
+        }
+
+        // Always set completedAt if passed
+        if (passed) {
+          newModuleData.completedAt = serverTimestamp();
+          // Calculate expiration (6 months from completion)
+          const expirationDate = new Date();
+          expirationDate.setMonth(expirationDate.getMonth() + 6);
+          newModuleData.expiresAt = Timestamp.fromDate(expirationDate);
+        }
+
+        modules[moduleId] = newModuleData;
+        progressData.modules = modules;
+        progressData.overallStatus = passed ? "in_progress" : "not_started";
+      }
 
       // Check if all modules are completed
       let totalModules = 0;
@@ -336,64 +381,18 @@ export async function POST(
         overallStatus = "in_progress";
       }
 
-      try {
+      // Update or create progress document
+      if (!progressSnapshot.empty) {
         await updateDoc(progressDocRef, {
           modules,
           overallStatus,
           updatedAt: serverTimestamp(),
         });
-      } catch (updateError: any) {
-        console.error("[Quiz API] Error updating trainingProgress:", updateError);
-        console.error("[Quiz API] Update error details:", {
-          message: updateError?.message,
-          code: updateError?.code,
-          employeeId,
-          moduleId,
-        });
-        // Don't throw - this is non-blocking
-      }
-    } else {
-      // Create new progress document if it doesn't exist
-      try {
-        const progressDocRef = doc(progressRef);
-        const modules: any = {};
-        
-        modules[moduleId] = {
-          startedAt: serverTimestamp(),
-          attempts: attemptNumber,
-          score,
-          lastAttemptAt: serverTimestamp(),
-          pdfViewed: false,
-          failed: !passed,
-          lastFailedAt: !passed ? serverTimestamp() : undefined,
-          status: passed ? "passed" : "failed",
-        };
-
-        if (passed) {
-          modules[moduleId].completedAt = serverTimestamp();
-          const expirationDate = new Date();
-          expirationDate.setMonth(expirationDate.getMonth() + 6);
-          modules[moduleId].expiresAt = Timestamp.fromDate(expirationDate);
-        }
-
+      } else {
         await setDoc(progressDocRef, {
-          employeeId,
-          currentModuleOrder: 1,
-          modules,
-          certificates: [],
-          overallStatus: passed ? "in_progress" : "not_started",
-          updatedAt: serverTimestamp(),
+          ...progressData,
+          overallStatus,
         });
-      } catch (createError: any) {
-        console.error("[Quiz API] Error creating trainingProgress:", createError);
-        console.error("[Quiz API] Create error details:", {
-          message: createError?.message,
-          code: createError?.code,
-          employeeId,
-          moduleId,
-        });
-        // Don't throw - this is non-blocking
-      }
       }
     } catch (progressError: any) {
       // Log but don't fail the quiz submission - the main quiz attempt and employeeTraining are already saved

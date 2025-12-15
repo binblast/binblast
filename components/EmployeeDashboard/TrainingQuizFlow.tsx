@@ -3,9 +3,10 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { QuizResults } from "./QuizResults";
+import { getNextModule } from "@/lib/training-utils";
 
 interface QuizQuestion {
   question: string;
@@ -39,11 +40,26 @@ export function TrainingQuizFlow({
   const [submitting, setSubmitting] = useState(false);
   const [isLastModule, setIsLastModule] = useState(false);
   const [claimingCertificate, setClaimingCertificate] = useState(false);
+  const [nextModuleInfo, setNextModuleInfo] = useState<{ nextModuleId: string | null; currentModuleOrder: number; totalModules: number; isLastModule: boolean } | null>(null);
+  const [autoNavigateCountdown, setAutoNavigateCountdown] = useState<number | null>(null);
+  const [autoNavigateCancelled, setAutoNavigateCancelled] = useState(false);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     checkIfLastModule();
+    loadNextModuleInfo();
   }, [moduleId]);
+
+  const loadNextModuleInfo = async () => {
+    try {
+      const info = await getNextModule(moduleId);
+      setNextModuleInfo(info);
+      setIsLastModule(info.isLastModule);
+    } catch (err) {
+      console.error("Error loading next module info:", err);
+    }
+  };
 
   const checkIfLastModule = async () => {
     try {
@@ -190,6 +206,17 @@ export function TrainingQuizFlow({
       if (passed) {
         // Trigger a custom event that TrainingList can listen to
         window.dispatchEvent(new CustomEvent('trainingProgressUpdated'));
+        
+        // Reload next module info in case order changed
+        const nextInfo = await getNextModule(moduleId);
+        setNextModuleInfo(nextInfo);
+        setIsLastModule(nextInfo.isLastModule);
+        
+        // Start auto-navigation countdown if not last module and next module exists
+        if (nextInfo.nextModuleId && !nextInfo.isLastModule) {
+          setAutoNavigateCountdown(5);
+          setAutoNavigateCancelled(false);
+        }
       }
     } catch (err: any) {
       console.error("Error submitting quiz:", err);
@@ -200,6 +227,56 @@ export function TrainingQuizFlow({
       setScore(null);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Handle auto-navigation countdown
+  useEffect(() => {
+    // Clear any existing interval
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+
+    // Start countdown if conditions are met
+    if (autoNavigateCountdown !== null && autoNavigateCountdown > 0 && !autoNavigateCancelled) {
+      countdownIntervalRef.current = setInterval(() => {
+        setAutoNavigateCountdown((prev) => {
+          if (prev === null || prev === undefined) {
+            return null;
+          }
+          if (prev <= 1) {
+            return 0; // Set to 0 to trigger navigation
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else if (autoNavigateCountdown === 0 && !autoNavigateCancelled && nextModuleInfo?.nextModuleId) {
+      // Auto-navigate to next module when countdown reaches 0
+      router.push(`/employee/training/${nextModuleInfo.nextModuleId}`);
+    }
+
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+    };
+  }, [autoNavigateCountdown, autoNavigateCancelled, nextModuleInfo, router]);
+
+  const handleNextLesson = () => {
+    if (nextModuleInfo?.nextModuleId) {
+      router.push(`/employee/training/${nextModuleInfo.nextModuleId}`);
+    } else {
+      router.push("/employee/dashboard");
+    }
+  };
+
+  const handleCancelAutoNavigate = () => {
+    setAutoNavigateCancelled(true);
+    setAutoNavigateCountdown(null);
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
     }
   };
 
@@ -245,7 +322,9 @@ export function TrainingQuizFlow({
           totalQuestions={questions.length}
           correctAnswers={Object.values(results).filter((r) => r).length}
           isLastModule={isLastModule && passed}
-          onNextLesson={() => router.push("/employee/dashboard")}
+          currentModuleOrder={nextModuleInfo?.currentModuleOrder || 0}
+          totalModules={nextModuleInfo?.totalModules || 0}
+          onNextLesson={handleNextLesson}
           onRetake={() => {
             setCurrentQuestionIndex(0);
             setSelectedAnswer(null);
@@ -254,9 +333,44 @@ export function TrainingQuizFlow({
             setResults({});
             setSubmitted(false);
             setScore(null);
+            setAutoNavigateCountdown(null);
+            setAutoNavigateCancelled(false);
           }}
           onClaimCertificate={isLastModule && passed ? handleClaimCertificate : undefined}
         />
+        
+        {/* Auto-navigation countdown */}
+        {passed && autoNavigateCountdown !== null && !autoNavigateCancelled && nextModuleInfo?.nextModuleId && (
+          <div
+            style={{
+              marginTop: "1rem",
+              padding: "1rem",
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+              borderRadius: "8px",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: "0.875rem", color: "#1e40af", marginBottom: "0.5rem" }}>
+              Auto-advancing to next lesson in {autoNavigateCountdown} second{autoNavigateCountdown !== 1 ? "s" : ""}...
+            </div>
+            <button
+              onClick={handleCancelAutoNavigate}
+              style={{
+                padding: "0.5rem 1rem",
+                background: "#ffffff",
+                color: "#2563eb",
+                border: "1px solid #bfdbfe",
+                borderRadius: "6px",
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                cursor: "pointer",
+              }}
+            >
+              Stay on this page
+            </button>
+          </div>
+        )}
       </div>
     );
   }

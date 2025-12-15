@@ -14,6 +14,8 @@ interface QuizResultsProps {
   onRetake: () => void;
   isLastModule?: boolean;
   onClaimCertificate?: () => void;
+  currentModuleOrder?: number;
+  totalModules?: number;
 }
 
 export function QuizResults({
@@ -69,6 +71,20 @@ export function QuizResults({
             ? `You passed the ${moduleName} quiz!`
             : `You scored ${score}%. You need at least 80% to pass.`}
         </p>
+        
+        {/* Progress Indicator */}
+        {passed && currentModuleOrder > 0 && totalModules > 0 && (
+          <div
+            style={{
+              fontSize: "0.875rem",
+              color: "#6b7280",
+              marginBottom: "1rem",
+              fontWeight: "500",
+            }}
+          >
+            Module {currentModuleOrder} of {totalModules}
+          </div>
+        )}
 
         {/* Score Display */}
         <div
@@ -132,7 +148,7 @@ export function QuizResults({
                   cursor: "pointer",
                 }}
               >
-                Continue Training
+                Next Lesson
               </button>
             )
           ) : (

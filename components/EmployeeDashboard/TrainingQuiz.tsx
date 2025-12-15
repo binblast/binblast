@@ -68,23 +68,54 @@ export function TrainingQuiz({
       setSubmitted(true);
 
       // Submit to API
-      const response = await fetch(`/api/employee/training/${moduleId}/quiz`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          employeeId,
-          answers: Object.entries(answers).map(([questionId, selectedAnswer]) => ({
-            questionId,
-            selectedAnswer,
-            isCorrect: resultMap[questionId],
-          })),
-          score: calculatedScore,
-          passed,
-        }),
-      });
+      let response;
+      try {
+        response = await fetch(`/api/employee/training/${moduleId}/quiz`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            employeeId,
+            answers: Object.entries(answers).map(([questionId, selectedAnswer]) => ({
+              questionId,
+              selectedAnswer,
+              isCorrect: resultMap[questionId],
+            })),
+            score: calculatedScore,
+            passed,
+          }),
+        });
+      } catch (fetchError: any) {
+        console.error("[TrainingQuiz] Network error during fetch:", fetchError);
+        throw new Error(`Network error: ${fetchError.message || "Failed to connect to server"}`);
+      }
 
       if (!response.ok) {
-        throw new Error("Failed to save quiz results");
+        let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.details || errorMessage;
+          console.error("[TrainingQuiz] API error response:", errorData);
+        } catch (parseError) {
+          console.error("[TrainingQuiz] Failed to parse error response:", parseError);
+          const text = await response.text().catch(() => "");
+          console.error("[TrainingQuiz] Raw error response:", text);
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Verify response is valid JSON and check success field
+      const result = await response.json().catch((parseError) => {
+        console.error("[TrainingQuiz] Failed to parse success response:", parseError);
+        throw new Error("Invalid response from server");
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Quiz submission failed");
+      }
+
+      // Trigger progress refresh event
+      if (passed) {
+        window.dispatchEvent(new CustomEvent('trainingProgressUpdated'));
       }
 
       onQuizComplete(passed, calculatedScore);
