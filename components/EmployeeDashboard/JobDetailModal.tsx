@@ -103,6 +103,35 @@ export function JobDetailModal({
     }
   };
 
+  const loadExistingPhotos = async () => {
+    if (!job?.id) return;
+    try {
+      const response = await fetch(`/api/employee/jobs/${job.id}/photos`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.photos && Array.isArray(data.photos)) {
+          data.photos.forEach((photo: any) => {
+            if (photo.photoType === "inside") {
+              setInsidePhoto(photo.storageUrl);
+              setInsidePhotoId(photo.id);
+            } else if (photo.photoType === "outside") {
+              setOutsidePhoto(photo.storageUrl);
+              setOutsidePhotoId(photo.id);
+            } else if (photo.photoType === "dumpster_pad") {
+              setDumpsterPadPhoto(photo.storageUrl);
+              setDumpsterPadPhotoId(photo.id);
+            } else if (photo.photoType === "sticker_placement") {
+              setStickerPlacementPhoto(photo.storageUrl);
+              setStickerPlacementPhotoId(photo.id);
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading existing photos:", error);
+    }
+  };
+
   if (!isOpen || !job) return null;
 
   const fullAddress = `${job.addressLine1}${
