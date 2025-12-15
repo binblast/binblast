@@ -59,6 +59,7 @@ export default function EmployeeRegisterPage() {
       
       if (db && userCredential.user) {
         const userDocRef = doc(collection(db, "users"), userCredential.user.uid);
+        const { addDoc } = firestore;
         
         await setDoc(userDocRef, {
           firstName,
@@ -68,8 +69,17 @@ export default function EmployeeRegisterPage() {
           role: "employee",
           serviceArea: [], // Service areas will be assigned later by operators
           payRatePerJob: payRatePerJob ? parseFloat(payRatePerJob) : null,
+          hiringStatus: "pending_approval",
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
+        });
+        
+        // Create application document
+        const applicationsRef = collection(db, "employeeApplications");
+        await addDoc(applicationsRef, {
+          employeeId: userCredential.user.uid,
+          applicationDate: serverTimestamp(),
+          status: "pending",
         });
         
         console.log("[Employee Register] Employee account created successfully");
@@ -109,9 +119,14 @@ export default function EmployeeRegisterPage() {
             {success ? (
               <div style={{ textAlign: "center", padding: "3rem 0" }}>
                 <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "0.5rem", color: "#16a34a" }}>
-                  Employee Account Created!
+                  Application Submitted!
                 </h2>
-                <p style={{ color: "#6b7280" }}>Redirecting to employee dashboard...</p>
+                <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
+                  Your employee application has been submitted and is pending admin approval.
+                </p>
+                <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+                  You will be notified once your application is reviewed. Redirecting...
+                </p>
               </div>
             ) : (
               <div style={{

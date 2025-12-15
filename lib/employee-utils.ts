@@ -14,14 +14,46 @@ export interface ClockInRecord {
   isActive: boolean;
 }
 
+export interface TaxInfo {
+  name?: string;
+  ssn?: string;
+  ein?: string;
+  address?: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+  signature?: string;
+  signedDate?: any; // Firestore timestamp
+}
+
 export interface Employee {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
+  phone?: string;
   role?: string;
   serviceArea?: string[];
   payRatePerJob?: number;
+  taxInfo?: TaxInfo | null;
+  hiringStatus?: "pending_approval" | "approved" | "rejected" | "active";
+  hiredDate?: any;
+  hiredBy?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface EmployeeApplication {
+  id: string;
+  employeeId: string;
+  applicationDate: Date | string;
+  status: "pending" | "approved" | "rejected";
+  reviewedBy?: string;
+  reviewedAt?: Date | string;
+  notes?: string;
 }
 
 /**
@@ -178,5 +210,71 @@ export function calculateHoursWorked(clockInTime: any, clockOutTime: any | null)
   
   const diffMs = end.getTime() - start.getTime();
   return diffMs / (1000 * 60 * 60); // Convert to hours
+}
+
+/**
+ * Get employee tax information
+ */
+export async function getEmployeeTaxInfo(employeeId: string): Promise<TaxInfo | null> {
+  try {
+    const db = await getDbInstance();
+    if (!db) return null;
+
+    const firestore = await safeImportFirestore();
+    const { doc, getDoc } = firestore;
+
+    const userDoc = await getDoc(doc(db, "users", employeeId));
+    if (!userDoc.exists()) return null;
+
+    const data = userDoc.data();
+    return data.taxInfo || null;
+  } catch (error) {
+    console.error("Error getting employee tax info:", error);
+    return null;
+  }
+}
+
+/**
+ * Get employee applications
+ */
+export async function getEmployeeApplications(employeeId?: string): Promise<EmployeeApplication[]> {
+  try {
+    const db = await getDbInstance();
+    if (!db) return [];
+
+    const firestore = await safeImportFirestore();
+    const { collection, query, where, getDocs, orderBy } = firestore;
+
+    const applicationsRef = collection(db, "employeeApplications");
+    let applicationsQuery = query(
+      applicationsRef,
+      orderBy("applicationDate", "desc")
+    );
+
+    if (employeeId) {
+      applicationsQuery = query(
+        applicationsRef,
+        where("employeeId", "==", employeeId),
+        orderBy("applicationDate", "desc")
+      );
+    }
+
+    const snapshot = await getDocs(applicationsQuery);
+    return snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        employeeId: data.employeeId,
+        applicationDate: data.applicationDate?.toDate?.()?.toISOString() || new Date().toISOString(),
+        status: data.status || "pending",
+        reviewedBy: data.reviewedBy,
+        reviewedAt: data.reviewedAt?.toDate?.()?.toISOString(),
+        notes: data.notes || "",
+      };
+    });
+  } catch (error) {
+    console.error("Error getting employee applications:", error);
+    return [];
+  }
 }
 

@@ -212,7 +212,7 @@ function DashboardPageContent() {
   const [operatorCityFilter, setOperatorCityFilter] = useState<string>("");
   const [operatorTypeFilter, setOperatorTypeFilter] = useState<string>("");
   const [operatorActiveTab, setOperatorActiveTab] = useState<"overview" | "employees" | "customers" | "schedule">("overview");
-  const [adminActiveTab, setAdminActiveTab] = useState<"overview" | "customers" | "operations" | "financial" | "partners" | "analytics">("overview");
+  const [adminActiveTab, setAdminActiveTab] = useState<"overview" | "customers" | "operations" | "financial" | "partners" | "analytics" | "employees">("overview");
   const [newQuotesCount, setNewQuotesCount] = useState(0);
   const [showQuotesNotification, setShowQuotesNotification] = useState(true);
   
@@ -2711,7 +2711,7 @@ function DashboardPageContent() {
                   }}
                   className="hide-scrollbar tab-navigation"
                   >
-                    {(["overview", "customers", "operations", "financial", "partners", "analytics"] as const).map((tab) => (
+                    {(["overview", "customers", "operations", "financial", "partners", "analytics", "employees"] as const).map((tab) => (
                       <button
                         key={tab}
                         onClick={() => setAdminActiveTab(tab)}
@@ -3931,6 +3931,70 @@ function DashboardPageContent() {
                             </div>
                           </>
                         )}
+                      </div>
+                    )}
+
+                    {/* TAB: Employees */}
+                    {adminActiveTab === "employees" && (
+                      <div 
+                        key="employees"
+                        style={{
+                          animation: "fadeInUp 0.4s ease-out",
+                          opacity: 1
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+                          <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0 }}>
+                            Employee Management
+                          </h2>
+                          <button
+                            onClick={() => router.push("/admin/employees")}
+                            style={{
+                              padding: "0.75rem 1.5rem",
+                              background: "#16a34a",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "8px",
+                              fontSize: "0.95rem",
+                              fontWeight: "600",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Manage Employees →
+                          </button>
+                        </div>
+                        <div style={{
+                          background: "#ffffff",
+                          borderRadius: "12px",
+                          padding: "1.5rem",
+                          border: "1px solid #e5e7eb",
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)"
+                        }}>
+                          <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
+                            Access the full employee management system to view contact lists, manage tax information, 
+                            schedule employees, assign jobs, and handle hiring workflows.
+                          </p>
+                          <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                            gap: "1rem",
+                            marginTop: "1.5rem"
+                          }}>
+                            <div style={{
+                              padding: "1rem",
+                              background: "#f9fafb",
+                              borderRadius: "8px",
+                              border: "1px solid #e5e7eb"
+                            }}>
+                              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "600" }}>
+                                Active Employees
+                              </div>
+                              <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)" }}>
+                                {adminStats.activeEmployees || 0}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
