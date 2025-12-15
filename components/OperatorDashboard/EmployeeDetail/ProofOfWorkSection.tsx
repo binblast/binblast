@@ -7,6 +7,8 @@ import { JobPhotosViewer } from "./JobPhotosViewer";
 interface Proof {
   cleaningId: string;
   completionPhotoUrl: string | null;
+  insidePhotoUrl?: string | null;
+  outsidePhotoUrl?: string | null;
   employeeNotes: string | null;
   operatorNotes: string | null;
   flags: string[];
