@@ -85,9 +85,9 @@ export function JobDetailModal({
       setOutsidePhoto(null);
       setOutsidePhotoFile(null);
       setStickerStatus("none");
-      setCompletionStep(1);
       setError(null);
       checkPhotoDocumentationTraining();
+      loadExistingPhotos();
     }
   }, [isOpen, job?.id, employeeId]);
 
@@ -171,15 +171,13 @@ export function JobDetailModal({
     // Validate step 1: Photos (2 required if photo documentation training completed)
     if (photoDocumentationCompleted) {
       if (!insidePhoto || !outsidePhoto) {
-        setError("Photo Documentation training requires exactly 2 photos: one inside the bin and one outside the bin");
-        setCompletionStep(1);
+        setError("Both inside and outside photos are required to complete this job. Please upload both photos before marking the job as complete.");
         return;
       }
     } else {
       // If training not completed, at least one photo recommended
       if (!insidePhoto && !outsidePhoto) {
-        setError("Please take at least one photo of the cleaned bins");
-        setCompletionStep(1);
+        setError("Both inside and outside photos are required to complete this job. Please upload both photos before marking the job as complete.");
         return;
       }
     }
@@ -187,7 +185,6 @@ export function JobDetailModal({
     // Validate step 2: Sticker status
     if (stickerStatus === "none") {
       setError("Please confirm sticker status");
-      setCompletionStep(2);
       return;
     }
 
@@ -212,10 +209,24 @@ export function JobDetailModal({
       setEmployeeNotes("");
       setInsidePhoto(null);
       setInsidePhotoFile(null);
+      setInsidePhotoId(null);
       setOutsidePhoto(null);
       setOutsidePhotoFile(null);
+      setOutsidePhotoId(null);
+      setDumpsterPadPhoto(null);
+      setDumpsterPadPhotoId(null);
+      setStickerPlacementPhoto(null);
+      setStickerPlacementPhotoId(null);
       setStickerStatus("none");
-      setCompletionStep(1);
+      
+      // Clear photo cache
+      if (job.id) {
+        localStorage.removeItem(`job-photo-${job.id}-inside`);
+        localStorage.removeItem(`job-photo-${job.id}-outside`);
+        localStorage.removeItem(`job-photo-${job.id}-dumpster_pad`);
+        localStorage.removeItem(`job-photo-${job.id}-sticker_placement`);
+      }
+      
       onClose();
     } catch (err: any) {
       setError(err.message || "Failed to complete job");
