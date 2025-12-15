@@ -57,7 +57,7 @@ export function RevenueTrendSummary({ data }: RevenueTrendSummaryProps) {
       }}
     >
       <h4 style={{ fontSize: "1rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <span style={{ fontSize: "1.25rem" }}>📈</span>
+        <span style={{ fontSize: "1.25rem" }}></span>
         Revenue Trend (Last 30 Days)
       </h4>
       <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -195,7 +195,7 @@ export function CustomerGrowthSummary({ data }: CustomerGrowthSummaryProps) {
       }}
     >
       <h4 style={{ fontSize: "1rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <span style={{ fontSize: "1.25rem" }}>👥</span>
+        <span style={{ fontSize: "1.25rem" }}></span>
         Customer Growth (Last 6 Months)
       </h4>
       <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -443,7 +443,7 @@ export function PlanDistributionSummary({ data }: PlanDistributionSummaryProps) 
       }}
     >
       <h4 style={{ fontSize: "1rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <span style={{ fontSize: "1.25rem" }}>📋</span>
+        <span style={{ fontSize: "1.25rem" }}></span>
         Customers by Plan
       </h4>
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1.25rem" }}>
@@ -562,7 +562,7 @@ export function RevenueByPlanSummary({ data }: RevenueByPlanSummaryProps) {
       }}
     >
       <h4 style={{ fontSize: "1rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <span style={{ fontSize: "1.25rem" }}>💵</span>
+        <span style={{ fontSize: "1.25rem" }}></span>
         Revenue by Plan Type
       </h4>
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1.25rem" }}>

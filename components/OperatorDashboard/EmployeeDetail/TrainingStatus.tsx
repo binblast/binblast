@@ -89,11 +89,11 @@ export function TrainingStatus({ employeeId }: TrainingStatusProps) {
       case "completed":
         return { icon: "✅", text: "Certified", color: "#065f46", bg: "#d1fae5" };
       case "expired":
-        return { icon: "⚠️", text: "Expired", color: "#991b1b", bg: "#fee2e2" };
+        return { icon: "", text: "Expired", color: "#991b1b", bg: "#fee2e2" };
       case "in_progress":
-        return { icon: "🔄", text: "In Progress", color: "#92400e", bg: "#fef3c7" };
+        return { icon: "", text: "In Progress", color: "#92400e", bg: "#fef3c7" };
       default:
-        return { icon: "❌", text: "Not Started", color: "#6b7280", bg: "#f3f4f6" };
+        return { icon: "", text: "Not Started", color: "#6b7280", bg: "#f3f4f6" };
     }
   };
 
@@ -136,7 +136,7 @@ export function TrainingStatus({ employeeId }: TrainingStatusProps) {
                 marginBottom: "0.25rem",
               }}
             >
-              Status: {certificationStatus.isCertified ? "✅ Certified" : "⚠️ Not Certified"}
+              Status: {certificationStatus.isCertified ? "✅ Certified" : "Not Certified"}
             </div>
             <div style={{ fontSize: "0.75rem", color: certificationStatus.isCertified ? "#047857" : "#7f1d1d" }}>
               {certificationStatus.completedModules} / {certificationStatus.totalModules} modules completed

@@ -547,7 +547,7 @@ export const TrashOnboardingWizard: React.FC = () => {
 
   const renderSuccessStep = () => (
     <div className="text-center py-10">
-      <h2 className="text-2xl font-semibold mb-2">You&apos;re all set 🎉</h2>
+      <h2 className="text-2xl font-semibold mb-2">You&apos;re all set</h2>
       <p className="text-sm text-gray-600 mb-4">
         Your bin cleaning subscription is active. We&apos;ll send a confirmation
         email with your schedule.

@@ -228,7 +228,7 @@ export function ZonesCountiesPanel({ employeeId }: ZonesCountiesPanelProps) {
               cursor: "pointer",
             }}
           >
-            ℹ️ Zone Guide
+            Zone Guide
           </button>
         </div>
         

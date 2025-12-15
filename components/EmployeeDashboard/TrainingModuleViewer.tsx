@@ -263,7 +263,7 @@ export function TrainingModuleViewer({
             gap: "0.5rem",
           }}
         >
-          📥 Download PDF
+          Download PDF
         </button>
       </div>
 
@@ -351,7 +351,7 @@ export function TrainingModuleViewer({
             marginBottom: "1rem",
           }}
         >
-          <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>⚠️ PDF Loading Error</div>
+          <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>PDF Loading Error</div>
           <div style={{ fontSize: "0.875rem" }}>{error}</div>
           <div style={{ marginTop: "0.75rem", fontSize: "0.875rem" }}>
             You can still try downloading the PDF using the button above, or contact support if the issue persists.
@@ -370,7 +370,7 @@ export function TrainingModuleViewer({
             marginBottom: "1rem",
           }}
         >
-          ℹ️ PDF not yet available. Displaying training content from Markdown.
+          PDF not yet available. Displaying training content from Markdown.
         </div>
       )}
 
@@ -434,7 +434,7 @@ export function TrainingModuleViewer({
             color: "#92400e",
           }}
         >
-          ⚠️ Please review the training material before taking the quiz.
+          Please review the training material before taking the quiz.
         </div>
       )}
     </div>

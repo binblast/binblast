@@ -498,7 +498,7 @@ export function JobDetailModal({
                         color: "#92400e",
                       }}
                     >
-                      💡 Complete Photo Documentation training to enable payment eligibility. 2 photos (inside + outside) will be required after training.
+                      Complete Photo Documentation training to enable payment eligibility. 2 photos (inside + outside) will be required after training.
                     </div>
                   </>
                 )}

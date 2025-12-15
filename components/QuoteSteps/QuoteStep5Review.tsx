@@ -357,7 +357,7 @@ export function QuoteStep5Review({
               alignItems: "center",
               gap: "0.5rem"
             }}>
-              ✨ Recommended: {estimatedPrice.recommendedBundle}
+              Recommended: {estimatedPrice.recommendedBundle}
             </div>
             <div style={{
               fontSize: "0.75rem",
@@ -456,7 +456,7 @@ export function QuoteStep5Review({
               alignItems: "center",
               gap: "0.5rem"
             }}>
-              ⚠️ Manual Review Required
+              Manual Review Required
             </div>
             <div style={{
               fontSize: "0.875rem",

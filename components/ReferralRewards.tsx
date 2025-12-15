@@ -167,7 +167,7 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
             margin: 0,
             fontWeight: "600"
           }}>
-            ⚠️ No referral code found. Referral codes are generated when you first sign up for an account. 
+            No referral code found. Referral codes are generated when you first sign up for an account. 
             If you believe this is an error, please contact support.
           </p>
         </div>

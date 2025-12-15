@@ -54,19 +54,19 @@ export function TrainingModuleCard({
   const getStatusBadge = () => {
     switch (status) {
       case "locked":
-        return { icon: "🔒", text: "Locked", color: "#6b7280", bg: "#f3f4f6" };
+        return { icon: "", text: "Locked", color: "#6b7280", bg: "#f3f4f6" };
       case "in_progress":
-        return { icon: "🔄", text: "In Progress", color: "#92400e", bg: "#fef3c7" };
+        return { icon: "", text: "In Progress", color: "#92400e", bg: "#fef3c7" };
       case "passed":
         return { icon: "✅", text: "Passed", color: "#065f46", bg: "#d1fae5" };
       case "failed":
-        return { icon: "❌", text: "Failed", color: "#991b1b", bg: "#fee2e2" };
+        return { icon: "", text: "Failed", color: "#991b1b", bg: "#fee2e2" };
       case "expired":
-        return { icon: "⚠️", text: "Expired", color: "#991b1b", bg: "#fee2e2" };
+        return { icon: "", text: "Expired", color: "#991b1b", bg: "#fee2e2" };
       case "not_started":
-        return { icon: "❌", text: "Not Started", color: "#6b7280", bg: "#f3f4f6" };
+        return { icon: "", text: "Not Started", color: "#6b7280", bg: "#f3f4f6" };
       default:
-        return { icon: "❌", text: "Not Started", color: "#6b7280", bg: "#f3f4f6" };
+        return { icon: "", text: "Not Started", color: "#6b7280", bg: "#f3f4f6" };
     }
   };
 
@@ -232,7 +232,7 @@ export function TrainingModuleCard({
               cursor: "not-allowed",
             }}
           >
-            🔒 Locked
+            Locked
           </button>
         )}
 
@@ -375,7 +375,7 @@ export function TrainingModuleCard({
               cursor: "pointer",
             }}
           >
-            🔄 Re-certify
+            Re-certify
           </button>
         )}
       </div>

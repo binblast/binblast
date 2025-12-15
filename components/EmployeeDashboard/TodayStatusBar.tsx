@@ -200,8 +200,8 @@ export function TodayStatusBar({
           {certificationStatus === "completed"
             ? "✅ Certified"
             : certificationStatus === "expired"
-            ? "❌ Certification Expired"
-            : "🔄 Training In Progress"}
+            ? "Certification Expired"
+            : "Training In Progress"}
         </div>
       )}
     </div>

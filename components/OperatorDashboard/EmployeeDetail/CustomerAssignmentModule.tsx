@@ -183,9 +183,9 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
       const newUtilization = (newTotal / 40) * 100;
       
       if (newTotal > 40) {
-        warnings.push(`⚠️ Overload Warning: This will assign ${newTotal} customers (${newUtilization.toFixed(0)}% capacity). Consider reassigning some customers.`);
+        warnings.push(`Overload Warning: This will assign ${newTotal} customers (${newUtilization.toFixed(0)}% capacity). Consider reassigning some customers.`);
       } else if (newUtilization > 80) {
-        warnings.push(`⚠️ High Capacity: This will reach ${newUtilization.toFixed(0)}% capacity. Monitor workload closely.`);
+        warnings.push(`High Capacity: This will reach ${newUtilization.toFixed(0)}% capacity. Monitor workload closely.`);
       }
     }
 
@@ -411,7 +411,7 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
         }}>
           {warnings.map((warning, idx) => (
             <div key={idx} style={{ fontSize: "0.875rem", color: "#92400e", marginBottom: "0.25rem" }}>
-              ⚠️ {warning}
+              {warning}
             </div>
           ))}
         </div>

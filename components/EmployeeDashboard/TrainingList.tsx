@@ -248,7 +248,7 @@ export function TrainingList({ employeeId }: TrainingListProps) {
           }}
         >
           <div style={{ fontSize: "1.25rem", fontWeight: "600", color: "#065f46", marginBottom: "0.5rem" }}>
-            🎉 All Training Complete!
+            All Training Complete!
           </div>
           <div style={{ fontSize: "0.875rem", color: "#047857" }}>
             You have completed all required training modules. Your certification is valid for 6 months.

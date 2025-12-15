@@ -162,7 +162,7 @@ export function CertificateWidget({ employeeId, employeeName }: CertificateWidge
             marginBottom: "1rem",
           }}
         >
-          ⚠️ Your certificate has expired. Please complete re-certification training.
+          Your certificate has expired. Please complete re-certification training.
         </div>
       )}
 
@@ -178,7 +178,7 @@ export function CertificateWidget({ employeeId, employeeName }: CertificateWidge
             marginBottom: "1rem",
           }}
         >
-          ⚠️ Your certificate expires in {daysUntilExpiry} days. Re-certification will be required soon.
+          Your certificate expires in {daysUntilExpiry} days. Re-certification will be required soon.
         </div>
       )}
 

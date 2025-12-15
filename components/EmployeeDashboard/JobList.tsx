@@ -265,7 +265,7 @@ export function JobList({ jobs, onJobClick, isClockedIn }: JobListProps) {
                 }}
                 title="Tap to open in maps"
               >
-                📍 {fullAddress}
+                {fullAddress}
               </div>
             </div>
 
@@ -324,7 +324,7 @@ export function JobList({ jobs, onJobClick, isClockedIn }: JobListProps) {
                   marginBottom: "0.5rem",
                 }}
               >
-                ⚠️ {job.flags.length} Flag{job.flags.length > 1 ? "s" : ""}
+                {job.flags.length} Flag{job.flags.length > 1 ? "s" : ""}
               </div>
             )}
 
@@ -343,7 +343,7 @@ export function JobList({ jobs, onJobClick, isClockedIn }: JobListProps) {
                 }}
                 title={job.notes}
               >
-                📝 {job.notes.length > 50 ? job.notes.substring(0, 50) + "..." : job.notes}
+                {job.notes.length > 50 ? job.notes.substring(0, 50) + "..." : job.notes}
               </div>
             )}
 

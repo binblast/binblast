@@ -186,7 +186,7 @@ export function TrainingQuiz({
               </>
             ) : (
               <>
-                <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}>❌</div>
+                <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}></div>
                 <div
                   style={{
                     fontSize: "1.5rem",

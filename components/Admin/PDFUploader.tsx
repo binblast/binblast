@@ -163,7 +163,7 @@ export function PDFUploader({
             <div style={{ color: "#6b7280" }}>Uploading PDF...</div>
           ) : (
             <>
-              <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📄</div>
+              <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}></div>
               <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
                 Drop PDF here or click to upload
               </div>

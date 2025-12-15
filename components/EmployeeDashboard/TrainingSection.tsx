@@ -310,11 +310,11 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
       case "completed":
         return { icon: "✅", text: "Certified", color: "#065f46", bg: "#d1fae5" };
       case "expired":
-        return { icon: "⚠️", text: "Expired", color: "#991b1b", bg: "#fee2e2" };
+        return { icon: "", text: "Expired", color: "#991b1b", bg: "#fee2e2" };
       case "in_progress":
-        return { icon: "🔄", text: "In Progress", color: "#92400e", bg: "#fef3c7" };
+        return { icon: "", text: "In Progress", color: "#92400e", bg: "#fef3c7" };
       default:
-        return { icon: "❌", text: "Not Started", color: "#6b7280", bg: "#f3f4f6" };
+        return { icon: "", text: "Not Started", color: "#6b7280", bg: "#f3f4f6" };
     }
   };
 
@@ -454,7 +454,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
           }}
         >
           <div style={{ fontWeight: "700", marginBottom: "0.5rem", fontSize: "1rem" }}>
-            {certificationStatus.status === "expired" ? "⚠️ Certification Expired" : "🔄 Certification In Progress"}
+            {certificationStatus.status === "expired" ? "Certification Expired" : "Certification In Progress"}
           </div>
           <div style={{ fontSize: "0.875rem" }}>
             {certificationStatus.status === "expired"
@@ -718,7 +718,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                       cursor: "pointer",
                     }}
                   >
-                    📄 Start Lesson
+                    Start Lesson
                   </button>
                 )}
                 {module.pdfViewed && !module.completed && (
@@ -737,7 +737,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                       cursor: "pointer",
                     }}
                   >
-                    📝 Take Quiz
+                    Take Quiz
                   </button>
                 )}
                 {module.completed && (
@@ -756,7 +756,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                       cursor: "pointer",
                     }}
                   >
-                    📄 Review Lesson
+                    Review Lesson
                   </button>
                 )}
                 {module.certificationStatus === "expired" && (
@@ -775,7 +775,7 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
                       cursor: "pointer",
                     }}
                   >
-                    🔄 Re-certify
+                    Re-certify
                   </button>
                 )}
               </div>

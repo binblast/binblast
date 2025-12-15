@@ -100,7 +100,7 @@ export function StickerConfirmation({
           />
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
-              ✨ I Placed a Sticker
+              I Placed a Sticker
             </div>
             <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
               I placed a new Bin Blast sticker on the bin
@@ -135,7 +135,7 @@ export function StickerConfirmation({
           />
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
-              ⚠️ No Sticker Needed
+              No Sticker Needed
             </div>
             <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
               Sticker not applicable for this job
@@ -156,7 +156,7 @@ export function StickerConfirmation({
             color: "#92400e",
           }}
         >
-          ⚠️ Note: Most jobs require a Bin Blast sticker. Please confirm this is correct.
+          Note: Most jobs require a Bin Blast sticker. Please confirm this is correct.
         </div>
       )}
     </div>

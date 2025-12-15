@@ -302,7 +302,7 @@ export default function EmployeeDetailPage() {
                       onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
                       onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
                     >
-                      📞 Call Employee
+                      Call Employee
                     </button>
                   )}
                   <button

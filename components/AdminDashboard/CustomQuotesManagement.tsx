@@ -292,7 +292,7 @@ export function CustomQuotesManagement() {
                         color: "#dc2626",
                         marginLeft: "0.5rem"
                       }}>
-                        ⚠️ Review Required
+                        Review Required
                       </span>
                     )}
                   </div>
@@ -333,7 +333,7 @@ export function CustomQuotesManagement() {
                       color: "#f59e0b",
                       marginTop: "0.25rem"
                     }}>
-                      ⚠️ Price adjusted from ${quote.originalCalculatedPrice.toLocaleString()}
+                      Price adjusted from ${quote.originalCalculatedPrice.toLocaleString()}
                     </div>
                   )}
                   <div style={{
@@ -465,7 +465,7 @@ export function CustomQuotesManagement() {
                         color: quote.requiresManualReview ? "#991b1b" : "#92400e",
                         marginBottom: "0.75rem"
                       }}>
-                        {quote.requiresManualReview ? "⚠️ Manual Review Required" : "💰 Pricing Safeguards Applied"}
+                        {quote.requiresManualReview ? "Manual Review Required" : "Pricing Safeguards Applied"}
                       </div>
                       {quote.reviewReasons && quote.reviewReasons.length > 0 && (
                         <div style={{ marginBottom: "0.75rem" }}>

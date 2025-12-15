@@ -79,7 +79,7 @@ export function TrainingStatusHeader({ employeeId }: TrainingStatusHeaderProps) 
       const daysUntilExp = certification.daysUntilExpiration ?? 0;
       if (daysUntilExp <= 14 && daysUntilExp > 0) {
         return {
-          icon: "⚠️",
+          icon: "",
           text: `Expiring Soon (${daysUntilExp} days)`,
           color: "#92400e",
           bg: "#fef3c7",
@@ -96,14 +96,14 @@ export function TrainingStatusHeader({ employeeId }: TrainingStatusHeaderProps) 
     }
     if (certification.status === "expired") {
       return {
-        icon: "❌",
+        icon: "",
         text: "Not Certified / Expired",
         color: "#991b1b",
         bg: "#fee2e2",
       };
     }
     return {
-      icon: "❌",
+      icon: "",
       text: "Not Certified",
       color: "#991b1b",
       bg: "#fee2e2",
@@ -211,7 +211,7 @@ export function TrainingStatusHeader({ employeeId }: TrainingStatusHeaderProps) 
             gap: "0.75rem",
           }}
         >
-          <span style={{ fontSize: "1.25rem" }}>⚠️</span>
+          <span style={{ fontSize: "1.25rem" }}></span>
           <div style={{ flex: 1, fontSize: "0.875rem", color: "#92400e" }}>
             Certification required before clock-in. Complete training to unlock Clock In.
           </div>
@@ -246,7 +246,7 @@ export function TrainingStatusHeader({ employeeId }: TrainingStatusHeaderProps) 
                   marginBottom: "0.25rem",
                 }}
               >
-                🎓 Certified Bin Blast Technician
+                Certified Bin Blast Technician
               </div>
               {certificate.issuedAt && (
                 <div style={{ fontSize: "0.75rem", color: "#047857", marginBottom: "0.25rem" }}>

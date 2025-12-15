@@ -234,7 +234,7 @@ export function ProofOfWorkSection({ employeeId, cleaningId }: ProofOfWorkSectio
               color: "#991b1b",
               marginBottom: "1rem",
             }}>
-              ⚠️ No photo uploaded. Operator override required.
+              No photo uploaded. Operator override required.
             </div>
           )}
           {proof.employeeNotes && (

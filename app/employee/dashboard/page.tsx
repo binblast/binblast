@@ -484,7 +484,7 @@ export default function EmployeeDashboardPage() {
               }}
             >
               <div style={{ fontWeight: "700", marginBottom: "0.5rem", fontSize: "1rem" }}>
-                {certificationStatus.status === "expired" ? "⚠️ Certification Expired" : "🔄 Certification Required"}
+                {certificationStatus.status === "expired" ? "Certification Expired" : "Certification Required"}
               </div>
               <div style={{ fontSize: "0.875rem", marginBottom: "0.5rem" }}>
                 {certificationStatus.status === "expired"

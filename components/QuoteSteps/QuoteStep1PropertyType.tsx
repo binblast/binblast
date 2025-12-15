@@ -212,7 +212,7 @@ export function QuoteStep1PropertyType({
             fontSize: "1.25rem",
             flexShrink: 0
           }}>
-            {formData.propertyType === "hoa" ? "✓" : "🏘️"}
+            {formData.propertyType === "hoa" ? "✓" : ""}
           </div>
           <div style={{ flex: 1 }}>
             <div style={{

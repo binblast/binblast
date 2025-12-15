@@ -143,8 +143,8 @@ export async function POST(request: NextRequest) {
             <p><strong>Property Type:</strong> ${getPropertyTypeLabel(formData.propertyType)}</p>
             <p><strong>Address:</strong> ${formData.address}</p>
             <p><strong>Estimated Price Range:</strong> $${lowEstimate.toLocaleString()} - $${highEstimate.toLocaleString()}/month</p>
-            ${requiresManualReview ? `<p><strong>⚠️ Requires Manual Review:</strong> Yes</p><p><strong>Review Reasons:</strong> ${reviewReasons.join(", ")}</p>` : ''}
-            ${minimumPriceEnforced ? `<p><strong>💰 Price Safeguard Applied:</strong> Original price was $${originalCalculatedPrice?.toLocaleString()}, adjusted to $${estimatedPrice.toLocaleString()}</p>` : ''}
+            ${requiresManualReview ? `<p><strong>Requires Manual Review:</strong> Yes</p><p><strong>Review Reasons:</strong> ${reviewReasons.join(", ")}</p>` : ''}
+            ${minimumPriceEnforced ? `<p><strong>Price Safeguard Applied:</strong> Original price was $${originalCalculatedPrice?.toLocaleString()}, adjusted to $${estimatedPrice.toLocaleString()}</p>` : ''}
             ${safeguardReasons.length > 0 ? `<p><strong>Safeguard Reasons:</strong> ${safeguardReasons.join(", ")}</p>` : ''}
             ${recommendedBundle ? `<p><strong>Recommended Bundle:</strong> ${recommendedBundle}</p>` : ''}
             ${formData.dumpsterPadCleaning ? `<p><strong>Dumpster Pad Cleaning:</strong> Included (+$75/month)</p>` : ''}

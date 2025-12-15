@@ -46,7 +46,7 @@ export function QuizResults({
             marginBottom: "1rem",
           }}
         >
-          {passed ? "🎉" : "❌"}
+          {passed ? "" : ""}
         </div>
         <h2
           style={{
@@ -116,7 +116,7 @@ export function QuizResults({
                   cursor: "pointer",
                 }}
               >
-                🎓 Claim Certificate
+                Claim Certificate
               </button>
             ) : (
               <button

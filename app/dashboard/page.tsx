@@ -2868,28 +2868,28 @@ function DashboardPageContent() {
                         title="Total Active Customers"
                         value={adminStats.totalCustomers}
                         color="blue"
-                        icon="👥"
+                        icon=""
                         delay={100}
                       />
                       <KPICard
                         title="Active Partners"
                         value={adminStats.activePartners}
                         color="purple"
-                        icon="🤝"
+                        icon=""
                         delay={150}
                       />
                       <KPICard
                         title="Upcoming Cleanings"
                         value={adminStats.upcomingCleanings}
                         color="orange"
-                        icon="📅"
+                        icon=""
                         delay={200}
                       />
                       <KPICard
                         title="Monthly Recurring Revenue"
                         value={adminStats.monthlyRecurringRevenue || adminStats.estimatedMonthlyRevenue}
                         color="green"
-                        icon="💰"
+                        icon=""
                         delay={250}
                         formatValue={(val) => "$" + Math.round(val).toLocaleString()}
                       />
@@ -2897,7 +2897,7 @@ function DashboardPageContent() {
                         title="Active Subscriptions"
                         value={adminStats.activeSubscriptions || 0}
                         color="blue"
-                        icon="📊"
+                        icon=""
                         delay={300}
                       />
                       <KPICard
@@ -2911,21 +2911,21 @@ function DashboardPageContent() {
                         title="Completed This Week"
                         value={adminStats.completedCleaningsThisWeek || 0}
                         color="green"
-                        icon="📈"
+                        icon=""
                         delay={400}
                       />
                       <KPICard
                         title="Active Employees"
                         value={adminStats.activeEmployees || 0}
                         color="neutral"
-                        icon="👷"
+                        icon=""
                         delay={450}
                       />
                       <KPICard
                         title="Avg Revenue Per Customer"
                         value={adminStats.averageRevenuePerCustomer || 0}
                         color="green"
-                        icon="💵"
+                        icon=""
                         delay={500}
                         formatValue={(val) => "$" + Math.round(val).toLocaleString()}
                       />
@@ -2934,7 +2934,7 @@ function DashboardPageContent() {
                           title="Customer Growth Rate"
                           value={adminStats.customerGrowthRate}
                           color={adminStats.customerGrowthRate >= 0 ? "green" : "orange"}
-                          icon="📊"
+                          icon=""
                           delay={550}
                           formatValue={(val) => (val >= 0 ? "+" : "") + val.toFixed(1) + "%"}
                         />
@@ -2943,7 +2943,7 @@ function DashboardPageContent() {
                         title="Customer Retention Rate"
                         value={adminStats.customerRetentionRate}
                         color={adminStats.customerRetentionRate >= 80 ? "green" : adminStats.customerRetentionRate >= 60 ? "orange" : "neutral"}
-                        icon="🔄"
+                        icon=""
                         delay={600}
                         formatValue={(val) => val.toFixed(1) + "%"}
                       />
