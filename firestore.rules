@@ -471,6 +471,23 @@ service cloud.firestore {
       allow delete: if false; // Training records should not be deleted
     }
 
+    // Training quiz attempts collection - stores quiz attempt history
+    match /trainingQuizAttempts/{attemptId} {
+      // Employees can read their own quiz attempts
+      // Admins and operators can read all
+      // Server-side can read/write all
+      allow read: if (
+        (isAuthenticated() && resource.data.employeeId == request.auth.uid)
+        || isAdminOrOperator()
+        || request.auth == null
+      );
+      // Only server-side API routes can create quiz attempts (from quiz submission)
+      // Employees cannot create attempts directly (must go through API)
+      allow create: if request.auth == null;
+      // No updates or deletions allowed (quiz attempts are immutable)
+      allow update, delete: if false;
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
