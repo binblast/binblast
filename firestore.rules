@@ -153,6 +153,7 @@ service cloud.firestore {
       
       // Users can update their own scheduled cleanings (e.g., cancel, reschedule)
       // Employees can update jobs assigned to them (job status, completion data, flags)
+      // BUT: Employees can only mark jobs as "completed" if hasRequiredPhotos === true
       // Operators can update any scheduled cleaning (for operations management)
       allow update: if (
         (isAuthenticated() 
@@ -160,7 +161,12 @@ service cloud.firestore {
           && request.resource.data.userId == resource.data.userId) // Can't change userId
         || (isAuthenticated() 
           && resource.data.assignedEmployeeId == request.auth.uid
-          && request.resource.data.assignedEmployeeId == resource.data.assignedEmployeeId) // Employee updating assigned job
+          && resource.data.assignedEmployeeId == request.resource.data.assignedEmployeeId // Employee updating assigned job
+          && (
+            // Allow completion only if hasRequiredPhotos is true
+            (request.resource.data.jobStatus != "completed" && request.resource.data.status != "completed")
+            || (request.resource.data.hasRequiredPhotos == true && request.resource.data.photoDocumentationStatus == "complete")
+          ))
         || isAdminOrOperator() // Operators/admins can update any cleaning and assign jobs
       );
       
@@ -486,6 +492,26 @@ service cloud.firestore {
       allow create: if request.auth == null;
       // No updates or deletions allowed (quiz attempts are immutable)
       allow update, delete: if false;
+    }
+
+    // Job photos collection - stores photo metadata for completed jobs
+    match /jobPhotos/{photoId} {
+      // Employees can read photos for jobs assigned to them
+      // Operators and admins can read all job photos
+      // Server-side can read all
+      allow read: if (
+        (isAuthenticated() && resource.data.employeeId == request.auth.uid)
+        || isAdminOrOperator()
+        || request.auth == null
+      );
+      // Employees can create photos for their assigned jobs (verified via API route)
+      // Server-side API routes can create photos
+      allow create: if (
+        (isAuthenticated() && request.resource.data.employeeId == request.auth.uid)
+        || request.auth == null
+      );
+      // Only operators/admins can update or delete photos
+      allow update, delete: if isAdminOrOperator() || request.auth == null;
     }
 
     // Default deny all other collections

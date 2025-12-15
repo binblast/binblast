@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { JobPhotosViewer } from "./JobPhotosViewer";
 
 interface Proof {
   cleaningId: string;
@@ -212,7 +213,12 @@ export function ProofOfWorkSection({ employeeId, cleaningId }: ProofOfWorkSectio
           <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "1rem", color: "#374151" }}>
             Proof for This Stop
           </h4>
-          {proof.completionPhotoUrl ? (
+          
+          {/* Load and display all photos from jobPhotos collection */}
+          {cleaningId && <JobPhotosViewer cleaningId={cleaningId} />}
+          
+          {/* Legacy photo display (for backward compatibility) */}
+          {proof.completionPhotoUrl && !proof.insidePhotoUrl && !proof.outsidePhotoUrl && (
             <div style={{ marginBottom: "1rem" }}>
               <img
                 src={proof.completionPhotoUrl}
@@ -224,7 +230,10 @@ export function ProofOfWorkSection({ employeeId, cleaningId }: ProofOfWorkSectio
                 }}
               />
             </div>
-          ) : (
+          )}
+          
+          {/* Missing photos warning */}
+          {!proof.insidePhotoUrl && !proof.outsidePhotoUrl && !proof.completionPhotoUrl && (
             <div style={{
               padding: "2rem",
               background: "#fee2e2",
@@ -234,7 +243,7 @@ export function ProofOfWorkSection({ employeeId, cleaningId }: ProofOfWorkSectio
               color: "#991b1b",
               marginBottom: "1rem",
             }}>
-              No photo uploaded. Operator override required.
+              No photos uploaded. Required photos missing.
             </div>
           )}
           {proof.employeeNotes && (

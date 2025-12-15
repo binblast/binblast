@@ -40,7 +40,8 @@ export async function GET(req: NextRequest) {
 
     const payRatePerJob = employee.payRatePerJob || 0;
 
-    // Count completed jobs today
+    // Count completed jobs today WITH REQUIRED PHOTOS
+    // Payment protection: Only jobs with required photos count toward payment
     const today = getTodayDateString();
     const cleaningsRef = collection(db, "scheduledCleanings");
     const completedJobsQuery = query(
@@ -51,9 +52,26 @@ export async function GET(req: NextRequest) {
     );
 
     const completedSnapshot = await getDocs(completedJobsQuery);
-    const completedJobsCount = completedSnapshot.size;
+    
+    // Filter to only include jobs with required photos
+    // For backward compatibility, also check if insidePhotoUrl and outsidePhotoUrl exist
+    const eligibleJobs = completedSnapshot.docs.filter(doc => {
+      const data = doc.data();
+      // New field: hasRequiredPhotos must be true
+      if (data.hasRequiredPhotos === true) {
+        return true;
+      }
+      // Backward compatibility: check if both photo URLs exist
+      if (data.insidePhotoUrl && data.outsidePhotoUrl) {
+        return true;
+      }
+      // No photos = no payment eligibility
+      return false;
+    });
 
-    // Calculate estimated pay
+    const completedJobsCount = eligibleJobs.length;
+
+    // Calculate estimated pay (only for jobs with required photos)
     const estimatedPay = completedJobsCount * payRatePerJob;
 
     return NextResponse.json(

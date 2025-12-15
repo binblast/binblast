@@ -17,6 +17,9 @@ interface Job {
   notes?: string;
   jobStatus?: "pending" | "in_progress" | "completed";
   flags?: string[];
+  hasRequiredPhotos?: boolean;
+  insidePhotoUrl?: string;
+  outsidePhotoUrl?: string;
 }
 
 interface JobListProps {
@@ -344,6 +347,33 @@ export function JobList({ jobs, onJobClick, isClockedIn }: JobListProps) {
                 title={job.notes}
               >
                 {job.notes.length > 50 ? job.notes.substring(0, 50) + "..." : job.notes}
+              </div>
+            )}
+
+            {/* Photo Status Indicator - for in-progress jobs */}
+            {job.jobStatus === "in_progress" && (
+              <div
+                style={{
+                  marginTop: "0.75rem",
+                  padding: "0.5rem",
+                  background: (job.hasRequiredPhotos || (job.insidePhotoUrl && job.outsidePhotoUrl)) 
+                    ? "#d1fae5" 
+                    : "#fef3c7",
+                  border: `1px solid ${(job.hasRequiredPhotos || (job.insidePhotoUrl && job.outsidePhotoUrl)) 
+                    ? "#86efac" 
+                    : "#fde68a"}`,
+                  borderRadius: "6px",
+                  fontSize: "0.75rem",
+                  color: (job.hasRequiredPhotos || (job.insidePhotoUrl && job.outsidePhotoUrl)) 
+                    ? "#065f46" 
+                    : "#92400e",
+                  fontWeight: "600",
+                  textAlign: "center",
+                }}
+              >
+                {(job.hasRequiredPhotos || (job.insidePhotoUrl && job.outsidePhotoUrl)) 
+                  ? "✓ Photos Ready" 
+                  : "⚠ Photos Required"}
               </div>
             )}
 

@@ -612,34 +612,228 @@ export default function EmployeeDashboardPage() {
           {/* Tab Content */}
           {activeTab === "home" && (
             <>
+              {/* Step-Based UI Guide */}
               {isClockedIn && (
-                <>
-                  <ProgressTracker
-                    completed={completedJobs}
-                    remaining={remainingJobs}
-                    total={jobs.length}
-                  />
-
-                  <PayPreview
-                    completedJobs={payPreview.completedJobs}
-                    payRatePerJob={payPreview.payRatePerJob}
-                    estimatedPay={payPreview.estimatedPay}
-                    isClockedIn={isClockedIn}
-                  />
-                </>
-              )}
-
-              <div style={{ marginBottom: "1.5rem" }}>
-                <h2
+                <div
                   style={{
-                    fontSize: "1.25rem",
-                    fontWeight: "600",
-                    marginBottom: "1rem",
-                    color: "#111827",
+                    background: "#ffffff",
+                    borderRadius: "12px",
+                    padding: "1.5rem",
+                    marginBottom: "1.5rem",
+                    border: "1px solid #e5e7eb",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
                   }}
                 >
-                  Today&apos;s Route
-                </h2>
+                  <div
+                    style={{
+                      fontSize: "1rem",
+                      fontWeight: "600",
+                      color: "#111827",
+                      marginBottom: "1rem",
+                    }}
+                  >
+                    Your Workflow:
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.75rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        fontSize: "0.875rem",
+                        color: "#16a34a",
+                        fontWeight: "600",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "24px",
+                          height: "24px",
+                          borderRadius: "50%",
+                          background: "#d1fae5",
+                          color: "#16a34a",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: "700",
+                          fontSize: "0.75rem",
+                        }}
+                      >
+                        ✓
+                      </span>
+                      Clock In
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        fontSize: "0.875rem",
+                        color: "#2563eb",
+                        fontWeight: "600",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "24px",
+                          height: "24px",
+                          borderRadius: "50%",
+                          background: "#dbeafe",
+                          color: "#2563eb",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: "700",
+                          fontSize: "0.75rem",
+                        }}
+                      >
+                        2
+                      </span>
+                      View Jobs
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        fontSize: "0.875rem",
+                        color: "#6b7280",
+                        fontWeight: "500",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "24px",
+                          height: "24px",
+                          borderRadius: "50%",
+                          background: "#f3f4f6",
+                          color: "#6b7280",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: "700",
+                          fontSize: "0.75rem",
+                        }}
+                      >
+                        3
+                      </span>
+                      Complete Job (with required photos)
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        fontSize: "0.875rem",
+                        color: "#6b7280",
+                        fontWeight: "500",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "24px",
+                          height: "24px",
+                          borderRadius: "50%",
+                          background: "#f3f4f6",
+                          color: "#6b7280",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: "700",
+                          fontSize: "0.75rem",
+                        }}
+                      >
+                        4
+                      </span>
+                      Upload Photos (inside + outside required)
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        fontSize: "0.875rem",
+                        color: "#6b7280",
+                        fontWeight: "500",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "24px",
+                          height: "24px",
+                          borderRadius: "50%",
+                          background: "#f3f4f6",
+                          color: "#6b7280",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: "700",
+                          fontSize: "0.75rem",
+                        }}
+                      >
+                        5
+                      </span>
+                      Submit Job
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Today's Route - Primary Focus */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  <h2
+                    style={{
+                      fontSize: "1.5rem",
+                      fontWeight: "700",
+                      color: "#111827",
+                    }}
+                  >
+                    Today&apos;s Route
+                  </h2>
+                  {isClockedIn && (
+                    <div
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "#6b7280",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {completedJobs} / {jobs.length} completed
+                    </div>
+                  )}
+                </div>
+                
+                {isClockedIn && (
+                  <>
+                    <ProgressTracker
+                      completed={completedJobs}
+                      remaining={remainingJobs}
+                      total={jobs.length}
+                    />
+
+                    <PayPreview
+                      completedJobs={payPreview.completedJobs}
+                      payRatePerJob={payPreview.payRatePerJob}
+                      estimatedPay={payPreview.estimatedPay}
+                      isClockedIn={isClockedIn}
+                    />
+                  </>
+                )}
+
                 <JobList
                   jobs={jobs}
                   onJobClick={(job) => {

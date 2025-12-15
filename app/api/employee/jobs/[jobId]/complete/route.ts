@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { getJobPhotos } from "@/lib/job-photo-upload";
 
 export async function POST(
   req: NextRequest,
@@ -49,14 +50,57 @@ export async function POST(
       );
     }
 
+    // ENFORCE MANDATORY PHOTO REQUIREMENTS (NON-NEGOTIABLE)
+    // Both inside and outside photos are REQUIRED for every job completion
+    if (!insidePhotoUrl || !outsidePhotoUrl) {
+      return NextResponse.json(
+        { 
+          message: "Both inside and outside photos are required to complete this job. Please upload both photos before marking the job as complete.",
+          requiredPhotos: ["inside", "outside"],
+          missingPhotos: [
+            !insidePhotoUrl ? "inside" : null,
+            !outsidePhotoUrl ? "outside" : null,
+          ].filter(Boolean),
+        },
+        { status: 400 }
+      );
+    }
+
+    // Verify photos exist in jobPhotos collection
+    try {
+      const jobPhotos = await getJobPhotos(jobId);
+      const hasInsidePhoto = jobPhotos.some(p => p.photoType === "inside");
+      const hasOutsidePhoto = jobPhotos.some(p => p.photoType === "outside");
+
+      if (!hasInsidePhoto || !hasOutsidePhoto) {
+        return NextResponse.json(
+          { 
+            message: "Required photos not found in photo documentation. Please ensure photos are uploaded before completing the job.",
+            missingInDatabase: {
+              inside: !hasInsidePhoto,
+              outside: !hasOutsidePhoto,
+            },
+          },
+          { status: 400 }
+        );
+      }
+    } catch (photoError: any) {
+      console.error("Error verifying photos in jobPhotos collection:", photoError);
+      // Continue with completion if verification fails (photos may be in process of uploading)
+      // But still require the URLs to be provided
+    }
+
     // Update job with completion data
     // Set both jobStatus and status for compatibility with customer dashboard
     const updateData: any = {
       jobStatus: "completed",
       status: "completed",
       completedAt: serverTimestamp(),
+      hasRequiredPhotos: true,
+      photoDocumentationStatus: "complete",
     };
 
+    // Store photo URLs for backward compatibility
     if (completionPhotoUrl) {
       updateData.completionPhotoUrl = completionPhotoUrl;
     }
@@ -67,26 +111,6 @@ export async function POST(
 
     if (outsidePhotoUrl) {
       updateData.outsidePhotoUrl = outsidePhotoUrl;
-    }
-
-    // Check photo documentation training completion
-    try {
-      const { getModuleProgress } = await import("@/lib/training-certification");
-      const photoTraining = await getModuleProgress(employeeId, "photo-documentation");
-      
-      if (photoTraining.completed && photoTraining.certificationStatus === "completed") {
-        // Require 2 photos if photo documentation training is completed
-        if (!insidePhotoUrl || !outsidePhotoUrl) {
-          return NextResponse.json(
-            { message: "Photo Documentation training requires exactly 2 photos: inside and outside of bin" },
-            { status: 400 }
-          );
-        }
-        updateData.photoDocumentationCompliant = true;
-      }
-    } catch (error) {
-      console.error("Error checking photo documentation training:", error);
-      // Don't fail the completion if check fails
     }
 
     if (employeeNotes) {

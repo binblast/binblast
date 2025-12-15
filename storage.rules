@@ -33,6 +33,20 @@ service firebase.storage {
       allow delete: if isAdminOrOperator();
     }
     
+    // Job photos - employees can upload for their assigned jobs, operators/admins can read all
+    match /job-photos/{jobId}/{photoType}/{fileName} {
+      // Employees can upload photos for jobs assigned to them (checked via API route)
+      // Operators and admins can read all job photos
+      allow read: if isAuthenticated();
+      
+      // Upload is handled via API route which verifies job assignment
+      // Storage rules allow authenticated uploads (API route enforces permissions)
+      allow write: if isAuthenticated();
+      
+      // Only operators/admins can delete photos
+      allow delete: if isAdminOrOperator();
+    }
+    
     // Default deny all other paths
     match /{allPaths=**} {
       allow read, write: if false;

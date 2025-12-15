@@ -40,7 +40,8 @@ export async function GET(
     const firestore = await safeImportFirestore();
     const { collection, query, where, getDocs } = firestore;
 
-    // Get today's completed stops
+    // Get today's completed stops WITH REQUIRED PHOTOS
+    // Payment protection: Only jobs with required photos count toward payment
     const today = getTodayDateString();
     const cleaningsRef = collection(db, "scheduledCleanings");
     const completedJobsQuery = query(
@@ -51,7 +52,24 @@ export async function GET(
     );
 
     const completedSnapshot = await getDocs(completedJobsQuery);
-    const completedStops = completedSnapshot.docs.map(doc => {
+    
+    // Filter to only include jobs with required photos
+    // For backward compatibility, also check if insidePhotoUrl and outsidePhotoUrl exist
+    const eligibleJobs = completedSnapshot.docs.filter(doc => {
+      const data = doc.data();
+      // New field: hasRequiredPhotos must be true
+      if (data.hasRequiredPhotos === true) {
+        return true;
+      }
+      // Backward compatibility: check if both photo URLs exist
+      if (data.insidePhotoUrl && data.outsidePhotoUrl) {
+        return true;
+      }
+      // No photos = no payment eligibility
+      return false;
+    });
+
+    const completedStops = eligibleJobs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -63,10 +81,11 @@ export async function GET(
         customerName: data.customerName || data.userEmail || "N/A",
         completedAt: data.completedAt,
         earnings: payRatePerJob,
+        hasRequiredPhotos: data.hasRequiredPhotos || false,
       };
     });
 
-    // Calculate total earnings
+    // Calculate total earnings (only for jobs with required photos)
     const totalEarnings = completedStops.length * payRatePerJob;
 
     // Format addresses for display

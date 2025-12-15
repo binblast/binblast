@@ -64,10 +64,15 @@ export function JobDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [insidePhoto, setInsidePhoto] = useState<string | null>(null);
   const [insidePhotoFile, setInsidePhotoFile] = useState<File | null>(null);
+  const [insidePhotoId, setInsidePhotoId] = useState<string | null>(null);
   const [outsidePhoto, setOutsidePhoto] = useState<string | null>(null);
   const [outsidePhotoFile, setOutsidePhotoFile] = useState<File | null>(null);
+  const [outsidePhotoId, setOutsidePhotoId] = useState<string | null>(null);
+  const [dumpsterPadPhoto, setDumpsterPadPhoto] = useState<string | null>(null);
+  const [dumpsterPadPhotoId, setDumpsterPadPhotoId] = useState<string | null>(null);
+  const [stickerPlacementPhoto, setStickerPlacementPhoto] = useState<string | null>(null);
+  const [stickerPlacementPhotoId, setStickerPlacementPhotoId] = useState<string | null>(null);
   const [stickerStatus, setStickerStatus] = useState<StickerStatus>("none");
-  const [completionStep, setCompletionStep] = useState<1 | 2 | 3>(1);
   const [photoDocumentationCompleted, setPhotoDocumentationCompleted] = useState(false);
 
   // Reset state when job changes or modal closes
@@ -128,10 +133,38 @@ export function JobDetailModal({
     setError(null);
   };
 
+  const handleInsidePhotoUploaded = (photoId: string, storageUrl: string) => {
+    setInsidePhotoId(photoId);
+    setInsidePhoto(storageUrl);
+  };
+
   const handleOutsidePhotoSelect = (file: File, dataUrl: string) => {
     setOutsidePhotoFile(file);
     setOutsidePhoto(dataUrl);
     setError(null);
+  };
+
+  const handleOutsidePhotoUploaded = (photoId: string, storageUrl: string) => {
+    setOutsidePhotoId(photoId);
+    setOutsidePhoto(storageUrl);
+  };
+
+  const handleDumpsterPadPhotoSelect = (file: File, dataUrl: string) => {
+    setDumpsterPadPhoto(dataUrl);
+  };
+
+  const handleDumpsterPadPhotoUploaded = (photoId: string, storageUrl: string) => {
+    setDumpsterPadPhotoId(photoId);
+    setDumpsterPadPhoto(storageUrl);
+  };
+
+  const handleStickerPlacementPhotoSelect = (file: File, dataUrl: string) => {
+    setStickerPlacementPhoto(dataUrl);
+  };
+
+  const handleStickerPlacementPhotoUploaded = (photoId: string, storageUrl: string) => {
+    setStickerPlacementPhotoId(photoId);
+    setStickerPlacementPhoto(storageUrl);
   };
 
   const handleCompleteJob = async () => {
@@ -191,38 +224,8 @@ export function JobDetailModal({
     }
   };
 
-  const handleNextStep = () => {
-    if (completionStep === 1) {
-      // Validate photos based on training status
-      if (photoDocumentationCompleted) {
-        if (!insidePhoto || !outsidePhoto) {
-          setError("Photo Documentation training requires exactly 2 photos: inside and outside");
-          return;
-        }
-      } else {
-        if (!insidePhoto && !outsidePhoto) {
-          setError("Please take at least one photo before continuing");
-          return;
-        }
-      }
-      setCompletionStep(2);
-      setError(null);
-    } else if (completionStep === 2) {
-      if (stickerStatus === "none") {
-        setError("Please select a sticker status");
-        return;
-      }
-      setCompletionStep(3);
-      setError(null);
-    }
-  };
-
-  const handlePreviousStep = () => {
-    if (completionStep > 1) {
-      setCompletionStep((completionStep - 1) as 1 | 2 | 3);
-      setError(null);
-    }
-  };
+  // Check if job can be completed (both required photos uploaded)
+  const canCompleteJob = insidePhoto && outsidePhoto && insidePhotoId && outsidePhotoId && stickerStatus !== "none";
 
   const handleFlag = async (flag: string) => {
     try {
@@ -364,302 +367,233 @@ export function JobDetailModal({
           )}
         </div>
 
-        {/* Multi-Step Completion Form (if not completed) */}
+        {/* Linear Completion Form (if not completed) */}
         {!isCompleted && isInProgress && (
           <>
-            {/* Progress Indicator */}
-            <div style={{ marginBottom: "1.5rem" }}>
+            {/* Job Checklist - Always Visible */}
+            <div
+              style={{
+                padding: "1rem",
+                background: "#f9fafb",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                marginBottom: "1.5rem",
+              }}
+            >
               <div
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "0.5rem",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  color: "#111827",
+                  marginBottom: "0.75rem",
                 }}
               >
-                <span
+                Job Checklist:
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                  {insidePhoto && outsidePhoto ? "✓" : "○"} Inside cleaned
+                </div>
+                <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                  {insidePhoto && outsidePhoto ? "✓" : "○"} Outside cleaned
+                </div>
+                <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                  {stickerStatus !== "none" ? "✓" : "○"} Sticker applied
+                </div>
+              </div>
+            </div>
+
+            {/* Photo Upload Section - REQUIRED */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <h3
+                style={{
+                  fontSize: "1.125rem",
+                  fontWeight: "600",
+                  marginBottom: "0.5rem",
+                  color: "#111827",
+                }}
+              >
+                Required Photos
+              </h3>
+              <p
+                style={{
+                  fontSize: "0.875rem",
+                  color: "#6b7280",
+                  marginBottom: "1rem",
+                }}
+              >
+                Both photos are required to complete this job
+              </p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                <PhotoUpload
+                  onPhotoSelect={handleInsidePhotoSelect}
+                  onPhotoUploaded={handleInsidePhotoUploaded}
+                  currentPhoto={insidePhoto}
+                  required={true}
+                  label="Inside Bin Photo"
+                  photoType="inside"
+                  jobId={job.id}
+                  employeeId={employeeId}
+                  showExamples={true}
+                  uploadImmediately={true}
+                />
+                <PhotoUpload
+                  onPhotoSelect={handleOutsidePhotoSelect}
+                  onPhotoUploaded={handleOutsidePhotoUploaded}
+                  currentPhoto={outsidePhoto}
+                  required={true}
+                  label="Outside Bin Photo"
+                  photoType="outside"
+                  jobId={job.id}
+                  employeeId={employeeId}
+                  showExamples={true}
+                  uploadImmediately={true}
+                />
+              </div>
+
+              {/* Optional Photos */}
+              <div style={{ marginTop: "1.5rem" }}>
+                <h4
                   style={{
-                    fontSize: "0.875rem",
+                    fontSize: "1rem",
                     fontWeight: "600",
+                    marginBottom: "0.5rem",
                     color: "#111827",
                   }}
                 >
-                  Step {completionStep} of 3
-                </span>
-                <span
+                  Optional Photos
+                </h4>
+                <p
                   style={{
                     fontSize: "0.75rem",
                     color: "#6b7280",
+                    marginBottom: "1rem",
                   }}
                 >
-                  {Math.round((completionStep / 3) * 100)}% Complete
-                </span>
+                  Only if applicable to this job
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <PhotoUpload
+                    onPhotoSelect={handleDumpsterPadPhotoSelect}
+                    onPhotoUploaded={handleDumpsterPadPhotoUploaded}
+                    currentPhoto={dumpsterPadPhoto}
+                    required={false}
+                    label="Dumpster Pad Photo (Optional)"
+                    photoType="dumpster_pad"
+                    jobId={job.id}
+                    employeeId={employeeId}
+                    showExamples={true}
+                    uploadImmediately={true}
+                  />
+                  <PhotoUpload
+                    onPhotoSelect={handleStickerPlacementPhotoSelect}
+                    onPhotoUploaded={handleStickerPlacementPhotoUploaded}
+                    currentPhoto={stickerPlacementPhoto}
+                    required={false}
+                    label="Sticker Placement Photo (Optional)"
+                    photoType="sticker_placement"
+                    jobId={job.id}
+                    employeeId={employeeId}
+                    showExamples={true}
+                    uploadImmediately={true}
+                  />
+                </div>
               </div>
-              <div
+            </div>
+
+            {/* Sticker Status */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <h3
                 style={{
-                  width: "100%",
-                  height: "8px",
-                  background: "#e5e7eb",
-                  borderRadius: "4px",
-                  overflow: "hidden",
+                  fontSize: "1.125rem",
+                  fontWeight: "600",
+                  marginBottom: "0.5rem",
+                  color: "#111827",
                 }}
               >
-                <div
+                Sticker Status
+              </h3>
+              <StickerConfirmation
+                onStatusChange={setStickerStatus}
+                currentStatus={stickerStatus}
+              />
+            </div>
+
+            {/* Additional Details */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <h3
+                style={{
+                  fontSize: "1.125rem",
+                  fontWeight: "600",
+                  marginBottom: "0.5rem",
+                  color: "#111827",
+                }}
+              >
+                Additional Details
+              </h3>
+
+              <div style={{ marginBottom: "1rem" }}>
+                <label
                   style={{
-                    width: `${(completionStep / 3) * 100}%`,
-                    height: "100%",
-                    background: "#16a34a",
-                    transition: "width 0.3s",
+                    display: "block",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    marginBottom: "0.5rem",
+                    color: "#111827",
+                  }}
+                >
+                  Number of Bins
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={binCount || ""}
+                  onChange={(e) =>
+                    setBinCount(
+                      e.target.value ? parseInt(e.target.value, 10) : undefined
+                    )
+                  }
+                  style={{
+                    width: "100%",
+                    minHeight: "44px",
+                    padding: "0.75rem",
+                    border: "2px solid #e5e7eb",
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "1rem" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    marginBottom: "0.5rem",
+                    color: "#111827",
+                  }}
+                >
+                  Job Notes (optional)
+                </label>
+                <textarea
+                  value={employeeNotes}
+                  onChange={(e) => setEmployeeNotes(e.target.value)}
+                  placeholder="Add any notes about this job..."
+                  rows={3}
+                  style={{
+                    width: "100%",
+                    minHeight: "80px",
+                    padding: "0.75rem",
+                    border: "2px solid #e5e7eb",
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                    fontFamily: "inherit",
                   }}
                 />
               </div>
             </div>
-
-            {/* Step 1: Photo Upload */}
-            {completionStep === 1 && (
-              <div>
-                <h3
-                  style={{
-                    fontSize: "1.125rem",
-                    fontWeight: "600",
-                    marginBottom: "1rem",
-                    color: "#111827",
-                  }}
-                >
-                  Step 1: Take Photos
-                </h3>
-                {photoDocumentationCompleted ? (
-                  <>
-                    <div
-                      style={{
-                        padding: "1rem",
-                        background: "#eff6ff",
-                        border: "1px solid #bfdbfe",
-                        borderRadius: "8px",
-                        marginBottom: "1rem",
-                        fontSize: "0.875rem",
-                        color: "#1e40af",
-                      }}
-                    >
-                      <strong>Photo Documentation Training Completed:</strong> You must provide exactly 2 photos:
-                      <ul style={{ marginTop: "0.5rem", paddingLeft: "1.5rem" }}>
-                        <li>Inside photo: Camera angled downward showing clean base + walls</li>
-                        <li>Outside photo: Full bin visible with sticker and clean exterior</li>
-                      </ul>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                      <PhotoUpload
-                        onPhotoSelect={handleInsidePhotoSelect}
-                        currentPhoto={insidePhoto}
-                        required={true}
-                        label="Inside Photo (Required)"
-                      />
-                      <PhotoUpload
-                        onPhotoSelect={handleOutsidePhotoSelect}
-                        currentPhoto={outsidePhoto}
-                        required={true}
-                        label="Outside Photo (Required)"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p
-                      style={{
-                        fontSize: "0.875rem",
-                        color: "#6b7280",
-                        marginBottom: "1rem",
-                      }}
-                    >
-                      Take clear photos of the cleaned bins showing your work
-                    </p>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                      <PhotoUpload
-                        onPhotoSelect={handleInsidePhotoSelect}
-                        currentPhoto={insidePhoto}
-                        required={false}
-                        label="Inside Photo (Recommended)"
-                      />
-                      <PhotoUpload
-                        onPhotoSelect={handleOutsidePhotoSelect}
-                        currentPhoto={outsidePhoto}
-                        required={false}
-                        label="Outside Photo (Recommended)"
-                      />
-                    </div>
-                    <div
-                      style={{
-                        marginTop: "1rem",
-                        padding: "0.75rem",
-                        background: "#fef3c7",
-                        border: "1px solid #fde68a",
-                        borderRadius: "6px",
-                        fontSize: "0.75rem",
-                        color: "#92400e",
-                      }}
-                    >
-                      Complete Photo Documentation training to enable payment eligibility. 2 photos (inside + outside) will be required after training.
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Step 2: Sticker Confirmation */}
-            {completionStep === 2 && (
-              <div>
-                <h3
-                  style={{
-                    fontSize: "1.125rem",
-                    fontWeight: "600",
-                    marginBottom: "1rem",
-                    color: "#111827",
-                  }}
-                >
-                  Step 2: Sticker Status
-                </h3>
-                <p
-                  style={{
-                    fontSize: "0.875rem",
-                    color: "#6b7280",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  Confirm the Bin Blast sticker status for this bin
-                </p>
-                <StickerConfirmation
-                  onStatusChange={setStickerStatus}
-                  currentStatus={stickerStatus}
-                />
-              </div>
-            )}
-
-            {/* Step 3: Final Details */}
-            {completionStep === 3 && (
-              <div>
-                <h3
-                  style={{
-                    fontSize: "1.125rem",
-                    fontWeight: "600",
-                    marginBottom: "1rem",
-                    color: "#111827",
-                  }}
-                >
-                  Step 3: Final Details
-                </h3>
-                <p
-                  style={{
-                    fontSize: "0.875rem",
-                    color: "#6b7280",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  Add any additional notes or update bin count
-                </p>
-
-                <div style={{ marginBottom: "1rem" }}>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.875rem",
-                      fontWeight: "600",
-                      marginBottom: "0.5rem",
-                      color: "#111827",
-                    }}
-                  >
-                    Number of Bins
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={binCount || ""}
-                    onChange={(e) =>
-                      setBinCount(
-                        e.target.value ? parseInt(e.target.value, 10) : undefined
-                      )
-                    }
-                    style={{
-                      width: "100%",
-                      minHeight: "44px",
-                      padding: "0.75rem",
-                      border: "2px solid #e5e7eb",
-                      borderRadius: "8px",
-                      fontSize: "0.875rem",
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: "1rem" }}>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.875rem",
-                      fontWeight: "600",
-                      marginBottom: "0.5rem",
-                      color: "#111827",
-                    }}
-                  >
-                    Job Notes (optional)
-                  </label>
-                  <textarea
-                    value={employeeNotes}
-                    onChange={(e) => setEmployeeNotes(e.target.value)}
-                    placeholder="Add any notes about this job..."
-                    rows={4}
-                    style={{
-                      width: "100%",
-                      minHeight: "120px",
-                      padding: "0.75rem",
-                      border: "2px solid #e5e7eb",
-                      borderRadius: "8px",
-                      fontSize: "0.875rem",
-                      fontFamily: "inherit",
-                    }}
-                  />
-                </div>
-
-                {/* Review Summary */}
-                <div
-                  style={{
-                    padding: "1rem",
-                    background: "#f9fafb",
-                    borderRadius: "8px",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "0.875rem",
-                      fontWeight: "600",
-                      marginBottom: "0.5rem",
-                      color: "#111827",
-                    }}
-                  >
-                    Review Summary:
-                  </div>
-                  <div style={{ fontSize: "0.8125rem", color: "#6b7280" }}>
-                    {photoDocumentationCompleted ? (
-                      <>
-                        ✓ Inside Photo: {insidePhoto ? "Uploaded" : "Missing"}
-                        <br />
-                        ✓ Outside Photo: {outsidePhoto ? "Uploaded" : "Missing"}
-                      </>
-                    ) : (
-                      <>✓ Photo: {(insidePhoto || outsidePhoto) ? "Uploaded" : "Missing"}</>
-                    )}
-                    <br />
-                    ✓ Sticker:{" "}
-                    {stickerStatus === "existing"
-                      ? "Customer has sticker"
-                      : stickerStatus === "placed"
-                      ? "Sticker placed"
-                      : "No sticker"}
-                    <br />
-                    ✓ Bins: {binCount || "Not specified"}
-                  </div>
-                </div>
-              </div>
-            )}
           </>
         )}
 
@@ -796,71 +730,45 @@ export function JobDetailModal({
           )}
 
           {canComplete && !isCompleted && isInProgress && (
-            <>
-              {completionStep > 1 && (
-                <button
-                  onClick={handlePreviousStep}
-                  disabled={isSubmitting}
-                  style={{
-                    minHeight: "48px",
-                    padding: "0.75rem 1rem",
-                    borderRadius: "8px",
-                    border: "2px solid #e5e7eb",
-                    fontSize: "1rem",
-                    fontWeight: "600",
-                    color: "#111827",
-                    background: "#ffffff",
-                    cursor: isSubmitting ? "not-allowed" : "pointer",
-                    transition: "all 0.2s",
-                  }}
-                >
-                  ← Back
-                </button>
-              )}
-              {completionStep < 3 ? (
-                <button
-                  onClick={handleNextStep}
-                  disabled={isSubmitting}
-                  style={{
-                    flex: 1,
-                    minHeight: "48px",
-                    padding: "0.75rem 1rem",
-                    borderRadius: "8px",
-                    border: "none",
-                    fontSize: "1rem",
-                    fontWeight: "700",
-                    color: "#ffffff",
-                    background: "#2563eb",
-                    cursor: isSubmitting ? "not-allowed" : "pointer",
-                    opacity: isSubmitting ? 0.6 : 1,
-                    transition: "opacity 0.2s, transform 0.1s",
-                  }}
-                >
-                  Next →
-                </button>
-              ) : (
-                <button
-                  onClick={handleCompleteJob}
-                  disabled={isSubmitting}
-                  style={{
-                    flex: 1,
-                    minHeight: "48px",
-                    padding: "0.75rem 1rem",
-                    borderRadius: "8px",
-                    border: "none",
-                    fontSize: "1rem",
-                    fontWeight: "700",
-                    color: "#ffffff",
-                    background: "#16a34a",
-                    cursor: isSubmitting ? "not-allowed" : "pointer",
-                    opacity: isSubmitting ? 0.6 : 1,
-                    transition: "opacity 0.2s, transform 0.1s",
-                  }}
-                >
-                  {isSubmitting ? "Completing..." : "✓ Complete Job"}
-                </button>
-              )}
-            </>
+            <button
+              onClick={handleCompleteJob}
+              disabled={!canCompleteJob || isSubmitting}
+              style={{
+                flex: 1,
+                minHeight: "48px",
+                padding: "0.75rem 1rem",
+                borderRadius: "8px",
+                border: "none",
+                fontSize: "1rem",
+                fontWeight: "700",
+                color: "#ffffff",
+                background: canCompleteJob ? "#16a34a" : "#9ca3af",
+                cursor: canCompleteJob && !isSubmitting ? "pointer" : "not-allowed",
+                opacity: isSubmitting ? 0.6 : 1,
+                transition: "opacity 0.2s, transform 0.1s",
+              }}
+            >
+              {isSubmitting ? "Completing..." : canCompleteJob ? "✓ Mark Job Complete" : "Upload Required Photos"}
+            </button>
+          )}
+
+          {/* Show requirements if not met */}
+          {canComplete && !isCompleted && isInProgress && !canCompleteJob && (
+            <div
+              style={{
+                padding: "0.75rem",
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: "6px",
+                fontSize: "0.875rem",
+                color: "#dc2626",
+                marginTop: "0.5rem",
+              }}
+            >
+              {!insidePhoto || !insidePhotoId ? "• Inside photo required\n" : ""}
+              {!outsidePhoto || !outsidePhotoId ? "• Outside photo required\n" : ""}
+              {stickerStatus === "none" ? "• Sticker status required" : ""}
+            </div>
           )}
 
           {isCompleted && (
