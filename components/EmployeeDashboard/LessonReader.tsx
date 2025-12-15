@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { PDFViewer } from "./PDFViewer";
+import { StyledMarkdown } from "./StyledMarkdown";
 import { useRouter } from "next/navigation";
 
 interface LessonReaderProps {
@@ -21,12 +22,30 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
   const [materialReviewed, setMaterialReviewed] = useState(false);
   const [allModules, setAllModules] = useState<any[]>([]);
   const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [markdownContent, setMarkdownContent] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     loadModule();
     loadProgress();
+    loadAllModules();
   }, [moduleId, employeeId]);
+
+  useEffect(() => {
+    // Load markdown content as fallback
+    const loadMarkdownContent = async () => {
+      try {
+        const response = await fetch(`/api/employee/training/${moduleId}/content`);
+        if (response.ok) {
+          const data = await response.json();
+          setMarkdownContent(data.content);
+        }
+      } catch (err) {
+        console.error("Error fetching markdown content:", err);
+      }
+    };
+    loadMarkdownContent();
+  }, [moduleId]);
 
   const loadModule = async () => {
     try {
@@ -200,7 +219,7 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
         }}
         className="lesson-reader-layout"
       >
-        {/* Left: PDF Viewer */}
+        {/* Left: PDF Viewer or Markdown Content */}
         <div>
           {hasPDF ? (
             <PDFViewer
@@ -211,6 +230,20 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
               onPageChange={setCurrentPage}
               onLoad={() => setPdfLoaded(true)}
             />
+          ) : hasMarkdown ? (
+            <div
+              style={{
+                padding: "2rem",
+                background: "#ffffff",
+                border: "2px solid #e5e7eb",
+                borderRadius: "8px",
+                minHeight: "600px",
+                maxHeight: "calc(100vh - 200px)",
+                overflowY: "auto",
+              }}
+            >
+              <StyledMarkdown content={markdownContent!} moduleId={moduleId} />
+            </div>
           ) : (
             <div
               style={{
@@ -223,14 +256,14 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
               }}
             >
               <div style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-                PDF Not Available
+                Content Not Available
               </div>
               <div style={{ fontSize: "0.875rem", marginBottom: "1rem" }}>
-                The PDF for this module is not yet available. Please contact an administrator.
+                The content for this module is not yet available. Please contact an administrator.
               </div>
               <button
                 onClick={() => {
-                  window.location.href = `mailto:binblastcompany@gmail.com?subject=PDF Missing: ${moduleId}&body=The PDF for module ${moduleId} is not available.`;
+                  window.location.href = `mailto:binblastcompany@gmail.com?subject=Content Missing: ${moduleId}&body=The content for module ${moduleId} is not available.`;
                 }}
                 style={{
                   padding: "0.5rem 1rem",
@@ -345,38 +378,40 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
             <>
               <button
                 onClick={handleStartQuiz}
-                disabled={!materialReviewed || !pdfLoaded || loading}
+                disabled={!materialReviewed || (hasPDF && !pdfLoaded) || loading}
                 style={{
                   width: "100%",
                   padding: "0.75rem 1rem",
-                  background: materialReviewed && pdfLoaded ? "#16a34a" : "#9ca3af",
+                  background: materialReviewed && (hasMarkdown || pdfLoaded) ? "#16a34a" : "#9ca3af",
                   color: "#ffffff",
                   border: "none",
                   borderRadius: "8px",
                   fontSize: "0.875rem",
                   fontWeight: "600",
-                  cursor: materialReviewed && pdfLoaded ? "pointer" : "not-allowed",
+                  cursor: materialReviewed && (hasMarkdown || pdfLoaded) ? "pointer" : "not-allowed",
                   marginTop: "auto",
-                  opacity: materialReviewed && pdfLoaded ? 1 : 0.6,
+                  opacity: materialReviewed && (hasMarkdown || pdfLoaded) ? 1 : 0.6,
                 }}
               >
                 Start Quiz
               </button>
-              <a
-                href={module.pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "block",
-                  marginTop: "0.75rem",
-                  textAlign: "center",
-                  fontSize: "0.75rem",
-                  color: "#2563eb",
-                  textDecoration: "underline",
-                }}
-              >
-                Open PDF in new tab
-              </a>
+              {hasPDF && (
+                <a
+                  href={module.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "block",
+                    marginTop: "0.75rem",
+                    textAlign: "center",
+                    fontSize: "0.75rem",
+                    color: "#2563eb",
+                    textDecoration: "underline",
+                  }}
+                >
+                  Open PDF in new tab
+                </a>
+              )}
             </>
           )}
         </div>

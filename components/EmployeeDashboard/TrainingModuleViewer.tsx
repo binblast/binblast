@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { StyledMarkdown } from "./StyledMarkdown";
 
 interface TrainingModuleViewerProps {
   moduleId: string;
@@ -11,37 +12,6 @@ interface TrainingModuleViewerProps {
   onPdfViewed: () => void;
   onStartQuiz: () => void;
   pdfViewed: boolean;
-}
-
-// Simple Markdown to HTML converter
-function markdownToHtml(markdown: string): string {
-  let html = markdown
-    // Headers
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    // Bold
-    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-    // Lists - convert list items first, then wrap consecutive items in ul tags
-    .replace(/^- (.*$)/gim, '<li>$1</li>');
-  
-  // Wrap consecutive list items in ul tags (using [\s\S] instead of . to match newlines in ES5)
-  html = html.replace(/(<li>[\s\S]*?<\/li>)/gim, '<ul>$1</ul>');
-  
-  // Line breaks
-  html = html
-    .replace(/\n\n/gim, '</p><p>')
-    .replace(/\n/gim, '<br>');
-  
-  // Wrap in paragraphs
-  html = '<p>' + html + '</p>';
-  
-  // Clean up empty paragraphs
-  html = html.replace(/<p><\/p>/gim, '');
-  html = html.replace(/<p>(<[h|u])/gim, '$1');
-  html = html.replace(/(<\/[h|u]>)<\/p>/gim, '$1');
-  
-  return html;
 }
 
 export function TrainingModuleViewer({
@@ -316,11 +286,11 @@ export function TrainingModuleViewer({
               maxHeight: "calc(100vh - 300px)",
               minHeight: "700px",
               overflowY: "auto",
-              lineHeight: "1.6",
-              color: "#111827",
+              background: "#ffffff",
             }}
-            dangerouslySetInnerHTML={{ __html: markdownToHtml(markdownContent) }}
-          />
+          >
+            <StyledMarkdown content={markdownContent} moduleId={moduleId} />
+          </div>
         ) : (
           <iframe
             ref={iframeRef}
