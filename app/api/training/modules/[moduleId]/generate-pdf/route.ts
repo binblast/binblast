@@ -25,8 +25,6 @@ const MARKDOWN_FILES: Record<string, string> = {
 marked.setOptions({
   gfm: true,
   breaks: false,
-  headerIds: true,
-  mangle: false,
 });
 
 export async function GET(
