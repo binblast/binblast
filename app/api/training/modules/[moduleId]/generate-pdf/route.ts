@@ -103,7 +103,9 @@ export async function GET(
       await browser.close();
 
       // Return PDF as response
-      return new NextResponse(pdfBuffer, {
+      // Convert Buffer to Uint8Array for NextResponse
+      const pdfArray = new Uint8Array(pdfBuffer);
+      return new NextResponse(pdfArray, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `inline; filename="${moduleId}.pdf"`,
