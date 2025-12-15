@@ -34,7 +34,6 @@ Go to your Vercel project dashboard → **Settings** → **Environment Variables
 
 ```
 NEXT_PUBLIC_EMAILJS_SERVICE_ID=service_rok6u9h
-NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=your_template_id_here
 NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=your_public_key_here
 ADMIN_EMAIL=your-admin-email@example.com
 ```
@@ -43,17 +42,18 @@ ADMIN_EMAIL=your-admin-email@example.com
 
 ```
 NEXT_PUBLIC_EMAILJS_SERVICE_ID=service_rok6u9h
-NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=your_template_id_here
 NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=your_public_key_here
 NEXT_PUBLIC_ADMIN_EMAIL=your-admin-email@example.com
 ```
 
+**Note:** The template ID (`template_aabpctf`) is hardcoded in the code, so you don't need to set `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID` unless you want to override it.
+
 ### Variable Descriptions:
 
-- **NEXT_PUBLIC_EMAILJS_SERVICE_ID**: Your EmailJS service ID (`service_rok6u9h`)
-- **NEXT_PUBLIC_EMAILJS_TEMPLATE_ID**: The template ID from Step 2 (you'll get this after creating the template)
-- **NEXT_PUBLIC_EMAILJS_PUBLIC_KEY**: Your EmailJS public key/user ID from Step 3
-- **ADMIN_EMAIL** or **NEXT_PUBLIC_ADMIN_EMAIL**: The email address where you want to receive partnership application notifications
+- **NEXT_PUBLIC_EMAILJS_SERVICE_ID**: Your EmailJS service ID (`service_rok6u9h`) - defaults to `service_rok6u9h` if not set
+- **NEXT_PUBLIC_EMAILJS_TEMPLATE_ID**: (Optional) Template ID - defaults to `template_aabpctf` if not set
+- **NEXT_PUBLIC_EMAILJS_PUBLIC_KEY**: Your EmailJS public key/user ID from Step 3 (**Required**)
+- **ADMIN_EMAIL** or **NEXT_PUBLIC_ADMIN_EMAIL**: The email address where you want to receive partnership application notifications (**Required**)
 
 ## Step 5: Template Variables Reference
 
