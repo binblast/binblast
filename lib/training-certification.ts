@@ -130,8 +130,22 @@ export async function checkCertificationStatus(employeeId: string): Promise<Cert
         photoDocumentationCompleted = true;
       }
 
-      // Track earliest expiration
-      const expiration = calculateExpiration(completedDate);
+      // Track earliest expiration - use stored expiresAt if available, otherwise calculate from completedDate
+      let expiration: Date;
+      if (progress.expiresAt) {
+        // Use stored expiration date
+        if (progress.expiresAt instanceof Date) {
+          expiration = progress.expiresAt;
+        } else if (typeof progress.expiresAt === 'string') {
+          expiration = new Date(progress.expiresAt);
+        } else {
+          expiration = calculateExpiration(completedDate);
+        }
+      } else {
+        // Calculate expiration from completion date (6 months)
+        expiration = calculateExpiration(completedDate);
+      }
+      
       if (!earliestExpiration || expiration < earliestExpiration) {
         earliestExpiration = expiration;
       }

@@ -103,9 +103,34 @@ export async function POST(req: NextRequest) {
     // Generate certificate ID
     const certId = `CERT-${employeeId}-${Date.now()}`;
 
-    // Calculate expiry date (6 months from now)
-    const issueDate = new Date();
-    const expiryDate = new Date();
+    // Calculate expiry date (6 months from when the last module was completed)
+    // Find the latest completion date among all modules
+    let latestCompletionDate: Date | null = null;
+    for (const module of allModules) {
+      const moduleProgress = modules[module.id];
+      if (moduleProgress?.completedAt) {
+        let completedAt: Date | null = null;
+        if (moduleProgress.completedAt instanceof Date) {
+          completedAt = moduleProgress.completedAt;
+        } else if (moduleProgress.completedAt?.toDate) {
+          completedAt = moduleProgress.completedAt.toDate();
+        } else if (typeof moduleProgress.completedAt === 'string') {
+          completedAt = new Date(moduleProgress.completedAt);
+        }
+        
+        if (completedAt && (!latestCompletionDate || completedAt > latestCompletionDate)) {
+          latestCompletionDate = completedAt;
+        }
+      }
+    }
+
+    // If no completion dates found, use current date as fallback
+    if (!latestCompletionDate) {
+      latestCompletionDate = new Date();
+    }
+
+    const issueDate = latestCompletionDate;
+    const expiryDate = new Date(latestCompletionDate);
     expiryDate.setMonth(expiryDate.getMonth() + 6);
 
     // Calculate average score

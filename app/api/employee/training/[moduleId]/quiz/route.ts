@@ -316,8 +316,12 @@ export async function POST(
 
         // Always set completedAt if passed
         if (passed) {
-          moduleUpdate.completedAt = serverTimestamp();
+          const completedAtTimestamp = serverTimestamp();
+          moduleUpdate.completedAt = completedAtTimestamp;
           // Calculate expiration (6 months from completion)
+          // Note: We'll calculate this on the server side when reading, since serverTimestamp() 
+          // returns a server timestamp object, not a Date. For now, set a placeholder.
+          // The actual expiration will be calculated from completedAt when reading.
           const expirationDate = new Date();
           expirationDate.setMonth(expirationDate.getMonth() + 6);
           moduleUpdate.expiresAt = Timestamp.fromDate(expirationDate);
