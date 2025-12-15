@@ -37,7 +37,7 @@ export function PhotoUpload({
   const [gpsCoordinates, setGpsCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const cachedPhotoRef = useRef<{ photoId: string; storageUrl: string; file: File } | null>(null);
+  const cachedPhotoRef = useRef<{ photoId: string; storageUrl: string; file: File | null } | null>(null);
 
   // Request GPS coordinates when component mounts (optional)
   useEffect(() => {
@@ -188,10 +188,15 @@ export function PhotoUpload({
       setPreview(dataUrl);
       
       // Store file reference for retry
-      cachedPhotoRef.current = {
-        ...cachedPhotoRef.current,
-        file,
-      } as any;
+      if (cachedPhotoRef.current) {
+        cachedPhotoRef.current.file = file;
+      } else {
+        cachedPhotoRef.current = {
+          photoId: "",
+          storageUrl: "",
+          file,
+        };
+      }
 
       // Upload immediately if configured, otherwise just select
       if (uploadImmediately && jobId && employeeId && photoType) {
