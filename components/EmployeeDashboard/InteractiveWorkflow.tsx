@@ -11,11 +11,22 @@ interface Job {
   customerName?: string;
   userEmail?: string;
   addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  binCount?: number;
+  planType?: string;
+  notes?: string;
   jobStatus?: "pending" | "in_progress" | "completed";
+  flags?: string[];
+  completionPhotoUrl?: string;
+  employeeNotes?: string;
+  completedAt?: any;
   hasRequiredPhotos?: boolean;
   insidePhotoUrl?: string;
   outsidePhotoUrl?: string;
-  stickerStatus?: string;
+  stickerStatus?: "existing" | "placed" | "none";
 }
 
 interface JobCompletionData {
