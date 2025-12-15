@@ -168,21 +168,19 @@ export function JobDetailModal({
   };
 
   const handleCompleteJob = async () => {
-    // Validate step 1: Photos (2 required if photo documentation training completed)
-    if (photoDocumentationCompleted) {
-      if (!insidePhoto || !outsidePhoto) {
-        setError("Both inside and outside photos are required to complete this job. Please upload both photos before marking the job as complete.");
-        return;
-      }
-    } else {
-      // If training not completed, at least one photo recommended
-      if (!insidePhoto && !outsidePhoto) {
-        setError("Both inside and outside photos are required to complete this job. Please upload both photos before marking the job as complete.");
-        return;
-      }
+    // MANDATORY VALIDATION: Both inside and outside photos are REQUIRED
+    if (!insidePhoto || !outsidePhoto) {
+      setError("Both inside and outside photos are required to complete this job. Please upload both photos before marking the job as complete.");
+      return;
     }
 
-    // Validate step 2: Sticker status
+    // Verify photos are uploaded (have photo IDs)
+    if (!insidePhotoId || !outsidePhotoId) {
+      setError("Photos must be uploaded before completing the job. Please wait for uploads to complete.");
+      return;
+    }
+
+    // Validate sticker status
     if (stickerStatus === "none") {
       setError("Please confirm sticker status");
       return;
@@ -191,18 +189,13 @@ export function JobDetailModal({
     setIsSubmitting(true);
     setError(null);
     try {
-      // Combine photos (inside first, then outside)
-      const photos = [];
-      if (insidePhoto) photos.push(insidePhoto);
-      if (outsidePhoto) photos.push(outsidePhoto);
-      const photoUrl = photos.length > 0 ? photos.join("|") : undefined; // Use | as separator
-
+      // Use storage URLs from uploaded photos
       await onCompleteJob(job.id, {
         employeeNotes: employeeNotes.trim() || undefined,
         binCount,
-        completionPhotoUrl: photoUrl,
-        insidePhotoUrl: insidePhoto || undefined,
-        outsidePhotoUrl: outsidePhoto || undefined,
+        completionPhotoUrl: insidePhoto + "|" + outsidePhoto, // For backward compatibility
+        insidePhotoUrl: insidePhoto,
+        outsidePhotoUrl: outsidePhoto,
         stickerStatus,
         stickerPlaced: stickerStatus === "placed",
       });
