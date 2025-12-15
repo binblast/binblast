@@ -237,9 +237,9 @@ export function InteractiveWorkflow({
         {/* Step Icon */}
         <div
           style={{
-            width: '48px',
-            height: '48px',
-            minWidth: '48px',
+            width: 'clamp(40px, 6vw, 48px)',
+            height: 'clamp(40px, 6vw, 48px)',
+            minWidth: 'clamp(40px, 6vw, 48px)',
             borderRadius: '50%',
             background: colors.iconBg,
             color: colors.iconText,
@@ -247,7 +247,7 @@ export function InteractiveWorkflow({
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: '700',
-            fontSize: '1.25rem',
+            fontSize: 'clamp(1rem, 2vw, 1.25rem)',
             flexShrink: 0,
           }}
         >
@@ -322,10 +322,11 @@ export function InteractiveWorkflow({
       style={{
         background: '#ffffff',
         borderRadius: '12px',
-        padding: '1.5rem',
+        padding: 'clamp(1rem, 3vw, 1.5rem)',
         marginBottom: '1.5rem',
         border: '1px solid #e5e7eb',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+        maxWidth: '100%',
       }}
     >
       {/* Progress Header */}
@@ -334,12 +335,14 @@ export function InteractiveWorkflow({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '1.5rem',
+          marginBottom: 'clamp(1rem, 2vw, 1.5rem)',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
         }}
       >
         <div
           style={{
-            fontSize: '1rem',
+            fontSize: 'clamp(0.9375rem, 2vw, 1rem)',
             fontWeight: '600',
             color: '#111827',
           }}
@@ -348,7 +351,7 @@ export function InteractiveWorkflow({
         </div>
         <div
           style={{
-            fontSize: '0.875rem',
+            fontSize: 'clamp(0.8125rem, 1.5vw, 0.875rem)',
             fontWeight: '600',
             color: '#6b7280',
           }}
@@ -383,7 +386,7 @@ export function InteractiveWorkflow({
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.75rem',
+          gap: 'clamp(0.625rem, 1.5vw, 0.75rem)',
         }}
       >
         {/* Step 1: Clock In */}
@@ -466,7 +469,7 @@ export function InteractiveWorkflow({
       {/* Hidden ref for job list scrolling */}
       <div ref={jobListRef} style={{ position: 'absolute', top: 0 }} />
 
-      {/* CSS Animation for pulse effect */}
+      {/* CSS Animation for pulse effect and responsive styles */}
       <style jsx>{`
         @keyframes workflowPulse {
           0% {
@@ -477,6 +480,37 @@ export function InteractiveWorkflow({
           }
           100% {
             box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+          }
+        }
+
+        /* Desktop optimizations */
+        @media (min-width: 768px) {
+          /* Better spacing on tablets and up */
+          .workflow-container {
+            max-width: 800px;
+            margin: 0 auto;
+          }
+        }
+
+        @media (min-width: 1024px) {
+          /* Enhanced desktop layout */
+          .workflow-step {
+            padding: 1.25rem !important;
+            min-height: 72px !important;
+          }
+          
+          .workflow-step:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+          /* Remove hover effects on touch devices */
+          .workflow-step:hover {
+            transform: none;
+            box-shadow: none;
           }
         }
       `}</style>
