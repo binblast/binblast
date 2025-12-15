@@ -35,7 +35,7 @@ interface JobCompletionData {
   outsidePhotoUrl?: string;
   employeeNotes?: string;
   binCount?: number;
-  stickerStatus?: string;
+  stickerStatus?: "existing" | "placed" | "none";
   stickerPlaced?: boolean;
 }
 
