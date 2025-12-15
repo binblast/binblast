@@ -150,6 +150,7 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
   }
 
   const hasPDF = module.pdfUrl && module.pdfUrl.trim() !== "";
+  const hasMarkdown = markdownContent !== null;
 
   // Calculate lesson number and total
   const totalModules = allModules.length;
