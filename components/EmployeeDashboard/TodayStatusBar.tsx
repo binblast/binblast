@@ -13,6 +13,8 @@ interface TodayStatusBarProps {
   isClockInLoading?: boolean;
   canClockIn?: boolean;
   certificationStatus?: "completed" | "expired" | "in_progress" | "not_started";
+  certificationExpiresAt?: string;
+  certificationDaysRemaining?: number;
 }
 
 export function TodayStatusBar({
@@ -24,6 +26,8 @@ export function TodayStatusBar({
   isClockInLoading = false,
   canClockIn = true,
   certificationStatus,
+  certificationExpiresAt,
+  certificationDaysRemaining,
 }: TodayStatusBarProps) {
   const currentDate = new Date().toLocaleDateString("en-US", {
     month: "2-digit",
@@ -174,7 +178,35 @@ export function TodayStatusBar({
       )}
 
       {/* Certification Status Badge */}
-      {certificationStatus && (
+      {certificationStatus === "completed" && certificationExpiresAt && (
+        <div
+          style={{
+            marginTop: "0.75rem",
+            padding: "0.75rem",
+            borderRadius: "6px",
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            textAlign: "center",
+            background: "#d1fae5",
+            color: "#065f46",
+          }}
+        >
+          <div style={{ marginBottom: "0.25rem" }}>
+            Certified
+          </div>
+          <div style={{ fontSize: "0.75rem", fontWeight: "500" }}>
+            Expires: {new Date(certificationExpiresAt).toLocaleDateString("en-US", {
+              month: "numeric",
+              day: "numeric",
+              year: "numeric",
+            })}
+            {certificationDaysRemaining !== undefined && (
+              <span> ({certificationDaysRemaining} days remaining)</span>
+            )}
+          </div>
+        </div>
+      )}
+      {certificationStatus && certificationStatus !== "completed" && (
         <div
           style={{
             marginTop: "0.75rem",
@@ -184,22 +216,16 @@ export function TodayStatusBar({
             fontWeight: "600",
             textAlign: "center",
             background:
-              certificationStatus === "completed"
-                ? "#d1fae5"
-                : certificationStatus === "expired"
+              certificationStatus === "expired"
                 ? "#fee2e2"
                 : "#fef3c7",
             color:
-              certificationStatus === "completed"
-                ? "#065f46"
-                : certificationStatus === "expired"
+              certificationStatus === "expired"
                 ? "#991b1b"
                 : "#92400e",
           }}
         >
-          {certificationStatus === "completed"
-            ? "✅ Certified"
-            : certificationStatus === "expired"
+          {certificationStatus === "expired"
             ? "Certification Expired"
             : "Training In Progress"}
         </div>

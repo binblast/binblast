@@ -529,6 +529,8 @@ export default function EmployeeDashboardPage() {
             isClockInLoading={isClockInLoading}
             canClockIn={certificationStatus?.canClockIn ?? false}
             certificationStatus={certificationStatus?.status}
+            certificationExpiresAt={certificationStatus?.expiresAt}
+            certificationDaysRemaining={certificationStatus?.daysUntilExpiration}
           />
 
           {/* Tab Navigation */}
@@ -563,28 +565,31 @@ export default function EmployeeDashboardPage() {
             >
               Home
             </button>
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setActiveTab("training");
-              }}
-              type="button"
-              style={{
-                padding: "0.75rem 1.5rem",
-                border: "none",
-                background: "transparent",
-                fontSize: "0.95rem",
-                fontWeight: "600",
-                color: activeTab === "training" ? "#16a34a" : "#6b7280",
-                cursor: "pointer",
-                borderBottom: activeTab === "training" ? "2px solid #16a34a" : "2px solid transparent",
-                marginBottom: "-2px",
-                transition: "all 0.2s",
-              }}
-            >
-              Training
-            </button>
+            {/* Only show Training tab if not certified */}
+            {(!certificationStatus?.isCertified) && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setActiveTab("training");
+                }}
+                type="button"
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  border: "none",
+                  background: "transparent",
+                  fontSize: "0.95rem",
+                  fontWeight: "600",
+                  color: activeTab === "training" ? "#16a34a" : "#6b7280",
+                  cursor: "pointer",
+                  borderBottom: activeTab === "training" ? "2px solid #16a34a" : "2px solid transparent",
+                  marginBottom: "-2px",
+                  transition: "all 0.2s",
+                }}
+              >
+                Training
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -846,7 +851,7 @@ export default function EmployeeDashboardPage() {
             </>
           )}
 
-          {activeTab === "training" && employee && (
+          {activeTab === "training" && employee && !certificationStatus?.isCertified && (
             <TrainingSection employeeId={employee.id} />
           )}
 
