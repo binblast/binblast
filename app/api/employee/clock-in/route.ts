@@ -44,19 +44,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Check if employee already has an active clock-in
-    const activeClockIn = await getActiveClockIn(employeeId);
-    if (activeClockIn) {
-      return NextResponse.json(
-        {
-          message: "Employee already clocked in",
-          clockInTime: activeClockIn.clockInTime,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check if employee already clocked in today
+    // Allow clock-in at any time - close any existing active clock-in first
     const today = getTodayDateString();
     const db = await getDbInstance();
     if (!db) {
@@ -67,28 +55,26 @@ export async function POST(req: NextRequest) {
     }
 
     const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs, addDoc, serverTimestamp } = firestore;
+    const { collection, addDoc, serverTimestamp, doc, updateDoc } = firestore;
 
-    const clockInsRef = collection(db, "clockIns");
-    const todayQuery = query(
-      clockInsRef,
-      where("employeeId", "==", employeeId),
-      where("date", "==", today)
-    );
-
-    const todaySnapshot = await getDocs(todayQuery);
-    if (!todaySnapshot.empty) {
-      const existingClockIn = todaySnapshot.docs[0].data();
-      return NextResponse.json(
-        {
-          message: "Employee already clocked in today",
-          clockInTime: existingClockIn.clockInTime,
-        },
-        { status: 400 }
-      );
+    // Close any existing active clock-in
+    const activeClockIn = await getActiveClockIn(employeeId);
+    if (activeClockIn) {
+      try {
+        const clockInsRef = collection(db, "clockIns");
+        const activeClockInDoc = doc(db, "clockIns", activeClockIn.id);
+        await updateDoc(activeClockInDoc, {
+          clockOutTime: serverTimestamp(),
+          isActive: false,
+        });
+      } catch (error) {
+        console.error("Error closing existing clock-in:", error);
+        // Continue with new clock-in even if closing previous one fails
+      }
     }
 
     // Create new clock-in record
+    const clockInsRef = collection(db, "clockIns");
     const clockInData = {
       employeeId,
       employeeEmail,
