@@ -2,14 +2,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { checkAdminAccess, logAdminAction } from "@/lib/admin-auth";
 
 export const dynamic = 'force-dynamic';
-
-// Helper to check admin access
-async function checkAdminAccess(req: NextRequest): Promise<boolean> {
-  // TODO: Implement proper Firebase auth token verification
-  return true;
-}
 
 export async function GET(
   req: NextRequest,
