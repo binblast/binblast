@@ -12,6 +12,7 @@ import { ProgressTracker } from "@/components/EmployeeDashboard/ProgressTracker"
 import { PayPreview } from "@/components/EmployeeDashboard/PayPreview";
 import { TrainingSection } from "@/components/EmployeeDashboard/TrainingSection";
 import { EquipmentChecklist } from "@/components/EmployeeDashboard/EquipmentChecklist";
+import { InteractiveWorkflow } from "@/components/EmployeeDashboard/InteractiveWorkflow";
 import {
   getEmployeeData,
   ClockInRecord,
@@ -43,6 +44,10 @@ interface Job {
   completionPhotoUrl?: string;
   employeeNotes?: string;
   completedAt?: any;
+  hasRequiredPhotos?: boolean;
+  insidePhotoUrl?: string;
+  outsidePhotoUrl?: string;
+  stickerStatus?: "existing" | "placed" | "none";
 }
 
 type DashboardTab = "home" | "training" | "equipment";
@@ -58,6 +63,7 @@ export default function EmployeeDashboardPage() {
   const [isClockInLoading, setIsClockInLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>("home");
   const [certificationStatus, setCertificationStatus] = useState<any>(null);
+  const [workflowStep, setWorkflowStep] = useState<'start' | 'photos' | 'complete' | undefined>(undefined);
   const [payPreview, setPayPreview] = useState({
     completedJobs: 0,
     payRatePerJob: 0,
@@ -617,178 +623,38 @@ export default function EmployeeDashboardPage() {
           {/* Tab Content */}
           {activeTab === "home" && (
             <>
-              {/* Step-Based UI Guide */}
-              {isClockedIn && (
-                <div
-                  style={{
-                    background: "#ffffff",
-                    borderRadius: "12px",
-                    padding: "1.5rem",
-                    marginBottom: "1.5rem",
-                    border: "1px solid #e5e7eb",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "1rem",
-                      fontWeight: "600",
-                      color: "#111827",
-                      marginBottom: "1rem",
-                    }}
-                  >
-                    Your Workflow:
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.75rem",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.75rem",
-                        fontSize: "0.875rem",
-                        color: "#16a34a",
-                        fontWeight: "600",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "24px",
-                          height: "24px",
-                          borderRadius: "50%",
-                          background: "#d1fae5",
-                          color: "#16a34a",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: "700",
-                          fontSize: "0.75rem",
-                        }}
-                      >
-                        ✓
-                      </span>
-                      Clock In
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.75rem",
-                        fontSize: "0.875rem",
-                        color: "#2563eb",
-                        fontWeight: "600",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "24px",
-                          height: "24px",
-                          borderRadius: "50%",
-                          background: "#dbeafe",
-                          color: "#2563eb",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: "700",
-                          fontSize: "0.75rem",
-                        }}
-                      >
-                        2
-                      </span>
-                      View Jobs
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.75rem",
-                        fontSize: "0.875rem",
-                        color: "#6b7280",
-                        fontWeight: "500",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "24px",
-                          height: "24px",
-                          borderRadius: "50%",
-                          background: "#f3f4f6",
-                          color: "#6b7280",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: "700",
-                          fontSize: "0.75rem",
-                        }}
-                      >
-                        3
-                      </span>
-                      Complete Job (with required photos)
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.75rem",
-                        fontSize: "0.875rem",
-                        color: "#6b7280",
-                        fontWeight: "500",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "24px",
-                          height: "24px",
-                          borderRadius: "50%",
-                          background: "#f3f4f6",
-                          color: "#6b7280",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: "700",
-                          fontSize: "0.75rem",
-                        }}
-                      >
-                        4
-                      </span>
-                      Upload Photos (inside + outside required)
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.75rem",
-                        fontSize: "0.875rem",
-                        color: "#6b7280",
-                        fontWeight: "500",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "24px",
-                          height: "24px",
-                          borderRadius: "50%",
-                          background: "#f3f4f6",
-                          color: "#6b7280",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: "700",
-                          fontSize: "0.75rem",
-                        }}
-                      >
-                        5
-                      </span>
-                      Submit Job
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Interactive Workflow */}
+              <InteractiveWorkflow
+                isClockedIn={isClockedIn}
+                jobs={jobs}
+                activeJob={selectedJob}
+                onClockIn={handleClockIn}
+                onJobClick={(job) => {
+                  setSelectedJob(job);
+                  setIsModalOpen(true);
+                }}
+                onStartJob={handleStartJob}
+                onCompleteJob={handleCompleteJob}
+                employeeId={employee.id}
+                onWorkflowStepClick={(stepId, jobId) => {
+                  // Handle workflow step clicks for custom navigation
+                  if (stepId === 'uploadPhotos' && jobId) {
+                    const job = jobs.find(j => j.id === jobId);
+                    if (job) {
+                      setSelectedJob(job);
+                      setIsModalOpen(true);
+                      // JobDetailModal will handle focusing on photos
+                    }
+                  } else if (stepId === 'completeJob' && jobId) {
+                    const job = jobs.find(j => j.id === jobId);
+                    if (job) {
+                      setSelectedJob(job);
+                      setIsModalOpen(true);
+                      // JobDetailModal will handle focusing on completion
+                    }
+                  }
+                }}
+              />
 
               {/* Today's Route - Primary Focus */}
               <div style={{ marginBottom: "1.5rem" }}>
@@ -870,11 +736,35 @@ export default function EmployeeDashboardPage() {
         onClose={() => {
           setIsModalOpen(false);
           setSelectedJob(null);
+          setWorkflowStep(undefined);
         }}
         onStartJob={handleStartJob}
         onCompleteJob={handleCompleteJob}
         onFlagJob={handleFlagJob}
         employeeId={employee.id}
+        workflowStep={workflowStep}
+        onStepComplete={(stepId) => {
+          // Auto-advance workflow when steps complete
+          if (stepId === 'startJob') {
+            setWorkflowStep('photos');
+          } else if (stepId === 'uploadPhotos') {
+            setWorkflowStep('complete');
+          } else if (stepId === 'completeJob') {
+            // Move to next job or close modal
+            setWorkflowStep(undefined);
+            const nextJob = jobs.find(j => j.jobStatus === 'pending' || !j.jobStatus);
+            if (nextJob) {
+              setTimeout(() => {
+                setSelectedJob(nextJob);
+                setWorkflowStep('start');
+                setIsModalOpen(true);
+              }, 500);
+            } else {
+              setIsModalOpen(false);
+              setSelectedJob(null);
+            }
+          }
+        }}
       />
     </>
   );

@@ -45,6 +45,8 @@ interface JobDetailModalProps {
   ) => Promise<void>;
   onFlagJob: (jobId: string, flag: string) => Promise<void>;
   employeeId: string;
+  workflowStep?: 'start' | 'photos' | 'complete';
+  onStepComplete?: (stepId: string) => void;
 }
 
 export function JobDetailModal({
@@ -55,6 +57,8 @@ export function JobDetailModal({
   onCompleteJob,
   onFlagJob,
   employeeId,
+  workflowStep,
+  onStepComplete,
 }: JobDetailModalProps) {
   const [employeeNotes, setEmployeeNotes] = useState("");
   const [binCount, setBinCount] = useState<number | undefined>(
@@ -90,6 +94,19 @@ export function JobDetailModal({
       loadExistingPhotos();
     }
   }, [isOpen, job?.id, employeeId]);
+
+  // Focus on workflow step section when workflowStep prop changes
+  React.useEffect(() => {
+    if (isOpen && workflowStep) {
+      setTimeout(() => {
+        if (workflowStep === 'photos' && photoSectionRef.current) {
+          photoSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else if (workflowStep === 'complete' && completionSectionRef.current) {
+          completionSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, [isOpen, workflowStep]);
 
   const checkPhotoDocumentationTraining = async () => {
     try {
@@ -148,6 +165,10 @@ export function JobDetailModal({
     setError(null);
     try {
       await onStartJob(job.id);
+      // Emit step completion event for workflow auto-advancement
+      if (onStepComplete) {
+        onStepComplete('startJob');
+      }
       onClose();
     } catch (err: any) {
       setError(err.message || "Failed to start job");
@@ -176,6 +197,12 @@ export function JobDetailModal({
   const handleOutsidePhotoUploaded = (photoId: string, storageUrl: string) => {
     setOutsidePhotoId(photoId);
     setOutsidePhoto(storageUrl);
+    // Check if both photos are uploaded and emit completion event
+    if (insidePhotoId && insidePhoto) {
+      if (onStepComplete) {
+        onStepComplete('uploadPhotos');
+      }
+    }
   };
 
   const handleDumpsterPadPhotoSelect = (file: File, dataUrl: string) => {
@@ -247,6 +274,11 @@ export function JobDetailModal({
         localStorage.removeItem(`job-photo-${job.id}-outside`);
         localStorage.removeItem(`job-photo-${job.id}-dumpster_pad`);
         localStorage.removeItem(`job-photo-${job.id}-sticker_placement`);
+      }
+      
+      // Emit step completion event for workflow auto-advancement
+      if (onStepComplete) {
+        onStepComplete('completeJob');
       }
       
       onClose();
@@ -536,7 +568,7 @@ export function JobDetailModal({
             </div>
 
             {/* Sticker Status */}
-            <div style={{ marginBottom: "1.5rem" }}>
+            <div ref={completionSectionRef} style={{ marginBottom: "1.5rem" }}>
               <h3
                 style={{
                   fontSize: "1.125rem",
