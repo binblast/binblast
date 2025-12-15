@@ -99,6 +99,54 @@ export default function PartnerApplyPage() {
         throw new Error(data.error || "Failed to submit application");
       }
 
+      // Send email notification via EmailJS (client-side, since EmailJS doesn't work server-side)
+      if (data.emailData) {
+        try {
+          // Access environment variables (must be NEXT_PUBLIC_ prefix for client-side)
+          const emailjsServiceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || "service_rok6u9h";
+          const emailjsTemplateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID || "template_aabpctf";
+          const emailjsPublicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
+          const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+
+          if (emailjsPublicKey && adminEmail) {
+            const emailjsUrl = `https://api.emailjs.com/api/v1.0/email/send`;
+            
+            const emailPayload = {
+              service_id: emailjsServiceId,
+              template_id: emailjsTemplateId,
+              user_id: emailjsPublicKey,
+              template_params: {
+                ...data.emailData,
+                to_email: adminEmail,
+              },
+            };
+
+            const emailResponse = await fetch(emailjsUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(emailPayload),
+            });
+
+            if (!emailResponse.ok) {
+              const errorText = await emailResponse.text();
+              console.error("[Partner Application] EmailJS error:", errorText);
+            } else {
+              console.log("[Partner Application] Email notification sent successfully");
+            }
+          } else {
+            console.warn("[Partner Application] EmailJS not configured. Missing:", {
+              publicKey: !emailjsPublicKey,
+              adminEmail: !adminEmail,
+            });
+          }
+        } catch (emailError: any) {
+          // Don't fail the application if email fails
+          console.error("[Partner Application] Email sending error:", emailError);
+        }
+      }
+
       // Application submitted successfully - show confirmation
       setSuccess(true);
       setSubmitting(false);
