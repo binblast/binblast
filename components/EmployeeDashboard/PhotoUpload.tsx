@@ -150,15 +150,8 @@ export function PhotoUpload({
   };
 
   const retryUpload = async () => {
-    if (cachedPhotoRef.current?.file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUrl = reader.result as string;
-        uploadPhoto(cachedPhotoRef.current!.file, dataUrl);
-      };
-      reader.readAsDataURL(cachedPhotoRef.current.file);
-    } else if (fileInputRef.current?.files?.[0]) {
-      const file = fileInputRef.current.files[0];
+    const file = cachedPhotoRef.current?.file || fileInputRef.current?.files?.[0];
+    if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
