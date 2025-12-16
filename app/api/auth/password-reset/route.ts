@@ -27,11 +27,26 @@ export async function POST(req: NextRequest) {
 
     // Try to use Firebase Admin SDK to generate password reset link
     try {
-      const admin = await import("firebase-admin");
+      // Dynamically import firebase-admin - may not be installed
+      // Construct module name at runtime to prevent webpack from analyzing
+      let admin: any;
+      try {
+        const moduleName = 'firebase' + '-admin'; // Construct at runtime
+        admin = await import(moduleName);
+      } catch (importError: any) {
+        // firebase-admin not installed, skip Admin SDK path
+        if (importError.code === 'MODULE_NOT_FOUND' || importError.message?.includes('Cannot find module') || importError.message?.includes('firebase-admin')) {
+          throw new Error("Admin SDK not available");
+        }
+        throw importError;
+      }
       
-      if (!admin.apps.length) {
+      if (!admin.apps || !admin.apps.length) {
         // Initialize Firebase Admin if not already initialized
         try {
+          if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
+            throw new Error("Admin SDK credentials not configured");
+          }
           admin.initializeApp({
             credential: admin.credential.cert({
               projectId: process.env.FIREBASE_PROJECT_ID,

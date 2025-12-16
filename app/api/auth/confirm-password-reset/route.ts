@@ -114,24 +114,50 @@ export async function POST(req: NextRequest) {
 
       const email = resetData.email;
 
-      // Use Firebase Admin SDK to update password, or use client SDK with temporary sign-in
+      // Use Firebase Admin SDK to update password
       try {
-        // Try Admin SDK first
-        const admin = await import("firebase-admin");
-        
-        if (admin.apps.length) {
-          await admin.auth().updateUser(
-            (await admin.auth().getUserByEmail(email)).uid,
-            { password }
-          );
-        } else {
-          throw new Error("Admin SDK not available");
+        // Try Admin SDK first - dynamically import (may not be installed)
+        // Construct module name at runtime to prevent webpack from analyzing
+        let admin: any;
+        try {
+          const moduleName = 'firebase' + '-admin'; // Construct at runtime
+          admin = await import(moduleName);
+        } catch (importError: any) {
+          // firebase-admin not installed
+          if (importError.code === 'MODULE_NOT_FOUND' || importError.message?.includes('Cannot find module') || importError.message?.includes('firebase-admin')) {
+            throw new Error("Admin SDK not available");
+          }
+          throw importError;
         }
-      } catch (adminError) {
-        // Fallback: Use client SDK (requires temporary sign-in)
-        // This is more complex and less secure, so we'll require Admin SDK
+        
+        if (!admin.apps || !admin.apps.length) {
+          // Try to initialize if credentials are available
+          if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+            try {
+              admin.initializeApp({
+                credential: admin.credential.cert({
+                  projectId: process.env.FIREBASE_PROJECT_ID,
+                  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+                }),
+              });
+            } catch (initError) {
+              throw new Error("Admin SDK not configured");
+            }
+          } else {
+            throw new Error("Admin SDK not configured");
+          }
+        }
+        
+        await admin.auth().updateUser(
+          (await admin.auth().getUserByEmail(email)).uid,
+          { password }
+        );
+      } catch (adminError: any) {
+        // Admin SDK not available - return error
+        console.error("[Confirm Password Reset] Admin SDK error:", adminError);
         return NextResponse.json(
-          { error: "Password reset service temporarily unavailable. Please contact support." },
+          { error: "Password reset service temporarily unavailable. Please contact support or request a new reset link." },
           { status: 503 }
         );
       }

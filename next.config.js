@@ -2,6 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
   webpack: (config, { isServer }) => {
+    // Mark firebase-admin as external for server-side (it's optional)
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push({
+        'firebase-admin': 'commonjs firebase-admin',
+      });
+    }
+    
     if (!isServer) {
       // CRITICAL: Prevent Firebase from being code-split
       // Force all Firebase modules into the main bundle so they load together
