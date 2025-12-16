@@ -28,6 +28,7 @@ function RegisterForm() {
   const initialEmail = searchParams.get("email") || "";
   const referralCode = searchParams.get("ref") || "";
   const redirectParam = searchParams.get("redirect") || "";
+  const isPartnerSignup = searchParams.get("partner") === "true";
   
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -40,6 +41,7 @@ function RegisterForm() {
   const [success, setSuccess] = useState(false);
   const [verifyingSession, setVerifyingSession] = useState(!!sessionId);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [checkingPartnerStatus, setCheckingPartnerStatus] = useState(isPartnerSignup);
   const [stripeData, setStripeData] = useState<{
     customerId: string | null;
     subscriptionId: string | null;
@@ -47,9 +49,9 @@ function RegisterForm() {
   } | null>(null);
 
   // If referral code is present in URL without session_id, redirect to pricing page to choose plan
-  // User must pay first before registering
+  // User must pay first before registering (unless it's a partner signup)
   useEffect(() => {
-    if (referralCode && !sessionId && !redirectParam && typeof window !== 'undefined') {
+    if (referralCode && !sessionId && !redirectParam && !isPartnerSignup && typeof window !== 'undefined') {
       const normalizedCode = referralCode.trim().toUpperCase();
       
       // Don't redirect if code is empty
@@ -61,7 +63,7 @@ function RegisterForm() {
       console.log("[Register] Referral code detected, redirecting to pricing page to choose plan:", normalizedCode);
       router.push(`/#pricing?ref=${normalizedCode}`);
     }
-  }, [referralCode, sessionId, redirectParam, router]);
+  }, [referralCode, sessionId, redirectParam, isPartnerSignup, router]);
 
   // Check if user is already logged in
   useEffect(() => {
@@ -90,6 +92,56 @@ function RegisterForm() {
     
     checkAuth();
   }, [sessionId, router]);
+
+  // Check if user is already logged in and has partnerAccepted status
+  useEffect(() => {
+    async function checkPartnerStatus() {
+      if (!isPartnerSignup) {
+        setCheckingPartnerStatus(false);
+        return;
+      }
+
+      try {
+        const { getAuthInstance, getDbInstance, onAuthStateChanged } = await import("@/lib/firebase");
+        const auth = await getAuthInstance();
+        
+        if (auth && typeof auth === "object" && "currentUser" in auth) {
+          await onAuthStateChanged(async (firebaseUser) => {
+            if (firebaseUser) {
+              const db = await getDbInstance();
+              if (db) {
+                const { doc, getDoc, updateDoc } = await import("firebase/firestore");
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDoc = await getDoc(userDocRef);
+                
+                if (userDoc.exists()) {
+                  const userData = userDoc.data();
+                  // If user is already logged in and accepted as partner, just mark account as created
+                  if (userData.partnerAccepted === true && userData.partnerAccountCreated !== true) {
+                    await updateDoc(userDocRef, {
+                      partnerAccountCreated: true,
+                      updatedAt: (await import("firebase/firestore")).serverTimestamp(),
+                    });
+                    // Redirect to dashboard
+                    router.push("/dashboard");
+                    return;
+                  }
+                }
+              }
+            }
+            setCheckingPartnerStatus(false);
+          });
+        } else {
+          setCheckingPartnerStatus(false);
+        }
+      } catch (err) {
+        console.warn("[Register] Error checking partner status:", err);
+        setCheckingPartnerStatus(false);
+      }
+    }
+
+    checkPartnerStatus();
+  }, [isPartnerSignup, router]);
 
   // Verify Stripe session on mount if session_id is present
   useEffect(() => {
@@ -318,6 +370,11 @@ function RegisterForm() {
               console.log("[Register] Assigning operator role to:", email);
             }
 
+            // Check if user document already exists (for partner signup case)
+            const { getDoc: getDocCheck } = await import("firebase/firestore");
+            const existingUserDoc = await getDocCheck(userDocRef);
+            const existingData = existingUserDoc.exists() ? existingUserDoc.data() : null;
+
             await setDoc(userDocRef, {
               firstName,
               lastName,
@@ -331,9 +388,13 @@ function RegisterForm() {
               referralCode: generatedCode, // Generate unique code on registration
               referralCount: 0, // Initialize referral count
               role: userRole, // Set role based on email check (customer, operator, etc.)
-              createdAt: serverTimestamp(),
+              // If partner signup, mark as partner account
+              ...(isPartnerSignup ? { partnerAccountCreated: true } : {}),
+              // If user already exists and was accepted as partner, preserve that status
+              ...(existingData?.partnerAccepted === true ? { partnerAccepted: true } : {}),
+              createdAt: existingUserDoc.exists() ? existingData?.createdAt : serverTimestamp(),
               updatedAt: serverTimestamp(),
-            });
+            }, { merge: true });
             
             console.log("[Register] User document created successfully with role:", userRole);
           } catch (userDocErr: any) {
@@ -346,7 +407,6 @@ function RegisterForm() {
             throw new Error(`Failed to create user document: ${userDocErr.message || "Unknown error"}`);
           }
         }
-
         // Process referral if referral code was provided
         if (normalizedReferralCode && db && userCredential.user) {
           try {
@@ -475,14 +535,43 @@ function RegisterForm() {
         <div className="container">
           <div style={{ maxWidth: "600px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
-              {sessionId ? "Complete Your Registration" : "Create Your Account"}
+              {isPartnerSignup ? "Complete Your Partner Account Setup" : (sessionId ? "Complete Your Registration" : "Create Your Account")}
             </h1>
-            {!sessionId && (
+            
+            {isPartnerSignup && (
+              <div style={{
+                padding: "1rem 1.5rem",
+                background: "#eff6ff",
+                borderRadius: "12px",
+                marginBottom: "2rem",
+                border: "1px solid #3b82f6"
+              }}>
+                <p style={{ margin: 0, fontSize: "0.95rem", color: "#1e40af", fontWeight: "500" }}>
+                  🎉 Congratulations! Your partner application has been accepted. Complete your account setup below to get started.
+                </p>
+              </div>
+            )}
+
+            {checkingPartnerStatus && (
+              <div style={{
+                padding: "1rem 1.5rem",
+                background: "#f9fafb",
+                borderRadius: "12px",
+                marginBottom: "2rem",
+                border: "1px solid #e5e7eb"
+              }}>
+                <p style={{ margin: 0, fontSize: "0.95rem", color: "#6b7280" }}>
+                  Checking your partner status...
+                </p>
+              </div>
+            )}
+
+            {!isPartnerSignup && !sessionId && (
               <p style={{ textAlign: "center", color: "#dc2626", marginBottom: "1rem", fontSize: "0.875rem" }}>
                 Please select a service plan and complete payment before creating an account.
               </p>
             )}
-            {sessionId && (
+            {!isPartnerSignup && sessionId && (
               <p style={{ textAlign: "center", color: "#16a34a", marginBottom: "1rem", fontSize: "0.875rem" }}>
                 Payment successful! Please complete your registration below.
               </p>

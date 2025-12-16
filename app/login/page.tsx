@@ -28,16 +28,40 @@ function LoginForm() {
 
     try {
       // Use safe wrapper function that ensures Firebase is initialized
-      const { signInWithEmailAndPassword, getAuthInstance } = await import("@/lib/firebase");
+      const { signInWithEmailAndPassword, getAuthInstance, getDbInstance } = await import("@/lib/firebase");
       
       // Sign in with Firebase
-      await signInWithEmailAndPassword(email, password);
+      const userCredential = await signInWithEmailAndPassword(email, password);
       
-      // Get the authenticated user to check partner status
+      // Get the authenticated user
       const auth = await getAuthInstance();
       const user = auth?.currentUser;
       
       if (user) {
+        // Check if user is an accepted partner who needs to sign up for partner account
+        // This check should happen first before other redirects
+        try {
+          const db = await getDbInstance();
+          if (db) {
+            const { doc, getDoc } = await import("firebase/firestore");
+            const userDocRef = doc(db, "users", user.uid);
+            const userDoc = await getDoc(userDocRef);
+            
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              // Check if partner is accepted but hasn't created partner account yet
+              if (userData.partnerAccepted === true && userData.partnerAccountCreated !== true) {
+                // Redirect to partner signup
+                router.push("/register?partner=true");
+                return;
+              }
+            }
+          }
+        } catch (partnerCheckErr) {
+          console.warn("[Login] Error checking partner status:", partnerCheckErr);
+          // Continue with normal flow if partner check fails
+        }
+
         // Check redirect parameter first (for employee portal, etc.)
         const redirectParam = searchParams.get("redirect");
         if (redirectParam) {
@@ -54,7 +78,6 @@ function LoginForm() {
 
         // Check if user is an employee
         try {
-          const { getDbInstance } = await import("@/lib/firebase");
           const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
           const db = await getDbInstance();
           

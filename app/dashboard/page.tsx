@@ -98,6 +98,8 @@ interface UserData {
   paymentStatus?: string;
   role?: string; // "admin" | "customer" | "partner"
   createdAt?: any;
+  partnerAccepted?: boolean;
+  partnerAccountCreated?: boolean;
 }
 
 const PLAN_NAMES: Record<string, string> = {
@@ -385,6 +387,16 @@ function DashboardPageContent() {
             if (userDoc.exists()) {
               const userData = userDoc.data() as UserData;
               
+              // Check if partner is accepted but hasn't created partner account yet
+              // This check should happen first before other logic
+              if ((userData as any).partnerAccepted === true && (userData as any).partnerAccountCreated !== true) {
+                // Redirect to partner signup
+                if (mounted) {
+                  router.push("/register?partner=true");
+                }
+                return;
+              }
+
               // CRITICAL: Store user info in ref BEFORE updating state
               // This prevents the callback from running again for the same user
               const userRole = userData.role || "customer";
