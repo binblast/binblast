@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Find user by email in users collection (Firebase Auth UID is the document ID)
-    // We need to query users collection to find the userId
+    // The users collection stores user data with email field, and the document ID is the Firebase Auth UID
     let userId: string | null = null;
     try {
       const usersQuery = query(
@@ -46,24 +46,9 @@ export async function POST(req: NextRequest) {
       console.warn("[Assign User] Could not query users collection:", queryErr);
     }
 
-    // If user not found in users collection, try to find by checking if they have a Firebase Auth account
-    // Note: This requires Firebase Admin SDK which may not be available
-    if (!userId) {
-      // Try Firebase Admin SDK as fallback
-      try {
-        const admin = await import("firebase-admin");
-        if (admin.apps.length > 0) {
-          const userRecord = await admin.auth().getUserByEmail(userEmail);
-          userId = userRecord.uid;
-        }
-      } catch (adminErr: any) {
-        console.warn("[Assign User] Firebase Admin SDK not available:", adminErr.message);
-      }
-    }
-
     if (!userId) {
       return NextResponse.json(
-        { error: `User with email ${userEmail} not found. User must register first.` },
+        { error: `User with email ${userEmail} not found. User must register first and have a user document in Firestore.` },
         { status: 404 }
       );
     }
