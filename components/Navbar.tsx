@@ -186,30 +186,69 @@ export function Navbar() {
     };
   }, []); // Remove firebaseReady dependency - check auth state regardless
 
+  // Helper function to get the correct href for homepage sections
+  const getHomeSectionHref = (sectionId: string) => {
+    // If we're on the homepage, use hash link directly
+    // Otherwise, navigate to homepage with hash
+    return isHomePage ? `#${sectionId}` : `/#${sectionId}`;
+  };
+
   useEffect(() => {
-    // Smooth scrolling for anchor links
+    // Handle smooth scrolling for anchor links on the homepage
     const handleAnchorClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const anchor = target.closest('a[href^="#"]') as HTMLAnchorElement;
       if (anchor && anchor.getAttribute('href')?.startsWith('#')) {
-        e.preventDefault();
-        const targetId = anchor.getAttribute('href')?.slice(1);
-        const targetElement = document.getElementById(targetId || '');
-        if (targetElement) {
-          const offsetTop = targetElement.offsetTop - 80; // Account for sticky navbar
-          window.scrollTo({
-            top: offsetTop,
-            behavior: 'smooth'
-          });
-          // Close mobile menu after clicking
-          setIsMenuOpen(false);
+        // Only handle smooth scroll if we're on the homepage and it's a direct hash link (not /#section)
+        const href = anchor.getAttribute('href') || '';
+        if (isHomePage && href.startsWith('#') && !href.startsWith('/#')) {
+          e.preventDefault();
+          const targetId = href.slice(1);
+          const targetElement = document.getElementById(targetId || '');
+          if (targetElement) {
+            const offsetTop = targetElement.offsetTop - 80; // Account for sticky navbar
+            window.scrollTo({
+              top: offsetTop,
+              behavior: 'smooth'
+            });
+            // Close mobile menu after clicking
+            setIsMenuOpen(false);
+          }
         }
+        // If not on homepage or href starts with /#, let Next.js Link handle navigation
+        // Then scroll after page loads (handled in next useEffect)
       }
     };
 
     document.addEventListener('click', handleAnchorClick);
     return () => document.removeEventListener('click', handleAnchorClick);
-  }, []);
+  }, [isHomePage]);
+
+  // Handle smooth scrolling when landing on homepage with hash from another page
+  useEffect(() => {
+    if (isHomePage && typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash) {
+        // Small delay to ensure page is fully rendered
+        const scrollToSection = () => {
+          const targetId = hash.slice(1);
+          const targetElement = document.getElementById(targetId);
+          if (targetElement) {
+            const offsetTop = targetElement.offsetTop - 80; // Account for sticky navbar
+            window.scrollTo({
+              top: offsetTop,
+              behavior: 'smooth'
+            });
+          }
+        };
+        
+        // Try immediately, then retry after a short delay to handle dynamic content
+        scrollToSection();
+        setTimeout(scrollToSection, 100);
+        setTimeout(scrollToSection, 500); // Extra retry for slower content
+      }
+    }
+  }, [isHomePage, pathname]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -276,21 +315,21 @@ export function Navbar() {
             {isLoggedIn ? (
               <Link href="/">Home</Link>
             ) : (
-              <Link href="#home">Home</Link>
+              <Link href={getHomeSectionHref("home")}>Home</Link>
             )}
           </li>
           <li>
             {isLoggedIn ? (
               <Link href="/#pricing">Services</Link>
             ) : (
-              <Link href="#pricing">Services</Link>
+              <Link href={getHomeSectionHref("pricing")}>Services</Link>
             )}
           </li>
           <li>
             {isLoggedIn ? (
               <Link href={accountUrl}>{isEmployee ? "Dashboard" : "Account"}</Link>
             ) : (
-              <Link href="#account">Account</Link>
+              <Link href={getHomeSectionHref("account")}>Account</Link>
             )}
           </li>
           {!isEmployee && (
@@ -337,7 +376,7 @@ export function Navbar() {
             </li>
           )}
           <li>
-            <Link href="#pricing" className="nav-login">Get Started</Link>
+            <Link href={getHomeSectionHref("pricing")} className="nav-login">Get Started</Link>
           </li>
         </ul>
         <button className="nav-toggle" onClick={toggleMenu} aria-label="Toggle menu">
