@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { AddTeamMemberModal } from "@/components/PartnerDashboard/AddTeamMemberModal";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
   ssr: false,
@@ -56,6 +57,89 @@ interface Customer {
   activeSubscriptions: number;
 }
 
+interface TeamMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  serviceArea: string[];
+  payRatePerJob: number;
+  hiringStatus: string;
+}
+
+function TeamMemberRow({ member }: { member: TeamMember }) {
+  const [trainingStatus, setTrainingStatus] = useState<{
+    status: string;
+    completed: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    async function checkTrainingStatus() {
+      try {
+        const response = await fetch(`/api/operator/employees/${member.id}/training`);
+        if (response.ok) {
+          const data = await response.json();
+          const allCompleted = data.modules?.every((m: any) => m.completed) || false;
+          setTrainingStatus({
+            status: allCompleted ? "certified" : "in_progress",
+            completed: allCompleted,
+          });
+        }
+      } catch (err) {
+        console.error("Error checking training status:", err);
+      }
+    }
+    checkTrainingStatus();
+  }, [member.id]);
+
+  return (
+    <tr style={{ borderBottom: "1px solid #f3f4f6" }} onMouseEnter={(e) => {
+      e.currentTarget.style.background = "#f9fafb";
+    }} onMouseLeave={(e) => {
+      e.currentTarget.style.background = "transparent";
+    }}>
+      <td style={{ padding: "0.75rem 1rem", fontWeight: "600", color: "#111827" }}>
+        {member.firstName} {member.lastName}
+      </td>
+      <td style={{ padding: "0.75rem 1rem", fontSize: "0.875rem", color: "#6b7280" }}>
+        {member.email}
+      </td>
+      <td style={{ padding: "0.75rem 1rem", fontSize: "0.875rem", color: "#6b7280" }}>
+        {member.serviceArea.length > 0 ? member.serviceArea.join(", ") : "Not assigned"}
+      </td>
+      <td style={{ padding: "0.75rem 1rem" }}>
+        {trainingStatus ? (
+          <span style={{
+            padding: "0.25rem 0.75rem",
+            borderRadius: "9999px",
+            fontSize: "0.75rem",
+            fontWeight: "600",
+            background: trainingStatus.completed ? "#dcfce7" : "#fef3c7",
+            color: trainingStatus.completed ? "#166534" : "#92400e"
+          }}>
+            {trainingStatus.completed ? "✓ Certified" : "⏳ In Training"}
+          </span>
+        ) : (
+          <span style={{
+            padding: "0.25rem 0.75rem",
+            borderRadius: "9999px",
+            fontSize: "0.75rem",
+            fontWeight: "600",
+            background: "#f3f4f6",
+            color: "#6b7280"
+          }}>
+            Checking...
+          </span>
+        )}
+      </td>
+      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: "600", color: "#16a34a" }}>
+        ${member.payRatePerJob.toFixed(2)}/job
+      </td>
+    </tr>
+  );
+}
+
 export default function PartnerDashboardPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
@@ -86,6 +170,18 @@ export default function PartnerDashboardPage() {
     payoutsEnabled?: boolean;
   } | null>(null);
   const [connectingStripe, setConnectingStripe] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    serviceArea: string[];
+    payRatePerJob: number;
+    hiringStatus: string;
+  }>>([]);
+  const [showAddTeamMemberModal, setShowAddTeamMemberModal] = useState(false);
+  const [loadingTeamMembers, setLoadingTeamMembers] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
@@ -329,9 +425,29 @@ export default function PartnerDashboardPage() {
       }
 
       setLoading(false);
+      
+      // Load team members
+      if (partnerDoc.id) {
+        loadTeamMembers(partnerDoc.id);
+      }
     } catch (err) {
       console.error("Error loading partner data:", err);
       setLoading(false);
+    }
+  }
+
+  async function loadTeamMembers(partnerId: string) {
+    try {
+      setLoadingTeamMembers(true);
+      const response = await fetch(`/api/partners/team-members?partnerId=${partnerId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTeamMembers(data.employees || []);
+      }
+    } catch (err) {
+      console.error("Error loading team members:", err);
+    } finally {
+      setLoadingTeamMembers(false);
     }
   }
 
@@ -1625,52 +1741,83 @@ export default function PartnerDashboardPage() {
             }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
                 <h2 style={{ fontSize: "1.75rem", fontWeight: "700", color: "#111827" }}>Your Team</h2>
-                <button style={{
-                  padding: "0.5rem 1rem",
-                  background: "#2563eb",
-                  color: "#ffffff",
-                  borderRadius: "8px",
-                  fontSize: "0.875rem",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  border: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  transition: "all 0.2s ease"
-                }} onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#1d4ed8";
-                }} onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#2563eb";
-                }}>
+                <button 
+                  onClick={() => setShowAddTeamMemberModal(true)}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    background: "#2563eb",
+                    color: "#ffffff",
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    border: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    transition: "all 0.2s ease"
+                  }} 
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#1d4ed8";
+                  }} 
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#2563eb";
+                  }}
+                >
                   <svg style={{ width: "20px", height: "20px" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                   Add Team Member
                 </button>
               </div>
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                      <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Name</th>
-                      <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Role</th>
-                      <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Assigned Area</th>
-                      <th style={{ padding: "0.75rem 1rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Active Jobs Today</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr style={{ borderBottom: "1px solid #f3f4f6" }}>
-                      <td colSpan={4} style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
-                        <svg style={{ width: "48px", height: "48px", margin: "0 auto 0.75rem", color: "#d1d5db" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        <p>No team members yet. Click "Add Team Member" to get started.</p>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              {loadingTeamMembers ? (
+                <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
+                  Loading team members...
+                </div>
+              ) : teamMembers.length === 0 ? (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                        <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Name</th>
+                        <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Role</th>
+                        <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Assigned Area</th>
+                        <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Training Status</th>
+                        <th style={{ padding: "0.75rem 1rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Pay Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style={{ borderBottom: "1px solid #f3f4f6" }}>
+                        <td colSpan={5} style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
+                          <svg style={{ width: "48px", height: "48px", margin: "0 auto 0.75rem", color: "#d1d5db" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          <p>No team members yet. Click "Add Team Member" to get started.</p>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                        <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Name</th>
+                        <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Email</th>
+                        <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Assigned Area</th>
+                        <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Training Status</th>
+                        <th style={{ padding: "0.75rem 1rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Pay Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {teamMembers.map((member) => (
+                        <TeamMemberRow key={member.id} member={member} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Active Subscribers List */}
@@ -1966,6 +2113,21 @@ export default function PartnerDashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Add Team Member Modal */}
+      {showAddTeamMemberModal && partnerData && userId && (
+        <AddTeamMemberModal
+          partnerId={partnerData.id}
+          userId={userId}
+          onSuccess={() => {
+            setShowAddTeamMemberModal(false);
+            if (partnerData.id) {
+              loadTeamMembers(partnerData.id);
+            }
+          }}
+          onCancel={() => setShowAddTeamMemberModal(false)}
+        />
+      )}
     </>
   );
 }
