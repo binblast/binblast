@@ -77,6 +77,8 @@ export default function PartnerDashboardPage() {
   const [copiedSignupLink, setCopiedSignupLink] = useState(false);
   const [showPlaybookScripts, setShowPlaybookScripts] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [copiedScript, setCopiedScript] = useState<number | null>(null);
+  const [copiedStrategy, setCopiedStrategy] = useState<string | null>(null);
   const [stripeConnectStatus, setStripeConnectStatus] = useState<{
     connected: boolean;
     status: string;
@@ -369,6 +371,210 @@ export default function PartnerDashboardPage() {
     if (!partnerLink) return;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(partnerLink)}`;
     setQrCodeUrl(qrUrl);
+  };
+
+  const handleDownloadPDF = () => {
+    if (!partnerData || !partnerLink) return;
+    
+    const pdfContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>How to Sell Bin Blast Co. - Playbook</title>
+  <style>
+    @media print {
+      @page { margin: 1in; }
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #111827;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    h1 {
+      color: #111827;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      border-bottom: 3px solid #2563eb;
+      padding-bottom: 0.5rem;
+    }
+    h2 {
+      color: #374151;
+      font-size: 1.5rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+    }
+    h3 {
+      color: #111827;
+      font-size: 1.25rem;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .subtitle {
+      color: #6b7280;
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+    .strategy-card {
+      background: #f9fafb;
+      border-left: 4px solid #2563eb;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+    }
+    .strategy-title {
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 0.5rem;
+    }
+    .strategy-desc {
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+    .script-box {
+      background: #eff6ff;
+      border: 2px solid #93c5fd;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      font-style: italic;
+    }
+    .partner-link {
+      color: #2563eb;
+      font-weight: 600;
+      word-break: break-all;
+    }
+    .footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e5e7eb;
+      color: #6b7280;
+      font-size: 0.875rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>How to Sell Bin Blast Co.</h1>
+  <p class="subtitle">A guided playbook to maximize your earnings</p>
+  
+  <div style="background: #eff6ff; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
+    <strong>Your Partner Link:</strong><br>
+    <span class="partner-link">${partnerLink}</span>
+  </div>
+
+  <h2>Sales Strategies</h2>
+  
+  <div class="strategy-card">
+    <div class="strategy-title">📄 Put on invoices</div>
+    <div class="strategy-desc">Add your booking link to every invoice and receipt</div>
+  </div>
+  
+  <div class="strategy-card">
+    <div class="strategy-title">💬 Text after service</div>
+    <div class="strategy-desc">Send your link via text message after completing a service</div>
+  </div>
+  
+  <div class="strategy-card">
+    <div class="strategy-title">🌐 Add to website</div>
+    <div class="strategy-desc">Include your booking link on your website or service menu</div>
+  </div>
+  
+  <div class="strategy-card">
+    <div class="strategy-title">📧 Follow-up emails</div>
+    <div class="strategy-desc">Include your link in customer follow-up emails</div>
+  </div>
+
+  <h2>Top Performing Sales Scripts</h2>
+  
+  <h3>Script 1: After Service Completion</h3>
+  <div class="script-box">
+    "Thanks for choosing us! Want to keep your bins clean year-round? Check out Bin Blast Co.'s subscription service - ${partnerLink}. They offer monthly and bi-weekly cleaning plans."
+  </div>
+  
+  <h3>Script 2: Invoice Follow-up</h3>
+  <div class="script-box">
+    "Your invoice is attached. As a bonus, here's a special link to Bin Blast Co.'s professional bin cleaning service: ${partnerLink}. They offer flexible plans perfect for maintaining clean bins between our visits."
+  </div>
+  
+  <h3>Script 3: Social Media Post</h3>
+  <div class="script-box">
+    "Partnered with Bin Blast Co. to offer you the best bin cleaning service! Use my link to get started: ${partnerLink}. They handle everything - you just enjoy clean bins!"
+  </div>
+
+  <div class="footer">
+    <p>Bin Blast Co. Partner Playbook</p>
+    <p>Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+  </div>
+</body>
+</html>
+    `;
+    
+    const blob = new Blob([pdfContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Bin-Blast-Co-Playbook-${partnerData.businessName.replace(/\s+/g, '-')}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    // Also open print dialog
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(pdfContent);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+  };
+
+  const handleCopyStrategy = async (strategy: string, template: string) => {
+    try {
+      await navigator.clipboard.writeText(template);
+      setCopiedStrategy(strategy);
+      setTimeout(() => setCopiedStrategy(null), 2000);
+    } catch (error) {
+      console.error("Failed to copy:", error);
+    }
+  };
+
+  const handleCopyScript = async (scriptIndex: number, scriptText: string) => {
+    const scriptWithLink = scriptText.replace('[your link]', partnerLink);
+    try {
+      await navigator.clipboard.writeText(scriptWithLink);
+      setCopiedScript(scriptIndex);
+      setTimeout(() => setCopiedScript(null), 2000);
+    } catch (error) {
+      console.error("Failed to copy:", error);
+    }
+  };
+
+  const salesScripts = [
+    {
+      title: "Script 1: After Service Completion",
+      text: "Thanks for choosing us! Want to keep your bins clean year-round? Check out Bin Blast Co.'s subscription service - [your link]. They offer monthly and bi-weekly cleaning plans."
+    },
+    {
+      title: "Script 2: Invoice Follow-up",
+      text: "Your invoice is attached. As a bonus, here's a special link to Bin Blast Co.'s professional bin cleaning service: [your link]. They offer flexible plans perfect for maintaining clean bins between our visits."
+    },
+    {
+      title: "Script 3: Social Media Post",
+      text: "Partnered with Bin Blast Co. to offer you the best bin cleaning service! Use my link to get started: [your link]. They handle everything - you just enjoy clean bins!"
+    }
+  ];
+
+  const strategyTemplates = {
+    invoices: `Add this to your invoices:\n\n"Keep your bins clean year-round! Check out Bin Blast Co.'s subscription service: ${partnerLink}"`,
+    text: `Text message template:\n\n"Thanks for choosing us! Want to keep your bins clean year-round? Check out Bin Blast Co.'s subscription service: ${partnerLink}. They offer monthly and bi-weekly cleaning plans."`,
+    website: `Add this to your website:\n\n"Partnered with Bin Blast Co. for professional bin cleaning services. Book your cleaning: ${partnerLink}"`,
+    email: `Email template:\n\n"Your invoice is attached. As a bonus, here's a special link to Bin Blast Co.'s professional bin cleaning service: ${partnerLink}. They offer flexible plans perfect for maintaining clean bins between our visits."`
   };
 
   const handleConnectStripe = async () => {
@@ -880,21 +1086,36 @@ export default function PartnerDashboardPage() {
                   <h2 style={{ fontSize: "1.75rem", fontWeight: "700", color: "#111827", marginBottom: "0.5rem" }}>How to Sell Bin Blast Co.</h2>
                   <p style={{ color: "#6b7280" }}>A guided playbook to maximize your earnings</p>
                 </div>
-                <button style={{
-                  padding: "0.5rem 1rem",
-                  background: "#f3f4f6",
-                  borderRadius: "8px",
-                  fontSize: "0.875rem",
-                  fontWeight: "600",
-                  color: "#374151",
-                  cursor: "pointer",
-                  border: "none",
-                  transition: "all 0.2s ease"
-                }} onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#e5e7eb";
-                }} onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#f3f4f6";
-                }}>
+                <button 
+                  onClick={handleDownloadPDF}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    background: "#2563eb",
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    color: "#ffffff",
+                    cursor: "pointer",
+                    border: "none",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem"
+                  }} 
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#1d4ed8";
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(37, 99, 235, 0.3)";
+                  }} 
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#2563eb";
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  <svg style={{ width: "16px", height: "16px" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
                   Download PDF
                 </button>
               </div>
@@ -904,99 +1125,179 @@ export default function PartnerDashboardPage() {
                 gap: "1rem",
                 marginBottom: "1.5rem"
               }}>
-                <div style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "0.75rem",
-                  padding: "1rem",
-                  background: "#f9fafb",
-                  borderRadius: "12px",
-                  transition: "all 0.2s ease",
-                  cursor: "pointer"
-                }} onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f3f4f6";
-                }} onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#f9fafb";
-                }}>
-                  <div style={{ padding: "0.5rem", background: "#dbeafe", borderRadius: "8px", flexShrink: 0 }}>
-                    <svg style={{ width: "20px", height: "20px", color: "#2563eb" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div 
+                  onClick={() => handleCopyStrategy('invoices', strategyTemplates.invoices)}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.75rem",
+                    padding: "1rem",
+                    background: copiedStrategy === 'invoices' ? "#dcfce7" : "#f9fafb",
+                    borderRadius: "12px",
+                    transition: "all 0.2s ease",
+                    cursor: "pointer",
+                    border: copiedStrategy === 'invoices' ? "2px solid #16a34a" : "2px solid transparent",
+                    transform: copiedStrategy === 'invoices' ? "scale(1.02)" : "scale(1)"
+                  }} 
+                  onMouseEnter={(e) => {
+                    if (copiedStrategy !== 'invoices') {
+                      e.currentTarget.style.background = "#f3f4f6";
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
+                    }
+                  }} 
+                  onMouseLeave={(e) => {
+                    if (copiedStrategy !== 'invoices') {
+                      e.currentTarget.style.background = "#f9fafb";
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }
+                  }}
+                >
+                  <div style={{ padding: "0.5rem", background: copiedStrategy === 'invoices' ? "#16a34a" : "#dbeafe", borderRadius: "8px", flexShrink: 0 }}>
+                    <svg style={{ width: "20px", height: "20px", color: copiedStrategy === 'invoices' ? "#ffffff" : "#2563eb" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <div>
-                    <h3 style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>Put on invoices</h3>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                      <h3 style={{ fontWeight: "600", color: "#111827" }}>Put on invoices</h3>
+                      {copiedStrategy === 'invoices' && (
+                        <span style={{ fontSize: "0.75rem", color: "#16a34a", fontWeight: "600" }}>✓ Copied!</span>
+                      )}
+                    </div>
                     <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>Add your booking link to every invoice and receipt</p>
                   </div>
                 </div>
-                <div style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "0.75rem",
-                  padding: "1rem",
-                  background: "#f9fafb",
-                  borderRadius: "12px",
-                  transition: "all 0.2s ease",
-                  cursor: "pointer"
-                }} onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f3f4f6";
-                }} onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#f9fafb";
-                }}>
-                  <div style={{ padding: "0.5rem", background: "#dcfce7", borderRadius: "8px", flexShrink: 0 }}>
-                    <svg style={{ width: "20px", height: "20px", color: "#16a34a" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div 
+                  onClick={() => handleCopyStrategy('text', strategyTemplates.text)}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.75rem",
+                    padding: "1rem",
+                    background: copiedStrategy === 'text' ? "#dcfce7" : "#f9fafb",
+                    borderRadius: "12px",
+                    transition: "all 0.2s ease",
+                    cursor: "pointer",
+                    border: copiedStrategy === 'text' ? "2px solid #16a34a" : "2px solid transparent",
+                    transform: copiedStrategy === 'text' ? "scale(1.02)" : "scale(1)"
+                  }} 
+                  onMouseEnter={(e) => {
+                    if (copiedStrategy !== 'text') {
+                      e.currentTarget.style.background = "#f3f4f6";
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
+                    }
+                  }} 
+                  onMouseLeave={(e) => {
+                    if (copiedStrategy !== 'text') {
+                      e.currentTarget.style.background = "#f9fafb";
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }
+                  }}
+                >
+                  <div style={{ padding: "0.5rem", background: copiedStrategy === 'text' ? "#16a34a" : "#dcfce7", borderRadius: "8px", flexShrink: 0 }}>
+                    <svg style={{ width: "20px", height: "20px", color: copiedStrategy === 'text' ? "#ffffff" : "#16a34a" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                   </div>
-                  <div>
-                    <h3 style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>Text after service</h3>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                      <h3 style={{ fontWeight: "600", color: "#111827" }}>Text after service</h3>
+                      {copiedStrategy === 'text' && (
+                        <span style={{ fontSize: "0.75rem", color: "#16a34a", fontWeight: "600" }}>✓ Copied!</span>
+                      )}
+                    </div>
                     <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>Send your link via text message after completing a service</p>
                   </div>
                 </div>
-                <div style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "0.75rem",
-                  padding: "1rem",
-                  background: "#f9fafb",
-                  borderRadius: "12px",
-                  transition: "all 0.2s ease",
-                  cursor: "pointer"
-                }} onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f3f4f6";
-                }} onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#f9fafb";
-                }}>
-                  <div style={{ padding: "0.5rem", background: "#e9d5ff", borderRadius: "8px", flexShrink: 0 }}>
-                    <svg style={{ width: "20px", height: "20px", color: "#9333ea" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div 
+                  onClick={() => handleCopyStrategy('website', strategyTemplates.website)}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.75rem",
+                    padding: "1rem",
+                    background: copiedStrategy === 'website' ? "#dcfce7" : "#f9fafb",
+                    borderRadius: "12px",
+                    transition: "all 0.2s ease",
+                    cursor: "pointer",
+                    border: copiedStrategy === 'website' ? "2px solid #16a34a" : "2px solid transparent",
+                    transform: copiedStrategy === 'website' ? "scale(1.02)" : "scale(1)"
+                  }} 
+                  onMouseEnter={(e) => {
+                    if (copiedStrategy !== 'website') {
+                      e.currentTarget.style.background = "#f3f4f6";
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
+                    }
+                  }} 
+                  onMouseLeave={(e) => {
+                    if (copiedStrategy !== 'website') {
+                      e.currentTarget.style.background = "#f9fafb";
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }
+                  }}
+                >
+                  <div style={{ padding: "0.5rem", background: copiedStrategy === 'website' ? "#16a34a" : "#e9d5ff", borderRadius: "8px", flexShrink: 0 }}>
+                    <svg style={{ width: "20px", height: "20px", color: copiedStrategy === 'website' ? "#ffffff" : "#9333ea" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                     </svg>
                   </div>
-                  <div>
-                    <h3 style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>Add to website</h3>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                      <h3 style={{ fontWeight: "600", color: "#111827" }}>Add to website</h3>
+                      {copiedStrategy === 'website' && (
+                        <span style={{ fontSize: "0.75rem", color: "#16a34a", fontWeight: "600" }}>✓ Copied!</span>
+                      )}
+                    </div>
                     <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>Include your booking link on your website or service menu</p>
                   </div>
                 </div>
-                <div style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "0.75rem",
-                  padding: "1rem",
-                  background: "#f9fafb",
-                  borderRadius: "12px",
-                  transition: "all 0.2s ease",
-                  cursor: "pointer"
-                }} onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f3f4f6";
-                }} onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#f9fafb";
-                }}>
-                  <div style={{ padding: "0.5rem", background: "#fed7aa", borderRadius: "8px", flexShrink: 0 }}>
-                    <svg style={{ width: "20px", height: "20px", color: "#ea580c" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div 
+                  onClick={() => handleCopyStrategy('email', strategyTemplates.email)}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.75rem",
+                    padding: "1rem",
+                    background: copiedStrategy === 'email' ? "#dcfce7" : "#f9fafb",
+                    borderRadius: "12px",
+                    transition: "all 0.2s ease",
+                    cursor: "pointer",
+                    border: copiedStrategy === 'email' ? "2px solid #16a34a" : "2px solid transparent",
+                    transform: copiedStrategy === 'email' ? "scale(1.02)" : "scale(1)"
+                  }} 
+                  onMouseEnter={(e) => {
+                    if (copiedStrategy !== 'email') {
+                      e.currentTarget.style.background = "#f3f4f6";
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
+                    }
+                  }} 
+                  onMouseLeave={(e) => {
+                    if (copiedStrategy !== 'email') {
+                      e.currentTarget.style.background = "#f9fafb";
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }
+                  }}
+                >
+                  <div style={{ padding: "0.5rem", background: copiedStrategy === 'email' ? "#16a34a" : "#fed7aa", borderRadius: "8px", flexShrink: 0 }}>
+                    <svg style={{ width: "20px", height: "20px", color: copiedStrategy === 'email' ? "#ffffff" : "#ea580c" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <div>
-                    <h3 style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>Follow-up emails</h3>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                      <h3 style={{ fontWeight: "600", color: "#111827" }}>Follow-up emails</h3>
+                      {copiedStrategy === 'email' && (
+                        <span style={{ fontSize: "0.75rem", color: "#16a34a", fontWeight: "600" }}>✓ Copied!</span>
+                      )}
+                    </div>
                     <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>Include your link in customer follow-up emails</p>
                   </div>
                 </div>
@@ -1040,18 +1341,87 @@ export default function PartnerDashboardPage() {
                 }}>
                   <h3 style={{ fontWeight: "700", fontSize: "1.125rem", color: "#111827", marginBottom: "1rem" }}>Top Performing Sales Scripts</h3>
                   <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                    <div style={{ padding: "1rem", background: "#ffffff", borderRadius: "8px" }}>
-                      <h4 style={{ fontWeight: "600", color: "#111827", marginBottom: "0.5rem" }}>Script 1: After Service Completion</h4>
-                      <p style={{ fontSize: "0.875rem", color: "#374151", fontStyle: "italic" }}>"Thanks for choosing us! Want to keep your bins clean year-round? Check out Bin Blast Co.'s subscription service - [your link]. They offer monthly and bi-weekly cleaning plans."</p>
-                    </div>
-                    <div style={{ padding: "1rem", background: "#ffffff", borderRadius: "8px" }}>
-                      <h4 style={{ fontWeight: "600", color: "#111827", marginBottom: "0.5rem" }}>Script 2: Invoice Follow-up</h4>
-                      <p style={{ fontSize: "0.875rem", color: "#374151", fontStyle: "italic" }}>"Your invoice is attached. As a bonus, here's a special link to Bin Blast Co.'s professional bin cleaning service: [your link]. They offer flexible plans perfect for maintaining clean bins between our visits."</p>
-                    </div>
-                    <div style={{ padding: "1rem", background: "#ffffff", borderRadius: "8px" }}>
-                      <h4 style={{ fontWeight: "600", color: "#111827", marginBottom: "0.5rem" }}>Script 3: Social Media Post</h4>
-                      <p style={{ fontSize: "0.875rem", color: "#374151", fontStyle: "italic" }}>"Partnered with Bin Blast Co. to offer you the best bin cleaning service! Use my link to get started: [your link]. They handle everything - you just enjoy clean bins!"</p>
-                    </div>
+                    {salesScripts.map((script, index) => {
+                      const scriptWithLink = script.text.replace('[your link]', partnerLink);
+                      return (
+                        <div key={index} style={{ 
+                          padding: "1rem", 
+                          background: "#ffffff", 
+                          borderRadius: "8px",
+                          border: copiedScript === index ? "2px solid #16a34a" : "1px solid #e5e7eb",
+                          transition: "all 0.2s ease"
+                        }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                            <h4 style={{ fontWeight: "600", color: "#111827" }}>{script.title}</h4>
+                            <button
+                              onClick={() => handleCopyScript(index, script.text)}
+                              style={{
+                                padding: "0.375rem 0.75rem",
+                                background: copiedScript === index ? "#16a34a" : "#2563eb",
+                                color: "#ffffff",
+                                border: "none",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                fontWeight: "600",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                                transition: "all 0.2s ease",
+                                flexShrink: 0
+                              }}
+                              onMouseEnter={(e) => {
+                                if (copiedScript !== index) {
+                                  e.currentTarget.style.background = "#1d4ed8";
+                                  e.currentTarget.style.transform = "scale(1.05)";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (copiedScript !== index) {
+                                  e.currentTarget.style.background = "#2563eb";
+                                  e.currentTarget.style.transform = "scale(1)";
+                                }
+                              }}
+                            >
+                              {copiedScript === index ? (
+                                <>
+                                  <svg style={{ width: "14px", height: "14px" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  Copied!
+                                </>
+                              ) : (
+                                <>
+                                  <svg style={{ width: "14px", height: "14px" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                  Copy
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <p style={{ 
+                            fontSize: "0.875rem", 
+                            color: "#374151", 
+                            fontStyle: "italic",
+                            lineHeight: "1.6",
+                            wordBreak: "break-word"
+                          }}>
+                            "{scriptWithLink}"
+                          </p>
+                          <div style={{ 
+                            marginTop: "0.5rem", 
+                            padding: "0.5rem", 
+                            background: "#f0f9ff", 
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            color: "#0369a1"
+                          }}>
+                            <strong>Your link:</strong> <span style={{ fontFamily: "monospace", wordBreak: "break-all" }}>{partnerLink}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
