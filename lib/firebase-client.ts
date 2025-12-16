@@ -506,15 +506,46 @@ export async function sendPasswordResetEmail(email: string) {
   const { safeImportAuth } = await import("./firebase-module-loader");
   const firebaseAuth = await safeImportAuth();
   
-  // Configure action code settings for password reset email
-  const actionCodeSettings = {
-    url: typeof window !== 'undefined' 
-      ? `${window.location.origin}/reset-password`
-      : process.env.NEXT_PUBLIC_APP_URL || 'https://binblastco.com/reset-password',
-    handleCodeInApp: false, // Open link in browser, not app
-  };
+  // Get the current origin for the redirect URL
+  // Use the origin from window.location if available, otherwise use environment variable
+  let continueUrl: string | undefined;
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin;
+    // Only use actionCodeSettings if we're on a production domain (not localhost)
+    // Firebase requires domains to be authorized in Firebase Console
+    if (origin && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+      continueUrl = `${origin}/reset-password`;
+    }
+  } else {
+    // Server-side: use environment variable if set
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (appUrl && !appUrl.includes('localhost')) {
+      continueUrl = `${appUrl}/reset-password`;
+    }
+  }
   
-  return await firebaseAuth.sendPasswordResetEmail(authInstance, email, actionCodeSettings);
+  try {
+    // Try with custom redirect URL if we have a valid domain
+    if (continueUrl) {
+      const actionCodeSettings = {
+        url: continueUrl,
+        handleCodeInApp: false, // Open link in browser, not app
+      };
+      return await firebaseAuth.sendPasswordResetEmail(authInstance, email, actionCodeSettings);
+    } else {
+      // No valid domain or localhost - use default Firebase redirect
+      // This will redirect to Firebase's default password reset page
+      return await firebaseAuth.sendPasswordResetEmail(authInstance, email);
+    }
+  } catch (error: any) {
+    // If domain not authorized error, fallback to default Firebase redirect
+    if (error.code === 'auth/unauthorized-continue-uri' || error.message?.includes('unauthorized-continue-uri')) {
+      console.warn('[Password Reset] Domain not authorized, using default Firebase redirect');
+      // Retry without actionCodeSettings - Firebase will use default redirect page
+      return await firebaseAuth.sendPasswordResetEmail(authInstance, email);
+    }
+    throw error;
+  }
 }
 
 // Initialize Firebase early if on client-side

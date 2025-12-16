@@ -39,6 +39,12 @@ function ForgotPasswordForm() {
         setError("Invalid email address.");
       } else if (err.code === "auth/too-many-requests") {
         setError("Too many password reset requests. Please try again later.");
+      } else if (err.code === "auth/unauthorized-continue-uri" || err.message?.includes("unauthorized-continue-uri")) {
+        setError("Domain not authorized. The password reset email will use Firebase's default page. Please check your email inbox.");
+        // Still show success since email was sent, just with default redirect
+        setSuccess(true);
+        setLoading(false);
+        return;
       } else {
         setError(err.message || "Failed to send password reset email. Please try again.");
       }
