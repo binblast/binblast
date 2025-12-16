@@ -185,8 +185,8 @@ function RegisterForm() {
     e.preventDefault();
     setError(null);
 
-    // Require session_id for customer registration (employee registration is handled separately)
-    if (!sessionId && !redirectParam) {
+    // Require session_id for customer registration (employee registration and partner signup are handled separately)
+    if (!sessionId && !redirectParam && !isPartnerSignup) {
       setError("Please complete payment before creating an account. Select a service plan first.");
       router.push("/#pricing");
       return;
@@ -492,12 +492,18 @@ function RegisterForm() {
       }
       
       // Redirect logic:
-      // 1. If redirect parameter exists (or partner dashboard) -> use it
-      // 2. If user has already paid (has stripeData) -> go to dashboard
-      // 3. If user has referral code -> go to pricing page to choose plan (with referral code preserved)
-      // 4. If user has selected a plan -> go to pricing page to complete checkout
-      // 5. Otherwise -> go to pricing page to choose plan
-      if (finalRedirect) {
+      // 1. If partner signup -> redirect to partner application page
+      // 2. If redirect parameter exists (or partner dashboard) -> use it
+      // 3. If user has already paid (has stripeData) -> go to dashboard
+      // 4. If user has referral code -> go to pricing page to choose plan (with referral code preserved)
+      // 5. If user has selected a plan -> go to pricing page to complete checkout
+      // 6. Otherwise -> go to pricing page to choose plan
+      if (isPartnerSignup) {
+        // Partner signup - redirect to partner application page
+        setTimeout(() => {
+          router.push("/partners/apply");
+        }, 2000);
+      } else if (finalRedirect) {
         // Redirect to the specified page (e.g., partner application or partner dashboard)
         setTimeout(() => {
           router.push(finalRedirect);
@@ -611,9 +617,13 @@ function RegisterForm() {
                 <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "0.5rem", color: "#16a34a" }}>
                   Account Created!
                 </h2>
-                <p style={{ color: "var(--text-light)" }}>Redirecting to your dashboard...</p>
+                <p style={{ color: "var(--text-light)" }}>
+                  {isPartnerSignup 
+                    ? "Redirecting to partner application..." 
+                    : "Redirecting to your dashboard..."}
+                </p>
               </div>
-            ) : !sessionId && !redirectParam ? (
+            ) : !sessionId && !redirectParam && !isPartnerSignup ? (
               <div style={{ textAlign: "center", padding: "3rem 0" }}>
                 <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem", color: "#111827" }}>
                   Select a Service Plan First

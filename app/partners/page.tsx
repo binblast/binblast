@@ -209,7 +209,7 @@ export default function PartnersPage() {
                   </p>
                   <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
                     <Link 
-                      href="/register"
+                      href="/register?partner=true"
                       className="btn btn-primary"
                       style={{
                         display: "inline-block",
