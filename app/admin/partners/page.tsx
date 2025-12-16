@@ -16,7 +16,7 @@ const ALLOWED_ADMIN_EMAILS = [
 
 interface Partner {
   id: string;
-  userId: string;
+  userId?: string | null;
   businessName: string;
   ownerName: string;
   email: string;
@@ -47,6 +47,8 @@ export default function AdminPartnersPage() {
   const [partnerStats, setPartnerStats] = useState<Record<string, PartnerStats>>({});
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [assignUserEmail, setAssignUserEmail] = useState("");
+  const [assigningUser, setAssigningUser] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
@@ -210,6 +212,42 @@ export default function AdminPartnersPage() {
     } catch (err) {
       console.error("Error updating revenue share:", err);
       alert("Failed to update revenue share");
+    }
+  }
+
+  async function assignUserToPartner(partnerId: string, userEmail: string) {
+    if (!userEmail || !userEmail.includes("@")) {
+      alert("Please enter a valid email address");
+      return;
+    }
+
+    setAssigningUser(true);
+    try {
+      const response = await fetch("/api/admin/partners/assign-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          partnerId,
+          userEmail: userEmail.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to assign user");
+      }
+
+      alert(`✅ ${data.message}\n\nPartner ID: ${data.partnerId}\nUser ID: ${data.userId}`);
+      setAssignUserEmail("");
+      loadPartners();
+    } catch (err: any) {
+      console.error("Error assigning user:", err);
+      alert(`Failed to assign user: ${err.message}`);
+    } finally {
+      setAssigningUser(false);
     }
   }
 
@@ -476,6 +514,65 @@ export default function AdminPartnersPage() {
                 </div>
                 <div style={{ fontSize: "1rem", fontWeight: "600", color: "var(--text-dark)" }}>
                   {selectedPartner.email}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.25rem" }}>
+                  User ID
+                </div>
+                <div style={{ fontSize: "1rem", fontWeight: "600", color: selectedPartner.userId ? "var(--text-dark)" : "#dc2626" }}>
+                  {selectedPartner.userId || "Not assigned"}
+                </div>
+              </div>
+              <div style={{ 
+                padding: "1rem", 
+                background: "#f0f9ff", 
+                borderRadius: "8px", 
+                border: "1px solid #bae6fd",
+                marginTop: "0.5rem"
+              }}>
+                <div style={{ fontSize: "0.875rem", color: "#0369a1", marginBottom: "0.5rem", fontWeight: "600" }}>
+                  Assign User Account
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <input
+                    type="email"
+                    placeholder="Enter user email (e.g., sylvannious98@gmail.com)"
+                    value={assignUserEmail}
+                    onChange={(e) => setAssignUserEmail(e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: "0.5rem 0.75rem",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "6px",
+                      fontSize: "0.875rem"
+                    }}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter" && assignUserEmail) {
+                        assignUserToPartner(selectedPartner.id, assignUserEmail);
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => assignUserToPartner(selectedPartner.id, assignUserEmail)}
+                    disabled={assigningUser || !assignUserEmail}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      background: assigningUser ? "#9ca3af" : "#0369a1",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      cursor: assigningUser || !assignUserEmail ? "not-allowed" : "pointer",
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    {assigningUser ? "Assigning..." : "Assign User"}
+                  </button>
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.5rem" }}>
+                  Enter the email address of the user account to link to this partner account.
                 </div>
               </div>
               <div>
