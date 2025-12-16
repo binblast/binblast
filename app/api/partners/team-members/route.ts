@@ -68,6 +68,8 @@ export async function GET(req: NextRequest) {
         payRatePerJob: data.payRatePerJob || 0,
         hiringStatus: data.hiringStatus || "active",
         partnerId: data.partnerId || null,
+        tempPassword: data.tempPassword || null,
+        hasChangedPassword: data.hasChangedPassword || false,
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
       };
@@ -234,6 +236,8 @@ export async function POST(req: NextRequest) {
         hiringStatus: "active",
         hiredDate: serverTimestamp(),
         hiredBy: userId || finalPartnerId,
+        tempPassword: tempPassword, // Store temporary password
+        hasChangedPassword: false, // Track if user has changed password
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });

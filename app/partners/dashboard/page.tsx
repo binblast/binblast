@@ -66,6 +66,8 @@ interface TeamMember {
   serviceArea: string[];
   payRatePerJob: number;
   hiringStatus: string;
+  tempPassword?: string;
+  hasChangedPassword?: boolean;
 }
 
 function TeamMemberRow({ member }: { member: TeamMember }) {
@@ -73,6 +75,8 @@ function TeamMemberRow({ member }: { member: TeamMember }) {
     status: string;
     completed: boolean;
   } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
 
   useEffect(() => {
     async function checkTrainingStatus() {
@@ -92,6 +96,20 @@ function TeamMemberRow({ member }: { member: TeamMember }) {
     }
     checkTrainingStatus();
   }, [member.id]);
+
+  const handleCopyPassword = async () => {
+    if (member.tempPassword) {
+      try {
+        await navigator.clipboard.writeText(member.tempPassword);
+        setCopiedPassword(true);
+        setTimeout(() => setCopiedPassword(false), 2000);
+      } catch (error) {
+        console.error("Failed to copy password:", error);
+      }
+    }
+  };
+
+  const hasTempPassword = member.tempPassword && !member.hasChangedPassword;
 
   return (
     <tr style={{ borderBottom: "1px solid #f3f4f6" }} onMouseEnter={(e) => {
@@ -130,6 +148,93 @@ function TeamMemberRow({ member }: { member: TeamMember }) {
             color: "#6b7280"
           }}>
             Checking...
+          </span>
+        )}
+      </td>
+      <td style={{ padding: "0.75rem 1rem" }}>
+        {hasTempPassword ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>Temp Password:</span>
+              <button
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "0.25rem 0.5rem",
+                  fontSize: "0.75rem",
+                  color: "#2563eb",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem"
+                }}
+              >
+                {showPassword ? (
+                  <>
+                    <span style={{ fontFamily: "monospace", fontWeight: "600" }}>{member.tempPassword}</span>
+                    <svg style={{ width: "14px", height: "14px" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.36m0 0L21 21" />
+                    </svg>
+                  </>
+                ) : (
+                  <>
+                    <span>••••••••</span>
+                    <svg style={{ width: "14px", height: "14px" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleCopyPassword}
+                style={{
+                  background: copiedPassword ? "#16a34a" : "#f3f4f6",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "0.25rem 0.5rem",
+                  borderRadius: "4px",
+                  fontSize: "0.75rem",
+                  color: copiedPassword ? "#ffffff" : "#374151",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem"
+                }}
+                onMouseEnter={(e) => {
+                  if (!copiedPassword) {
+                    e.currentTarget.style.background = "#e5e7eb";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = copiedPassword ? "#16a34a" : "#f3f4f6";
+                }}
+              >
+                {copiedPassword ? (
+                  <>
+                    <svg style={{ width: "12px", height: "12px" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <svg style={{ width: "12px", height: "12px" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy
+                  </>
+                )}
+              </button>
+            </div>
+            <span style={{ fontSize: "0.7rem", color: "#9ca3af", fontStyle: "italic" }}>
+              Available until changed
+            </span>
+          </div>
+        ) : (
+          <span style={{ fontSize: "0.875rem", color: "#16a34a", fontWeight: "600" }}>
+            ✓ Password Changed
           </span>
         )}
       </td>
@@ -1788,7 +1893,7 @@ export default function PartnerDashboardPage() {
                     </thead>
                     <tbody>
                       <tr style={{ borderBottom: "1px solid #f3f4f6" }}>
-                        <td colSpan={5} style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
+                        <td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
                           <svg style={{ width: "48px", height: "48px", margin: "0 auto 0.75rem", color: "#d1d5db" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                           </svg>
@@ -1807,6 +1912,7 @@ export default function PartnerDashboardPage() {
                         <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Email</th>
                         <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Assigned Area</th>
                         <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Training Status</th>
+                        <th style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Password</th>
                         <th style={{ padding: "0.75rem 1rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Pay Rate</th>
                       </tr>
                     </thead>
