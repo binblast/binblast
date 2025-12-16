@@ -47,37 +47,49 @@ export async function POST(req: NextRequest) {
     let connectedAccountId = partnerData.stripeConnectedAccountId;
 
     if (!connectedAccountId) {
-      // Create a new Stripe Connect account
-      const account = await stripe.accounts.create({
-        type: 'express',
-        country: 'US',
-        email: partnerData.email,
-        capabilities: {
-          transfers: { requested: true },
-        },
-        business_type: 'individual', // or 'company' based on partner data
-        business_profile: {
-          name: partnerData.businessName,
-          support_email: partnerData.email,
-        },
-      });
+      try {
+        // Create a new Stripe Connect account
+        const account = await stripe.accounts.create({
+          type: 'express',
+          country: 'US',
+          email: partnerData.email,
+          capabilities: {
+            transfers: { requested: true },
+          },
+          business_type: partnerData.businessType === 'company' ? 'company' : 'individual',
+          business_profile: {
+            name: partnerData.businessName || partnerData.businessName || 'Partner Account',
+            support_email: partnerData.email,
+          },
+        });
 
-      connectedAccountId = account.id;
+        connectedAccountId = account.id;
 
-      // Save the connected account ID to the partner document
-      await updateDoc(partnerRef, {
-        stripeConnectedAccountId: connectedAccountId,
-        stripeConnectStatus: 'pending',
-        updatedAt: serverTimestamp(),
-      });
+        // Save the connected account ID to the partner document
+        await updateDoc(partnerRef, {
+          stripeConnectedAccountId: connectedAccountId,
+          stripeConnectStatus: 'pending',
+          updatedAt: serverTimestamp(),
+        });
+      } catch (accountError: any) {
+        // If account creation fails, check if it's a Connect not enabled error
+        if (accountError.message?.includes("Connect") || accountError.type === "invalid_request_error") {
+          throw new Error("Stripe Connect is not enabled. Please enable Stripe Connect in your Stripe Dashboard first.");
+        }
+        throw accountError;
+      }
     }
 
-    // Create account link for onboarding
+    // Check if account needs onboarding or update
+    const account = await stripe.accounts.retrieve(connectedAccountId);
+    const needsOnboarding = !account.details_submitted || !account.charges_enabled || !account.payouts_enabled;
+    
+    // Create account link for onboarding or update
     const accountLink = await stripe.accountLinks.create({
       account: connectedAccountId,
       refresh_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://binblast.vercel.app'}/partners/dashboard?stripe_connect=refresh`,
       return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://binblast.vercel.app'}/partners/dashboard?stripe_connect=success`,
-      type: 'account_onboarding',
+      type: needsOnboarding ? 'account_onboarding' : 'account_update',
     });
 
     return NextResponse.json({
@@ -86,6 +98,19 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("Error creating Stripe Connect account link:", err);
+    
+    // Check if Stripe Connect is not enabled
+    if (err.message?.includes("Connect") || err.type === "invalid_request_error") {
+      return NextResponse.json(
+        { 
+          error: "Stripe Connect is not enabled on this account. Please enable Stripe Connect in your Stripe Dashboard first.",
+          requiresConnectSetup: true,
+          stripeConnectDocs: "https://stripe.com/docs/connect"
+        },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
       { error: err.message || "Failed to create account link" },
       { status: 500 }

@@ -385,10 +385,26 @@ export default function PartnerDashboardPage() {
       if (response.ok) {
         const data = await response.json();
         // Redirect to Stripe onboarding
-        window.location.href = data.url;
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          alert("No redirect URL received from Stripe");
+        }
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to create Stripe Connect account");
+        if (error.requiresConnectSetup) {
+          alert(
+            `${error.error}\n\n` +
+            `To enable Stripe Connect:\n` +
+            `1. Go to Stripe Dashboard → Settings → Connect\n` +
+            `2. Enable "Express accounts"\n` +
+            `3. Configure your Connect settings\n` +
+            `4. Try connecting again\n\n` +
+            `Learn more: ${error.stripeConnectDocs}`
+          );
+        } else {
+          alert(error.error || "Failed to create Stripe Connect account");
+        }
       }
     } catch (err) {
       console.error("Error connecting Stripe:", err);
