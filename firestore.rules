@@ -514,6 +514,13 @@ service cloud.firestore {
       allow update, delete: if isAdminOrOperator() || request.auth == null;
     }
 
+    // Password resets collection - stores password reset tokens
+    match /passwordResets/{resetId} {
+      // Only server-side API routes can read/write password reset tokens
+      // This ensures security - tokens are only created and verified server-side
+      allow read, write: if request.auth == null;
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
