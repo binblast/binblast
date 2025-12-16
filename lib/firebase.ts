@@ -48,3 +48,8 @@ export async function updateProfile(user: any, profile: { displayName?: string; 
   const { updateProfile: fn } = await import("./firebase-client");
   return fn(user, profile);
 }
+
+export async function sendPasswordResetEmail(email: string) {
+  const { sendPasswordResetEmail: fn } = await import("./firebase-client");
+  return fn(email);
+}

@@ -496,6 +496,27 @@ export async function updateProfile(user: any, profile: { displayName?: string; 
   return await firebaseAuth.updateProfile(user, profile);
 }
 
+export async function sendPasswordResetEmail(email: string) {
+  // CRITICAL: Wait for Firebase to be initialized before importing auth module
+  const authInstance = await getAuthInstance();
+  if (!authInstance) {
+    throw new Error("Firebase auth is not available");
+  }
+  // Use safe import to ensure app exists before importing auth module
+  const { safeImportAuth } = await import("./firebase-module-loader");
+  const firebaseAuth = await safeImportAuth();
+  
+  // Configure action code settings for password reset email
+  const actionCodeSettings = {
+    url: typeof window !== 'undefined' 
+      ? `${window.location.origin}/reset-password`
+      : process.env.NEXT_PUBLIC_APP_URL || 'https://binblastco.com/reset-password',
+    handleCodeInApp: false, // Open link in browser, not app
+  };
+  
+  return await firebaseAuth.sendPasswordResetEmail(authInstance, email, actionCodeSettings);
+}
+
 // Initialize Firebase early if on client-side
 // This ensures Firebase is ready before page chunks load
 // CRITICAL: Start initialization immediately when module loads

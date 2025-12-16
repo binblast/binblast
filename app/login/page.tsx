@@ -20,6 +20,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const passwordReset = searchParams.get("passwordReset") === "true";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -145,6 +146,19 @@ function LoginForm() {
               border: "1px solid #e5e7eb"
             }}>
               <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                {passwordReset && (
+                  <div style={{
+                    padding: "0.75rem 1rem",
+                    background: "#dcfce7",
+                    border: "1px solid #86efac",
+                    borderRadius: "8px",
+                    color: "#166534",
+                    fontSize: "0.875rem",
+                    marginBottom: "0.5rem"
+                  }}>
+                    ✓ Your password has been reset successfully. Please log in with your new password.
+                  </div>
+                )}
                 <div>
                   <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
                     Email
@@ -169,9 +183,28 @@ function LoginForm() {
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                    Password
-                  </label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                    <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", color: "var(--text-dark)" }}>
+                      Password
+                    </label>
+                    <Link 
+                      href="/forgot-password" 
+                      style={{ 
+                        fontSize: "0.875rem", 
+                        color: "var(--primary-color)", 
+                        fontWeight: "500",
+                        textDecoration: "none"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.textDecoration = "underline";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.textDecoration = "none";
+                      }}
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
                   <input
                     type="password"
                     required
