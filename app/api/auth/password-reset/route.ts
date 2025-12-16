@@ -122,6 +122,9 @@ export async function POST(req: NextRequest) {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour expiration
 
+      // Create reset link with custom token (do this first so it's always defined)
+      resetLink = `${baseUrl}/reset-password?token=${resetToken}`;
+
       // Store reset token in Firestore
       // Try Admin SDK first for server-side operations, fall back to client SDK
       try {
@@ -151,30 +154,38 @@ export async function POST(req: NextRequest) {
         } else {
           throw new Error("Admin SDK not configured");
         }
-      } catch (adminError) {
+      } catch (adminError: any) {
         // Fall back to client SDK (should work with updated Firestore rules)
-        const { getDbInstance } = await import("@/lib/firebase");
-        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-        const db = await getDbInstance();
-        
-        if (db) {
-          const firestore = await safeImportFirestore();
-          const { collection, addDoc, serverTimestamp } = firestore;
+        console.log("[Password Reset] Admin SDK Firestore failed, trying client SDK:", adminError?.message);
+        try {
+          const { getDbInstance } = await import("@/lib/firebase");
+          const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+          const db = await getDbInstance();
           
-          await addDoc(collection(db, "passwordResets"), {
-            email: email.toLowerCase(),
-            token: resetToken,
-            expiresAt: expiresAt,
-            createdAt: serverTimestamp(),
-            used: false,
-          });
-        } else {
-          console.error("[Password Reset] Failed to initialize Firestore");
+          if (db) {
+            const firestore = await safeImportFirestore();
+            const { collection, addDoc, serverTimestamp } = firestore;
+            
+            await addDoc(collection(db, "passwordResets"), {
+              email: email.toLowerCase(),
+              token: resetToken,
+              expiresAt: expiresAt,
+              createdAt: serverTimestamp(),
+              used: false,
+            });
+            console.log("[Password Reset] Token stored successfully in Firestore");
+          } else {
+            console.error("[Password Reset] Failed to initialize Firestore - db is null");
+            // Continue anyway - token will still be generated and email sent
+            // The reset won't work without Firestore, but at least we don't fail completely
+          }
+        } catch (firestoreError: any) {
+          console.error("[Password Reset] Firestore write failed:", firestoreError?.message || firestoreError);
+          console.error("[Password Reset] Firestore error code:", firestoreError?.code);
+          // Continue anyway - token will still be generated and email sent
+          // Note: Reset won't work without Firestore storage, but we'll still try to send email
         }
       }
-
-      // Create reset link with custom token
-      resetLink = `${baseUrl}/reset-password?token=${resetToken}`;
     }
 
     // Send email via EmailJS
@@ -204,6 +215,13 @@ export async function POST(req: NextRequest) {
       },
     };
 
+    console.log("[Password Reset] Sending email via EmailJS:", {
+      serviceId: emailjsServiceId,
+      templateId: emailjsTemplateId,
+      hasPublicKey: !!emailjsPublicKey,
+      email: email,
+    });
+
     const emailResponse = await fetch(emailjsUrl, {
       method: "POST",
       headers: {
@@ -214,12 +232,19 @@ export async function POST(req: NextRequest) {
 
     if (!emailResponse.ok) {
       const errorText = await emailResponse.text();
-      console.error("[Password Reset] EmailJS error:", errorText);
+      console.error("[Password Reset] EmailJS error response:", {
+        status: emailResponse.status,
+        statusText: emailResponse.statusText,
+        errorText: errorText,
+      });
       return NextResponse.json(
         { error: "Failed to send password reset email. Please try again later." },
         { status: 500 }
       );
     }
+
+    const emailResult = await emailResponse.text();
+    console.log("[Password Reset] EmailJS success:", emailResult);
 
     // For security, don't reveal if email exists or not
     return NextResponse.json({
@@ -228,7 +253,12 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error("[Password Reset API] Error:", error);
+    console.error("[Password Reset API] Unexpected error:", {
+      message: error?.message,
+      stack: error?.stack,
+      code: error?.code,
+      name: error?.name,
+    });
     return NextResponse.json(
       { error: error.message || "Failed to process password reset request" },
       { status: 500 }
