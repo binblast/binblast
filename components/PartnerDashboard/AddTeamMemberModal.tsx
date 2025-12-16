@@ -17,7 +17,7 @@ export function AddTeamMemberModal({ partnerId, userId, onSuccess, onCancel }: A
     email: "",
     phone: "",
     serviceArea: "",
-    payRatePerJob: "10",
+    payRatePerJob: "10.00",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +30,14 @@ export function AddTeamMemberModal({ partnerId, userId, onSuccess, onCancel }: A
     setLoading(true);
 
     try {
+      // Validate pay rate
+      const payRate = parseFloat(formData.payRatePerJob);
+      if (isNaN(payRate) || payRate < 7.50 || payRate > 10) {
+        setError("Pay rate must be between $7.50 and $10.00 per trash can");
+        setLoading(false);
+        return;
+      }
+
       const serviceAreas = formData.serviceArea
         ? formData.serviceArea.split(",").map((area) => area.trim()).filter(Boolean)
         : [];
@@ -45,7 +53,7 @@ export function AddTeamMemberModal({ partnerId, userId, onSuccess, onCancel }: A
           email: formData.email,
           phone: formData.phone || null,
           serviceArea: serviceAreas,
-          payRatePerJob: parseFloat(formData.payRatePerJob),
+          payRatePerJob: payRate,
         }),
       });
 
@@ -66,7 +74,7 @@ export function AddTeamMemberModal({ partnerId, userId, onSuccess, onCancel }: A
           email: "",
           phone: "",
           serviceArea: "",
-          payRatePerJob: "10",
+          payRatePerJob: "10.00",
         });
         setSuccess(false);
         setTempPassword(null);
@@ -304,14 +312,23 @@ export function AddTeamMemberModal({ partnerId, userId, onSuccess, onCancel }: A
 
             <div>
               <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "#111827" }}>
-                Pay Rate Per Job ($)
+                Pay Rate Per Trash Can ($)
               </label>
               <input
                 type="number"
                 step="0.01"
-                min="0"
+                min="7.50"
+                max="10"
+                required
                 value={formData.payRatePerJob}
-                onChange={(e) => setFormData({ ...formData, payRatePerJob: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const numValue = parseFloat(value);
+                  // Enforce min/max in real-time
+                  if (value === "" || (!isNaN(numValue) && numValue >= 7.50 && numValue <= 10)) {
+                    setFormData({ ...formData, payRatePerJob: value });
+                  }
+                }}
                 style={{
                   width: "100%",
                   padding: "0.75rem 1rem",
@@ -320,6 +337,9 @@ export function AddTeamMemberModal({ partnerId, userId, onSuccess, onCancel }: A
                   fontSize: "0.95rem",
                 }}
               />
+              <p style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                Minimum: $7.50 | Maximum: $10.00
+              </p>
             </div>
 
             {error && (

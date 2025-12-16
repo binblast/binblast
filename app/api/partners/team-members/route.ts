@@ -119,6 +119,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate pay rate
+    const payRate = payRatePerJob ? parseFloat(payRatePerJob.toString()) : 10;
+    if (isNaN(payRate) || payRate < 7.50 || payRate > 10) {
+      return NextResponse.json(
+        { error: "Pay rate must be between $7.50 and $10.00 per trash can" },
+        { status: 400 }
+      );
+    }
+
     // Verify partner access
     let finalPartnerId = partnerId;
     if (!finalPartnerId && userId) {
@@ -174,20 +183,27 @@ export async function POST(req: NextRequest) {
     }
 
     // Create Firebase user account
-    const { createUserWithEmailAndPassword, updateProfile, getAuthInstance } = await import("@/lib/firebase");
-    const auth = await getAuthInstance();
-    
-    if (!auth) {
-      return NextResponse.json(
-        { error: "Firebase auth not available" },
-        { status: 500 }
-      );
-    }
-
-    // Generate temporary password
+    // Generate temporary password first
     const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`;
     
     try {
+      // Initialize Firebase before creating user
+      const { getAuthInstance, createUserWithEmailAndPassword, updateProfile } = await import("@/lib/firebase");
+      
+      // Ensure Firebase is initialized
+      const { getFirebaseApp } = await import("@/lib/firebase");
+      await getFirebaseApp();
+      
+      const auth = await getAuthInstance();
+      
+      if (!auth) {
+        console.error("[Team Members API] Firebase auth instance is null after initialization");
+        return NextResponse.json(
+          { error: "Unable to initialize authentication service. Please try again or contact support." },
+          { status: 500 }
+        );
+      }
+
       const userCredential = await createUserWithEmailAndPassword(email, tempPassword);
       
       // Update profile
@@ -204,7 +220,7 @@ export async function POST(req: NextRequest) {
         phone: phone || null,
         role: "employee",
         serviceArea: serviceArea || [],
-        payRatePerJob: payRatePerJob ? parseFloat(payRatePerJob) : 10,
+        payRatePerJob: payRate,
         partnerId: finalPartnerId, // Link employee to partner
         hiringStatus: "active",
         hiredDate: serverTimestamp(),
@@ -234,8 +250,9 @@ export async function POST(req: NextRequest) {
         message: "Team member added successfully. They will need to complete training before clocking in.",
       });
     } catch (authError: any) {
-      console.error("Error creating user:", authError);
+      console.error("[Team Members API] Error creating user:", authError);
       
+      // Handle specific Firebase auth errors
       if (authError.code === "auth/email-already-in-use") {
         return NextResponse.json(
           { error: "An account with this email already exists" },
@@ -243,8 +260,15 @@ export async function POST(req: NextRequest) {
         );
       }
       
+      if (authError.message?.includes("Firebase") || authError.message?.includes("auth")) {
+        return NextResponse.json(
+          { error: "Authentication service error. Please try again or contact support if the issue persists." },
+          { status: 500 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: authError.message || "Failed to create team member account" },
+        { error: authError.message || "Failed to create team member account. Please try again." },
         { status: 500 }
       );
     }
