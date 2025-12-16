@@ -26,25 +26,32 @@ function ForgotPasswordForm() {
     setSuccess(false);
 
     try {
-      const { sendPasswordResetEmail } = await import("@/lib/firebase");
-      await sendPasswordResetEmail(email);
+      // Call our API route that uses EmailJS
+      const response = await fetch("/api/auth/password-reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send password reset email");
+      }
+
       setSuccess(true);
     } catch (err: any) {
       console.error("Password reset error:", err);
       
-      // Handle specific Firebase errors
-      if (err.code === "auth/user-not-found") {
+      // Handle specific errors
+      if (err.message?.includes("No account found")) {
         setError("No account found with this email address.");
-      } else if (err.code === "auth/invalid-email") {
+      } else if (err.message?.includes("Invalid email")) {
         setError("Invalid email address.");
-      } else if (err.code === "auth/too-many-requests") {
+      } else if (err.message?.includes("Too many")) {
         setError("Too many password reset requests. Please try again later.");
-      } else if (err.code === "auth/unauthorized-continue-uri" || err.message?.includes("unauthorized-continue-uri")) {
-        setError("Domain not authorized. The password reset email will use Firebase's default page. Please check your email inbox.");
-        // Still show success since email was sent, just with default redirect
-        setSuccess(true);
-        setLoading(false);
-        return;
       } else {
         setError(err.message || "Failed to send password reset email. Please try again.");
       }

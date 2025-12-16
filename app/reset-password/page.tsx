@@ -23,14 +23,20 @@ function ResetPasswordForm() {
   const router = useRouter();
 
   useEffect(() => {
-    // Get the oobCode from URL query parameters (Firebase sends this in the reset link)
+    // Get the reset token from URL query parameters
+    // Can be either Firebase oobCode or custom token
     const code = searchParams.get("oobCode");
+    const token = searchParams.get("token");
     const mode = searchParams.get("mode");
     
     if (mode === "resetPassword" && code) {
+      // Firebase oobCode format
       setOobCode(code);
-    } else if (!code && !mode) {
-      // If no code, this might be a direct visit - show error
+    } else if (token) {
+      // Custom token format
+      setOobCode(token);
+    } else if (!code && !token && !mode) {
+      // If no code or token, this might be a direct visit - show error
       setError("Invalid or expired password reset link. Please request a new one.");
     }
   }, [searchParams]);
@@ -57,19 +63,42 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
-      // Import Firebase auth functions
-      const { getAuthInstance } = await import("@/lib/firebase");
-      const { safeImportAuth } = await import("@/lib/firebase-module-loader");
+      // Check if it's a Firebase oobCode (longer) or custom token
+      const isOobCode = oobCode && oobCode.length > 50;
       
-      const auth = await getAuthInstance();
-      if (!auth) {
-        throw new Error("Firebase auth is not available");
-      }
+      if (isOobCode) {
+        // Use Firebase's confirmPasswordReset for oobCode
+        const { getAuthInstance } = await import("@/lib/firebase");
+        const { safeImportAuth } = await import("@/lib/firebase-module-loader");
+        
+        const auth = await getAuthInstance();
+        if (!auth) {
+          throw new Error("Firebase auth is not available");
+        }
 
-      const firebaseAuth = await safeImportAuth();
-      
-      // Verify the password reset code and apply the new password
-      await firebaseAuth.confirmPasswordReset(auth, oobCode, password);
+        const firebaseAuth = await safeImportAuth();
+        
+        // Verify the password reset code and apply the new password
+        await firebaseAuth.confirmPasswordReset(auth, oobCode, password);
+      } else {
+        // Use API route for custom token
+        const response = await fetch("/api/auth/confirm-password-reset", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            token: oobCode,
+            password: password,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to reset password");
+        }
+      }
       
       setSuccess(true);
       
@@ -81,11 +110,11 @@ function ResetPasswordForm() {
       console.error("Password reset error:", err);
       
       // Handle specific Firebase errors
-      if (err.code === "auth/expired-action-code") {
+      if (err.code === "auth/expired-action-code" || err.message?.includes("expired")) {
         setError("This password reset link has expired. Please request a new one.");
-      } else if (err.code === "auth/invalid-action-code") {
+      } else if (err.code === "auth/invalid-action-code" || err.message?.includes("Invalid")) {
         setError("Invalid password reset link. Please request a new one.");
-      } else if (err.code === "auth/weak-password") {
+      } else if (err.code === "auth/weak-password" || err.message?.includes("weak")) {
         setError("Password is too weak. Please choose a stronger password.");
       } else {
         setError(err.message || "Failed to reset password. Please try again.");
