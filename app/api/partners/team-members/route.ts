@@ -188,13 +188,21 @@ export async function POST(req: NextRequest) {
     
     try {
       // Initialize Firebase before creating user
-      const { getAuthInstance, createUserWithEmailAndPassword, updateProfile } = await import("@/lib/firebase");
-      
-      // Ensure Firebase is initialized
       const { getFirebaseApp } = await import("@/lib/firebase");
-      await getFirebaseApp();
+      const app = await getFirebaseApp();
       
-      const auth = await getAuthInstance();
+      if (!app) {
+        console.error("[Team Members API] Firebase app not initialized");
+        return NextResponse.json(
+          { error: "Unable to initialize authentication service. Please try again or contact support." },
+          { status: 500 }
+        );
+      }
+
+      // Import Firebase auth module directly (server-side)
+      // On server, we can import directly since we've already initialized the app
+      const firebaseAuth = await import("firebase/auth");
+      const auth = firebaseAuth.getAuth(app);
       
       if (!auth) {
         console.error("[Team Members API] Firebase auth instance is null after initialization");
@@ -204,10 +212,11 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const userCredential = await createUserWithEmailAndPassword(email, tempPassword);
+      // Create user with email/password
+      const userCredential = await firebaseAuth.createUserWithEmailAndPassword(auth, email, tempPassword);
       
       // Update profile
-      await updateProfile(userCredential.user, {
+      await firebaseAuth.updateProfile(userCredential.user, {
         displayName: `${firstName} ${lastName}`,
       });
 
