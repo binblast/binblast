@@ -123,21 +123,54 @@ export async function POST(req: NextRequest) {
       expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour expiration
 
       // Store reset token in Firestore
-      const { getDbInstance } = await import("@/lib/firebase");
-      const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-      const db = await getDbInstance();
-      
-      if (db) {
-        const firestore = await safeImportFirestore();
-        const { collection, addDoc, serverTimestamp } = firestore;
+      // Try Admin SDK first for server-side operations, fall back to client SDK
+      try {
+        const moduleName = 'firebase' + '-admin';
+        const admin = await import(moduleName);
         
-        await addDoc(collection(db, "passwordResets"), {
-          email: email.toLowerCase(),
-          token: resetToken,
-          expiresAt: expiresAt,
-          createdAt: serverTimestamp(),
-          used: false,
-        });
+        if (admin.apps && admin.apps.length > 0 || (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY)) {
+          // Use Admin SDK for Firestore
+          if (!admin.apps || !admin.apps.length) {
+            admin.initializeApp({
+              credential: admin.credential.cert({
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+              }),
+            });
+          }
+          
+          const adminDb = admin.firestore();
+          await adminDb.collection("passwordResets").add({
+            email: email.toLowerCase(),
+            token: resetToken,
+            expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            used: false,
+          });
+        } else {
+          throw new Error("Admin SDK not configured");
+        }
+      } catch (adminError) {
+        // Fall back to client SDK (should work with updated Firestore rules)
+        const { getDbInstance } = await import("@/lib/firebase");
+        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+        const db = await getDbInstance();
+        
+        if (db) {
+          const firestore = await safeImportFirestore();
+          const { collection, addDoc, serverTimestamp } = firestore;
+          
+          await addDoc(collection(db, "passwordResets"), {
+            email: email.toLowerCase(),
+            token: resetToken,
+            expiresAt: expiresAt,
+            createdAt: serverTimestamp(),
+            used: false,
+          });
+        } else {
+          console.error("[Password Reset] Failed to initialize Firestore");
+        }
       }
 
       // Create reset link with custom token
