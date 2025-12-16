@@ -17,7 +17,7 @@ export function AddTeamMemberModal({ partnerId, userId, onSuccess, onCancel }: A
     email: "",
     phone: "",
     serviceArea: "",
-    payRatePerJob: "10.00",
+    payRatePerJob: "10.00", // Default to maximum
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,10 +30,10 @@ export function AddTeamMemberModal({ partnerId, userId, onSuccess, onCancel }: A
     setLoading(true);
 
     try {
-      // Validate pay rate
+      // Pay rate is validated by dropdown, but ensure it's a valid number
       const payRate = parseFloat(formData.payRatePerJob);
-      if (isNaN(payRate) || payRate < 7.50 || payRate > 10) {
-        setError("Pay rate must be between $7.50 and $10.00 per trash can");
+      if (isNaN(payRate)) {
+        setError("Please select a valid pay rate");
         setLoading(false);
         return;
       }
@@ -314,31 +314,49 @@ export function AddTeamMemberModal({ partnerId, userId, onSuccess, onCancel }: A
               <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "#111827" }}>
                 Pay Rate Per Trash Can ($)
               </label>
-              <input
-                type="number"
-                step="0.01"
-                min="7.50"
-                max="10"
+              <select
                 required
                 value={formData.payRatePerJob}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const numValue = parseFloat(value);
-                  // Enforce min/max in real-time
-                  if (value === "" || (!isNaN(numValue) && numValue >= 7.50 && numValue <= 10)) {
-                    setFormData({ ...formData, payRatePerJob: value });
-                  }
-                }}
+                onChange={(e) => setFormData({ ...formData, payRatePerJob: e.target.value })}
                 style={{
                   width: "100%",
                   padding: "0.75rem 1rem",
                   border: "1px solid #e5e7eb",
                   borderRadius: "8px",
                   fontSize: "0.95rem",
+                  background: "#ffffff",
+                  cursor: "pointer",
+                  appearance: "none",
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 1rem center",
+                  paddingRight: "2.5rem"
                 }}
-              />
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#93c5fd";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#e5e7eb";
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "#2563eb";
+                  e.currentTarget.style.outline = "none";
+                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(37, 99, 235, 0.1)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "#e5e7eb";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                <option value="7.50">$7.50</option>
+                <option value="8.00">$8.00</option>
+                <option value="8.50">$8.50</option>
+                <option value="9.00">$9.00</option>
+                <option value="9.50">$9.50</option>
+                <option value="10.00">$10.00</option>
+              </select>
               <p style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
-                Minimum: $7.50 | Maximum: $10.00
+                Select from preset rates between $7.50 and $10.00
               </p>
             </div>
 
