@@ -62,7 +62,6 @@ export async function POST(req: NextRequest) {
     console.log("[Password Reset] Using base URL:", baseUrl);
     
     let resetLink: string;
-    let userExists = false;
 
     // Try to use Firebase Admin SDK to generate password reset link
     try {
@@ -106,7 +105,6 @@ export async function POST(req: NextRequest) {
         handleCodeInApp: false,
       });
       
-      userExists = true;
       console.log("[Password Reset] Generated reset link using Admin SDK (no email sent by Firebase)");
     } catch (adminError: any) {
       // Admin SDK not available or failed - use alternative method
@@ -130,7 +128,6 @@ export async function POST(req: NextRequest) {
           const usersSnapshot = await getDocs(usersQuery);
           
           if (!usersSnapshot.empty) {
-            userExists = true;
             console.log("[Password Reset] User found in Firestore");
           } else {
             // Also check Firebase Auth users if Admin SDK is available
@@ -153,7 +150,6 @@ export async function POST(req: NextRequest) {
                 // Check if user exists in Firebase Auth (doesn't send email)
                 try {
                   await admin.auth().getUserByEmail(email);
-                  userExists = true;
                   console.log("[Password Reset] User found in Firebase Auth");
                 } catch (authError: any) {
                   if (authError.code === 'auth/user-not-found') {
