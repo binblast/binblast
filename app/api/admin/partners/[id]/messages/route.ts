@@ -29,7 +29,7 @@ export async function GET(
       }
 
       app = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+        credential: admin.credential.cert(serviceAccount as any),
       });
     }
 
@@ -92,7 +92,7 @@ export async function POST(
       }
 
       app = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+        credential: admin.credential.cert(serviceAccount as any),
       });
     }
 
