@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { georgiaCounties } from "@/data/gaCounties";
 import { metroAtlZones } from "@/data/metroAtlZones";
+import { PartnerMiniProfile } from "./PartnerMiniProfile";
 
 interface PartnerApplication {
   id: string;
@@ -50,6 +51,8 @@ interface Partner {
   customersAssigned?: number;
   jobsTotal?: number;
   jobsThisWeek?: number;
+  jobsThisMonth?: number;
+  photoCompliance30d?: number;
   grossRevenueMTD?: number;
   grossRevenueLifetime?: number;
   unpaidBalance?: number;
@@ -71,14 +74,17 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
   const [applicationStatusFilter, setApplicationStatusFilter] = useState<string>("all");
   const [partnerSearch, setPartnerSearch] = useState("");
   const [partnerStatusFilter, setPartnerStatusFilter] = useState<string>("all");
+  const [partnerServiceAreaFilter, setPartnerServiceAreaFilter] = useState<string>("all");
+  const [lowPhotoComplianceFilter, setLowPhotoComplianceFilter] = useState(false);
   
   // Modals
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
   const [showHoldModal, setShowHoldModal] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<PartnerApplication | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const [showMiniProfile, setShowMiniProfile] = useState(false);
+  const [miniProfileApplicationId, setMiniProfileApplicationId] = useState<string | undefined>();
   
   // Approve modal state
   const [approveServiceAreas, setApproveServiceAreas] = useState<string[]>([]);
@@ -92,6 +98,27 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
   useEffect(() => {
     loadData();
   }, []);
+
+  // Listen for approve requests from mini profile
+  useEffect(() => {
+    const handleApproveRequest = (e: CustomEvent) => {
+      const applicationId = e.detail?.applicationId;
+      if (applicationId) {
+        const app = applications.find(a => a.id === applicationId);
+        if (app) {
+          setSelectedApplication(app);
+          setApproveServiceAreas([]);
+          setApprovePartnerShare(60);
+          setApprovePlatformShare(40);
+          setShowApproveModal(true);
+        }
+      }
+    };
+    window.addEventListener('partnerApproveRequest', handleApproveRequest as EventListener);
+    return () => {
+      window.removeEventListener('partnerApproveRequest', handleApproveRequest as EventListener);
+    };
+  }, [applications]);
 
   async function loadData() {
     try {
@@ -290,7 +317,12 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
     
     const matchesStatus = partnerStatusFilter === "all" || partner.status === partnerStatusFilter;
     
-    return matchesSearch && matchesStatus;
+    const matchesServiceArea = partnerServiceAreaFilter === "all" || 
+      partner.serviceAreas?.some(area => area.toLowerCase().includes(partnerServiceAreaFilter.toLowerCase()));
+    
+    const matchesPhotoCompliance = !lowPhotoComplianceFilter || (partner.photoCompliance30d || 100) < 90;
+    
+    return matchesSearch && matchesStatus && matchesServiceArea && matchesPhotoCompliance;
   });
 
   if (loading) {
@@ -431,16 +463,12 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                     <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Phone</th>
                     <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Service Area</th>
                     <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Services</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Date Applied</th>
                     <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Status</th>
                     <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredApplications.map((app) => {
-                    const createdAt = app.createdAt?.toDate?.() || app.createdAt;
-                    const dateStr = createdAt ? new Date(createdAt).toLocaleDateString() : "N/A";
-                    
                     return (
                       <tr key={app.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
                         <td style={{ padding: "0.75rem" }}>
@@ -464,7 +492,6 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.phone}</td>
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.serviceArea}</td>
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.serviceType}</td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{dateStr}</td>
                         <td style={{ padding: "0.75rem" }}>
                           <span style={{
                             padding: "0.25rem 0.75rem",
@@ -483,23 +510,52 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                         </td>
                         <td style={{ padding: "0.75rem" }}>
                           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                            <button
-                              onClick={() => {
-                                setSelectedApplication(app);
-                                setShowViewModal(true);
-                              }}
-                              style={{
-                                padding: "0.25rem 0.5rem",
-                                background: "#0369a1",
-                                color: "#ffffff",
-                                border: "none",
-                                borderRadius: "4px",
-                                fontSize: "0.75rem",
-                                cursor: "pointer"
-                              }}
-                            >
-                              View
-                            </button>
+                            {app.linkedPartnerId ? (
+                              <button
+                                onClick={async () => {
+                                  // Load partner and show mini profile
+                                  const partnerResponse = await fetch(`/api/admin/partners/${app.linkedPartnerId}`);
+                                  const partnerData = await partnerResponse.json();
+                                  if (partnerData.success) {
+                                    setSelectedPartner(partnerData.partner);
+                                    setShowMiniProfile(true);
+                                  }
+                                }}
+                                style={{
+                                  padding: "0.25rem 0.5rem",
+                                  background: "#0369a1",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  borderRadius: "4px",
+                                  fontSize: "0.75rem",
+                                  cursor: "pointer"
+                                }}
+                              >
+                                View Profile
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  // For applications, show approve modal instead of mini profile
+                                  setSelectedApplication(app);
+                                  setApproveServiceAreas([]);
+                                  setApprovePartnerShare(60);
+                                  setApprovePlatformShare(40);
+                                  setShowApproveModal(true);
+                                }}
+                                style={{
+                                  padding: "0.25rem 0.5rem",
+                                  background: "#0369a1",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  borderRadius: "4px",
+                                  fontSize: "0.75rem",
+                                  cursor: "pointer"
+                                }}
+                              >
+                                View Profile
+                              </button>
+                            )}
                             {app.status === "pending" && (
                               <>
                                 <button
@@ -605,6 +661,29 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
               <option value="paused">Paused</option>
               <option value="removed">Removed</option>
             </select>
+            <select
+              value={partnerServiceAreaFilter}
+              onChange={(e) => setPartnerServiceAreaFilter(e.target.value)}
+              style={{
+                padding: "0.5rem 0.75rem",
+                border: "1px solid #e5e7eb",
+                borderRadius: "6px",
+                fontSize: "0.875rem",
+              }}
+            >
+              <option value="all">All Service Areas</option>
+              {[...metroAtlZones, ...georgiaCounties.map(c => c.name)].map(area => (
+                <option key={area} value={area}>{area}</option>
+              ))}
+            </select>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem" }}>
+              <input
+                type="checkbox"
+                checked={lowPhotoComplianceFilter}
+                onChange={(e) => setLowPhotoComplianceFilter(e.target.checked)}
+              />
+              Low Photo Compliance (&lt;90%)
+            </label>
             {selectedPartnerIds.size > 0 && (
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <button
@@ -701,13 +780,12 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Partner Name</th>
                     <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Service Area(s)</th>
                     <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Status</th>
-                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Customers</th>
-                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Jobs</th>
-                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Gross Revenue</th>
-                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Company Share %</th>
-                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Partner Share %</th>
+                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Jobs (7d)</th>
+                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Jobs (30d)</th>
+                    <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "600" }}>Photo Compliance</th>
+                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Gross Revenue (30d)</th>
+                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Company Share (30d)</th>
                     <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Unpaid</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Last Payout</th>
                     <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "600" }}>Actions</th>
                   </tr>
                 </thead>
@@ -734,60 +812,66 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                           />
                         </td>
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600" }}>
-                          <a
-                            href={`/admin/partners/${partner.id}`}
-                            style={{ color: "#0369a1", textDecoration: "none" }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              router.push(`/admin/partners/${partner.id}`);
-                            }}
-                          >
-                            {partner.businessName}
-                          </a>
+                          {partner.businessName}
                         </td>
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
                           {partner.serviceAreas?.join(", ") || "N/A"}
                         </td>
                         <td style={{ padding: "0.75rem" }}>
+                          <select
+                            value={partner.status}
+                            onChange={async (e) => {
+                              const newStatus = e.target.value;
+                              if (newStatus === "paused" && partner.status === "active") {
+                                await handlePausePartner(partner.id);
+                              } else if (newStatus === "active" && partner.status === "paused") {
+                                await handleResumePartner(partner.id);
+                              }
+                            }}
+                            style={{
+                              padding: "0.25rem 0.5rem",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "6px",
+                              fontSize: "0.75rem",
+                              background: "#ffffff",
+                            }}
+                          >
+                            <option value="active">Active</option>
+                            <option value="paused">Paused</option>
+                            <option value="removed">Removed</option>
+                          </select>
+                        </td>
+                        <td style={{ padding: "0.75rem", fontSize: "0.875rem", textAlign: "right" }}>
+                          {partner.jobsThisWeek || 0}
+                        </td>
+                        <td style={{ padding: "0.75rem", fontSize: "0.875rem", textAlign: "right" }}>
+                          {partner.jobsThisMonth || 0}
+                        </td>
+                        <td style={{ padding: "0.75rem", textAlign: "center" }}>
                           <span style={{
-                            padding: "0.25rem 0.75rem",
-                            borderRadius: "12px",
-                            fontSize: "0.75rem",
+                            fontSize: "0.875rem",
                             fontWeight: "600",
-                            background: partner.status === "active" ? "#dcfce7" : 
-                                       partner.status === "paused" ? "#fef3c7" : "#fee2e2",
-                            color: partner.status === "active" ? "#16a34a" : 
-                                  partner.status === "paused" ? "#d97706" : "#dc2626"
+                            color: (partner.photoCompliance30d || 100) >= 90 ? "#16a34a" : "#dc2626"
                           }}>
-                            {partner.status}
+                            {partner.photoCompliance30d || 100}%
                           </span>
                         </td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem", textAlign: "right" }}>
-                          {partner.customersAssigned || 0}
-                        </td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem", textAlign: "right" }}>
-                          {partner.jobsTotal || 0} {partner.jobsThisWeek ? `(${partner.jobsThisWeek} this week)` : ""}
-                        </td>
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600", color: "#16a34a", textAlign: "right" }}>
-                          ${((partner.grossRevenueMTD || 0) + (partner.grossRevenueLifetime || 0)).toLocaleString()}
-                          {partner.grossRevenueMTD ? ` (MTD: $${partner.grossRevenueMTD.toLocaleString()})` : ""}
+                          ${(partner.grossRevenueMTD || 0).toLocaleString()}
                         </td>
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem", textAlign: "right" }}>
-                          {((partner.revenueSharePlatform || 0) * 100).toFixed(0)}%
-                        </td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem", textAlign: "right" }}>
-                          {((partner.revenueSharePartner || 0) * 100).toFixed(0)}%
+                          ${((partner.grossRevenueMTD || 0) * (partner.revenueSharePlatform || 0)).toLocaleString()}
                         </td>
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600", color: "#dc2626", textAlign: "right" }}>
                           ${(partner.unpaidBalance || 0).toLocaleString()}
                         </td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem", textAlign: "left" }}>
-                          {payoutStr}
-                        </td>
                         <td style={{ padding: "0.75rem", textAlign: "center" }}>
                           <div style={{ display: "flex", gap: "0.25rem", justifyContent: "center", flexWrap: "wrap" }}>
                             <button
-                              onClick={() => router.push(`/admin/partners/${partner.id}`)}
+                              onClick={() => {
+                                setSelectedPartner(partner);
+                                setShowMiniProfile(true);
+                              }}
                               style={{
                                 padding: "0.25rem 0.5rem",
                                 background: "#0369a1",
@@ -798,61 +882,30 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                                 cursor: "pointer"
                               }}
                             >
-                              View
+                              View Profile
                             </button>
-                            {partner.status === "active" && (
-                              <button
-                                onClick={() => handlePausePartner(partner.id)}
-                                style={{
-                                  padding: "0.25rem 0.5rem",
-                                  background: "#f59e0b",
-                                  color: "#ffffff",
-                                  border: "none",
-                                  borderRadius: "4px",
-                                  fontSize: "0.75rem",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                Pause
-                              </button>
-                            )}
-                            {partner.status === "paused" && (
-                              <button
-                                onClick={() => handleResumePartner(partner.id)}
-                                style={{
-                                  padding: "0.25rem 0.5rem",
-                                  background: "#16a34a",
-                                  color: "#ffffff",
-                                  border: "none",
-                                  borderRadius: "4px",
-                                  fontSize: "0.75rem",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                Resume
-                              </button>
-                            )}
-                            {partner.status !== "removed" && (
-                              <button
-                                onClick={() => {
-                                  const reason = prompt("Enter removal reason:");
-                                  if (reason) {
-                                    handleRemovePartner(partner.id, reason);
-                                  }
-                                }}
-                                style={{
-                                  padding: "0.25rem 0.5rem",
-                                  background: "#dc2626",
-                                  color: "#ffffff",
-                                  border: "none",
-                                  borderRadius: "4px",
-                                  fontSize: "0.75rem",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                Remove
-                              </button>
-                            )}
+                            <button
+                              onClick={() => {
+                                setSelectedPartner(partner);
+                                setShowMiniProfile(true);
+                                // Set initial tab to messages
+                                setTimeout(() => {
+                                  const event = new CustomEvent('partnerMiniProfileOpen', { detail: { tab: 'messages' } });
+                                  window.dispatchEvent(event);
+                                }, 100);
+                              }}
+                              style={{
+                                padding: "0.25rem 0.5rem",
+                                background: "#6366f1",
+                                color: "#ffffff",
+                                border: "none",
+                                borderRadius: "4px",
+                                fontSize: "0.75rem",
+                                cursor: "pointer"
+                              }}
+                            >
+                              Message
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -907,16 +960,22 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
         />
       )}
 
-      {/* View Application Modal */}
-      {showViewModal && selectedApplication && (
-        <ViewApplicationModal
-          application={selectedApplication}
-          onClose={() => {
-            setShowViewModal(false);
-            setSelectedApplication(null);
-          }}
-        />
-      )}
+      {/* Partner Mini Profile */}
+      <PartnerMiniProfile
+        partner={selectedPartner}
+        isOpen={showMiniProfile}
+        onClose={() => {
+          setShowMiniProfile(false);
+          setSelectedPartner(null);
+          setMiniProfileApplicationId(undefined);
+        }}
+        onUpdate={loadData}
+      />
+    </div>
+  );
+}
+
+// Listen for approve requests from mini profile - moved inside component
     </div>
   );
 }

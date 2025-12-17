@@ -58,17 +58,49 @@ export async function GET(req: NextRequest) {
         
         const now = new Date();
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         let jobsTotal = 0;
         let jobsThisWeek = 0;
+        let jobsThisMonth = 0;
         
-        jobsSnapshot.forEach(doc => {
-          const job = doc.data();
+        // Calculate photo compliance for last 30 days
+        let jobsWithPhotos30d = 0;
+        let totalJobs30d = 0;
+        
+        for (const jobDoc of jobsSnapshot.docs) {
+          const job = jobDoc.data();
+          const jobDate = job.scheduledDate?.toDate?.() || job.createdAt?.toDate?.() || job.createdAt;
+          
           jobsTotal++;
-          const jobDate = job.scheduledDate?.toDate?.() || job.scheduledDate;
-          if (jobDate && new Date(jobDate) >= weekAgo) {
-            jobsThisWeek++;
+          if (jobDate) {
+            if (new Date(jobDate) >= weekAgo) {
+              jobsThisWeek++;
+            }
+            if (new Date(jobDate) >= monthAgo) {
+              jobsThisMonth++;
+              
+              // Check photo compliance for jobs in last 30 days
+              if (job.status === "completed" || job.jobStatus === "completed") {
+                totalJobs30d++;
+                const photosQuery = query(
+                  collection(db, "jobPhotos"),
+                  where("jobId", "==", jobDoc.id)
+                );
+                const photosSnapshot = await getDocs(photosQuery);
+                const photos = photosSnapshot.docs.map(doc => doc.data());
+                const hasInsidePhoto = photos.some((p: any) => p.photoType === "inside");
+                const hasOutsidePhoto = photos.some((p: any) => p.photoType === "outside");
+                if (hasInsidePhoto && hasOutsidePhoto) {
+                  jobsWithPhotos30d++;
+                }
+              }
+            }
           }
-        });
+        }
+        
+        const photoCompliance30d = totalJobs30d > 0 
+          ? Math.round((jobsWithPhotos30d / totalJobs30d) * 100) 
+          : 100;
 
         // Calculate revenue
         let grossRevenueMTD = 0;
@@ -113,6 +145,8 @@ export async function GET(req: NextRequest) {
           customersAssigned: customerEmails.size,
           jobsTotal,
           jobsThisWeek,
+          jobsThisMonth,
+          photoCompliance30d,
           grossRevenueMTD,
           grossRevenueLifetime,
           unpaidBalance,
