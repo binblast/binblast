@@ -256,45 +256,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Send email via EmailJS
+    // Validate EmailJS configuration before proceeding
     const emailjsServiceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || "service_rok6u9h";
-    // Password reset email template ID
     const emailjsTemplateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PASSWORD_RESET || "template_l421jys";
     const emailjsPublicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
 
-    // Detailed logging for debugging
-    console.log("[Password Reset] EmailJS Configuration Check:", {
-      hasServiceId: !!emailjsServiceId,
-      serviceId: emailjsServiceId,
-      hasTemplateId: !!emailjsTemplateId,
-      templateId: emailjsTemplateId,
-      hasPublicKey: !!emailjsPublicKey,
-      publicKeyLength: emailjsPublicKey?.length || 0,
-      publicKeyPrefix: emailjsPublicKey?.substring(0, 10) || "none",
-    });
-
-    if (!emailjsPublicKey) {
-      console.error("[Password Reset] EmailJS not configured - missing NEXT_PUBLIC_EMAILJS_PUBLIC_KEY");
+    if (!emailjsPublicKey || typeof emailjsPublicKey !== 'string' || emailjsPublicKey.length < 10) {
+      console.error("[Password Reset] EmailJS not configured properly");
       return NextResponse.json(
         { error: "Email service not configured. Please contact support." },
         { status: 500 }
       );
     }
 
-    // Validate EmailJS public key format (should be a string, typically starts with a letter)
-    if (typeof emailjsPublicKey !== 'string' || emailjsPublicKey.length < 10) {
-      console.error("[Password Reset] Invalid EmailJS public key format:", {
-        type: typeof emailjsPublicKey,
-        length: emailjsPublicKey?.length,
-      });
-      return NextResponse.json(
-        { error: "Email service configuration error. Please contact support." },
-        { status: 500 }
-      );
-    }
-
+    // Return success immediately - send email asynchronously (non-blocking)
+    // This significantly improves perceived response time
     const emailjsUrl = "https://api.emailjs.com/api/v1.0/email/send";
-    
     const emailPayload = {
       service_id: emailjsServiceId,
       template_id: emailjsTemplateId,
@@ -306,75 +283,57 @@ export async function POST(req: NextRequest) {
       },
     };
 
-    console.log("[Password Reset] Sending email via EmailJS:", {
-      serviceId: emailjsServiceId,
-      templateId: emailjsTemplateId,
-      hasPublicKey: !!emailjsPublicKey,
-      email: email,
-    });
-
-    const emailResponse = await fetch(emailjsUrl, {
+    // Send email asynchronously (fire-and-forget) - don't await
+    // This allows the API to return immediately while email sends in background
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), 10000); // 10 second timeout
+    
+    fetch(emailjsUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(emailPayload),
-    });
-
-    if (!emailResponse.ok) {
-      const errorText = await emailResponse.text();
-      let errorMessage = "Failed to send password reset email. Please try again later.";
-      
-      // Parse EmailJS error response for better error messages
-      try {
-        const errorJson = JSON.parse(errorText);
-        if (errorJson.error) {
-          errorMessage = `Email service error: ${errorJson.error}`;
-        }
-      } catch {
-        // If not JSON, use the text as-is
-        if (errorText && errorText.length < 200) {
-          errorMessage = `Email service error: ${errorText}`;
-        }
-      }
-      
-      console.error("[Password Reset] EmailJS error response:", {
-        status: emailResponse.status,
-        statusText: emailResponse.statusText,
-        errorText: errorText,
-        serviceId: emailjsServiceId,
-        templateId: emailjsTemplateId,
-        hasPublicKey: !!emailjsPublicKey,
-      });
-      
-      // Provide specific error messages for common issues
-      if (emailResponse.status === 400) {
-        errorMessage = "Invalid email template configuration. Please contact support.";
-      } else if (emailResponse.status === 401) {
-        errorMessage = "Email service authentication failed. The EmailJS public key may be incorrect or expired. Please check Vercel environment variables.";
-      } else if (emailResponse.status === 403) {
-        // Check if it's the server-side API restriction
-        if (errorText && (errorText.includes('non-browser applications') || errorText.includes('disabled for non-browser'))) {
-          errorMessage = "EmailJS server-side API calls are disabled. Go to EmailJS Dashboard → Account → General → Enable 'Allow server-side API calls', then redeploy your Vercel project.";
+      signal: abortController.signal,
+    })
+      .then(async (emailResponse) => {
+        clearTimeout(timeoutId); // Clear timeout on success
+        if (!emailResponse.ok) {
+          const errorText = await emailResponse.text();
+          console.error("[Password Reset] EmailJS error response:", {
+            status: emailResponse.status,
+            statusText: emailResponse.statusText,
+            errorText: errorText.substring(0, 200),
+            serviceId: emailjsServiceId,
+            templateId: emailjsTemplateId,
+            email: email,
+          });
+          
+          // Log specific errors for debugging
+          if (emailResponse.status === 403 && errorText.includes('non-browser applications')) {
+            console.error("[Password Reset] EmailJS server-side API calls disabled. Enable in EmailJS Dashboard → Account → General.");
+          }
         } else {
-          errorMessage = "Email service access denied. Please verify EmailJS public key and service permissions in Vercel settings.";
+          const emailResult = await emailResponse.text();
+          console.log("[Password Reset] EmailJS success:", emailResult.substring(0, 100));
         }
-      } else if (emailResponse.status === 404) {
-        errorMessage = `Email template not found. Please verify template ID "${emailjsTemplateId}" exists in EmailJS dashboard.`;
-      } else if (emailResponse.status === 429) {
-        errorMessage = "Too many email requests. Please try again in a few minutes.";
-      }
-      
-      return NextResponse.json(
-        { error: errorMessage },
-        { status: 500 }
-      );
-    }
+      })
+      .catch((emailError: any) => {
+        clearTimeout(timeoutId); // Clear timeout on error
+        // Log but don't fail the request - email sending errors shouldn't block user
+        if (emailError?.name === 'AbortError') {
+          console.warn("[Password Reset] EmailJS request timed out (non-blocking):", email);
+        } else {
+          console.error("[Password Reset] EmailJS send error (non-blocking):", {
+            message: emailError?.message,
+            name: emailError?.name,
+            email: email,
+          });
+        }
+      });
 
-    const emailResult = await emailResponse.text();
-    console.log("[Password Reset] EmailJS success:", emailResult);
-
-    // For security, don't reveal if email exists or not
+    // Return immediately - user gets instant feedback
+    // Email is sent in background
     return NextResponse.json({
       success: true,
       message: "If an account exists with this email, a password reset link has been sent.",
