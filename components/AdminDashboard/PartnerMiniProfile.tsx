@@ -622,11 +622,12 @@ function JobsTab({
                     </td>
                   </tr>
                 );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
 
       {/* Photo Viewer Modal */}
       {selectedJob && (
