@@ -246,10 +246,22 @@ export async function POST(req: NextRequest) {
             used: false,
           });
           
-          console.log("[Password Reset] Token stored successfully in Firestore (client SDK):", {
+          // Verify the token was stored correctly by reading it back
+          const { getDoc } = firestore;
+          const verifyDoc = await getDoc(docRef);
+          if (!verifyDoc.exists()) {
+            throw new Error("Token was not stored - verification read failed");
+          }
+          const verifyData = verifyDoc.data();
+          
+          console.log("[Password Reset] Token stored and verified in Firestore (client SDK):", {
             docId: docRef.id,
             tokenPrefix: resetToken.substring(0, 10),
+            storedTokenPrefix: verifyData.token?.substring(0, 10),
+            tokensMatch: verifyData.token === resetToken,
             email: email.toLowerCase(),
+            storedEmail: verifyData.email,
+            expiresAt: verifyData.expiresAt?.toDate?.()?.toISOString(),
           });
         } catch (firestoreError: any) {
           console.error("[Password Reset] Firestore write failed:", firestoreError?.message || firestoreError);
