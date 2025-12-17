@@ -975,11 +975,6 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
   );
 }
 
-// Listen for approve requests from mini profile - moved inside component
-    </div>
-  );
-}
-
 // Helper functions
 function generatePartnersCSV(partners: Partner[]): string {
   const headers = [
