@@ -106,6 +106,8 @@ export async function POST(req: NextRequest) {
         console.error("[Confirm Password Reset] Query details:", {
           collection: "passwordResets",
           tokenQuery: token.substring(0, 20),
+          fullToken: token, // Log full token for debugging
+          tokenLength: token.length,
           usedQuery: false,
         });
         
@@ -122,6 +124,22 @@ export async function POST(req: NextRequest) {
             used: data.used,
             expiresAt: data.expiresAt?.toDate?.()?.toISOString() || data.expiresAt,
             email: data.email,
+            storedToken: data.token?.substring(0, 20),
+            storedTokenLength: data.token?.length,
+            tokensMatch: data.token === token,
+          });
+        } else {
+          // Token doesn't exist at all - check if there are any tokens in the collection
+          const allDocsQuery = query(collection(db, "passwordResets"));
+          const allDocsSnapshot = await getDocs(allDocsQuery);
+          console.error("[Confirm Password Reset] Token doesn't exist. Collection stats:", {
+            totalDocs: allDocsSnapshot.size,
+            sampleTokens: allDocsSnapshot.docs.slice(0, 3).map(d => ({
+              tokenPrefix: d.data().token?.substring(0, 10),
+              tokenLength: d.data().token?.length,
+              used: d.data().used,
+              email: d.data().email,
+            })),
           });
         }
         
