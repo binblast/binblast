@@ -82,6 +82,11 @@ function ResetPasswordForm() {
         await firebaseAuth.confirmPasswordReset(auth, oobCode, password);
       } else {
         // Use API route for custom token
+        console.log("[Reset Password] Using custom token, calling API:", {
+          tokenLength: oobCode?.length,
+          tokenPrefix: oobCode?.substring(0, 10),
+        });
+        
         const response = await fetch("/api/auth/confirm-password-reset", {
           method: "POST",
           headers: {
@@ -96,8 +101,14 @@ function ResetPasswordForm() {
         const data = await response.json();
 
         if (!response.ok) {
+          console.error("[Reset Password] API error:", {
+            status: response.status,
+            error: data.error,
+          });
           throw new Error(data.error || "Failed to reset password");
         }
+        
+        console.log("[Reset Password] Password reset successful via API");
       }
       
       setSuccess(true);

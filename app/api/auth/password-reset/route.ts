@@ -63,7 +63,8 @@ export async function POST(req: NextRequest) {
     
     let resetLink: string;
 
-    // Try to use Firebase Admin SDK to generate password reset link
+    // Try to use Firebase Admin SDK to generate password reset link (preferred - gives oobCode)
+    // This generates an oobCode that works with Firebase's client SDK confirmPasswordReset
     try {
       // Dynamically import firebase-admin - may not be installed
       // Construct module name at runtime to prevent webpack from analyzing
@@ -99,13 +100,14 @@ export async function POST(req: NextRequest) {
       }
 
       // Generate password reset link using Admin SDK (doesn't send email, just generates link)
-      // Note: generatePasswordResetLink doesn't send an email - it only generates the link
+      // This generates a link with oobCode that works with Firebase client SDK confirmPasswordReset
       resetLink = await admin.auth().generatePasswordResetLink(email, {
         url: `${baseUrl}/reset-password`,
         handleCodeInApp: false,
       });
       
-      console.log("[Password Reset] Generated reset link using Admin SDK (no email sent by Firebase)");
+      console.log("[Password Reset] Generated reset link using Admin SDK (oobCode format, no email sent by Firebase)");
+      console.log("[Password Reset] Reset link preview:", resetLink.substring(0, Math.min(150, resetLink.length)) + "...");
     } catch (adminError: any) {
       // Admin SDK not available or failed - use alternative method
       console.log("[Password Reset] Using alternative token method");

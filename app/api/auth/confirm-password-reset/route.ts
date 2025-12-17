@@ -94,9 +94,16 @@ export async function POST(req: NextRequest) {
 
       const snapshot = await getDocs(resetQuery);
       
+      console.log("[Confirm Password Reset] Token lookup:", {
+        tokenLength: token.length,
+        tokenPrefix: token.substring(0, 10),
+        foundTokens: snapshot.size,
+      });
+      
       if (snapshot.empty) {
+        console.error("[Confirm Password Reset] Token not found in Firestore");
         return NextResponse.json(
-          { error: "Invalid or expired reset link" },
+          { error: "Invalid or expired reset link. Please request a new one." },
           { status: 400 }
         );
       }
@@ -105,9 +112,24 @@ export async function POST(req: NextRequest) {
       const resetData = resetDoc.data();
       const expiresAt = resetData.expiresAt?.toDate();
       
+      console.log("[Confirm Password Reset] Token found:", {
+        email: resetData.email,
+        expiresAt: expiresAt?.toISOString(),
+        used: resetData.used,
+        now: new Date().toISOString(),
+        isExpired: expiresAt && expiresAt < new Date(),
+      });
+      
       if (expiresAt && expiresAt < new Date()) {
         return NextResponse.json(
           { error: "Reset link has expired. Please request a new one." },
+          { status: 400 }
+        );
+      }
+
+      if (resetData.used) {
+        return NextResponse.json(
+          { error: "This reset link has already been used. Please request a new one." },
           { status: 400 }
         );
       }
@@ -154,10 +176,23 @@ export async function POST(req: NextRequest) {
           { password }
         );
       } catch (adminError: any) {
-        // Admin SDK not available - return error
-        console.error("[Confirm Password Reset] Admin SDK error:", adminError);
+        // Admin SDK not available - return error with details
+        console.error("[Confirm Password Reset] Admin SDK error:", {
+          message: adminError?.message,
+          code: adminError?.code,
+          hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+          hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+          hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+        });
+        
+        // Provide more specific error message
+        let errorMessage = "Password reset service temporarily unavailable. Please contact support or request a new reset link.";
+        if (adminError?.message?.includes("not available") || adminError?.message?.includes("not configured")) {
+          errorMessage = "Password reset requires server configuration. Please contact support.";
+        }
+        
         return NextResponse.json(
-          { error: "Password reset service temporarily unavailable. Please contact support or request a new reset link." },
+          { error: errorMessage },
           { status: 503 }
         );
       }
