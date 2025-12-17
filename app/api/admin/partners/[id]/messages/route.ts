@@ -2,8 +2,6 @@
 // Get and send messages to/from a partner
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
 
 export const dynamic = 'force-dynamic';
 
@@ -14,23 +12,34 @@ export async function GET(
   try {
     const partnerId = params.id;
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 500 }
-      );
+    // Use Admin SDK for server-side operations
+    const admin = await import("firebase-admin");
+    let app;
+    try {
+      app = admin.app();
+    } catch {
+      const serviceAccount = {
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      };
+
+      if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+        throw new Error("Firebase Admin credentials not configured");
+      }
+
+      app = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+      });
     }
 
-    const firestore = await safeImportFirestore();
-    const { collection, query, getDocs, where, orderBy } = firestore;
+    const db = app.firestore();
 
-    const messagesQuery = query(
-      collection(db, "partnerMessages"),
-      where("partnerId", "==", partnerId),
-      orderBy("createdAt", "desc")
-    );
-    const messagesSnapshot = await getDocs(messagesQuery);
+    const messagesSnapshot = await db
+      .collection("partnerMessages")
+      .where("partnerId", "==", partnerId)
+      .orderBy("createdAt", "desc")
+      .get();
 
     const messages = messagesSnapshot.docs.map(doc => ({
       id: doc.id,
@@ -66,16 +75,28 @@ export async function POST(
       );
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 500 }
-      );
+    // Use Admin SDK for server-side operations
+    const admin = await import("firebase-admin");
+    let app;
+    try {
+      app = admin.app();
+    } catch {
+      const serviceAccount = {
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      };
+
+      if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+        throw new Error("Firebase Admin credentials not configured");
+      }
+
+      app = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+      });
     }
 
-    const firestore = await safeImportFirestore();
-    const { collection, addDoc, serverTimestamp } = firestore;
+    const db = app.firestore();
 
     const messageData = {
       partnerId,
@@ -83,10 +104,10 @@ export async function POST(
       type: type || "request",
       from: "admin", // TODO: Get actual admin user ID
       read: false,
-      createdAt: serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    await addDoc(collection(db, "partnerMessages"), messageData);
+    await db.collection("partnerMessages").add(messageData);
 
     return NextResponse.json({
       success: true,
