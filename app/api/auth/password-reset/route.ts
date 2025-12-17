@@ -294,7 +294,12 @@ export async function POST(req: NextRequest) {
       } else if (emailResponse.status === 401) {
         errorMessage = "Email service authentication failed. The EmailJS public key may be incorrect or expired. Please check Vercel environment variables.";
       } else if (emailResponse.status === 403) {
-        errorMessage = "Email service access denied. Please verify EmailJS public key and service permissions in Vercel settings.";
+        // Check if it's the server-side API restriction
+        if (errorText && (errorText.includes('non-browser applications') || errorText.includes('disabled for non-browser'))) {
+          errorMessage = "EmailJS server-side API calls are disabled. Go to EmailJS Dashboard → Account → General → Enable 'Allow server-side API calls', then redeploy your Vercel project.";
+        } else {
+          errorMessage = "Email service access denied. Please verify EmailJS public key and service permissions in Vercel settings.";
+        }
       } else if (emailResponse.status === 404) {
         errorMessage = `Email template not found. Please verify template ID "${emailjsTemplateId}" exists in EmailJS dashboard.`;
       } else if (emailResponse.status === 429) {
