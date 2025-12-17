@@ -32,20 +32,41 @@ function ResetPasswordForm() {
     // Also check window.location.search as fallback (in case Next.js searchParams doesn't capture it)
     let fallbackCode: string | null = null;
     let fallbackToken: string | null = null;
+    let fallbackMode: string | null = null;
+    
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       fallbackCode = urlParams.get("oobCode");
       fallbackToken = urlParams.get("token");
+      fallbackMode = urlParams.get("mode");
+      
+      // Also check if we're on Firebase auth handler page and extract oobCode from there
+      // Firebase Admin SDK links go through: https://[project].firebaseapp.com/__/auth/action?mode=resetPassword&oobCode=...
+      // Then redirect to continueUrl with oobCode
+      if (!fallbackCode && window.location.href.includes('/__/auth/action')) {
+        const authUrlParams = new URLSearchParams(window.location.search);
+        fallbackCode = authUrlParams.get("oobCode");
+        fallbackMode = authUrlParams.get("mode");
+        console.log("[Reset Password] Found oobCode in Firebase auth handler URL");
+      }
+      
+      // Check hash fragment as well (some redirects might put params in hash)
+      if (!fallbackCode && window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        fallbackCode = hashParams.get("oobCode") || fallbackCode;
+        fallbackToken = hashParams.get("token") || fallbackToken;
+      }
     }
     
     const finalCode = code || fallbackCode;
     const finalToken = token || fallbackToken;
+    const finalMode = mode || fallbackMode;
     
     console.log("[Reset Password] URL params:", { 
       code: finalCode?.substring(0, 20), 
       token: finalToken?.substring(0, 20), 
-      mode,
-      url: typeof window !== 'undefined' ? window.location.href.substring(0, 100) : 'N/A'
+      mode: finalMode,
+      url: typeof window !== 'undefined' ? window.location.href.substring(0, 200) : 'N/A'
     });
     
     // Check for oobCode first (Firebase Admin SDK format)
@@ -59,11 +80,11 @@ function ResetPasswordForm() {
       // Custom token format (fallback method)
       console.log("[Reset Password] Found custom token");
       setOobCode(finalToken);
-    } else if (mode === "resetPassword" && !finalCode && !finalToken) {
+    } else if (finalMode === "resetPassword" && !finalCode && !finalToken) {
       // Mode is set but no code/token - invalid link
       console.error("[Reset Password] Mode is resetPassword but no code or token found");
       setError("Invalid password reset link. Please request a new one.");
-    } else if (!finalCode && !finalToken && !mode) {
+    } else if (!finalCode && !finalToken && !finalMode) {
       // If no code or token, this might be a direct visit - show error
       console.error("[Reset Password] No reset parameters found in URL");
       setError("Invalid or expired password reset link. Please request a new one.");
@@ -168,13 +189,33 @@ function ResetPasswordForm() {
     // Small delay to ensure URL params are parsed
     const timer = setTimeout(() => {
       if (!oobCode && !error) {
-        // If we still don't have a token after parsing, show error
+        // If we still don't have a token after parsing, show error with diagnostic info
         const code = searchParams.get("oobCode");
         const token = searchParams.get("token");
         const mode = searchParams.get("mode");
+        const apiKey = searchParams.get("apiKey");
+        const continueUrl = searchParams.get("continueUrl");
+        
+        // Log all URL parameters for debugging
+        const allParams: Record<string, string | null> = {};
+        if (typeof window !== 'undefined') {
+          const urlParams = new URLSearchParams(window.location.search);
+          urlParams.forEach((value, key) => {
+            allParams[key] = value.substring(0, 50); // Truncate long values
+          });
+        }
+        
+        console.error("[Reset Password] No token found after parsing:", { 
+          code: code?.substring(0, 20), 
+          token: token?.substring(0, 20), 
+          mode, 
+          apiKey: apiKey?.substring(0, 20),
+          continueUrl,
+          allParams,
+          url: typeof window !== 'undefined' ? window.location.href.substring(0, 200) : 'N/A'
+        });
         
         if (!code && !token) {
-          console.error("[Reset Password] No token found after parsing:", { code, token, mode, url: window.location.href });
           setError("Invalid password reset link. Please request a new one.");
         }
       }
@@ -308,6 +349,15 @@ function ResetPasswordForm() {
                         fontSize: "0.875rem"
                       }}>
                         {error}
+                        {process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && (
+                          <div style={{ marginTop: "0.5rem", padding: "0.5rem", background: "#fee2e2", borderRadius: "4px", fontSize: "0.75rem", fontFamily: "monospace", wordBreak: "break-all" }}>
+                            <strong>Debug Info:</strong><br/>
+                            URL: {window.location.href.substring(0, 200)}<br/>
+                            oobCode: {searchParams.get("oobCode")?.substring(0, 30) || "not found"}<br/>
+                            token: {searchParams.get("token")?.substring(0, 30) || "not found"}<br/>
+                            mode: {searchParams.get("mode") || "not found"}
+                          </div>
+                        )}
                       </div>
                     )}
 
