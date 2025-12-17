@@ -113,8 +113,32 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
-      // Check if it's a Firebase oobCode (longer) or custom token
-      const isOobCode = oobCode && oobCode.length > 50;
+      // Determine if it's a Firebase oobCode or custom token
+      // Custom tokens: 64 hex characters (32 bytes), come from 'token' param
+      // oobCodes: longer, base64-like, come from 'oobCode' param or Firebase auth handler
+      const tokenParam = searchParams.get("token");
+      const oobCodeParam = searchParams.get("oobCode");
+      
+      // If it came from 'token' parameter, it's definitely a custom token
+      // Custom tokens are exactly 64 hex characters (0-9, a-f)
+      const isCustomToken = tokenParam && (
+        oobCode === tokenParam || // Matches token param
+        (oobCode.length === 64 && /^[0-9a-f]+$/i.test(oobCode)) // 64 hex chars
+      );
+      
+      const isOobCode = !isCustomToken && (
+        oobCodeParam && oobCode === oobCodeParam || // Matches oobCode param
+        oobCode.length > 64 || // Longer than custom token
+        (oobCode.length > 50 && !/^[0-9a-f]+$/i.test(oobCode)) // Long but not hex
+      );
+      
+      console.log("[Reset Password] Token type detection:", {
+        tokenLength: oobCode?.length,
+        isCustomToken,
+        isOobCode,
+        tokenParam: tokenParam?.substring(0, 10),
+        oobCodeParam: oobCodeParam?.substring(0, 10),
+      });
       
       if (isOobCode) {
         // Use Firebase's confirmPasswordReset for oobCode
