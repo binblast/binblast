@@ -223,16 +223,19 @@ export async function POST(req: NextRequest) {
           
           if (db) {
             const firestore = await safeImportFirestore();
-            const { collection, addDoc, serverTimestamp } = firestore;
+            const { collection, addDoc, serverTimestamp, Timestamp } = firestore;
+            
+            // Convert JavaScript Date to Firestore Timestamp
+            const expiresAtTimestamp = Timestamp.fromDate(expiresAt);
             
             await addDoc(collection(db, "passwordResets"), {
               email: email.toLowerCase(),
               token: resetToken,
-              expiresAt: expiresAt,
+              expiresAt: expiresAtTimestamp, // Use Firestore Timestamp, not JavaScript Date
               createdAt: serverTimestamp(),
               used: false,
             });
-            console.log("[Password Reset] Token stored successfully in Firestore");
+            console.log("[Password Reset] Token stored successfully in Firestore (client SDK)");
           } else {
             console.error("[Password Reset] Failed to initialize Firestore - db is null");
             // Continue anyway - token will still be generated and email sent
@@ -241,6 +244,10 @@ export async function POST(req: NextRequest) {
         } catch (firestoreError: any) {
           console.error("[Password Reset] Firestore write failed:", firestoreError?.message || firestoreError);
           console.error("[Password Reset] Firestore error code:", firestoreError?.code);
+          console.error("[Password Reset] Firestore error details:", {
+            name: firestoreError?.name,
+            stack: firestoreError?.stack?.substring(0, 200),
+          });
           // Continue anyway - token will still be generated and email sent
           // Note: Reset won't work without Firestore storage, but we'll still try to send email
         }

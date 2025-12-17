@@ -98,10 +98,33 @@ export async function POST(req: NextRequest) {
         tokenLength: token.length,
         tokenPrefix: token.substring(0, 10),
         foundTokens: snapshot.size,
+        token: token.substring(0, 20), // Log first 20 chars for debugging
       });
       
       if (snapshot.empty) {
         console.error("[Confirm Password Reset] Token not found in Firestore");
+        console.error("[Confirm Password Reset] Query details:", {
+          collection: "passwordResets",
+          tokenQuery: token.substring(0, 20),
+          usedQuery: false,
+        });
+        
+        // Try to see if token exists but is marked as used
+        const allTokensQuery = query(
+          collection(db, "passwordResets"),
+          where("token", "==", token)
+        );
+        const allTokensSnapshot = await getDocs(allTokensQuery);
+        if (!allTokensSnapshot.empty) {
+          const doc = allTokensSnapshot.docs[0];
+          const data = doc.data();
+          console.error("[Confirm Password Reset] Token exists but:", {
+            used: data.used,
+            expiresAt: data.expiresAt?.toDate?.()?.toISOString() || data.expiresAt,
+            email: data.email,
+          });
+        }
+        
         return NextResponse.json(
           { error: "Invalid or expired reset link. Please request a new one." },
           { status: 400 }
