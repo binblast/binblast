@@ -99,60 +99,82 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Generate password reset link using Admin SDK
+      // Generate password reset link using Admin SDK (doesn't send email, just generates link)
+      // Note: generatePasswordResetLink doesn't send an email - it only generates the link
       resetLink = await admin.auth().generatePasswordResetLink(email, {
         url: `${baseUrl}/reset-password`,
         handleCodeInApp: false,
       });
       
       userExists = true;
+      console.log("[Password Reset] Generated reset link using Admin SDK (no email sent by Firebase)");
     } catch (adminError: any) {
       // Admin SDK not available or failed - use alternative method
       console.log("[Password Reset] Using alternative token method");
       
-      // Check if user exists using Firebase Auth
-      const { getFirebaseApp } = await import("@/lib/firebase");
-      const app = await getFirebaseApp();
-      
-      if (!app) {
-        return NextResponse.json(
-          { error: "Unable to initialize authentication service" },
-          { status: 500 }
-        );
-      }
-
-      const firebaseAuth = await import("firebase/auth");
-      const auth = firebaseAuth.getAuth(app);
-      
-      if (!auth) {
-        return NextResponse.json(
-          { error: "Unable to initialize authentication service" },
-          { status: 500 }
-        );
-      }
-
-      // Verify user exists by attempting to send reset email
+      // Check if user exists by querying Firestore (doesn't trigger Firebase email)
       try {
-        await firebaseAuth.sendPasswordResetEmail(auth, email);
-        userExists = true;
-      } catch (error: any) {
-        if (error.code === "auth/user-not-found") {
-          return NextResponse.json(
-            { error: "No account found with this email address" },
-            { status: 404 }
+        const { getDbInstance } = await import("@/lib/firebase");
+        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+        const db = await getDbInstance();
+        
+        if (db) {
+          const firestore = await safeImportFirestore();
+          const { collection, query, where, getDocs } = firestore;
+          
+          // Query users collection by email
+          const usersQuery = query(
+            collection(db, "users"),
+            where("email", "==", email.toLowerCase())
           );
-        } else if (error.code === "auth/invalid-email") {
-          return NextResponse.json(
-            { error: "Invalid email address" },
-            { status: 400 }
-          );
-        } else if (error.code === "auth/too-many-requests") {
-          return NextResponse.json(
-            { error: "Too many password reset requests. Please try again later" },
-            { status: 429 }
-          );
+          const usersSnapshot = await getDocs(usersQuery);
+          
+          if (!usersSnapshot.empty) {
+            userExists = true;
+            console.log("[Password Reset] User found in Firestore");
+          } else {
+            // Also check Firebase Auth users if Admin SDK is available
+            // But don't send email - just check existence
+            try {
+              const moduleName = 'firebase' + '-admin';
+              const admin = await import(moduleName);
+              
+              if (admin.apps && admin.apps.length > 0 || (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY)) {
+                if (!admin.apps || !admin.apps.length) {
+                  admin.initializeApp({
+                    credential: admin.credential.cert({
+                      projectId: process.env.FIREBASE_PROJECT_ID,
+                      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+                    }),
+                  });
+                }
+                
+                // Check if user exists in Firebase Auth (doesn't send email)
+                try {
+                  await admin.auth().getUserByEmail(email);
+                  userExists = true;
+                  console.log("[Password Reset] User found in Firebase Auth");
+                } catch (authError: any) {
+                  if (authError.code === 'auth/user-not-found') {
+                    // User doesn't exist - return error
+                    return NextResponse.json(
+                      { error: "No account found with this email address" },
+                      { status: 404 }
+                    );
+                  }
+                  // For other errors, continue (don't reveal if email exists for security)
+                }
+              }
+            } catch (adminCheckError) {
+              // Admin SDK not available for user check - continue anyway
+              console.log("[Password Reset] Cannot verify user existence, proceeding with reset");
+            }
+          }
         }
-        // For other errors, still proceed (don't reveal if email exists for security)
+      } catch (checkError: any) {
+        console.error("[Password Reset] Error checking user existence:", checkError);
+        // Continue anyway - don't reveal if email exists for security
       }
 
       // Generate a secure custom token
