@@ -29,7 +29,6 @@ export async function GET(
     const { doc, getDoc } = firestore;
     const partnerRef = doc(db, "partners", partnerId);
     const partnerDoc = await getDoc(partnerRef);
-    const partnerData = partnerDoc.data();
 
     if (!partnerDoc.exists()) {
       return NextResponse.json(
@@ -37,6 +36,8 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    const partnerData = partnerDoc.data();
 
     // Calculate revenue from bookings
     const bookingsQuery = query(
