@@ -19,6 +19,7 @@ function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [oobCode, setOobCode] = useState<string | null>(null);
+  const [tokenType, setTokenType] = useState<"oobCode" | "custom" | null>(null); // Track token type
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -76,10 +77,13 @@ function ResetPasswordForm() {
       // oobCodes are typically > 50 characters
       console.log("[Reset Password] Found oobCode:", finalCode.length > 50 ? "long (oobCode)" : "short");
       setOobCode(finalCode);
+      setTokenType("oobCode");
     } else if (finalToken) {
       // Custom token format (fallback method)
+      // Custom tokens are exactly 64 hex characters
       console.log("[Reset Password] Found custom token");
       setOobCode(finalToken);
+      setTokenType("custom");
     } else if (finalMode === "resetPassword" && !finalCode && !finalToken) {
       // Mode is set but no code/token - invalid link
       console.error("[Reset Password] Mode is resetPassword but no code or token found");
@@ -113,31 +117,29 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
-      // Determine if it's a Firebase oobCode or custom token
-      // Custom tokens: 64 hex characters (32 bytes), come from 'token' param
-      // oobCodes: longer, base64-like, come from 'oobCode' param or Firebase auth handler
-      const tokenParam = searchParams.get("token");
-      const oobCodeParam = searchParams.get("oobCode");
+      // Use the token type we determined when extracting from URL
+      // This is more reliable than checking searchParams again
+      let isOobCode = tokenType === "oobCode";
+      let isCustomToken = tokenType === "custom";
       
-      // If it came from 'token' parameter, it's definitely a custom token
-      // Custom tokens are exactly 64 hex characters (0-9, a-f)
-      const isCustomToken = tokenParam && (
-        oobCode === tokenParam || // Matches token param
-        (oobCode.length === 64 && /^[0-9a-f]+$/i.test(oobCode)) // 64 hex chars
-      );
-      
-      const isOobCode = !isCustomToken && (
-        oobCodeParam && oobCode === oobCodeParam || // Matches oobCode param
-        oobCode.length > 64 || // Longer than custom token
-        (oobCode.length > 50 && !/^[0-9a-f]+$/i.test(oobCode)) // Long but not hex
-      );
+      // Fallback detection if tokenType wasn't set (shouldn't happen, but safety check)
+      if (!tokenType && oobCode) {
+        // Custom tokens are exactly 64 hex characters (0-9, a-f)
+        const looksLikeCustomToken = oobCode.length === 64 && /^[0-9a-f]+$/i.test(oobCode);
+        if (looksLikeCustomToken) {
+          console.warn("[Reset Password] Token type not set, detected as custom token from format");
+          isCustomToken = true;
+        } else {
+          console.warn("[Reset Password] Token type not set, detected as oobCode from format");
+          isOobCode = true;
+        }
+      }
       
       console.log("[Reset Password] Token type detection:", {
         tokenLength: oobCode?.length,
+        tokenType,
         isCustomToken,
         isOobCode,
-        tokenParam: tokenParam?.substring(0, 10),
-        oobCodeParam: oobCodeParam?.substring(0, 10),
       });
       
       if (isOobCode) {
