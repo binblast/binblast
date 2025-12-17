@@ -13,6 +13,8 @@ export async function POST(
 ) {
   try {
     const applicationId = params.id;
+    const body = await req.json();
+    const { serviceAreas, revenueSharePartner, revenueSharePlatform } = body;
 
     if (!applicationId) {
       return NextResponse.json(
@@ -21,8 +23,28 @@ export async function POST(
       );
     }
 
+    // Validate service areas
+    if (!serviceAreas || !Array.isArray(serviceAreas) || serviceAreas.length === 0) {
+      return NextResponse.json(
+        { error: "At least one service area is required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate revenue split
+    const partnerShare = revenueSharePartner || PARTNER_REVENUE_SHARE;
+    const platformShare = revenueSharePlatform || PLATFORM_REVENUE_SHARE;
+    
+    if (Math.abs(partnerShare + platformShare - 1) > 0.01) {
+      return NextResponse.json(
+        { error: "Revenue shares must total 100%" },
+        { status: 400 }
+      );
+    }
+
     const { getDbInstance } = await import("@/lib/firebase");
     const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+    const { logPartnerAuditEvent } = await import("@/lib/partner-audit-log");
     const firestore = await safeImportFirestore();
     const { collection, doc, getDoc, setDoc, updateDoc, query, where, getDocs, serverTimestamp } = firestore;
 
@@ -113,13 +135,15 @@ export async function POST(
       email: applicationData.email,
       phone: applicationData.phone,
       serviceType: applicationData.serviceType,
-      serviceArea: applicationData.serviceArea,
-      status: "pending_agreement", // Will become "active" after agreement acceptance
+      serviceArea: applicationData.serviceArea, // Keep for backward compatibility
+      serviceAreas: serviceAreas, // New: array of service areas
+      status: "active", // Changed: Set to active immediately (was pending_agreement)
       referralCode,
+      partnerCode: referralCode, // Alias for referralCode
       bookingLinkSlug: referralCode.toLowerCase(),
       stripeConnected: false,
-      revenueSharePartner: PARTNER_REVENUE_SHARE,
-      revenueSharePlatform: PLATFORM_REVENUE_SHARE,
+      revenueSharePartner: partnerShare,
+      revenueSharePlatform: platformShare,
       agreementAcceptedAt: null,
       agreementVersion: null,
       createdAt: serverTimestamp(),
@@ -132,8 +156,40 @@ export async function POST(
     await updateDoc(applicationRef, {
       status: "approved",
       linkedPartnerId: partnerRef.id,
+      approvedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+
+    // Log audit event
+    await logPartnerAuditEvent(
+      "application_approve",
+      "partnerApplication",
+      applicationId,
+      {
+        before: { status: applicationData.status },
+        after: { status: "approved", linkedPartnerId: partnerRef.id },
+        metadata: {
+          serviceAreas,
+          revenueSharePartner: partnerShare,
+          revenueSharePlatform: platformShare,
+        },
+      }
+    );
+
+    // Also log partner creation
+    await logPartnerAuditEvent(
+      "partner_create",
+      "partner",
+      partnerRef.id,
+      {
+        metadata: {
+          fromApplication: applicationId,
+          serviceAreas,
+          revenueSharePartner: partnerShare,
+          revenueSharePlatform: platformShare,
+        },
+      }
+    );
 
     // IMPORTANT: Partners should NOT have user documents
     // Delete user document if it exists (partners are only in "partners" collection)

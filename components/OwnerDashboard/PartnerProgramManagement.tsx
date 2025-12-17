@@ -1,30 +1,11 @@
 // components/OwnerDashboard/PartnerProgramManagement.tsx
+// Re-export the enhanced AdminDashboard version
 "use client";
 
-import { useEffect, useState } from "react";
+export { PartnerProgramManagement } from "@/components/AdminDashboard/PartnerProgramManagement";
 
-interface PartnerProgramManagementProps {
-  userId: string;
-}
-
-interface Partner {
-  id: string;
-  businessName: string;
-  ownerName: string;
-  email: string;
-  serviceArea: string;
-  status: string;
-  customersAssigned: number;
-  jobsCompleted: number;
-  rating?: number;
-  grossRevenue: number;
-  companyShare: number;
-  partnerShare: number;
-  unpaidPayouts: number;
-  paidPayouts: number;
-}
-
-export function PartnerProgramManagement({ userId }: PartnerProgramManagementProps) {
+// Legacy component - now uses enhanced version from AdminDashboard
+// Keeping this file for backward compatibility with existing imports
   const [partners, setPartners] = useState<Partner[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

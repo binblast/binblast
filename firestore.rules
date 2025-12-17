@@ -328,15 +328,15 @@ service cloud.firestore {
     
     // PartnerPayouts collection - tracks partner payouts
     match /partnerPayouts/{payoutId} {
-      // Partners can read their own payouts
-      // Server-side can read all (for admin)
+      // Partners can read their own payouts, admins can read all, server-side can read/write
       allow read: if (
         (isAuthenticated() && resource.data.partnerId != null)
+        || isAdmin()
         || request.auth == null
       );
       
       // Only server-side API routes can create/update payouts
-      allow create, update: if request.auth == null;
+      allow create, update: if isAdmin() || request.auth == null;
       
       // No deletions allowed
       allow delete: if false;
@@ -519,6 +519,14 @@ service cloud.firestore {
       // Only server-side API routes can read/write password reset tokens
       // This ensures security - tokens are only created and verified server-side
       allow read, write: if request.auth == null;
+    }
+
+    // Partner audit logs collection - tracks all partner management actions
+    match /partnerAuditLogs/{logId} {
+      // Only server-side API routes can write audit logs
+      // Admins can read audit logs
+      allow read: if isAdmin() || request.auth == null;
+      allow write: if request.auth == null;
     }
 
     // Default deny all other collections
