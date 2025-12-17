@@ -349,7 +349,8 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                   onClick={async () => {
                     if (confirm(`Approve ${selectedApplicationIds.size} selected applications?`)) {
                       // Bulk approve
-                      for (const id of selectedApplicationIds) {
+                      const idsArray = Array.from(selectedApplicationIds);
+                      for (const id of idsArray) {
                         const app = applications.find(a => a.id === id);
                         if (app && app.status === "pending") {
                           setSelectedApplication(app);
@@ -609,7 +610,8 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                 <button
                   onClick={async () => {
                     if (confirm(`Pause ${selectedPartnerIds.size} selected partners?`)) {
-                      for (const id of selectedPartnerIds) {
+                      const idsArray = Array.from(selectedPartnerIds);
+                      for (const id of idsArray) {
                         await handlePausePartner(id);
                       }
                       setSelectedPartnerIds(new Set());
