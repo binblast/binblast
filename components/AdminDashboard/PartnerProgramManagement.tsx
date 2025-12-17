@@ -746,7 +746,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                           </a>
                         </td>
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
-                          {partner.serviceAreas?.join(", ") || partner.serviceArea || "N/A"}
+                          {partner.serviceAreas?.join(", ") || "N/A"}
                         </td>
                         <td style={{ padding: "0.75rem" }}>
                           <span style={{
