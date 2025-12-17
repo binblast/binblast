@@ -188,6 +188,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Ensure resetLink is defined
+    if (!resetLink) {
+      console.error("[Password Reset] Reset link not generated");
+      return NextResponse.json(
+        { error: "Failed to generate password reset link. Please try again." },
+        { status: 500 }
+      );
+    }
+
     // Send email via EmailJS
     const emailjsServiceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || "service_rok6u9h";
     // Password reset email template ID
@@ -195,9 +204,9 @@ export async function POST(req: NextRequest) {
     const emailjsPublicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
 
     if (!emailjsPublicKey) {
-      console.error("[Password Reset] EmailJS not configured");
+      console.error("[Password Reset] EmailJS not configured - missing NEXT_PUBLIC_EMAILJS_PUBLIC_KEY");
       return NextResponse.json(
-        { error: "Email service not configured. Please set NEXT_PUBLIC_EMAILJS_PUBLIC_KEY" },
+        { error: "Email service not configured. Please contact support." },
         { status: 500 }
       );
     }
@@ -232,13 +241,41 @@ export async function POST(req: NextRequest) {
 
     if (!emailResponse.ok) {
       const errorText = await emailResponse.text();
+      let errorMessage = "Failed to send password reset email. Please try again later.";
+      
+      // Parse EmailJS error response for better error messages
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error) {
+          errorMessage = `Email service error: ${errorJson.error}`;
+        }
+      } catch {
+        // If not JSON, use the text as-is
+        if (errorText && errorText.length < 200) {
+          errorMessage = `Email service error: ${errorText}`;
+        }
+      }
+      
       console.error("[Password Reset] EmailJS error response:", {
         status: emailResponse.status,
         statusText: emailResponse.statusText,
         errorText: errorText,
+        serviceId: emailjsServiceId,
+        templateId: emailjsTemplateId,
+        hasPublicKey: !!emailjsPublicKey,
       });
+      
+      // Provide specific error messages for common issues
+      if (emailResponse.status === 400) {
+        errorMessage = "Invalid email template configuration. Please contact support.";
+      } else if (emailResponse.status === 401 || emailResponse.status === 403) {
+        errorMessage = "Email service authentication failed. Please check EmailJS configuration.";
+      } else if (emailResponse.status === 404) {
+        errorMessage = "Email template not found. Please verify template ID.";
+      }
+      
       return NextResponse.json(
-        { error: "Failed to send password reset email. Please try again later." },
+        { error: errorMessage },
         { status: 500 }
       );
     }
