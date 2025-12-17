@@ -221,35 +221,50 @@ export async function POST(req: NextRequest) {
           const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
           const db = await getDbInstance();
           
-          if (db) {
-            const firestore = await safeImportFirestore();
-            const { collection, addDoc, serverTimestamp, Timestamp } = firestore;
-            
-            // Convert JavaScript Date to Firestore Timestamp
-            const expiresAtTimestamp = Timestamp.fromDate(expiresAt);
-            
-            await addDoc(collection(db, "passwordResets"), {
-              email: email.toLowerCase(),
-              token: resetToken,
-              expiresAt: expiresAtTimestamp, // Use Firestore Timestamp, not JavaScript Date
-              createdAt: serverTimestamp(),
-              used: false,
-            });
-            console.log("[Password Reset] Token stored successfully in Firestore (client SDK)");
-          } else {
+          if (!db) {
             console.error("[Password Reset] Failed to initialize Firestore - db is null");
-            // Continue anyway - token will still be generated and email sent
-            // The reset won't work without Firestore, but at least we don't fail completely
+            console.error("[Password Reset] This means password reset tokens cannot be stored.");
+            console.error("[Password Reset] Please configure Firebase Admin SDK or ensure NEXT_PUBLIC_FIREBASE_* env vars are set.");
+            // Don't continue - password reset won't work without token storage
+            return NextResponse.json(
+              { error: "Password reset service is temporarily unavailable. Please contact support." },
+              { status: 503 }
+            );
           }
+          
+          const firestore = await safeImportFirestore();
+          const { collection, addDoc, serverTimestamp, Timestamp } = firestore;
+          
+          // Convert JavaScript Date to Firestore Timestamp
+          const expiresAtTimestamp = Timestamp.fromDate(expiresAt);
+          
+          const docRef = await addDoc(collection(db, "passwordResets"), {
+            email: email.toLowerCase(),
+            token: resetToken,
+            expiresAt: expiresAtTimestamp, // Use Firestore Timestamp, not JavaScript Date
+            createdAt: serverTimestamp(),
+            used: false,
+          });
+          
+          console.log("[Password Reset] Token stored successfully in Firestore (client SDK):", {
+            docId: docRef.id,
+            tokenPrefix: resetToken.substring(0, 10),
+            email: email.toLowerCase(),
+          });
         } catch (firestoreError: any) {
           console.error("[Password Reset] Firestore write failed:", firestoreError?.message || firestoreError);
           console.error("[Password Reset] Firestore error code:", firestoreError?.code);
           console.error("[Password Reset] Firestore error details:", {
             name: firestoreError?.name,
-            stack: firestoreError?.stack?.substring(0, 200),
+            code: firestoreError?.code,
+            stack: firestoreError?.stack?.substring(0, 300),
           });
-          // Continue anyway - token will still be generated and email sent
-          // Note: Reset won't work without Firestore storage, but we'll still try to send email
+          
+          // Don't continue - password reset won't work without token storage
+          return NextResponse.json(
+            { error: "Failed to store password reset token. Please try again or contact support." },
+            { status: 500 }
+          );
         }
       }
     }
