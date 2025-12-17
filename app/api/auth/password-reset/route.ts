@@ -203,10 +203,33 @@ export async function POST(req: NextRequest) {
     const emailjsTemplateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PASSWORD_RESET || "template_l421jys";
     const emailjsPublicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
 
+    // Detailed logging for debugging
+    console.log("[Password Reset] EmailJS Configuration Check:", {
+      hasServiceId: !!emailjsServiceId,
+      serviceId: emailjsServiceId,
+      hasTemplateId: !!emailjsTemplateId,
+      templateId: emailjsTemplateId,
+      hasPublicKey: !!emailjsPublicKey,
+      publicKeyLength: emailjsPublicKey?.length || 0,
+      publicKeyPrefix: emailjsPublicKey?.substring(0, 10) || "none",
+    });
+
     if (!emailjsPublicKey) {
       console.error("[Password Reset] EmailJS not configured - missing NEXT_PUBLIC_EMAILJS_PUBLIC_KEY");
       return NextResponse.json(
         { error: "Email service not configured. Please contact support." },
+        { status: 500 }
+      );
+    }
+
+    // Validate EmailJS public key format (should be a string, typically starts with a letter)
+    if (typeof emailjsPublicKey !== 'string' || emailjsPublicKey.length < 10) {
+      console.error("[Password Reset] Invalid EmailJS public key format:", {
+        type: typeof emailjsPublicKey,
+        length: emailjsPublicKey?.length,
+      });
+      return NextResponse.json(
+        { error: "Email service configuration error. Please contact support." },
         { status: 500 }
       );
     }
@@ -268,10 +291,14 @@ export async function POST(req: NextRequest) {
       // Provide specific error messages for common issues
       if (emailResponse.status === 400) {
         errorMessage = "Invalid email template configuration. Please contact support.";
-      } else if (emailResponse.status === 401 || emailResponse.status === 403) {
-        errorMessage = "Email service authentication failed. Please check EmailJS configuration.";
+      } else if (emailResponse.status === 401) {
+        errorMessage = "Email service authentication failed. The EmailJS public key may be incorrect or expired. Please check Vercel environment variables.";
+      } else if (emailResponse.status === 403) {
+        errorMessage = "Email service access denied. Please verify EmailJS public key and service permissions in Vercel settings.";
       } else if (emailResponse.status === 404) {
-        errorMessage = "Email template not found. Please verify template ID.";
+        errorMessage = `Email template not found. Please verify template ID "${emailjsTemplateId}" exists in EmailJS dashboard.`;
+      } else if (emailResponse.status === 429) {
+        errorMessage = "Too many email requests. Please try again in a few minutes.";
       }
       
       return NextResponse.json(
