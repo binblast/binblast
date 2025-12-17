@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
           }
           
           const firestore = await safeImportFirestore();
-          const { collection, addDoc, serverTimestamp, Timestamp } = firestore;
+          const { collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } = firestore;
           
           // Convert JavaScript Date to Firestore Timestamp
           const expiresAtTimestamp = Timestamp.fromDate(expiresAt);
@@ -247,7 +247,6 @@ export async function POST(req: NextRequest) {
           });
           
           // Verify the token was stored correctly by reading it back
-          const { getDoc } = firestore;
           const verifyDoc = await getDoc(docRef);
           if (!verifyDoc.exists()) {
             throw new Error("Token was not stored - verification read failed");
