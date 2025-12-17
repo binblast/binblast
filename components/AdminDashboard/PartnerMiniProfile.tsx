@@ -553,22 +553,24 @@ function JobsTab({
           return matchesSearch && matchesStatus;
         });
 
-        return filteredJobs.length === 0 ? (
-        <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>No jobs found</div>
-      ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Date</th>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Customer</th>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Status</th>
-                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "600" }}>Proof Photos</th>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredJobs.map((job: any) => {
+        if (filteredJobs.length === 0) {
+          return <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>No jobs found</div>;
+        }
+
+        return (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Date</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Customer</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Status</th>
+                  <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "600" }}>Proof Photos</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredJobs.map((job: any) => {
                 const hasBothPhotos = job.hasInsidePhoto && job.hasOutsidePhoto;
                 return (
                   <tr key={job.jobId} style={{ borderBottom: "1px solid #f3f4f6" }}>
