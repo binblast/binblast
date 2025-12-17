@@ -29,14 +29,43 @@ function ResetPasswordForm() {
     const token = searchParams.get("token");
     const mode = searchParams.get("mode");
     
-    if (mode === "resetPassword" && code) {
-      // Firebase oobCode format
-      setOobCode(code);
-    } else if (token) {
-      // Custom token format
-      setOobCode(token);
-    } else if (!code && !token && !mode) {
+    // Also check window.location.search as fallback (in case Next.js searchParams doesn't capture it)
+    let fallbackCode: string | null = null;
+    let fallbackToken: string | null = null;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      fallbackCode = urlParams.get("oobCode");
+      fallbackToken = urlParams.get("token");
+    }
+    
+    const finalCode = code || fallbackCode;
+    const finalToken = token || fallbackToken;
+    
+    console.log("[Reset Password] URL params:", { 
+      code: finalCode?.substring(0, 20), 
+      token: finalToken?.substring(0, 20), 
+      mode,
+      url: typeof window !== 'undefined' ? window.location.href.substring(0, 100) : 'N/A'
+    });
+    
+    // Check for oobCode first (Firebase Admin SDK format)
+    // oobCode can exist with or without mode parameter
+    if (finalCode) {
+      // Firebase oobCode format (from Admin SDK generatePasswordResetLink)
+      // oobCodes are typically > 50 characters
+      console.log("[Reset Password] Found oobCode:", finalCode.length > 50 ? "long (oobCode)" : "short");
+      setOobCode(finalCode);
+    } else if (finalToken) {
+      // Custom token format (fallback method)
+      console.log("[Reset Password] Found custom token");
+      setOobCode(finalToken);
+    } else if (mode === "resetPassword" && !finalCode && !finalToken) {
+      // Mode is set but no code/token - invalid link
+      console.error("[Reset Password] Mode is resetPassword but no code or token found");
+      setError("Invalid password reset link. Please request a new one.");
+    } else if (!finalCode && !finalToken && !mode) {
       // If no code or token, this might be a direct visit - show error
+      console.error("[Reset Password] No reset parameters found in URL");
       setError("Invalid or expired password reset link. Please request a new one.");
     }
   }, [searchParams]);
@@ -133,6 +162,26 @@ function ResetPasswordForm() {
       setLoading(false);
     }
   }
+
+  // Show loading state while extracting token from URL
+  useEffect(() => {
+    // Small delay to ensure URL params are parsed
+    const timer = setTimeout(() => {
+      if (!oobCode && !error) {
+        // If we still don't have a token after parsing, show error
+        const code = searchParams.get("oobCode");
+        const token = searchParams.get("token");
+        const mode = searchParams.get("mode");
+        
+        if (!code && !token) {
+          console.error("[Reset Password] No token found after parsing:", { code, token, mode, url: window.location.href });
+          setError("Invalid password reset link. Please request a new one.");
+        }
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [oobCode, error, searchParams]);
 
   if (!oobCode && !error) {
     return (
