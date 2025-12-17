@@ -370,7 +370,7 @@ export function PartnerMiniProfile({
                 Remove Partner
               </button>
             )}
-            {applicationId && partner.status === "pending" && (
+            {applicationId && (
               <button
                 onClick={handleApprove}
                 style={{
