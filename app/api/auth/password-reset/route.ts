@@ -21,7 +21,46 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    // Determine the production domain
+    // Priority: 1. NEXT_PUBLIC_APP_URL env var, 2. VERCEL_URL (auto-set by Vercel), 3. Request headers
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+    
+    // If NEXT_PUBLIC_APP_URL is not set or is localhost, try Vercel's auto-provided URL
+    if (!baseUrl || baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
+      // Vercel automatically sets VERCEL_URL in production
+      if (process.env.VERCEL_URL) {
+        baseUrl = `https://${process.env.VERCEL_URL}`;
+      } else if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+        baseUrl = `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+      } else {
+        // Try to get from request headers (for production deployments)
+        const host = req.headers.get('host');
+        if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+          const protocol = req.headers.get('x-forwarded-proto') || 'https';
+          baseUrl = `${protocol}://${host}`;
+        } else {
+          // Last resort: use a placeholder that should be replaced
+          baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://yourdomain.com";
+          console.warn("[Password Reset] Using fallback URL. Please set NEXT_PUBLIC_APP_URL in Vercel:", baseUrl);
+        }
+      }
+    }
+    
+    // Ensure baseUrl is a full URL with protocol
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      baseUrl = `https://${baseUrl}`;
+    }
+    
+    // Remove trailing slash
+    baseUrl = baseUrl.replace(/\/$/, '');
+    
+    // Ensure we're not using localhost in production
+    if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
+      console.error("[Password Reset] WARNING: Using localhost URL in production! Set NEXT_PUBLIC_APP_URL in Vercel.");
+    }
+    
+    console.log("[Password Reset] Using base URL:", baseUrl);
+    
     let resetLink: string;
     let userExists = false;
 
