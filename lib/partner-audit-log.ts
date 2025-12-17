@@ -88,7 +88,7 @@ export async function getAuditLogs(
     return snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    })) as AuditLogEntry[];
+    })) as unknown as AuditLogEntry[];
   } catch (error: any) {
     console.error("[Audit Log] Failed to get audit logs:", error);
     return [];
