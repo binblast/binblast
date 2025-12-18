@@ -9,11 +9,22 @@ const PLATFORM_REVENUE_SHARE = 0.4; // 40% to platform
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
-    const applicationId = params.id;
-    const body = await req.json();
+    // Handle both Promise and direct params (Next.js 13+ vs 14+)
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const applicationId = resolvedParams.id;
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError: any) {
+      console.error("[Approve Partner] Failed to parse request body:", parseError);
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 }
+      );
+    }
     const { serviceAreas, revenueSharePartner, revenueSharePlatform } = body;
 
     if (!applicationId) {
@@ -194,12 +205,14 @@ export async function POST(
     // IMPORTANT: Partners should NOT have user documents
     // Delete user document if it exists (partners are only in "partners" collection)
     try {
-      const { deleteDoc } = firestore;
-      const userRef = doc(db, "users", applicationData.userId);
-      const userDoc = await getDoc(userRef);
-      if (userDoc.exists()) {
-        await deleteDoc(userRef);
-        console.log("[Admin] Deleted user document for partner:", applicationData.userId);
+      if (applicationData.userId) {
+        const { deleteDoc } = firestore;
+        const userRef = doc(db, "users", applicationData.userId);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          await deleteDoc(userRef);
+          console.log("[Admin] Deleted user document for partner:", applicationData.userId);
+        }
       }
     } catch (userDeleteError) {
       console.warn("[Admin] Could not delete user document (may not exist):", userDeleteError);
@@ -212,41 +225,45 @@ export async function POST(
     
     console.log("[Admin] Partner approved. Signup link:", signupLink);
 
-    // Send approval email to partner (non-blocking)
-    try {
-      const { notifyPartnerApproval } = await import("@/lib/email-utils");
-      await notifyPartnerApproval({
-        email: applicationData.email,
-        ownerName: applicationData.ownerName,
-        businessName: applicationData.businessName,
-        referralCode,
-        serviceAreas: serviceAreas.join(", "),
-        revenueSharePartner: partnerShare,
-        revenueSharePlatform: platformShare,
-        signupLink,
-      });
-    } catch (emailError) {
-      console.error("[Admin] Failed to send approval email:", emailError);
-      // Don't fail the approval if email fails
-    }
+    // Send approval email to partner (non-blocking - fire and forget)
+    (async () => {
+      try {
+        const { notifyPartnerApproval } = await import("@/lib/email-utils");
+        await notifyPartnerApproval({
+          email: applicationData.email,
+          ownerName: applicationData.ownerName,
+          businessName: applicationData.businessName,
+          referralCode,
+          serviceAreas: serviceAreas.join(", "),
+          revenueSharePartner: partnerShare,
+          revenueSharePlatform: platformShare,
+          signupLink,
+        });
+      } catch (emailError: any) {
+        console.error("[Admin] Failed to send approval email:", emailError?.message || emailError);
+        // Don't fail the approval if email fails
+      }
+    })();
 
-    // Create admin notification for approval (non-blocking)
-    try {
-      const notificationsRef = doc(collection(db, "adminNotifications"));
-      await setDoc(notificationsRef, {
-        type: "partner_approved",
-        title: "Partner Application Approved",
-        message: `${applicationData.businessName} has been approved and can now sign up`,
-        partnerId: partnerRef.id,
-        applicationId,
-        businessName: applicationData.businessName,
-        read: false,
-        createdAt: serverTimestamp(),
-      });
-    } catch (notificationError) {
-      console.error("[Admin] Failed to create approval notification:", notificationError);
-      // Don't fail the approval if notification creation fails
-    }
+    // Create admin notification for approval (non-blocking - fire and forget)
+    (async () => {
+      try {
+        const notificationsRef = doc(collection(db, "adminNotifications"));
+        await setDoc(notificationsRef, {
+          type: "partner_approved",
+          title: "Partner Application Approved",
+          message: `${applicationData.businessName} has been approved and can now sign up`,
+          partnerId: partnerRef.id,
+          applicationId,
+          businessName: applicationData.businessName,
+          read: false,
+          createdAt: serverTimestamp(),
+        });
+      } catch (notificationError: any) {
+        console.error("[Admin] Failed to create approval notification:", notificationError?.message || notificationError);
+        // Don't fail the approval if notification creation fails
+      }
+    })();
 
     return NextResponse.json({
       success: true,
@@ -256,9 +273,16 @@ export async function POST(
       message: "Application approved. Partner can now sign up at /partner",
     });
   } catch (err: any) {
-    console.error("Error approving partner application:", err);
+    console.error("[Approve Partner] Error approving partner application:", {
+      error: err.message,
+      stack: err.stack,
+      applicationId: params?.id,
+    });
     return NextResponse.json(
-      { error: err.message || "Failed to approve application" },
+      { 
+        error: err.message || "Failed to approve application",
+        details: process.env.NODE_ENV === "development" ? err.stack : undefined
+      },
       { status: 500 }
     );
   }

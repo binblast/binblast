@@ -101,13 +101,15 @@ export async function notifyPartnerApproval(partnerData: {
   const templateId = "template_lm4wzqr";
 
   // Try to send email (non-blocking)
-  sendEmailJS(templateId, {
-    to_email: partnerData.email,
-    ...partnerData,
-    revenueSharePartner: `${(partnerData.revenueSharePartner * 100).toFixed(0)}`,
-    revenueSharePlatform: `${(partnerData.revenueSharePlatform * 100).toFixed(0)}`,
-  }).catch((error) => {
-    console.error("[Notify Partner] Failed to send approval email:", error);
+  try {
+    await sendEmailJS(templateId, {
+      to_email: partnerData.email,
+      ...partnerData,
+      revenueSharePartner: `${(partnerData.revenueSharePartner * 100).toFixed(0)}`,
+      revenueSharePlatform: `${(partnerData.revenueSharePlatform * 100).toFixed(0)}`,
+    });
+  } catch (error: any) {
+    console.error("[Notify Partner] Failed to send approval email:", error?.message || error);
     // Don't throw - email failure shouldn't block approval
-  });
+  }
 }
