@@ -220,11 +220,11 @@ export async function POST(
       // Don't fail the approval if user deletion fails - partner document is the source of truth
     }
 
-    // Generate signup link
-    const baseUrl = req.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const signupLink = `${baseUrl}/partner?partnerId=${partnerRef.id}`;
+    // Generate registration link for partner signup
+    const baseUrl = req.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "https://binblast.vercel.app";
+    const signupLink = `${baseUrl}/register?partner=true`;
     
-    console.log("[Admin] Partner approved. Signup link:", signupLink);
+    console.log("[Admin] Partner approved. Registration link:", signupLink);
 
     // Send approval email to partner (non-blocking - fire and forget)
     (async () => {
