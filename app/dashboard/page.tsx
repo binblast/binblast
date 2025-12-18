@@ -215,7 +215,7 @@ function DashboardPageContent() {
   const [operatorCityFilter, setOperatorCityFilter] = useState<string>("");
   const [operatorTypeFilter, setOperatorTypeFilter] = useState<string>("");
   const [operatorActiveTab, setOperatorActiveTab] = useState<"overview" | "employees" | "customers" | "schedule">("overview");
-  const [adminActiveTab, setAdminActiveTab] = useState<"overview" | "customers" | "operations" | "financial" | "partners" | "analytics" | "employees">("overview");
+  const [adminActiveTab, setAdminActiveTab] = useState<"overview" | "customers" | "operations" | "financial" | "partners" | "analytics" | "employees" | "messages">("overview");
   const [newQuotesCount, setNewQuotesCount] = useState(0);
   const [showQuotesNotification, setShowQuotesNotification] = useState(true);
   
