@@ -288,6 +288,20 @@ export default function PartnerDashboardPage() {
   }>>([]);
   const [showAddTeamMemberModal, setShowAddTeamMemberModal] = useState(false);
   const [loadingTeamMembers, setLoadingTeamMembers] = useState(false);
+  const [payouts, setPayouts] = useState<Array<{
+    id: string;
+    amount: number;
+    grossAmount: number;
+    employeeCosts: number;
+    currency: string;
+    status: string;
+    stripeTransferId: string | null;
+    payoutDate: string | null;
+    createdAt: string | null;
+  }>>([]);
+  const [loadingPayouts, setLoadingPayouts] = useState(false);
+  const [expandedPayoutId, setExpandedPayoutId] = useState<string | null>(null);
+  const [loadingStripeLink, setLoadingStripeLink] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
@@ -524,6 +538,10 @@ export default function PartnerDashboardPage() {
           if (statusResponse.ok) {
             const statusData = await statusResponse.json();
             setStripeConnectStatus(statusData);
+            // Load payouts if Stripe is connected
+            if (statusData?.connected && statusData?.status === 'active') {
+              loadPayouts();
+            }
           }
         } catch (err) {
           console.error("Error checking Stripe Connect status:", err);
@@ -554,6 +572,43 @@ export default function PartnerDashboardPage() {
       console.error("Error loading team members:", err);
     } finally {
       setLoadingTeamMembers(false);
+    }
+  }
+
+  async function loadPayouts() {
+    try {
+      setLoadingPayouts(true);
+      const response = await fetch('/api/partners/payouts');
+      if (response.ok) {
+        const data = await response.json();
+        setPayouts(data.payouts || []);
+      }
+    } catch (err) {
+      console.error("Error loading payouts:", err);
+    } finally {
+      setLoadingPayouts(false);
+    }
+  }
+
+  async function handleViewStripeAccount() {
+    try {
+      setLoadingStripeLink(true);
+      const response = await fetch('/api/partners/stripe-connect/login-link', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.loginUrl) {
+          window.open(data.loginUrl, '_blank');
+        }
+      } else {
+        alert('Failed to generate Stripe login link. Please try again.');
+      }
+    } catch (err) {
+      console.error("Error getting Stripe login link:", err);
+      alert('Failed to generate Stripe login link. Please try again.');
+    } finally {
+      setLoadingStripeLink(false);
     }
   }
 
@@ -1793,18 +1848,198 @@ export default function PartnerDashboardPage() {
                 )}
               </div>
               {stripeConnectStatus?.connected && stripeConnectStatus?.status === 'active' ? (
-                <div style={{
-                  padding: "1rem",
-                  background: "#f0fdf4",
-                  borderRadius: "8px",
-                  border: "1px solid #86efac"
-                }}>
-                  <p style={{ fontSize: "0.875rem", color: "#166534", marginBottom: "0.5rem" }}>
-                    ✓ Your Stripe account is connected and ready to receive payouts.
-                  </p>
-                  <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                    Commissions are held for 7 days, then automatically transferred to your account weekly.
-                  </p>
+                <div>
+                  <div style={{
+                    padding: "1rem",
+                    background: "#f0fdf4",
+                    borderRadius: "8px",
+                    border: "1px solid #86efac",
+                    marginBottom: "1rem"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.75rem" }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: "0.875rem", color: "#166534", marginBottom: "0.5rem", fontWeight: "600" }}>
+                          ✓ Your Stripe account is connected and ready to receive payouts.
+                        </p>
+                        <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                          Commissions are held for 7 days, then automatically transferred to your account weekly.
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleViewStripeAccount}
+                        disabled={loadingStripeLink}
+                        style={{
+                          padding: "0.5rem 1rem",
+                          background: loadingStripeLink ? "#9ca3af" : "#2563eb",
+                          color: "#ffffff",
+                          borderRadius: "6px",
+                          fontSize: "0.875rem",
+                          fontWeight: "600",
+                          cursor: loadingStripeLink ? "not-allowed" : "pointer",
+                          border: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          whiteSpace: "nowrap"
+                        }}
+                      >
+                        {loadingStripeLink ? "Loading..." : (
+                          <>
+                            <svg style={{ width: "16px", height: "16px" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            View Stripe Account
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Payout History */}
+                  <div style={{
+                    marginTop: "1rem"
+                  }}>
+                    <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#111827", marginBottom: "0.75rem" }}>
+                      Payout History
+                    </h3>
+                    {loadingPayouts ? (
+                      <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
+                        Loading payout history...
+                      </div>
+                    ) : payouts.length === 0 ? (
+                      <div style={{
+                        padding: "1.5rem",
+                        background: "#f9fafb",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                        textAlign: "center",
+                        color: "#6b7280"
+                      }}>
+                        <p style={{ fontSize: "0.875rem" }}>No payouts yet. Payouts will appear here once processed.</p>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                        {payouts.slice(0, 5).map((payout) => (
+                          <div
+                            key={payout.id}
+                            style={{
+                              padding: "1rem",
+                              background: "#ffffff",
+                              borderRadius: "8px",
+                              border: "1px solid #e5e7eb",
+                              cursor: "pointer",
+                              transition: "all 0.2s ease"
+                            }}
+                            onClick={() => setExpandedPayoutId(expandedPayoutId === payout.id ? null : payout.id)}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = "#2563eb";
+                              e.currentTarget.style.boxShadow = "0 2px 8px rgba(37, 99, 235, 0.1)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = "#e5e7eb";
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
+                          >
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                                  <span style={{
+                                    fontSize: "0.875rem",
+                                    fontWeight: "600",
+                                    color: payout.status === 'completed' || payout.status === 'paid' ? "#16a34a" : "#f59e0b"
+                                  }}>
+                                    ${(payout.amount / 100).toFixed(2)}
+                                  </span>
+                                  <span style={{
+                                    padding: "0.25rem 0.5rem",
+                                    borderRadius: "4px",
+                                    fontSize: "0.75rem",
+                                    fontWeight: "600",
+                                    background: payout.status === 'completed' || payout.status === 'paid' ? "#dcfce7" : "#fef3c7",
+                                    color: payout.status === 'completed' || payout.status === 'paid' ? "#166534" : "#92400e"
+                                  }}>
+                                    {payout.status === 'completed' || payout.status === 'paid' ? 'Paid' : payout.status === 'pending' ? 'Pending' : 'Held'}
+                                  </span>
+                                </div>
+                                {payout.payoutDate && (
+                                  <p style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                                    {new Date(payout.payoutDate).toLocaleDateString('en-US', { 
+                                      year: 'numeric', 
+                                      month: 'short', 
+                                      day: 'numeric' 
+                                    })}
+                                  </p>
+                                )}
+                              </div>
+                              <svg 
+                                style={{ 
+                                  width: "20px", 
+                                  height: "20px", 
+                                  color: "#6b7280",
+                                  transform: expandedPayoutId === payout.id ? "rotate(180deg)" : "rotate(0deg)",
+                                  transition: "transform 0.2s ease"
+                                }} 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                            {expandedPayoutId === payout.id && (
+                              <div style={{
+                                marginTop: "1rem",
+                                paddingTop: "1rem",
+                                borderTop: "1px solid #e5e7eb"
+                              }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.875rem" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "#6b7280" }}>Gross Commission:</span>
+                                    <span style={{ fontWeight: "600", color: "#111827" }}>${(payout.grossAmount / 100).toFixed(2)}</span>
+                                  </div>
+                                  {payout.employeeCosts > 0 && (
+                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                      <span style={{ color: "#6b7280" }}>Employee Payroll Costs:</span>
+                                      <span style={{ fontWeight: "600", color: "#dc2626" }}>-${(payout.employeeCosts / 100).toFixed(2)}</span>
+                                    </div>
+                                  )}
+                                  <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "0.5rem", borderTop: "1px solid #e5e7eb", marginTop: "0.25rem" }}>
+                                    <span style={{ color: "#111827", fontWeight: "600" }}>Net Payout:</span>
+                                    <span style={{ fontWeight: "700", color: "#16a34a", fontSize: "1rem" }}>${(payout.amount / 100).toFixed(2)}</span>
+                                  </div>
+                                  {payout.stripeTransferId && (
+                                    <div style={{ marginTop: "0.5rem", paddingTop: "0.5rem", borderTop: "1px solid #e5e7eb" }}>
+                                      <p style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                                        Transfer ID: <code style={{ background: "#f3f4f6", padding: "0.125rem 0.25rem", borderRadius: "4px" }}>{payout.stripeTransferId}</code>
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {payouts.length > 5 && (
+                          <button
+                            onClick={handleViewStripeAccount}
+                            style={{
+                              padding: "0.75rem",
+                              background: "#f9fafb",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "8px",
+                              fontSize: "0.875rem",
+                              fontWeight: "600",
+                              color: "#2563eb",
+                              cursor: "pointer",
+                              textAlign: "center"
+                            }}
+                          >
+                            View All Payouts in Stripe →
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : stripeConnectStatus?.connected && stripeConnectStatus?.status === 'pending' ? (
                 <div style={{
