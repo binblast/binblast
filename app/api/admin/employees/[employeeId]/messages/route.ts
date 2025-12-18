@@ -1,4 +1,4 @@
-// app/api/admin/employees/[id]/messages/route.ts
+// app/api/admin/employees/[employeeId]/messages/route.ts
 // Get and send messages to/from an employee
 
 import { NextRequest, NextResponse } from "next/server";
@@ -8,10 +8,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { employeeId: string } }
 ) {
   try {
-    const employeeId = params.id;
+    const employeeId = params.employeeId;
 
     // Use Admin SDK for server-side operations
     const db = await getAdminFirestore();
@@ -49,10 +49,10 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { employeeId: string } }
 ) {
   try {
-    const employeeId = params.id;
+    const employeeId = params.employeeId;
     const body = await req.json();
     const { message, type, subject } = body;
 
