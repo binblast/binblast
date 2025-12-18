@@ -513,39 +513,61 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                             <button
                               onClick={async () => {
                                 try {
+                                  // Helper function to convert application to partner format
+                                  const convertApplicationToPartner = (application: PartnerApplication): Partner => ({
+                                    id: application.id,
+                                    userId: application.userId || null,
+                                    businessName: application.businessName,
+                                    ownerName: application.ownerName,
+                                    email: application.email,
+                                    phone: application.phone,
+                                    serviceAreas: application.serviceArea ? [application.serviceArea] : [],
+                                    serviceType: application.serviceType,
+                                    status: application.status === "approved" ? "active" : "paused",
+                                    revenueSharePartner: 0.6,
+                                    revenueSharePlatform: 0.4,
+                                    partnerCode: "",
+                                    partnerSlug: "",
+                                    createdAt: application.createdAt,
+                                    updatedAt: application.updatedAt,
+                                  });
+
                                   if (app.linkedPartnerId) {
-                                    // Load partner and show mini profile
-                                    const partnerResponse = await fetch(`/api/admin/partners/${app.linkedPartnerId}`);
-                                    if (!partnerResponse.ok) {
-                                      throw new Error(`Failed to load partner: ${partnerResponse.status}`);
-                                    }
-                                    const partnerData = await partnerResponse.json();
-                                    if (partnerData.success && partnerData.partner) {
-                                      setSelectedPartner(partnerData.partner);
+                                    // Try to load partner, but fall back to application data if not found
+                                    try {
+                                      const partnerResponse = await fetch(`/api/admin/partners/${app.linkedPartnerId}`);
+                                      const partnerData = await partnerResponse.json();
+                                      
+                                      if (partnerResponse.ok && partnerData.success && partnerData.partner) {
+                                        // Partner found, use partner data
+                                        setSelectedPartner(partnerData.partner);
+                                        setShowMiniProfile(true);
+                                      } else if (partnerResponse.status === 404) {
+                                        // Partner not found, fall back to application data
+                                        console.warn(`Partner ${app.linkedPartnerId} not found, showing application data instead`);
+                                        const applicationAsPartner = convertApplicationToPartner(app);
+                                        setSelectedPartner(applicationAsPartner);
+                                        setMiniProfileApplicationId(app.id);
+                                        setShowMiniProfile(true);
+                                      } else {
+                                        // Other error, try to show application data anyway
+                                        console.error(`Failed to load partner: ${partnerData.error || "Unknown error"}`);
+                                        const applicationAsPartner = convertApplicationToPartner(app);
+                                        setSelectedPartner(applicationAsPartner);
+                                        setMiniProfileApplicationId(app.id);
+                                        setShowMiniProfile(true);
+                                      }
+                                    } catch (fetchError: any) {
+                                      // Network or other fetch error, fall back to application data
+                                      console.error("[View Profile] Fetch error:", fetchError);
+                                      const applicationAsPartner = convertApplicationToPartner(app);
+                                      setSelectedPartner(applicationAsPartner);
+                                      setMiniProfileApplicationId(app.id);
                                       setShowMiniProfile(true);
-                                    } else {
-                                      alert(`Failed to load partner: ${partnerData.error || "Unknown error"}`);
                                     }
                                   } else {
-                                    // For applications without a linked partner, open mini profile with application data
-                                    // Convert application to partner-like object for viewing
-                                    const applicationAsPartner: Partner = {
-                                      id: app.id,
-                                      userId: app.userId || null,
-                                      businessName: app.businessName,
-                                      ownerName: app.ownerName,
-                                      email: app.email,
-                                      phone: app.phone,
-                                      serviceAreas: app.serviceArea ? [app.serviceArea] : [],
-                                      serviceType: app.serviceType,
-                                      status: app.status === "approved" ? "active" : "paused",
-                                      revenueSharePartner: 0.6,
-                                      revenueSharePlatform: 0.4,
-                                      partnerCode: "",
-                                      partnerSlug: "",
-                                      createdAt: app.createdAt,
-                                      updatedAt: app.updatedAt,
-                                    };
+                                    // No linked partner, show application data
+                                    const applicationAsPartner = convertApplicationToPartner(app);
                                     setSelectedPartner(applicationAsPartner);
                                     setMiniProfileApplicationId(app.id);
                                     setShowMiniProfile(true);
