@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
           .where("partnerId", "==", partner.id)
           .get();
         const customerEmails = new Set<string>();
-        bookingsSnapshot.forEach(doc => {
+        bookingsSnapshot.forEach((doc: any) => {
           const booking = doc.data();
           if (booking.customerEmail) {
             customerEmails.add(booking.customerEmail);
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
         let grossRevenueLifetime = 0;
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         
-        bookingsSnapshot.forEach(doc => {
+        bookingsSnapshot.forEach((doc: any) => {
           const booking = doc.data();
           if (booking.status === "completed" && booking.grossAmount) {
             grossRevenueLifetime += booking.grossAmount || 0;
