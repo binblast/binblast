@@ -11,10 +11,11 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
+  let applicationId: string | undefined;
   try {
     // Handle both Promise and direct params (Next.js 13+ vs 14+)
     const resolvedParams = params instanceof Promise ? await params : params;
-    const applicationId = resolvedParams.id;
+    applicationId = resolvedParams.id;
     let body;
     try {
       body = await req.json();
@@ -276,7 +277,7 @@ export async function POST(
     console.error("[Approve Partner] Error approving partner application:", {
       error: err.message,
       stack: err.stack,
-      applicationId: params?.id,
+      applicationId: typeof applicationId !== 'undefined' ? applicationId : 'unknown',
     });
     return NextResponse.json(
       { 
