@@ -471,7 +471,7 @@ export async function POST(req: NextRequest) {
             partnerBusinessName: partnerBusinessName || "Your Partner",
             serviceAreas: serviceArea && serviceArea.length > 0 ? serviceArea.join(", ") : undefined,
             payRate: payRate,
-            loginLink: "https://binblast.vercel.app/login",
+            loginLink: "https://binblast.vercel.app/login?redirect=/employee/dashboard",
           });
         } catch (emailError: any) {
           console.error("[Team Members API] Failed to send invitation email:", emailError?.message || emailError);

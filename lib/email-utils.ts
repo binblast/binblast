@@ -130,8 +130,8 @@ export async function notifyTeamMemberInvitation(teamMemberData: {
   // Hardcoded template ID for team member invitation email
   const templateId = "template_9796g8g";
 
-  // Default login link if not provided
-  const loginLink = teamMemberData.loginLink || "https://binblast.vercel.app/login";
+  // Default login link if not provided - redirect to employee dashboard after login
+  const loginLink = teamMemberData.loginLink || "https://binblast.vercel.app/login?redirect=/employee/dashboard";
 
   // Try to send email (non-blocking)
   try {
