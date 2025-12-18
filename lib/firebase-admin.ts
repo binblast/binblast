@@ -38,6 +38,19 @@ export async function getAdminApp(): Promise<any> {
       const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
       const privateKey = process.env.FIREBASE_PRIVATE_KEY?.trim();
 
+      // Debug: Log what we found (without exposing sensitive values)
+      console.log("[Firebase Admin] Environment check:", {
+        hasProjectId: !!projectId,
+        hasClientEmail: !!clientEmail,
+        hasPrivateKey: !!privateKey,
+        projectIdLength: projectId?.length || 0,
+        clientEmailLength: clientEmail?.length || 0,
+        privateKeyLength: privateKey?.length || 0,
+        // Check for common alternative names
+        hasNextPublicProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        allEnvKeys: Object.keys(process.env).filter(key => key.includes("FIREBASE") || key.includes("firebase")).join(", "),
+      });
+
       // Check if all required credentials are present
       if (!projectId || !clientEmail || !privateKey) {
         const missing: string[] = [];
