@@ -182,8 +182,26 @@ export async function POST(req: NextRequest) {
             
             // If still not found, try by email
             if (!partner) {
+              let userEmail: string | null = null;
+              
+              // Try to get email from users collection
               const userDoc = await getDoc(doc(db, "users", userId));
-              const userEmail = userDoc.exists() ? userDoc.data()?.email : null;
+              if (userDoc.exists()) {
+                userEmail = userDoc.data()?.email || null;
+              }
+              
+              // If user document doesn't exist but partnerId is provided, try to get email from partner record
+              if (!userEmail && partnerId) {
+                try {
+                  const partnerDoc = await getDoc(doc(db, "partners", partnerId));
+                  if (partnerDoc.exists()) {
+                    userEmail = partnerDoc.data()?.email || null;
+                    console.log(`[Team Members API] Got email from partner record: ${userEmail}`);
+                  }
+                } catch (partnerEmailError) {
+                  console.error("[Team Members API] Error getting email from partner record:", partnerEmailError);
+                }
+              }
               
               if (userEmail) {
                 console.log(`[Team Members API] Trying email lookup: ${userEmail.toLowerCase()}`);
@@ -215,12 +233,44 @@ export async function POST(req: NextRequest) {
                   console.log(`[Team Members API] No partner found with email: ${userEmail.toLowerCase()}`);
                 }
               } else {
-                console.log(`[Team Members API] Could not get user email from users collection`);
+                console.log(`[Team Members API] Could not get user email from users collection or partner record`);
               }
             }
           }
         } catch (emailLookupError) {
           console.error("[Team Members API] Error looking up partner:", emailLookupError);
+        }
+      }
+      
+      // If still not found and partnerId was provided, try to verify it directly
+      if (!partner && partnerId) {
+        try {
+          const db = await getDbInstance();
+          if (db) {
+            const firestore = await safeImportFirestore();
+            const { doc, getDoc } = firestore;
+            
+            const partnerDoc = await getDoc(doc(db, "partners", partnerId));
+            if (partnerDoc.exists()) {
+              const partnerData = partnerDoc.data();
+              partnerStatus = partnerData.status || null;
+              
+              console.log(`[Team Members API] Found partner by partnerId with status: ${partnerStatus}`);
+              
+              // If status is active, use this partner
+              if (partnerData.status === "active") {
+                partner = {
+                  id: partnerDoc.id,
+                  businessName: partnerData.businessName || "",
+                  referralCode: partnerData.referralCode || "",
+                  status: partnerData.status || "",
+                };
+                console.log(`[Team Members API] Using partner ${partner.id} (active from partnerId)`);
+              }
+            }
+          }
+        } catch (partnerIdError) {
+          console.error("[Team Members API] Error looking up partner by partnerId:", partnerIdError);
         }
       }
       
@@ -239,26 +289,29 @@ export async function POST(req: NextRequest) {
               const { collection, query, where, getDocs, doc, getDoc } = firestore;
               
               // Try to find partner by userId or email to get partnerId
-              let partnerIdForLink = null;
-              const partnersByUserIdQuery = query(
-                collection(db, "partners"),
-                where("userId", "==", userId)
-              );
-              const partnersByUserIdSnapshot = await getDocs(partnersByUserIdQuery);
+              let partnerIdForLink = partnerId || null; // Use provided partnerId first
               
-              if (!partnersByUserIdSnapshot.empty) {
-                partnerIdForLink = partnersByUserIdSnapshot.docs[0].id;
-              } else {
-                const userDoc = await getDoc(doc(db, "users", userId));
-                const userEmail = userDoc.exists() ? userDoc.data()?.email : null;
-                if (userEmail) {
-                  const partnersByEmailQuery = query(
-                    collection(db, "partners"),
-                    where("email", "==", userEmail.toLowerCase())
-                  );
-                  const partnersByEmailSnapshot = await getDocs(partnersByEmailQuery);
-                  if (!partnersByEmailSnapshot.empty) {
-                    partnerIdForLink = partnersByEmailSnapshot.docs[0].id;
+              if (!partnerIdForLink) {
+                const partnersByUserIdQuery = query(
+                  collection(db, "partners"),
+                  where("userId", "==", userId)
+                );
+                const partnersByUserIdSnapshot = await getDocs(partnersByUserIdQuery);
+                
+                if (!partnersByUserIdSnapshot.empty) {
+                  partnerIdForLink = partnersByUserIdSnapshot.docs[0].id;
+                } else {
+                  const userDoc = await getDoc(doc(db, "users", userId));
+                  const userEmail = userDoc.exists() ? userDoc.data()?.email : null;
+                  if (userEmail) {
+                    const partnersByEmailQuery = query(
+                      collection(db, "partners"),
+                      where("email", "==", userEmail.toLowerCase())
+                    );
+                    const partnersByEmailSnapshot = await getDocs(partnersByEmailQuery);
+                    if (!partnersByEmailSnapshot.empty) {
+                      partnerIdForLink = partnersByEmailSnapshot.docs[0].id;
+                    }
                   }
                 }
               }
@@ -276,7 +329,7 @@ export async function POST(req: NextRequest) {
           errorMessage = `Cannot add team members: Partner status is "${partnerStatus}". Account must be active.`;
         }
         
-        console.error(`[Team Members API] Partner lookup failed for userId ${userId}, status: ${partnerStatus || "not found"}`);
+        console.error(`[Team Members API] Partner lookup failed for userId ${userId}, partnerId: ${partnerId || "not provided"}, status: ${partnerStatus || "not found"}`);
         return NextResponse.json(
           { 
             error: errorMessage,
