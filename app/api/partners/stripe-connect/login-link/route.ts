@@ -68,7 +68,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       loginUrl: loginLink.url,
-      expiresAt: loginLink.expires_at,
     });
   } catch (error: any) {
     console.error("[Stripe Login Link] Error:", error);
