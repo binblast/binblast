@@ -510,52 +510,63 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                         </td>
                         <td style={{ padding: "0.75rem" }}>
                           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                            {app.linkedPartnerId ? (
-                              <button
-                                onClick={async () => {
-                                  // Load partner and show mini profile
-                                  const partnerResponse = await fetch(`/api/admin/partners/${app.linkedPartnerId}`);
-                                  const partnerData = await partnerResponse.json();
-                                  if (partnerData.success) {
-                                    setSelectedPartner(partnerData.partner);
+                            <button
+                              onClick={async () => {
+                                try {
+                                  if (app.linkedPartnerId) {
+                                    // Load partner and show mini profile
+                                    const partnerResponse = await fetch(`/api/admin/partners/${app.linkedPartnerId}`);
+                                    if (!partnerResponse.ok) {
+                                      throw new Error(`Failed to load partner: ${partnerResponse.status}`);
+                                    }
+                                    const partnerData = await partnerResponse.json();
+                                    if (partnerData.success && partnerData.partner) {
+                                      setSelectedPartner(partnerData.partner);
+                                      setShowMiniProfile(true);
+                                    } else {
+                                      alert(`Failed to load partner: ${partnerData.error || "Unknown error"}`);
+                                    }
+                                  } else {
+                                    // For applications without a linked partner, open mini profile with application data
+                                    // Convert application to partner-like object for viewing
+                                    const applicationAsPartner: Partner = {
+                                      id: app.id,
+                                      userId: app.userId || null,
+                                      businessName: app.businessName,
+                                      ownerName: app.ownerName,
+                                      email: app.email,
+                                      phone: app.phone,
+                                      serviceAreas: app.serviceArea ? [app.serviceArea] : [],
+                                      serviceType: app.serviceType,
+                                      status: app.status === "approved" ? "active" : "paused",
+                                      revenueSharePartner: 0.6,
+                                      revenueSharePlatform: 0.4,
+                                      partnerCode: "",
+                                      partnerSlug: "",
+                                      createdAt: app.createdAt,
+                                      updatedAt: app.updatedAt,
+                                    };
+                                    setSelectedPartner(applicationAsPartner);
+                                    setMiniProfileApplicationId(app.id);
                                     setShowMiniProfile(true);
                                   }
-                                }}
-                                style={{
-                                  padding: "0.25rem 0.5rem",
-                                  background: "#0369a1",
-                                  color: "#ffffff",
-                                  border: "none",
-                                  borderRadius: "4px",
-                                  fontSize: "0.75rem",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                View Profile
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  // For applications, show approve modal instead of mini profile
-                                  setSelectedApplication(app);
-                                  setApproveServiceAreas([]);
-                                  setApprovePartnerShare(60);
-                                  setApprovePlatformShare(40);
-                                  setShowApproveModal(true);
-                                }}
-                                style={{
-                                  padding: "0.25rem 0.5rem",
-                                  background: "#0369a1",
-                                  color: "#ffffff",
-                                  border: "none",
-                                  borderRadius: "4px",
-                                  fontSize: "0.75rem",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                View Profile
-                              </button>
-                            )}
+                                } catch (error: any) {
+                                  console.error("[View Profile] Error:", error);
+                                  alert(`Failed to load profile: ${error.message || "Unknown error"}`);
+                                }
+                              }}
+                              style={{
+                                padding: "0.25rem 0.5rem",
+                                background: "#0369a1",
+                                color: "#ffffff",
+                                border: "none",
+                                borderRadius: "4px",
+                                fontSize: "0.75rem",
+                                cursor: "pointer"
+                              }}
+                            >
+                              View Profile
+                            </button>
                             {app.status === "pending" && (
                               <>
                                 <button
@@ -869,8 +880,13 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                           <div style={{ display: "flex", gap: "0.25rem", justifyContent: "center", flexWrap: "wrap" }}>
                             <button
                               onClick={() => {
-                                setSelectedPartner(partner);
-                                setShowMiniProfile(true);
+                                try {
+                                  setSelectedPartner(partner);
+                                  setShowMiniProfile(true);
+                                } catch (error: any) {
+                                  console.error("[View Profile] Error:", error);
+                                  alert(`Failed to open profile: ${error.message || "Unknown error"}`);
+                                }
                               }}
                               style={{
                                 padding: "0.25rem 0.5rem",
@@ -886,13 +902,18 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                             </button>
                             <button
                               onClick={() => {
-                                setSelectedPartner(partner);
-                                setShowMiniProfile(true);
-                                // Set initial tab to messages
-                                setTimeout(() => {
-                                  const event = new CustomEvent('partnerMiniProfileOpen', { detail: { tab: 'messages' } });
-                                  window.dispatchEvent(event);
-                                }, 100);
+                                try {
+                                  setSelectedPartner(partner);
+                                  setShowMiniProfile(true);
+                                  // Set initial tab to messages
+                                  setTimeout(() => {
+                                    const event = new CustomEvent('partnerMiniProfileOpen', { detail: { tab: 'messages' } });
+                                    window.dispatchEvent(event);
+                                  }, 100);
+                                } catch (error: any) {
+                                  console.error("[Message] Error:", error);
+                                  alert(`Failed to open messages: ${error.message || "Unknown error"}`);
+                                }
                               }}
                               style={{
                                 padding: "0.25rem 0.5rem",
@@ -961,16 +982,19 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       )}
 
       {/* Partner Mini Profile */}
-      <PartnerMiniProfile
-        partner={selectedPartner}
-        isOpen={showMiniProfile}
-        onClose={() => {
-          setShowMiniProfile(false);
-          setSelectedPartner(null);
-          setMiniProfileApplicationId(undefined);
-        }}
-        onUpdate={loadData}
-      />
+      {selectedPartner && (
+        <PartnerMiniProfile
+          partner={selectedPartner}
+          isOpen={showMiniProfile}
+          onClose={() => {
+            setShowMiniProfile(false);
+            setSelectedPartner(null);
+            setMiniProfileApplicationId(undefined);
+          }}
+          onUpdate={loadData}
+          applicationId={miniProfileApplicationId}
+        />
+      )}
     </div>
   );
 }
