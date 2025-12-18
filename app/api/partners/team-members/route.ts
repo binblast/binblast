@@ -138,7 +138,11 @@ export async function POST(req: NextRequest) {
     
     if (userId) {
       // If userId is provided, use it to get the partner (userId is source of truth for auth)
+      console.log(`[Team Members API] Looking up partner for userId: ${userId}`);
       let partner = await getActivePartner(userId);
+      let partnerStatus = null;
+      
+      console.log(`[Team Members API] getActivePartner result:`, partner ? `Found partner ${partner.id}` : "Not found");
       
       // If not found by userId, try to get user email from Firestore and search by email (fallback)
       if (!partner) {
@@ -148,39 +152,92 @@ export async function POST(req: NextRequest) {
             const firestore = await safeImportFirestore();
             const { doc, getDoc, collection, query, where, getDocs } = firestore;
             
-            // Get user's email from users collection
-            const userDoc = await getDoc(doc(db, "users", userId));
-            const userEmail = userDoc.exists() ? userDoc.data()?.email : null;
+            // First, check if partner exists with any status (to get status info)
+            const partnersByUserIdQuery = query(
+              collection(db, "partners"),
+              where("userId", "==", userId)
+            );
+            const partnersByUserIdSnapshot = await getDocs(partnersByUserIdQuery);
             
-            if (userEmail) {
-              // Try to find partner by email
-              const partnersByEmailQuery = query(
-                collection(db, "partners"),
-                where("email", "==", userEmail.toLowerCase()),
-                where("status", "==", "active")
-              );
-              const partnersByEmailSnapshot = await getDocs(partnersByEmailQuery);
+            if (!partnersByUserIdSnapshot.empty) {
+              const partnerDoc = partnersByUserIdSnapshot.docs[0];
+              const partnerData = partnerDoc.data();
+              partnerStatus = partnerData.status || null;
               
-              if (!partnersByEmailSnapshot.empty) {
-                const partnerDoc = partnersByEmailSnapshot.docs[0];
-                const partnerData = partnerDoc.data();
+              console.log(`[Team Members API] Found partner by userId with status: ${partnerStatus}`);
+              
+              // If status is active, use this partner
+              if (partnerData.status === "active") {
                 partner = {
                   id: partnerDoc.id,
                   businessName: partnerData.businessName || "",
                   referralCode: partnerData.referralCode || "",
                   status: partnerData.status || "",
                 };
+                console.log(`[Team Members API] Using partner ${partner.id} (active)`);
+              }
+            } else {
+              console.log(`[Team Members API] No partner found with userId: ${userId}`);
+            }
+            
+            // If still not found, try by email
+            if (!partner) {
+              const userDoc = await getDoc(doc(db, "users", userId));
+              const userEmail = userDoc.exists() ? userDoc.data()?.email : null;
+              
+              if (userEmail) {
+                console.log(`[Team Members API] Trying email lookup: ${userEmail.toLowerCase()}`);
+                // Try to find partner by email (any status first to check status)
+                const partnersByEmailAnyStatusQuery = query(
+                  collection(db, "partners"),
+                  where("email", "==", userEmail.toLowerCase())
+                );
+                const partnersByEmailAnyStatusSnapshot = await getDocs(partnersByEmailAnyStatusQuery);
+                
+                if (!partnersByEmailAnyStatusSnapshot.empty) {
+                  const partnerDoc = partnersByEmailAnyStatusSnapshot.docs[0];
+                  const partnerData = partnerDoc.data();
+                  partnerStatus = partnerData.status || null;
+                  
+                  console.log(`[Team Members API] Found partner by email with status: ${partnerStatus}`);
+                  
+                  // If status is active, use this partner
+                  if (partnerData.status === "active") {
+                    partner = {
+                      id: partnerDoc.id,
+                      businessName: partnerData.businessName || "",
+                      referralCode: partnerData.referralCode || "",
+                      status: partnerData.status || "",
+                    };
+                    console.log(`[Team Members API] Using partner ${partner.id} (active from email lookup)`);
+                  }
+                } else {
+                  console.log(`[Team Members API] No partner found with email: ${userEmail.toLowerCase()}`);
+                }
+              } else {
+                console.log(`[Team Members API] Could not get user email from users collection`);
               }
             }
           }
         } catch (emailLookupError) {
-          console.error("[Team Members API] Error looking up partner by email:", emailLookupError);
+          console.error("[Team Members API] Error looking up partner:", emailLookupError);
         }
       }
       
       if (!partner) {
+        // Provide more specific error message based on partner status
+        let errorMessage = "Unauthorized: Partner not found or not active";
+        if (partnerStatus === "pending_agreement") {
+          errorMessage = "Please accept the partner agreement before adding team members";
+        } else if (partnerStatus === "suspended" || partnerStatus === "removed") {
+          errorMessage = `Cannot add team members: Partner account is ${partnerStatus}`;
+        } else if (partnerStatus) {
+          errorMessage = `Cannot add team members: Partner status is "${partnerStatus}". Account must be active.`;
+        }
+        
+        console.error(`[Team Members API] Partner lookup failed for userId ${userId}, status: ${partnerStatus || "not found"}`);
         return NextResponse.json(
-          { error: "Unauthorized: Partner not found or not active" },
+          { error: errorMessage },
           { status: 401 }
         );
       }
