@@ -61,9 +61,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Create login link for the connected account
-    const loginLink = await stripe.accounts.createLoginLink(stripeConnectedAccountId, {
-      redirect_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://binblast.vercel.app'}/partners/dashboard`,
-    });
+    // Note: redirect_url is not supported in the current Stripe API version
+    // Users will be redirected to Stripe's default page after logout
+    const loginLink = await stripe.accounts.createLoginLink(stripeConnectedAccountId);
 
     return NextResponse.json({
       success: true,
