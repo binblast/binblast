@@ -27,7 +27,7 @@ export default function MessagesPage() {
           return;
         }
 
-        auth.onAuthStateChanged(async (user) => {
+        auth.onAuthStateChanged(async (user: any) => {
           if (!user) {
             router.push("/login?redirect=/admin/messages");
             return;
