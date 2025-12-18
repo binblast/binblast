@@ -1,15 +1,26 @@
-// app/api/operator/employees/[employeeId]/earnings/route.ts
+// app/api/partners/team-members/[employeeId]/earnings/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { getTodayDateString, getEmployeeData, isPartnerEmployee } from "@/lib/employee-utils";
+import { getTodayDateString, getEmployeeData, getEmployeePartnerId } from "@/lib/employee-utils";
+import { getActivePartner } from "@/lib/partner-auth";
 
+export const dynamic = 'force-dynamic';
+
+/**
+ * GET /api/partners/team-members/[employeeId]/earnings
+ * Get earnings for a partner employee
+ * Only counts jobs from partner bookings (scheduledCleanings with partnerId)
+ */
 export async function GET(
   req: NextRequest,
   { params }: { params: { employeeId: string } }
 ) {
   try {
     const employeeId = params.employeeId;
+    const searchParams = req.nextUrl.searchParams;
+    const date = searchParams.get("date"); // Optional: YYYY-MM-DD format, defaults to today
+    const partnerId = searchParams.get("partnerId"); // Optional: for verification
 
     if (!employeeId) {
       return NextResponse.json(
@@ -26,7 +37,7 @@ export async function GET(
       );
     }
 
-    // Get employee data to find pay rate
+    // Get employee data
     const employee = await getEmployeeData(employeeId);
     if (!employee) {
       return NextResponse.json(
@@ -35,43 +46,45 @@ export async function GET(
       );
     }
 
-    // Check if employee belongs to a partner
-    // Partner employees should use the partner earnings API, not Bin Blast payroll
-    const isPartnerEmp = await isPartnerEmployee(employeeId);
-    if (isPartnerEmp) {
+    // Verify employee belongs to a partner
+    const employeePartnerId = employee.partnerId || await getEmployeePartnerId(employeeId);
+    if (!employeePartnerId) {
       return NextResponse.json(
-        { 
-          error: "This employee belongs to a partner. Use /api/partners/team-members/[employeeId]/earnings instead.",
-          isPartnerEmployee: true,
-          partnerId: employee.partnerId
-        },
+        { error: "Employee is not a partner employee" },
         { status: 403 }
       );
     }
 
-    const payRatePerJob = employee.payRatePerJob || 10; // Default to $10 if not set
+    // If partnerId provided, verify it matches
+    if (partnerId && partnerId !== employeePartnerId) {
+      return NextResponse.json(
+        { error: "Employee does not belong to this partner" },
+        { status: 403 }
+      );
+    }
+
+    const payRatePerJob = employee.payRatePerJob || 10;
+    const targetDate = date || getTodayDateString();
 
     const firestore = await safeImportFirestore();
     const { collection, query, where, getDocs } = firestore;
 
-    // Get today's completed stops WITH REQUIRED PHOTOS
-    // Payment protection: Only jobs with required photos count toward payment
-    const today = getTodayDateString();
+    // Get completed jobs for this employee on the target date
+    // Only count jobs from this partner's bookings (scheduledCleanings with partnerId)
     const cleaningsRef = collection(db, "scheduledCleanings");
     const completedJobsQuery = query(
       cleaningsRef,
       where("assignedEmployeeId", "==", employeeId),
-      where("scheduledDate", "==", today),
-      where("jobStatus", "==", "completed")
+      where("scheduledDate", "==", targetDate),
+      where("jobStatus", "==", "completed"),
+      where("partnerId", "==", employeePartnerId) // Only partner's jobs
     );
 
     const completedSnapshot = await getDocs(completedJobsQuery);
     
     // Filter to only include jobs with required photos
-    // For backward compatibility, also check if insidePhotoUrl and outsidePhotoUrl exist
     const eligibleJobs = completedSnapshot.docs.filter(doc => {
       const data = doc.data();
-      // New field: hasRequiredPhotos must be true
       if (data.hasRequiredPhotos === true) {
         return true;
       }
@@ -79,7 +92,6 @@ export async function GET(
       if (data.insidePhotoUrl && data.outsidePhotoUrl) {
         return true;
       }
-      // No photos = no payment eligibility
       return false;
     });
 
@@ -96,13 +108,12 @@ export async function GET(
         completedAt: data.completedAt,
         earnings: payRatePerJob,
         hasRequiredPhotos: data.hasRequiredPhotos || false,
+        partnerId: data.partnerId || employeePartnerId,
       };
     });
 
-    // Calculate total earnings (only for jobs with required photos)
     const totalEarnings = completedStops.length * payRatePerJob;
 
-    // Format addresses for display
     const stopsWithEarnings = completedStops.map(stop => ({
       ...stop,
       fullAddress: `${stop.addressLine1}${stop.addressLine2 ? `, ${stop.addressLine2}` : ""}, ${stop.city}, ${stop.state} ${stop.zipCode}`.trim(),
@@ -113,14 +124,15 @@ export async function GET(
       totalEarnings,
       payRatePerJob,
       completedStopsCount: completedStops.length,
+      date: targetDate,
+      partnerId: employeePartnerId,
       stops: stopsWithEarnings,
     });
   } catch (error: any) {
-    console.error("Error getting earnings:", error);
+    console.error("[Partner Employee Earnings] Error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to get earnings" },
       { status: 500 }
     );
   }
 }
-

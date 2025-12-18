@@ -227,17 +227,61 @@ export async function POST(req: NextRequest) {
       if (!partner) {
         // Provide more specific error message based on partner status
         let errorMessage = "Unauthorized: Partner not found or not active";
+        let errorDetails: any = { status: partnerStatus || "not found" };
+        
         if (partnerStatus === "pending_agreement") {
-          errorMessage = "Please accept the partner agreement before adding team members";
+          errorMessage = "Please accept the partner agreement before adding team members. Go to your partner dashboard to complete the agreement.";
+          // Try to get partnerId to provide a link
+          try {
+            const db = await getDbInstance();
+            if (db) {
+              const firestore = await safeImportFirestore();
+              const { collection, query, where, getDocs, doc, getDoc } = firestore;
+              
+              // Try to find partner by userId or email to get partnerId
+              let partnerIdForLink = null;
+              const partnersByUserIdQuery = query(
+                collection(db, "partners"),
+                where("userId", "==", userId)
+              );
+              const partnersByUserIdSnapshot = await getDocs(partnersByUserIdQuery);
+              
+              if (!partnersByUserIdSnapshot.empty) {
+                partnerIdForLink = partnersByUserIdSnapshot.docs[0].id;
+              } else {
+                const userDoc = await getDoc(doc(db, "users", userId));
+                const userEmail = userDoc.exists() ? userDoc.data()?.email : null;
+                if (userEmail) {
+                  const partnersByEmailQuery = query(
+                    collection(db, "partners"),
+                    where("email", "==", userEmail.toLowerCase())
+                  );
+                  const partnersByEmailSnapshot = await getDocs(partnersByEmailQuery);
+                  if (!partnersByEmailSnapshot.empty) {
+                    partnerIdForLink = partnersByEmailSnapshot.docs[0].id;
+                  }
+                }
+              }
+              
+              if (partnerIdForLink) {
+                errorDetails.agreementLink = `/partners/agreement/${partnerIdForLink}`;
+              }
+            }
+          } catch (linkError) {
+            console.error("[Team Members API] Error getting agreement link:", linkError);
+          }
         } else if (partnerStatus === "suspended" || partnerStatus === "removed") {
-          errorMessage = `Cannot add team members: Partner account is ${partnerStatus}`;
+          errorMessage = `Cannot add team members: Partner account is ${partnerStatus}. Please contact support.`;
         } else if (partnerStatus) {
           errorMessage = `Cannot add team members: Partner status is "${partnerStatus}". Account must be active.`;
         }
         
         console.error(`[Team Members API] Partner lookup failed for userId ${userId}, status: ${partnerStatus || "not found"}`);
         return NextResponse.json(
-          { error: errorMessage },
+          { 
+            error: errorMessage,
+            details: errorDetails
+          },
           { status: 401 }
         );
       }

@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { AddTeamMemberModal } from "@/components/PartnerDashboard/AddTeamMemberModal";
+import { PartnerPayroll } from "@/components/PartnerDashboard/PartnerPayroll";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
   ssr: false,
@@ -1925,6 +1926,11 @@ export default function PartnerDashboardPage() {
                 </div>
               )}
             </div>
+
+            {/* Partner Payroll Section */}
+            {partnerData && userId && (
+              <PartnerPayroll partnerId={partnerData.id} userId={userId} />
+            )}
 
             {/* Active Subscribers List */}
             {customers.filter(c => c.activeSubscriptions > 0).length > 0 && (

@@ -3,7 +3,7 @@
 
 import { getDbInstance } from "./firebase";
 import { safeImportFirestore } from "./firebase-module-loader";
-import { getAllEmployees, getTodayDateString } from "./employee-utils";
+import { getAllEmployees, getTodayDateString, getEmployeeData, isPartnerEmployee } from "./employee-utils";
 
 export interface JobAssignment {
   jobId: string;
@@ -91,27 +91,45 @@ export async function autoAssignJobsForToday(): Promise<JobAssignment[]> {
     for (const [areaKey, jobs] of Array.from(jobsByArea.entries())) {
       const [city, zipCode] = areaKey.split("_");
 
-      // Find employees who service this area
-      const availableEmployees = employees.filter((emp) =>
-        matchesServiceArea(city, zipCode, emp.serviceArea || [])
-      );
-
-      if (availableEmployees.length === 0) {
-        console.log(`No employees found for area: ${city}, ${zipCode}`);
-        continue;
-      }
-
-      // Sort employees by current job count (for even distribution)
-      const sortedEmployees = [...availableEmployees].sort(
-        (a, b) =>
-          (employeeJobCounts.get(a.id) || 0) -
-          (employeeJobCounts.get(b.id) || 0)
-      );
-
-      // Assign jobs round-robin style
-      jobs.forEach((jobDoc, index) => {
-        const employee = sortedEmployees[index % sortedEmployees.length];
+      // Process each job individually to check partner matching
+      for (const jobDoc of jobs) {
         const job = jobDoc.data();
+        const jobPartnerId = job.partnerId || null;
+
+        // Find employees who service this area
+        let availableEmployees = employees.filter((emp) =>
+          matchesServiceArea(city, zipCode, emp.serviceArea || [])
+        );
+
+        // Filter employees based on partner matching
+        // If job has a partnerId, only assign to employees from that partner
+        // If job has no partnerId (Bin Blast job), only assign to Bin Blast employees
+        if (jobPartnerId) {
+          // Partner job - only assign to employees from this partner
+          availableEmployees = availableEmployees.filter((emp) => {
+            return emp.partnerId === jobPartnerId;
+          });
+        } else {
+          // Bin Blast job - only assign to Bin Blast employees (no partnerId)
+          availableEmployees = availableEmployees.filter((emp) => {
+            return !emp.partnerId;
+          });
+        }
+
+        if (availableEmployees.length === 0) {
+          console.log(`No matching employees found for job ${jobDoc.id} in area: ${city}, ${zipCode}${jobPartnerId ? ` (partner: ${jobPartnerId})` : " (Bin Blast)"}`);
+          continue;
+        }
+
+        // Sort employees by current job count (for even distribution)
+        const sortedEmployees = [...availableEmployees].sort(
+          (a, b) =>
+            (employeeJobCounts.get(a.id) || 0) -
+            (employeeJobCounts.get(b.id) || 0)
+        );
+
+        // Assign to employee with least jobs
+        const employee = sortedEmployees[0];
         const employeeName = `${employee.firstName} ${employee.lastName}`;
 
         // Update job with assignment
@@ -132,7 +150,7 @@ export async function autoAssignJobsForToday(): Promise<JobAssignment[]> {
           employee.id,
           (employeeJobCounts.get(employee.id) || 0) + 1
         );
-      });
+      }
     }
 
     console.log(`Auto-assigned ${assignments.length} jobs to employees`);
@@ -171,16 +189,40 @@ export async function assignJobsToEmployeeOnClockIn(
     );
 
     const jobsSnapshot = await getDocs(todayJobsQuery);
+    
+    // Check if employee is a partner employee
+    const isPartnerEmp = employee.partnerId ? true : await isPartnerEmployee(employeeId);
+    const employeePartnerId = employee.partnerId || null;
+    
     const unassignedJobs = jobsSnapshot.docs.filter((jobDoc) => {
       const job = jobDoc.data();
-      return (
-        !job.assignedEmployeeId &&
-        matchesServiceArea(
-          job.city || "",
-          job.zipCode || "",
-          employee.serviceArea || []
-        )
-      );
+      
+      // Skip if already assigned
+      if (job.assignedEmployeeId) return false;
+      
+      // Check service area match
+      if (!matchesServiceArea(
+        job.city || "",
+        job.zipCode || "",
+        employee.serviceArea || []
+      )) {
+        return false;
+      }
+      
+      // Partner matching logic:
+      // - If employee belongs to a partner, only assign jobs from that partner
+      // - If employee is Bin Blast employee, only assign jobs without partnerId
+      const jobPartnerId = job.partnerId || null;
+      
+      if (isPartnerEmp && employeePartnerId) {
+        // Partner employee - only assign jobs from their partner
+        return jobPartnerId === employeePartnerId;
+      } else if (!isPartnerEmp) {
+        // Bin Blast employee - only assign Bin Blast jobs (no partnerId)
+        return !jobPartnerId;
+      }
+      
+      return false;
     });
 
     if (unassignedJobs.length === 0) {

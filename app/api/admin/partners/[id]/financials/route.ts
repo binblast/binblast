@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { calculatePartnerEmployeeCosts } from "@/lib/partner-payroll";
 
 export const dynamic = 'force-dynamic';
 
@@ -85,19 +86,36 @@ export async function GET(
       if (payout.status === "pending") {
         unpaidBalance += payout.amount || 0;
       } else if (payout.status === "paid") {
-        totalPaid += payout.amount || 0;
+        totalPaid += payout.amount || 0; // This is net amount (after employee costs)
       }
     });
+
+    // Calculate current month employee costs
+    const monthStartStr = monthStart.toISOString().split('T')[0];
+    const monthEndStr = new Date().toISOString().split('T')[0];
+    const employeeCostsMTD = await calculatePartnerEmployeeCosts(
+      partnerId,
+      monthStartStr,
+      monthEndStr
+    );
+
+    // Calculate lifetime employee costs (all time)
+    const employeeCostsLifetime = await calculatePartnerEmployeeCosts(partnerId);
 
     return NextResponse.json({
       success: true,
       grossRevenueMTD,
       grossRevenueLifetime,
       unpaidBalance,
-      totalPaid,
+      totalPaid, // Net paid (after employee costs)
       payouts,
       revenueSharePartner: partnerData.revenueSharePartner || 0,
       revenueSharePlatform: partnerData.revenueSharePlatform || 0,
+      employeeCostsMTD: employeeCostsMTD.totalCost,
+      employeeCostsLifetime: employeeCostsLifetime.totalCost,
+      netRevenueMTD: grossRevenueMTD - employeeCostsMTD.totalCost,
+      netRevenueLifetime: grossRevenueLifetime - employeeCostsLifetime.totalCost,
+      employeePayrollBreakdown: employeeCostsMTD.breakdown,
     });
   } catch (error: any) {
     console.error("[Get Partner Financials] Error:", error);

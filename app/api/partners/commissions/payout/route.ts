@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
+import { calculatePartnerEmployeeCosts } from "@/lib/partner-payroll";
 
 export const dynamic = 'force-dynamic';
 
@@ -80,14 +81,18 @@ export async function POST(req: NextRequest) {
         try {
           // Funds are already transferred (held), we just need to mark them as paid
           // If transfers weren't created initially, create them now
+          // Transfer net amount (after deducting employee costs)
           const transfer = await stripe.transfers.create({
-            amount: totalPayoutAmount,
+            amount: netPayoutAmount,
             currency: 'usd',
             destination: connectedAccountId,
             metadata: {
               partnerId: partnerId,
               payoutType: 'weekly',
               commissionIds: commissionIds.join(','),
+              grossAmount: totalPayoutAmount.toString(),
+              employeeCosts: employeeCosts.totalCost.toString(),
+              netAmount: netPayoutAmount.toString(),
             },
           });
 
@@ -101,15 +106,22 @@ export async function POST(req: NextRequest) {
             });
           }
 
-          // Create payout record
+          // Create payout record with employee cost breakdown
           const payoutRef = doc(collection(db, "partnerPayouts"));
           await setDoc(payoutRef, {
             partnerId: partnerId,
-            amount: totalPayoutAmount,
+            amount: netPayoutAmount, // Net amount after employee costs
+            grossAmount: totalPayoutAmount, // Gross commission before deductions
+            employeeCosts: employeeCosts.totalCost, // Total employee payroll costs
             currency: 'usd',
             status: 'completed',
             stripeTransferId: transfer.id,
             commissionIds: commissionIds,
+            employeePayrollBreakdown: employeeCosts.breakdown.map(emp => ({
+              employeeId: emp.employeeId,
+              employeeName: emp.employeeName,
+              earnings: emp.earnings,
+            })),
             payoutDate: serverTimestamp(),
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
@@ -117,7 +129,9 @@ export async function POST(req: NextRequest) {
 
           results.push({
             partnerId,
-            amount: totalPayoutAmount,
+            grossAmount: totalPayoutAmount,
+            employeeCosts: employeeCosts.totalCost,
+            netAmount: netPayoutAmount,
             commissionsCount: commissionIds.length,
             transferId: transfer.id,
             status: 'success',
