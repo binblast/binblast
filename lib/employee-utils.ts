@@ -38,6 +38,7 @@ export interface Employee {
   role?: string;
   serviceArea?: string[];
   payRatePerJob?: number;
+  partnerId?: string; // If set, this employee belongs to a partner
   taxInfo?: TaxInfo | null;
   hiringStatus?: "pending_approval" | "approved" | "rejected" | "active";
   hiredDate?: any;
@@ -149,14 +150,47 @@ export async function getEmployeeData(employeeId: string): Promise<Employee | nu
       email: data.email || "",
       firstName: data.firstName || "",
       lastName: data.lastName || "",
+      phone: data.phone || undefined,
       role: data.role || "",
       serviceArea: data.serviceArea || [],
       payRatePerJob: data.payRatePerJob || 0,
+      partnerId: data.partnerId || undefined, // Include partnerId if present
+      taxInfo: data.taxInfo || null,
+      hiringStatus: data.hiringStatus || undefined,
+      hiredDate: data.hiredDate || undefined,
+      hiredBy: data.hiredBy || undefined,
+      createdAt: data.createdAt || undefined,
+      updatedAt: data.updatedAt || undefined,
     };
   } catch (error) {
     console.error("Error getting employee data:", error);
     return null;
   }
+}
+
+/**
+ * Check if an employee belongs to a partner
+ * @param employeeId Firebase user ID of the employee
+ * @returns Partner ID if employee belongs to a partner, null otherwise
+ */
+export async function getEmployeePartnerId(employeeId: string): Promise<string | null> {
+  try {
+    const employee = await getEmployeeData(employeeId);
+    return employee?.partnerId || null;
+  } catch (error) {
+    console.error("Error getting employee partner ID:", error);
+    return null;
+  }
+}
+
+/**
+ * Check if an employee is a partner employee (not a Bin Blast employee)
+ * @param employeeId Firebase user ID of the employee
+ * @returns true if employee belongs to a partner, false otherwise
+ */
+export async function isPartnerEmployee(employeeId: string): Promise<boolean> {
+  const partnerId = await getEmployeePartnerId(employeeId);
+  return partnerId !== null;
 }
 
 /**
