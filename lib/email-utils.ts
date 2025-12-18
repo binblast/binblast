@@ -135,15 +135,21 @@ export async function notifyTeamMemberInvitation(teamMemberData: {
 
   // Try to send email (non-blocking)
   try {
+    // Format pay rate for display
+    let payRateDisplay = "";
+    if (teamMemberData.payRate) {
+      payRateDisplay = `$${teamMemberData.payRate.toFixed(2)} per trash can`;
+    }
+    
     await sendEmailJS(templateId, {
       to_email: teamMemberData.email,
-      firstName: teamMemberData.firstName,
-      lastName: teamMemberData.lastName,
-      email: teamMemberData.email,
-      tempPassword: teamMemberData.tempPassword,
-      partnerBusinessName: teamMemberData.partnerBusinessName,
-      serviceAreas: teamMemberData.serviceAreas || "",
-      payRate: teamMemberData.payRate ? teamMemberData.payRate.toFixed(2) : "",
+      firstName: teamMemberData.firstName || "",
+      lastName: teamMemberData.lastName || "",
+      email: teamMemberData.email || "",
+      tempPassword: teamMemberData.tempPassword || "",
+      partnerBusinessName: teamMemberData.partnerBusinessName || "Your Partner",
+      serviceAreas: teamMemberData.serviceAreas || "Not assigned",
+      payRate: payRateDisplay,
       loginLink: loginLink,
     });
   } catch (error: any) {

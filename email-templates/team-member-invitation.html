@@ -59,7 +59,6 @@
                                             {{tempPassword}}
                                         </td>
                                     </tr>
-                                    {{#if serviceAreas}}
                                     <tr>
                                         <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
                                             Service Areas:
@@ -68,17 +67,14 @@
                                             {{serviceAreas}}
                                         </td>
                                     </tr>
-                                    {{/if}}
-                                    {{#if payRate}}
                                     <tr>
                                         <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
                                             Pay Rate:
                                         </td>
                                         <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600;">
-                                            ${{payRate}} per trash can
+                                            {{payRate}}
                                         </td>
                                     </tr>
-                                    {{/if}}
                                 </table>
                             </div>
                             
