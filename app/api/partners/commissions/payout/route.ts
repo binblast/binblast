@@ -77,6 +77,18 @@ export async function POST(req: NextRequest) {
         }
       });
 
+      // Calculate employee payroll costs for the same period
+      const payrollStartDate = oneWeekAgo.toISOString().split('T')[0];
+      const payrollEndDate = new Date().toISOString().split('T')[0];
+      const employeeCosts = await calculatePartnerEmployeeCosts(
+        partnerId,
+        payrollStartDate,
+        payrollEndDate
+      );
+
+      // Calculate net payout (gross commission - employee costs)
+      const netPayoutAmount = Math.max(0, totalPayoutAmount - employeeCosts.totalCost);
+
       if (totalPayoutAmount > 0 && commissionIds.length > 0) {
         try {
           // Funds are already transferred (held), we just need to mark them as paid
