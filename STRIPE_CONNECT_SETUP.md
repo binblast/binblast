@@ -67,7 +67,7 @@ Add these to your Vercel environment variables:
 - **Payload style**: **Snapshot** (required for account.updated and legacy transfers)
 - **Events to listen for**:
   - `account.updated` (required - tracks account status changes)
-  - `transfer.created` (if available - when transfer is initiated)
+  - `transfer.created` (if availablettt - when transfer is initiated)
   - `transfer.updated` (if available - when transfer metadata changes)
   - `transfer.paid` (if available - legacy transfers)
   - `transfer.failed` (if available - legacy transfers)
