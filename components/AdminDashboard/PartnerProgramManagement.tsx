@@ -107,7 +107,9 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
         const app = applications.find(a => a.id === applicationId);
         if (app) {
           setSelectedApplication(app);
-          setApproveServiceAreas([]);
+          // Pre-populate service areas from application
+          const areas = app.serviceArea ? app.serviceArea.split(",").map(s => s.trim()).filter(s => s) : [];
+          setApproveServiceAreas(areas);
           setApprovePartnerShare(60);
           setApprovePlatformShare(40);
           setShowApproveModal(true);
@@ -594,7 +596,9 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                                 <button
                                   onClick={() => {
                                     setSelectedApplication(app);
-                                    setApproveServiceAreas([]);
+                                    // Pre-populate service areas from application
+                                    const areas = app.serviceArea ? app.serviceArea.split(",").map(s => s.trim()).filter(s => s) : [];
+                                    setApproveServiceAreas(areas);
                                     setApprovePartnerShare(60);
                                     setApprovePlatformShare(40);
                                     setShowApproveModal(true);
@@ -1082,9 +1086,6 @@ function ApproveModal({
   onApprove: () => void;
   onClose: () => void;
 }) {
-  const [selectedCounties, setSelectedCounties] = useState<string[]>([]);
-  const [selectedZones, setSelectedZones] = useState<string[]>([]);
-
   return (
     <div style={{
       position: "fixed",
@@ -1103,93 +1104,122 @@ function ApproveModal({
         background: "#ffffff",
         borderRadius: "12px",
         padding: "2rem",
-        maxWidth: "700px",
+        maxWidth: "600px",
         width: "100%",
         maxHeight: "90vh",
         overflowY: "auto"
       }}>
-        <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "1.5rem" }}>
-          Approve Partner: {application.businessName}
+        <h3 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1.5rem", color: "#111827" }}>
+          Approve Partner
         </h3>
 
-        <div style={{ marginBottom: "1.5rem" }}>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
-            Service Areas (Required)
-          </label>
-          <div style={{ marginBottom: "1rem" }}>
-            <div style={{ marginBottom: "0.5rem", fontWeight: "600", fontSize: "0.875rem" }}>Zones:</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-              {metroAtlZones.map(zone => (
-                <label key={zone} style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedZones.includes(zone)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedZones([...selectedZones, zone]);
-                      } else {
-                        setSelectedZones(selectedZones.filter(z => z !== zone));
-                      }
-                    }}
-                  />
-                  <span style={{ fontSize: "0.875rem" }}>{zone}</span>
-                </label>
-              ))}
+        {/* Partner Information Section */}
+        <div style={{
+          background: "#f9fafb",
+          borderRadius: "8px",
+          padding: "1.5rem",
+          marginBottom: "1.5rem",
+          border: "1px solid #e5e7eb"
+        }}>
+          <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "1rem", color: "#111827" }}>
+            Partner Information
+          </h4>
+          
+          <div style={{ display: "grid", gap: "1rem" }}>
+            {/* Who */}
+            <div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Owner Name
+              </div>
+              <div style={{ fontSize: "1rem", fontWeight: "600", color: "#111827" }}>
+                {application.ownerName}
+              </div>
+            </div>
+
+            {/* What Business */}
+            <div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Business Name
+              </div>
+              <div style={{ fontSize: "1rem", fontWeight: "600", color: "#111827" }}>
+                {application.businessName}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Business Type
+              </div>
+              <div style={{ fontSize: "1rem", color: "#111827" }}>
+                {application.serviceType}
+              </div>
+            </div>
+
+            {/* Contact Info */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div>
+                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Email
+                </div>
+                <div style={{ fontSize: "0.875rem", color: "#111827" }}>
+                  {application.email}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Phone
+                </div>
+                <div style={{ fontSize: "0.875rem", color: "#111827" }}>
+                  {application.phone}
+                </div>
+              </div>
+            </div>
+
+            {/* Where - Service Area from Application */}
+            <div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Service Area (from application)
+              </div>
+              <div style={{ fontSize: "0.875rem", color: "#111827", padding: "0.5rem", background: "#ffffff", borderRadius: "4px", border: "1px solid #e5e7eb" }}>
+                {application.serviceArea || "Not specified"}
+              </div>
             </div>
           </div>
-          <div>
-            <div style={{ marginBottom: "0.5rem", fontWeight: "600", fontSize: "0.875rem" }}>Counties:</div>
-            <div style={{ maxHeight: "200px", overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: "6px", padding: "0.5rem" }}>
-              {georgiaCounties.map(county => (
-                <label key={county.name} style={{ display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedCounties.includes(county.name)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedCounties([...selectedCounties, county.name]);
-                      } else {
-                        setSelectedCounties(selectedCounties.filter(c => c !== county.name));
-                      }
-                    }}
-                  />
-                  <span style={{ fontSize: "0.875rem" }}>{county.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              const allAreas = [...selectedZones, ...selectedCounties];
-              setServiceAreas(allAreas);
-            }}
-            style={{
-              marginTop: "0.5rem",
-              padding: "0.5rem 1rem",
-              background: "#6366f1",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "0.875rem",
-              cursor: "pointer"
-            }}
-          >
-            Apply Selected Areas
-          </button>
-          {serviceAreas.length > 0 && (
-            <div style={{ marginTop: "0.5rem", fontSize: "0.875rem", color: "#6b7280" }}>
-              Selected: {serviceAreas.join(", ")}
-            </div>
-          )}
         </div>
 
+        {/* Service Areas Selection - Simplified */}
         <div style={{ marginBottom: "1.5rem" }}>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
-            Revenue Split (Must total 100%)
+          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", fontSize: "0.875rem" }}>
+            Service Areas (Required) - Edit if needed
+          </label>
+          <input
+            type="text"
+            value={serviceAreas.join(", ")}
+            onChange={(e) => {
+              const areas = e.target.value.split(",").map(s => s.trim()).filter(s => s);
+              setServiceAreas(areas);
+            }}
+            placeholder="e.g., Metro Atlanta Core, Clayton, Cobb"
+            style={{
+              width: "100%",
+              padding: "0.75rem",
+              border: "1px solid #e5e7eb",
+              borderRadius: "6px",
+              fontSize: "0.875rem"
+            }}
+          />
+          <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#6b7280" }}>
+            Separate multiple areas with commas
+          </div>
+        </div>
+
+        {/* Revenue Split - Simplified */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", fontSize: "0.875rem" }}>
+            Revenue Split
           </label>
           <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: "0.875rem", color: "#6b7280" }}>Partner Share</label>
               <input
                 type="number"
                 min="0"
@@ -1202,14 +1232,18 @@ function ApproveModal({
                 }}
                 style={{
                   width: "100%",
-                  padding: "0.5rem",
+                  padding: "0.75rem",
                   border: "1px solid #e5e7eb",
-                  borderRadius: "6px"
+                  borderRadius: "6px",
+                  fontSize: "0.875rem"
                 }}
               />
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem", textAlign: "center" }}>
+                Partner %
+              </div>
             </div>
+            <div style={{ fontSize: "1.25rem", color: "#6b7280", paddingTop: "1rem" }}>/</div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: "0.875rem", color: "#6b7280" }}>Company Share</label>
               <input
                 type="number"
                 min="0"
@@ -1222,19 +1256,30 @@ function ApproveModal({
                 }}
                 style={{
                   width: "100%",
-                  padding: "0.5rem",
+                  padding: "0.75rem",
                   border: "1px solid #e5e7eb",
-                  borderRadius: "6px"
+                  borderRadius: "6px",
+                  fontSize: "0.875rem"
                 }}
               />
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem", textAlign: "center" }}>
+                Company %
+              </div>
             </div>
           </div>
-          <div style={{ marginTop: "0.5rem", fontSize: "0.875rem", color: partnerShare + platformShare === 100 ? "#16a34a" : "#dc2626" }}>
+          <div style={{ 
+            marginTop: "0.5rem", 
+            fontSize: "0.875rem", 
+            fontWeight: "600",
+            color: partnerShare + platformShare === 100 ? "#16a34a" : "#dc2626",
+            textAlign: "center"
+          }}>
             Total: {partnerShare + platformShare}%
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+        {/* Action Buttons */}
+        <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end", paddingTop: "1rem", borderTop: "1px solid #e5e7eb" }}>
           <button
             onClick={onClose}
             style={{
@@ -1245,8 +1290,11 @@ function ApproveModal({
               borderRadius: "6px",
               fontSize: "0.875rem",
               fontWeight: "600",
-              cursor: "pointer"
+              cursor: "pointer",
+              transition: "background 0.2s"
             }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#d1d5db"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "#e5e7eb"}
           >
             Cancel
           </button>
@@ -1261,7 +1309,18 @@ function ApproveModal({
               borderRadius: "6px",
               fontSize: "0.875rem",
               fontWeight: "600",
-              cursor: serviceAreas.length === 0 || partnerShare + platformShare !== 100 ? "not-allowed" : "pointer"
+              cursor: serviceAreas.length === 0 || partnerShare + platformShare !== 100 ? "not-allowed" : "pointer",
+              transition: "background 0.2s"
+            }}
+            onMouseEnter={(e) => {
+              if (serviceAreas.length > 0 && partnerShare + platformShare === 100) {
+                e.currentTarget.style.background = "#15803d";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (serviceAreas.length > 0 && partnerShare + platformShare === 100) {
+                e.currentTarget.style.background = "#16a34a";
+              }
             }}
           >
             Approve Partner
