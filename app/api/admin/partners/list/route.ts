@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     // Calculate stats for each partner
     const partnersWithStats = await Promise.all(
-      partners.map(async (partner) => {
+      partners.map(async (partner: any) => {
         // Count customers assigned to this partner
         const bookingsSnapshot = await db
           .collection("bookings")
