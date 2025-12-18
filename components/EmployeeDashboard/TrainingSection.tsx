@@ -218,8 +218,20 @@ export function TrainingSection({ employeeId }: TrainingSectionProps) {
     }
     loadCertificationStatus();
     
+    // Listen for training progress updates to refresh certification status
+    const handleTrainingProgressUpdate = () => {
+      console.log("[TrainingSection] Training progress updated, refreshing certification status");
+      loadCertificationStatus();
+      if (useFirestore === false) {
+        loadTrainingModules();
+      }
+    };
+
+    window.addEventListener('trainingProgressUpdated', handleTrainingProgressUpdate);
+    
     return () => {
       isMountedRef.current = false;
+      window.removeEventListener('trainingProgressUpdated', handleTrainingProgressUpdate);
     };
   }, [employeeId, useFirestore, loadTrainingModules, loadCertificationStatus]);
 

@@ -100,10 +100,14 @@ export async function checkCertificationStatus(employeeId: string): Promise<Cert
     let photoDocumentationCompleted = false;
     let earliestExpiration: Date | null = null;
 
+    console.log(`[checkCertificationStatus] Checking ${totalModules} required modules for employee ${employeeId}`);
+    console.log(`[checkCertificationStatus] Found ${Object.keys(moduleProgress).length} modules in employeeTraining collection`);
+
     for (const module of requiredModules) {
       const progress = moduleProgress[module.id];
       
       if (!progress || !progress.completed) {
+        console.log(`[checkCertificationStatus] Module ${module.id} is missing or not completed. Progress:`, progress);
         missingModules.push(module.id);
         continue;
       }
@@ -124,6 +128,7 @@ export async function checkCertificationStatus(employeeId: string): Promise<Cert
       }
 
       completedModules++;
+      console.log(`[checkCertificationStatus] Module ${module.id} is completed (${completedModules}/${totalModules})`);
 
       // Track photo documentation completion
       if (module.id === "photo-documentation") {
@@ -163,6 +168,8 @@ export async function checkCertificationStatus(employeeId: string): Promise<Cert
 
     const isCertified = status === "completed";
     const daysUntilExp = earliestExpiration ? daysUntilExpiration(earliestExpiration) : null;
+
+    console.log(`[checkCertificationStatus] Final status: ${status}, isCertified: ${isCertified}, completedModules: ${completedModules}/${totalModules}, missing: ${missingModules.length}, expired: ${expiredModules.length}`);
 
     return {
       isCertified,

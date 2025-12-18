@@ -27,6 +27,19 @@ export function TrainingStatusHeader({ employeeId }: TrainingStatusHeaderProps) 
   useEffect(() => {
     loadCertificationStatus();
     loadCertificate();
+
+    // Listen for training progress updates to refresh certification status
+    const handleTrainingProgressUpdate = () => {
+      console.log("[TrainingStatusHeader] Training progress updated, refreshing certification status");
+      loadCertificationStatus();
+      loadCertificate();
+    };
+
+    window.addEventListener('trainingProgressUpdated', handleTrainingProgressUpdate);
+
+    return () => {
+      window.removeEventListener('trainingProgressUpdated', handleTrainingProgressUpdate);
+    };
   }, [employeeId]);
 
   const loadCertificationStatus = async () => {

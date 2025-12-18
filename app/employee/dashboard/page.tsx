@@ -213,6 +213,20 @@ export default function EmployeeDashboardPage() {
       loadJobs();
       loadPayPreview();
     }
+
+    // Listen for training progress updates to refresh certification status
+    const handleTrainingProgressUpdate = () => {
+      console.log("[Employee Dashboard] Training progress updated, refreshing certification status");
+      if (employee?.id) {
+        loadCertificationStatus();
+      }
+    };
+
+    window.addEventListener('trainingProgressUpdated', handleTrainingProgressUpdate);
+
+    return () => {
+      window.removeEventListener('trainingProgressUpdated', handleTrainingProgressUpdate);
+    };
   }, [employee?.id, loadCertificationStatus, loadClockInStatus, loadJobs, loadPayPreview]);
 
   useEffect(() => {

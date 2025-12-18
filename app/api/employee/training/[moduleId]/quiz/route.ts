@@ -425,6 +425,19 @@ export async function POST(
       // Continue - quiz attempt and employeeTraining are already saved successfully
     }
 
+    // If quiz was passed, trigger a certification status recheck to ensure everything is in sync
+    // This is non-blocking - don't fail the quiz submission if this fails
+    if (passed) {
+      try {
+        const { checkCertificationStatus } = await import("@/lib/training-certification");
+        const certification = await checkCertificationStatus(employeeId);
+        console.log(`[Quiz API] Certification status after quiz completion: ${certification.status}, completedModules: ${certification.completedModules}/${certification.totalModules}`);
+      } catch (certError: any) {
+        console.warn("[Quiz API] Could not recheck certification status after quiz completion:", certError);
+        // Don't fail the quiz submission - this is just for logging/sync
+      }
+    }
+
     return NextResponse.json({
       success: true,
       passed,
