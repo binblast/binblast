@@ -437,76 +437,128 @@ function RegisterForm() {
         } else if (normalizedReferralCode && normalizedReferralCode.length > 0) {
           console.warn("[Register] Referral code provided but db or user not available:", { normalizedReferralCode, hasDb: !!db, hasUser: !!userCredential.user });
         }
-      }
-      
-      setSuccess(true);
-      
-      // Check if user is a partner before redirecting
-      // Partners should go to partner dashboard or partner signup, not back to application
-      let finalRedirect = redirectParam;
-      try {
-        if (userCredential?.user && db) {
-          const { query, where, getDocs, collection: firestoreCollection } = firestore;
-          // Check if user has a partner record
-          // Wrap in try-catch to handle permission errors gracefully
-          let partnersSnapshot: any = { empty: true };
-          try {
-            const partnersQuery = query(
-              firestoreCollection(db, "partners"),
-              where("userId", "==", userCredential.user.uid)
-            );
-            partnersSnapshot = await getDocs(partnersQuery);
-          } catch (partnerQueryErr: any) {
-            // Permission error means user is not a partner - this is expected for regular users
-            if (partnerQueryErr.code === "permission-denied" || partnerQueryErr.message?.includes("Missing or insufficient permissions")) {
-              console.log("[Register] User is not a partner (permission denied) - redirecting to regular dashboard");
-              // User is not a partner, continue with regular redirect logic
-            } else {
-              console.warn("[Register] Error querying partners for redirect:", partnerQueryErr);
-            }
-          }
+        
+        // Check if user is a partner before redirecting
+        // Partners should go to partner dashboard or partner signup, not back to application
+        // Use the partner data we already queried earlier (partnersByEmailSnapshot or partnersSnapshot)
+        let finalRedirect = redirectParam;
+        
+        // Check if we already found a partner record earlier in the registration process
+        let partnerRecord: any = null;
+        
+        // First check the partnersByEmailSnapshot that was already queried
+        if (!partnersByEmailSnapshot.empty) {
+          partnerRecord = partnersByEmailSnapshot.docs[0];
+        } 
+        // If not found by email, check the partnersSnapshot (by userId) that was already queried
+        else if (!partnersSnapshot.empty) {
+          partnerRecord = partnersSnapshot.docs[0];
+        }
+        
+        // If we found a partner record, determine redirect based on status
+        if (partnerRecord) {
+          const partnerData = partnerRecord.data();
+          const partnerId = partnerRecord.id;
           
-          if (!partnersSnapshot.empty) {
-            const partnerData = partnersSnapshot.docs[0].data();
-            const partnerId = partnersSnapshot.docs[0].id;
-            
-            if (partnerData.status === "pending_agreement") {
-              // Partner needs to complete signup - redirect to partner signup page
-              finalRedirect = `/partner?partnerId=${partnerId}`;
-            } else if (partnerData.status === "active") {
-              // Active partner - redirect to partner dashboard
-              finalRedirect = "/partners/dashboard";
-            }
-            // If status is something else, use original redirect
-          } else {
-            // Not a partner - check if redirect is to partner application
-            // If so, allow it (they're applying for partnership)
-            if (redirectParam === "/partners/apply") {
-              finalRedirect = redirectParam;
-            }
+          if (partnerData.status === "pending_agreement") {
+            // Partner needs to complete signup - redirect to partner signup page
+            finalRedirect = `/partner?partnerId=${partnerId}`;
+          } else if (partnerData.status === "active") {
+            // Active partner - redirect to partner dashboard
+            finalRedirect = "/partners/dashboard";
+          }
+          // If status is something else, use original redirect
+        } else {
+          // Not a partner - check if redirect is to partner application
+          // If so, allow it (they're applying for partnership)
+          if (redirectParam === "/partners/apply") {
+            finalRedirect = redirectParam;
           }
         }
-      } catch (partnerCheckErr) {
-        console.warn("[Register] Error checking partner status:", partnerCheckErr);
-        // Continue with original redirect if check fails
+        
+        setSuccess(true);
+        
+        // Redirect logic:
+        // 1. If partner redirect is set (from partner check) -> use it (partner dashboard or signup)
+        // 2. If partner signup param -> redirect to partner application page (for new applications)
+        // 3. If redirect parameter exists -> use it
+        // 4. If user has already paid (has stripeData) -> go to dashboard
+        // 5. If user has referral code -> go to pricing page to choose plan (with referral code preserved)
+        // 6. If user has selected a plan -> go to pricing page to complete checkout
+        // 7. Otherwise -> go to pricing page to choose plan
+        if (finalRedirect) {
+          // Partner redirect takes priority (partner dashboard or partner signup page)
+          setTimeout(() => {
+            console.log("[Register] Redirecting partner to:", finalRedirect);
+            router.push(finalRedirect);
+          }, 2000);
+        } else if (isPartnerSignup) {
+          // Partner signup param but not yet a partner - redirect to partner application page
+          setTimeout(() => {
+            router.push("/partners/apply");
+          }, 2000);
+        } else if (stripeData) {
+          // User has already paid - redirect to dashboard
+          setTimeout(() => {
+            router.push("/dashboard");
+          }, 2000);
+        } else {
+          // User hasn't paid yet - redirect to pricing page
+          // Preserve referral code if present, so discount can be applied
+          const redirectUrl = normalizedReferralCode 
+            ? `/#pricing?ref=${normalizedReferralCode}`
+            : "/#pricing";
+          
+          setTimeout(() => {
+            console.log("[Register] User registered, redirecting to pricing page to choose plan:", {
+              hasReferralCode: !!normalizedReferralCode,
+              redirectUrl,
+            });
+            router.push(redirectUrl);
+          }, 1500);
+        }
+        return; // Exit early since we've handled the redirect
       }
       
-      // Redirect logic:
-      // 1. If partner signup -> redirect to partner application page
-      // 2. If redirect parameter exists (or partner dashboard) -> use it
-      // 3. If user has already paid (has stripeData) -> go to dashboard
-      // 4. If user has referral code -> go to pricing page to choose plan (with referral code preserved)
-      // 5. If user has selected a plan -> go to pricing page to complete checkout
-      // 6. Otherwise -> go to pricing page to choose plan
+      // If we get here, db or userCredential is not available
+      setSuccess(true);
+      
+      // Fallback redirect logic (shouldn't normally reach here)
       if (isPartnerSignup) {
-        // Partner signup - redirect to partner application page
         setTimeout(() => {
           router.push("/partners/apply");
         }, 2000);
-      } else if (finalRedirect) {
-        // Redirect to the specified page (e.g., partner application or partner dashboard)
+      } else if (stripeData) {
         setTimeout(() => {
+          router.push("/dashboard");
+        }, 2000);
+      } else {
+        const redirectUrl = normalizedReferralCode 
+          ? `/#pricing?ref=${normalizedReferralCode}`
+          : "/#pricing";
+        setTimeout(() => {
+          router.push(redirectUrl);
+        }, 1500);
+      }
+      
+      // Redirect logic:
+      // 1. If partner redirect is set (from partner check) -> use it (partner dashboard or signup)
+      // 2. If partner signup param -> redirect to partner application page (for new applications)
+      // 3. If redirect parameter exists -> use it
+      // 4. If user has already paid (has stripeData) -> go to dashboard
+      // 5. If user has referral code -> go to pricing page to choose plan (with referral code preserved)
+      // 6. If user has selected a plan -> go to pricing page to complete checkout
+      // 7. Otherwise -> go to pricing page to choose plan
+      if (finalRedirect) {
+        // Partner redirect takes priority (partner dashboard or partner signup page)
+        setTimeout(() => {
+          console.log("[Register] Redirecting partner to:", finalRedirect);
           router.push(finalRedirect);
+        }, 2000);
+      } else if (isPartnerSignup) {
+        // Partner signup param but not yet a partner - redirect to partner application page
+        setTimeout(() => {
+          router.push("/partners/apply");
         }, 2000);
       } else if (stripeData) {
         // User has already paid - redirect to dashboard
