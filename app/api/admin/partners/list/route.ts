@@ -2,30 +2,19 @@
 // Get all partners with computed stats
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 500 }
-      );
-    }
-
-    const firestore = await safeImportFirestore();
-    const { collection, query, getDocs, where, orderBy } = firestore;
+    const db = await getAdminFirestore();
 
     // Get all partners
-    const partnersQuery = query(
-      collection(db, "partners"),
-      orderBy("createdAt", "desc")
-    );
-    const partnersSnapshot = await getDocs(partnersQuery);
+    const partnersSnapshot = await db
+      .collection("partners")
+      .orderBy("createdAt", "desc")
+      .get();
 
     const partners = partnersSnapshot.docs.map(doc => ({
       id: doc.id,
@@ -36,11 +25,10 @@ export async function GET(req: NextRequest) {
     const partnersWithStats = await Promise.all(
       partners.map(async (partner) => {
         // Count customers assigned to this partner
-        const bookingsQuery = query(
-          collection(db, "bookings"),
-          where("partnerId", "==", partner.id)
-        );
-        const bookingsSnapshot = await getDocs(bookingsQuery);
+        const bookingsSnapshot = await db
+          .collection("bookings")
+          .where("partnerId", "==", partner.id)
+          .get();
         const customerEmails = new Set<string>();
         bookingsSnapshot.forEach(doc => {
           const booking = doc.data();
@@ -50,11 +38,10 @@ export async function GET(req: NextRequest) {
         });
 
         // Count jobs
-        const jobsQuery = query(
-          collection(db, "scheduledCleanings"),
-          where("partnerId", "==", partner.id)
-        );
-        const jobsSnapshot = await getDocs(jobsQuery);
+        const jobsSnapshot = await db
+          .collection("scheduledCleanings")
+          .where("partnerId", "==", partner.id)
+          .get();
         
         const now = new Date();
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -82,11 +69,10 @@ export async function GET(req: NextRequest) {
               // Check photo compliance for jobs in last 30 days
               if (job.status === "completed" || job.jobStatus === "completed") {
                 totalJobs30d++;
-                const photosQuery = query(
-                  collection(db, "jobPhotos"),
-                  where("jobId", "==", jobDoc.id)
-                );
-                const photosSnapshot = await getDocs(photosQuery);
+                const photosSnapshot = await db
+                  .collection("jobPhotos")
+                  .where("jobId", "==", jobDoc.id)
+                  .get();
                 const photos = photosSnapshot.docs.map(doc => doc.data());
                 const hasInsidePhoto = photos.some((p: any) => p.photoType === "inside");
                 const hasOutsidePhoto = photos.some((p: any) => p.photoType === "outside");
@@ -119,25 +105,23 @@ export async function GET(req: NextRequest) {
         });
 
         // Get unpaid balance from payouts
-        const payoutsQuery = query(
-          collection(db, "partnerPayouts"),
-          where("partnerId", "==", partner.id),
-          where("status", "==", "pending")
-        );
-        const payoutsSnapshot = await getDocs(payoutsQuery);
+        const payoutsSnapshot = await db
+          .collection("partnerPayouts")
+          .where("partnerId", "==", partner.id)
+          .where("status", "==", "pending")
+          .get();
         let unpaidBalance = 0;
         payoutsSnapshot.forEach(doc => {
           unpaidBalance += doc.data().amount || 0;
         });
 
         // Get last payout date
-        const paidPayoutsQuery = query(
-          collection(db, "partnerPayouts"),
-          where("partnerId", "==", partner.id),
-          where("status", "==", "paid"),
-          orderBy("paidAt", "desc")
-        );
-        const paidPayoutsSnapshot = await getDocs(paidPayoutsQuery);
+        const paidPayoutsSnapshot = await db
+          .collection("partnerPayouts")
+          .where("partnerId", "==", partner.id)
+          .where("status", "==", "paid")
+          .orderBy("paidAt", "desc")
+          .get();
         const lastPayoutDate = paidPayoutsSnapshot.docs[0]?.data()?.paidAt || null;
 
         return {
@@ -161,8 +145,15 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error("[Partners List] Error:", error);
+    
+    // Provide helpful error message for missing credentials
+    let errorMessage = error.message || "Failed to fetch partners";
+    if (errorMessage.includes("Firebase Admin credentials not configured")) {
+      errorMessage = "Server configuration error: Firebase Admin credentials are missing. Please contact your administrator to configure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in Vercel environment variables.";
+    }
+    
     return NextResponse.json(
-      { error: error.message || "Failed to fetch partners" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

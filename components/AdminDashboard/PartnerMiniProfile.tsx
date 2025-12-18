@@ -834,14 +834,21 @@ function MessagesTab({
       });
 
       const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || `Server error: ${response.status}`);
+      }
+      
       if (data.success) {
         setMessageText("");
         onUpdate();
       } else {
-        alert(`Error: ${data.error}`);
+        throw new Error(data.error || "Failed to send message");
       }
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      console.error("[Send Message] Error:", err);
+      const errorMsg = err.message || "An unexpected error occurred";
+      alert(`Failed to send message: ${errorMsg}`);
     }
   }
 

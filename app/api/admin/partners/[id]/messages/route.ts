@@ -2,6 +2,7 @@
 // Get and send messages to/from a partner
 
 import { NextRequest, NextResponse } from "next/server";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export const dynamic = 'force-dynamic';
 
@@ -13,27 +14,7 @@ export async function GET(
     const partnerId = params.id;
 
     // Use Admin SDK for server-side operations
-    const admin = await import("firebase-admin");
-    let app;
-    try {
-      app = admin.app();
-    } catch {
-      const serviceAccount = {
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      };
-
-      if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
-        throw new Error("Firebase Admin credentials not configured");
-      }
-
-      app = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount as any),
-      });
-    }
-
-    const db = app.firestore();
+    const db = await getAdminFirestore();
 
     const messagesSnapshot = await db
       .collection("partnerMessages")
@@ -52,8 +33,15 @@ export async function GET(
     });
   } catch (error: any) {
     console.error("[Get Messages] Error:", error);
+    
+    // Provide helpful error message for missing credentials
+    let errorMessage = error.message || "Failed to fetch messages";
+    if (errorMessage.includes("Firebase Admin credentials not configured")) {
+      errorMessage = "Server configuration error: Firebase Admin credentials are missing. Please contact your administrator to configure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in Vercel environment variables.";
+    }
+    
     return NextResponse.json(
-      { error: error.message || "Failed to fetch messages" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -77,26 +65,7 @@ export async function POST(
 
     // Use Admin SDK for server-side operations
     const admin = await import("firebase-admin");
-    let app;
-    try {
-      app = admin.app();
-    } catch {
-      const serviceAccount = {
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      };
-
-      if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
-        throw new Error("Firebase Admin credentials not configured");
-      }
-
-      app = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount as any),
-      });
-    }
-
-    const db = app.firestore();
+    const db = await getAdminFirestore();
 
     const messageData = {
       partnerId,
@@ -115,8 +84,15 @@ export async function POST(
     });
   } catch (error: any) {
     console.error("[Send Message] Error:", error);
+    
+    // Provide helpful error message for missing credentials
+    let errorMessage = error.message || "Failed to send message";
+    if (errorMessage.includes("Firebase Admin credentials not configured")) {
+      errorMessage = "Server configuration error: Firebase Admin credentials are missing. Please contact your administrator to configure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in Vercel environment variables.";
+    }
+    
     return NextResponse.json(
-      { error: error.message || "Failed to send message" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
