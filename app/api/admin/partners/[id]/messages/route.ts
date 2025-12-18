@@ -22,7 +22,7 @@ export async function GET(
       .orderBy("createdAt", "desc")
       .get();
 
-    const messages = messagesSnapshot.docs.map(doc => ({
+    const messages = messagesSnapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data(),
     }));

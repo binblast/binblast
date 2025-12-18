@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
       .orderBy("createdAt", "desc")
       .get();
 
-    const partners = partnersSnapshot.docs.map(doc => ({
+    const partners = partnersSnapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data(),
     }));
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
                   .collection("jobPhotos")
                   .where("jobId", "==", jobDoc.id)
                   .get();
-                const photos = photosSnapshot.docs.map(doc => doc.data());
+                const photos = photosSnapshot.docs.map((doc: any) => doc.data());
                 const hasInsidePhoto = photos.some((p: any) => p.photoType === "inside");
                 const hasOutsidePhoto = photos.some((p: any) => p.photoType === "outside");
                 if (hasInsidePhoto && hasOutsidePhoto) {
@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
           .where("status", "==", "pending")
           .get();
         let unpaidBalance = 0;
-        payoutsSnapshot.forEach(doc => {
+        payoutsSnapshot.forEach((doc: any) => {
           unpaidBalance += doc.data().amount || 0;
         });
 
