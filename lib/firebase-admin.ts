@@ -34,7 +34,8 @@ export async function getAdminApp(): Promise<any> {
       }
 
       // Get credentials from environment variables
-      const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
+      // Fallback to NEXT_PUBLIC_FIREBASE_PROJECT_ID if FIREBASE_PROJECT_ID is not set
+      const projectId = (process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID)?.trim();
       const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
       const privateKey = process.env.FIREBASE_PRIVATE_KEY?.trim();
 
@@ -54,7 +55,7 @@ export async function getAdminApp(): Promise<any> {
       // Check if all required credentials are present
       if (!projectId || !clientEmail || !privateKey) {
         const missing: string[] = [];
-        if (!projectId) missing.push("FIREBASE_PROJECT_ID");
+        if (!projectId) missing.push("FIREBASE_PROJECT_ID (or NEXT_PUBLIC_FIREBASE_PROJECT_ID)");
         if (!clientEmail) missing.push("FIREBASE_CLIENT_EMAIL");
         if (!privateKey) missing.push("FIREBASE_PRIVATE_KEY");
 
