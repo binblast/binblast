@@ -99,6 +99,12 @@ export async function getAdminApp(): Promise<any> {
       return adminApp;
     } catch (error: any) {
       console.error("[Firebase Admin] Failed to initialize:", error.message || error);
+      console.error("[Firebase Admin] Error details:", {
+        message: error.message,
+        code: error.code,
+        stack: error.stack?.substring(0, 500), // First 500 chars of stack
+        errorType: error.constructor?.name,
+      });
       adminInitPromise = null; // Reset promise so we can retry
       throw error;
     }
