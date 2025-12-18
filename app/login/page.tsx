@@ -77,7 +77,7 @@ function LoginForm() {
           return;
         }
 
-        // Check if user is an employee
+        // Check if user is an employee (including partner employees)
         try {
           const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
           const db = await getDbInstance();
@@ -89,10 +89,17 @@ function LoginForm() {
             
             if (userDoc.exists()) {
               const userData = userDoc.data();
+              console.log(`[Login] User role: ${userData.role}, partnerId: ${userData.partnerId || "none"}`);
+              
               if (userData.role === "employee") {
-                router.push("/employee/dashboard");
+                // Employee (including partner employees) - redirect to employee dashboard
+                const redirectPath = redirectParam || "/employee/dashboard";
+                console.log(`[Login] Redirecting employee to: ${redirectPath}`);
+                router.push(redirectPath);
                 return;
               }
+            } else {
+              console.warn(`[Login] User document not found for uid: ${user.uid}`);
             }
           }
         } catch (err) {
@@ -113,14 +120,19 @@ function LoginForm() {
       console.error("Login error:", err);
       
       // Handle specific Firebase errors
+      console.error("[Login] Error code:", err.code);
+      console.error("[Login] Error message:", err.message);
+      
       if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-        setError("Invalid email or password.");
+        setError("Invalid email or password. Please check your credentials and try again.");
       } else if (err.code === "auth/invalid-email") {
         setError("Invalid email address.");
       } else if (err.code === "auth/user-disabled") {
         setError("This account has been disabled.");
       } else if (err.code === "auth/too-many-requests") {
         setError("Too many failed login attempts. Please try again later.");
+      } else if (err.code === "auth/network-request-failed") {
+        setError("Network error. Please check your connection and try again.");
       } else {
         setError(err.message || "Failed to sign in. Please try again.");
       }

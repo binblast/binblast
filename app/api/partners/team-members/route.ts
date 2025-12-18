@@ -393,46 +393,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create Firebase user account
+    // Create Firebase user account using Admin SDK (proper way for server-side)
     // Generate temporary password first
     const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`;
     
+    let userUid: string;
+    
     try {
-      // Initialize Firebase before creating user
-      const { getFirebaseApp } = await import("@/lib/firebase");
-      const app = await getFirebaseApp();
+      // Use Firebase Admin SDK for server-side user creation
+      const { getAdminApp } = await import("@/lib/firebase-admin");
+      const adminApp = await getAdminApp();
+      const adminAuth = adminApp.auth();
       
-      if (!app) {
-        console.error("[Team Members API] Firebase app not initialized");
-        return NextResponse.json(
-          { error: "Unable to initialize authentication service. Please try again or contact support." },
-          { status: 500 }
-        );
-      }
-
-      // Import Firebase auth module directly (server-side)
-      // On server, we can import directly since we've already initialized the app
-      const firebaseAuth = await import("firebase/auth");
-      const auth = firebaseAuth.getAuth(app);
-      
-      if (!auth) {
-        console.error("[Team Members API] Firebase auth instance is null after initialization");
-        return NextResponse.json(
-          { error: "Unable to initialize authentication service. Please try again or contact support." },
-          { status: 500 }
-        );
-      }
-
-      // Create user with email/password
-      const userCredential = await firebaseAuth.createUserWithEmailAndPassword(auth, email, tempPassword);
-      
-      // Update profile
-      await firebaseAuth.updateProfile(userCredential.user, {
+      // Create user with Admin SDK
+      const userRecord = await adminAuth.createUser({
+        email: email.toLowerCase(),
+        password: tempPassword,
         displayName: `${firstName} ${lastName}`,
+        emailVerified: false, // User will verify via login
       });
-
+      
+      userUid = userRecord.uid;
+      console.log(`[Team Members API] Created user with Admin SDK: ${userUid}`);
+      
       // Save employee data to Firestore with partnerId
-      const userDocRef = doc(collection(db, "users"), userCredential.user.uid);
+      const userDocRef = doc(collection(db, "users"), userUid);
       await setDoc(userDocRef, {
         firstName,
         lastName,
@@ -453,8 +438,8 @@ export async function POST(req: NextRequest) {
 
       // Initialize training progress (employee will need to complete training)
       const trainingProgressRef = collection(db, "trainingProgress");
-      await setDoc(doc(trainingProgressRef, userCredential.user.uid), {
-        employeeId: userCredential.user.uid,
+      await setDoc(doc(trainingProgressRef, userUid), {
+        employeeId: userUid,
         overallStatus: "in_progress",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -482,7 +467,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         employee: {
-          id: userCredential.user.uid,
+          id: userUid,
           email,
           firstName,
           lastName,
@@ -491,20 +476,27 @@ export async function POST(req: NextRequest) {
         message: "Team member added successfully. They will need to complete training before clocking in.",
       });
     } catch (authError: any) {
-      console.error("[Team Members API] Error creating user:", authError);
+      console.error("[Team Members API] Error creating user with Admin SDK:", authError);
       
-      // Handle specific Firebase auth errors
-      if (authError.code === "auth/email-already-in-use") {
+      // Handle specific Firebase Admin errors
+      if (authError.code === "auth/email-already-exists" || authError.code === "auth/email-already-in-use") {
         return NextResponse.json(
           { error: "An account with this email already exists" },
           { status: 400 }
         );
       }
       
-      if (authError.message?.includes("Firebase") || authError.message?.includes("auth")) {
+      if (authError.code === "auth/invalid-email") {
         return NextResponse.json(
-          { error: "Authentication service error. Please try again or contact support if the issue persists." },
-          { status: 500 }
+          { error: "Invalid email address" },
+          { status: 400 }
+        );
+      }
+      
+      if (authError.code === "auth/invalid-password") {
+        return NextResponse.json(
+          { error: "Password does not meet requirements" },
+          { status: 400 }
         );
       }
       
