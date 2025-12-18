@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to the Team!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <!-- Logo Header -->
+                    <tr>
+                        <td align="center" style="padding: 30px 30px 20px 30px; background-color: #ffffff;">
+                            <img src="https://binblast.vercel.app/bin-blast-logo.png" alt="Bin Blast Co. Logo" style="max-width: 200px; height: auto; display: block; border: 0;" width="200" />
+                        </td>
+                    </tr>
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 20px 30px 30px 30px; background-color: #2563eb; border-radius: 0 0 8px 8px;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; text-align: center;">
+                                🎉 Welcome to the Team!
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 30px;">
+                            <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Hi <strong>{{firstName}}</strong>,
+                            </p>
+                            
+                            <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                You've been invited to join <strong>{{partnerBusinessName}}</strong> as a team member! We're excited to have you on board.
+                            </p>
+                            
+                            <!-- Account Details -->
+                            <div style="background-color: #f9fafb; border-left: 4px solid #2563eb; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                                <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">
+                                    Your Account Details
+                                </h2>
+                                
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 40%; font-weight: 600;">
+                                            Email:
+                                        </td>
+                                        <td style="padding: 8px 0; color: #111827; font-size: 14px;">
+                                            {{email}}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
+                                            Temporary Password:
+                                        </td>
+                                        <td style="padding: 8px 0; color: #111827; font-size: 14px; font-family: monospace; font-weight: 600;">
+                                            {{tempPassword}}
+                                        </td>
+                                    </tr>
+                                    {{#if serviceAreas}}
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
+                                            Service Areas:
+                                        </td>
+                                        <td style="padding: 8px 0; color: #111827; font-size: 14px;">
+                                            {{serviceAreas}}
+                                        </td>
+                                    </tr>
+                                    {{/if}}
+                                    {{#if payRate}}
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
+                                            Pay Rate:
+                                        </td>
+                                        <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600;">
+                                            ${{payRate}} per trash can
+                                        </td>
+                                    </tr>
+                                    {{/if}}
+                                </table>
+                            </div>
+                            
+                            <!-- CTA Button -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                        <a href="{{loginLink}}" style="display: inline-block; padding: 14px 32px; background-color: #16a34a; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                                            Login to Your Account
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="margin: 20px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center;">
+                                Or copy and paste this link into your browser:<br>
+                                <a href="{{loginLink}}" style="color: #2563eb; word-break: break-all;">{{loginLink}}</a>
+                            </p>
+                            
+                            <!-- Important Requirements -->
+                            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                                <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">
+                                    ⚠️ Important: Before You Start
+                                </h2>
+                                <p style="margin: 0 0 10px 0; color: #374151; font-size: 14px; line-height: 1.6;">
+                                    <strong>New team members must complete training and certification before they can clock in for work.</strong>
+                                </p>
+                                <ol style="margin: 10px 0 0 0; padding-left: 20px; color: #374151; font-size: 14px; line-height: 1.8;">
+                                    <li>Login to your account using the temporary password above</li>
+                                    <li>Change your password to something secure</li>
+                                    <li>Complete all required training modules</li>
+                                    <li>Pass the certification assessment</li>
+                                    <li>Once certified, you'll be able to clock in and start working!</li>
+                                </ol>
+                            </div>
+                            
+                            <!-- Next Steps -->
+                            <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                                <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">
+                                    What's Next?
+                                </h2>
+                                <p style="margin: 0; color: #374151; font-size: 14px; line-height: 1.6;">
+                                    After logging in, you'll have access to:
+                                </p>
+                                <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #374151; font-size: 14px; line-height: 1.8;">
+                                    <li>Training modules and certification materials</li>
+                                    <li>Your assigned service areas and job schedule</li>
+                                    <li>Clock in/out functionality (after certification)</li>
+                                    <li>Job details and instructions</li>
+                                    <li>Your earnings and payment information</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Security Note -->
+                            <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                                <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
+                                    <strong>Security:</strong> Please change your temporary password immediately after logging in. Keep your login credentials secure and never share them with anyone.
+                                </p>
+                            </div>
+                            
+                            <!-- Footer -->
+                            <p style="margin: 30px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                                Welcome to <strong>{{partnerBusinessName}}</strong>!<br>
+                                If you have any questions, please contact your team lead or <a href="mailto:binblastcompany@gmail.com" style="color: #2563eb;">binblastcompany@gmail.com</a>.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

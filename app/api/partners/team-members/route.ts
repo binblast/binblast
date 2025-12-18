@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getActivePartner } from "@/lib/partner-auth";
+import { notifyTeamMemberInvitation } from "@/lib/email-utils";
 
 export const dynamic = 'force-dynamic';
 
@@ -130,25 +131,79 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify partner access
+    // Verify partner access and get partner data
+    // Priority: userId (authenticated user) > partnerId (parameter)
     let finalPartnerId = partnerId;
-    if (!finalPartnerId && userId) {
-      const partner = await getActivePartner(userId);
+    let partnerBusinessName = "";
+    
+    if (userId) {
+      // If userId is provided, use it to get the partner (userId is source of truth for auth)
+      let partner = await getActivePartner(userId);
+      
+      // If not found by userId, try to get user email from Firestore and search by email (fallback)
+      if (!partner) {
+        try {
+          const db = await getDbInstance();
+          if (db) {
+            const firestore = await safeImportFirestore();
+            const { doc, getDoc, collection, query, where, getDocs } = firestore;
+            
+            // Get user's email from users collection
+            const userDoc = await getDoc(doc(db, "users", userId));
+            const userEmail = userDoc.exists() ? userDoc.data()?.email : null;
+            
+            if (userEmail) {
+              // Try to find partner by email
+              const partnersByEmailQuery = query(
+                collection(db, "partners"),
+                where("email", "==", userEmail.toLowerCase()),
+                where("status", "==", "active")
+              );
+              const partnersByEmailSnapshot = await getDocs(partnersByEmailQuery);
+              
+              if (!partnersByEmailSnapshot.empty) {
+                const partnerDoc = partnersByEmailSnapshot.docs[0];
+                const partnerData = partnerDoc.data();
+                partner = {
+                  id: partnerDoc.id,
+                  businessName: partnerData.businessName || "",
+                  referralCode: partnerData.referralCode || "",
+                  status: partnerData.status || "",
+                };
+              }
+            }
+          }
+        } catch (emailLookupError) {
+          console.error("[Team Members API] Error looking up partner by email:", emailLookupError);
+        }
+      }
+      
       if (!partner) {
         return NextResponse.json(
-          { error: "Unauthorized: Partner not found" },
+          { error: "Unauthorized: Partner not found or not active" },
           { status: 401 }
         );
       }
+      
+      // Use the partner ID from the authenticated user's partner record
       finalPartnerId = partner.id;
-    } else if (finalPartnerId && userId) {
-      // Verify that the partnerId belongs to the userId
-      const partner = await getActivePartner(userId);
-      if (!partner || partner.id !== finalPartnerId) {
-        return NextResponse.json(
-          { error: "Unauthorized: Partner ID does not match your account" },
-          { status: 403 }
-        );
+      partnerBusinessName = partner.businessName || "";
+      
+      // If partnerId was also provided, log a warning if it doesn't match (but don't fail)
+      if (partnerId && partner.id !== partnerId) {
+        console.warn(`[Team Members API] Partner ID mismatch: provided ${partnerId}, but userId ${userId} belongs to partner ${partner.id}`);
+      }
+    } else if (finalPartnerId) {
+      // If only partnerId is provided (no userId), fetch partner data to get business name
+      const db = await getDbInstance();
+      if (db) {
+        const firestore = await safeImportFirestore();
+        const { doc, getDoc } = firestore;
+        const partnerDoc = await getDoc(doc(db, "partners", finalPartnerId));
+        if (partnerDoc.exists()) {
+          const partnerData = partnerDoc.data();
+          partnerBusinessName = partnerData.businessName || "";
+        }
       }
     }
 
@@ -250,6 +305,25 @@ export async function POST(req: NextRequest) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+
+      // Send invitation email (fire-and-forget, non-blocking)
+      (async () => {
+        try {
+          await notifyTeamMemberInvitation({
+            email,
+            firstName,
+            lastName,
+            tempPassword,
+            partnerBusinessName: partnerBusinessName || "Your Partner",
+            serviceAreas: serviceArea && serviceArea.length > 0 ? serviceArea.join(", ") : undefined,
+            payRate: payRate,
+            loginLink: "https://binblast.vercel.app/login",
+          });
+        } catch (emailError: any) {
+          console.error("[Team Members API] Failed to send invitation email:", emailError?.message || emailError);
+          // Don't throw - email failure shouldn't block team member creation
+        }
+      })();
 
       return NextResponse.json({
         success: true,

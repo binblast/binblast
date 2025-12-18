@@ -113,3 +113,41 @@ export async function notifyPartnerApproval(partnerData: {
     // Don't throw - email failure shouldn't block approval
   }
 }
+
+/**
+ * Send team member invitation email with temporary password and login link
+ */
+export async function notifyTeamMemberInvitation(teamMemberData: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  tempPassword: string;
+  partnerBusinessName: string;
+  serviceAreas?: string;
+  payRate?: number;
+  loginLink?: string;
+}): Promise<void> {
+  // Hardcoded template ID for team member invitation email
+  const templateId = "template_9796g8g";
+
+  // Default login link if not provided
+  const loginLink = teamMemberData.loginLink || "https://binblast.vercel.app/login";
+
+  // Try to send email (non-blocking)
+  try {
+    await sendEmailJS(templateId, {
+      to_email: teamMemberData.email,
+      firstName: teamMemberData.firstName,
+      lastName: teamMemberData.lastName,
+      email: teamMemberData.email,
+      tempPassword: teamMemberData.tempPassword,
+      partnerBusinessName: teamMemberData.partnerBusinessName,
+      serviceAreas: teamMemberData.serviceAreas || "",
+      payRate: teamMemberData.payRate ? teamMemberData.payRate.toFixed(2) : "",
+      loginLink: loginLink,
+    });
+  } catch (error: any) {
+    console.error("[Notify Team Member] Failed to send invitation email:", error?.message || error);
+    // Don't throw - email failure shouldn't block team member creation
+  }
+}
