@@ -26,6 +26,7 @@ import { RevenueTrendSummary, CustomerGrowthSummary, WeeklyCleaningsSummary, Pla
 import { AdminAIChat } from "@/components/AdminDashboard/AdminAIChat";
 import { KPICard } from "@/components/AdminDashboard/KPICard";
 import { CustomQuotesManagement } from "@/components/AdminDashboard/CustomQuotesManagement";
+import { MessagingCenter } from "@/components/AdminDashboard/MessagingCenter";
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
@@ -2723,7 +2724,7 @@ function DashboardPageContent() {
                   }}
                   className="hide-scrollbar tab-navigation"
                   >
-                    {(["overview", "customers", "operations", "financial", "partners", "analytics", "employees"] as const).map((tab) => (
+                    {(["overview", "customers", "operations", "financial", "partners", "analytics", "employees", "messages"] as const).map((tab) => (
                       <button
                         key={tab}
                         onClick={() => setAdminActiveTab(tab)}
@@ -4007,6 +4008,22 @@ function DashboardPageContent() {
                             </div>
                           </div>
                         </div>
+                      </div>
+                    )}
+                    {adminActiveTab === "messages" && (
+                      <div 
+                        key="messages"
+                        style={{
+                          animation: "fadeInUp 0.4s ease-out",
+                          opacity: 1
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+                          <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0 }}>
+                            Messaging Center
+                          </h2>
+                        </div>
+                        <MessagingCenter userId={userId} />
                       </div>
                     )}
                   </div>
