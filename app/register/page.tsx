@@ -520,10 +520,10 @@ function RegisterForm() {
         return; // Exit early since we've handled the redirect
       }
       
-      // If we get here, db or userCredential is not available
+      // If we get here, db or userCredential is not available (shouldn't normally happen)
       setSuccess(true);
       
-      // Fallback redirect logic (shouldn't normally reach here)
+      // Fallback redirect logic
       if (isPartnerSignup) {
         setTimeout(() => {
           router.push("/partners/apply");
@@ -537,46 +537,6 @@ function RegisterForm() {
           ? `/#pricing?ref=${normalizedReferralCode}`
           : "/#pricing";
         setTimeout(() => {
-          router.push(redirectUrl);
-        }, 1500);
-      }
-      
-      // Redirect logic:
-      // 1. If partner redirect is set (from partner check) -> use it (partner dashboard or signup)
-      // 2. If partner signup param -> redirect to partner application page (for new applications)
-      // 3. If redirect parameter exists -> use it
-      // 4. If user has already paid (has stripeData) -> go to dashboard
-      // 5. If user has referral code -> go to pricing page to choose plan (with referral code preserved)
-      // 6. If user has selected a plan -> go to pricing page to complete checkout
-      // 7. Otherwise -> go to pricing page to choose plan
-      if (finalRedirect) {
-        // Partner redirect takes priority (partner dashboard or partner signup page)
-        setTimeout(() => {
-          console.log("[Register] Redirecting partner to:", finalRedirect);
-          router.push(finalRedirect);
-        }, 2000);
-      } else if (isPartnerSignup) {
-        // Partner signup param but not yet a partner - redirect to partner application page
-        setTimeout(() => {
-          router.push("/partners/apply");
-        }, 2000);
-      } else if (stripeData) {
-        // User has already paid - redirect to dashboard
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 2000);
-      } else {
-        // User hasn't paid yet - redirect to pricing page
-        // Preserve referral code if present, so discount can be applied
-        const redirectUrl = normalizedReferralCode 
-          ? `/#pricing?ref=${normalizedReferralCode}`
-          : "/#pricing";
-        
-        setTimeout(() => {
-          console.log("[Register] User registered, redirecting to pricing page to choose plan:", {
-            hasReferralCode: !!normalizedReferralCode,
-            redirectUrl,
-          });
           router.push(redirectUrl);
         }, 1500);
       }
