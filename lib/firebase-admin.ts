@@ -65,11 +65,33 @@ export async function getAdminApp(): Promise<any> {
       }
 
       // Initialize Admin SDK
+      // Normalize private key: handle various formats
+      let normalizedPrivateKey = privateKey;
+      
+      // Replace escaped newlines
+      normalizedPrivateKey = normalizedPrivateKey.replace(/\\n/g, "\n");
+      
+      // If the key doesn't have newlines but should, try to add them
+      // (some systems store the key as a single line)
+      if (!normalizedPrivateKey.includes("\n") && normalizedPrivateKey.includes("-----")) {
+        // Try to detect if it's a single-line key that needs formatting
+        normalizedPrivateKey = normalizedPrivateKey.replace(/-----BEGIN PRIVATE KEY-----/, "-----BEGIN PRIVATE KEY-----\n");
+        normalizedPrivateKey = normalizedPrivateKey.replace(/-----END PRIVATE KEY-----/, "\n-----END PRIVATE KEY-----");
+      }
+      
+      // Ensure proper line breaks around BEGIN/END markers
+      if (!normalizedPrivateKey.startsWith("-----BEGIN")) {
+        console.warn("[Firebase Admin] Private key may be malformed - missing BEGIN marker");
+      }
+      if (!normalizedPrivateKey.includes("-----END")) {
+        console.warn("[Firebase Admin] Private key may be malformed - missing END marker");
+      }
+
       adminApp = admin.initializeApp({
         credential: admin.credential.cert({
           projectId,
           clientEmail,
-          privateKey: privateKey.replace(/\\n/g, "\n"),
+          privateKey: normalizedPrivateKey,
         } as any),
       });
 
