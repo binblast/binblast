@@ -16,16 +16,24 @@ export async function GET(
     // Use Admin SDK for server-side operations
     const db = await getAdminFirestore();
 
+    // Query without orderBy to avoid composite index requirement
+    // We'll sort in memory instead
     const messagesSnapshot = await db
       .collection("partnerMessages")
       .where("partnerId", "==", partnerId)
-      .orderBy("createdAt", "desc")
       .get();
 
-    const messages = messagesSnapshot.docs.map((doc: any) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const messages = messagesSnapshot.docs
+      .map((doc: any) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      // Sort by createdAt descending in memory
+      .sort((a: any, b: any) => {
+        const aTime = a.createdAt?.toMillis?.() || a.createdAt?._seconds * 1000 || 0;
+        const bTime = b.createdAt?.toMillis?.() || b.createdAt?._seconds * 1000 || 0;
+        return bTime - aTime; // Descending order (newest first)
+      });
 
     return NextResponse.json({
       success: true,

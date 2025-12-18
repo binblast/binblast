@@ -41,6 +41,8 @@ service cloud.firestore {
     match /users/{userId} {
       // Users can read their own document, admins and operators can read all, server-side can read all
       allow read: if isOwner(userId) || isAdminOrOperator() || request.auth == null;
+      // Explicitly allow list queries for admin/operator (for dashboard components)
+      allow list: if isAdminOrOperator() || request.auth == null;
       
       // Users can create their own document (during registration)
       // Allow creation with required fields and optional fields like role, phone, plan, etc.
@@ -334,6 +336,8 @@ service cloud.firestore {
         || isAdmin()
         || request.auth == null
       );
+      // Explicitly allow list queries for admin/operator
+      allow list: if isAdminOrOperator() || request.auth == null;
       
       // Only server-side API routes can create/update payouts
       allow create, update: if isAdmin() || request.auth == null;
@@ -368,6 +372,8 @@ service cloud.firestore {
         isAdminOrOperator()
         || request.auth == null // Server-side reads
       );
+      // Explicitly allow list queries for admin/operator
+      allow list: if isAdminOrOperator() || request.auth == null;
       
       // Only server-side API routes can create quotes (from custom quote wizard)
       // Allow creates from unauthenticated requests (server-side API routes)
@@ -538,6 +544,15 @@ service cloud.firestore {
         || request.auth == null
       );
       allow write: if isAdmin() || request.auth == null;
+    }
+
+    // Admin notifications collection - notifications for admin dashboard
+    match /adminNotifications/{notificationId} {
+      // Only admins can read notifications, server-side can create
+      allow read: if isAdminOrOperator() || request.auth == null;
+      allow create: if request.auth == null; // Only server-side can create
+      allow update: if isAdminOrOperator() || request.auth == null; // Allow marking as read
+      allow delete: if isAdminOrOperator() || request.auth == null;
     }
 
     // Default deny all other collections

@@ -218,6 +218,8 @@ function DashboardPageContent() {
   const [adminActiveTab, setAdminActiveTab] = useState<"overview" | "customers" | "operations" | "financial" | "partners" | "analytics" | "employees" | "messages">("overview");
   const [newQuotesCount, setNewQuotesCount] = useState(0);
   const [showQuotesNotification, setShowQuotesNotification] = useState(true);
+  const [newPartnerApplicationsCount, setNewPartnerApplicationsCount] = useState(0);
+  const [showPartnerApplicationsNotification, setShowPartnerApplicationsNotification] = useState(true);
   
   // Refs for scroll targets
   const scheduleSectionRef = useRef<HTMLDivElement>(null);
@@ -816,6 +818,8 @@ function DashboardPageContent() {
     let unsubscribeCleanings: (() => void) | undefined;
     let unsubscribeClockIns: (() => void) | undefined;
     let unsubscribeQuotes: (() => void) | undefined;
+    let unsubscribePartnerApplications: (() => void) | undefined;
+    let unsubscribeAdminNotifications: (() => void) | undefined;
 
     async function setupRealtimeListeners() {
       if ((!isAdmin && !isOperator) || !userId || !mounted) return;
@@ -860,17 +864,49 @@ function DashboardPageContent() {
         });
 
         // Listen to customQuotes for new quote notifications
-        const newQuotesQuery = query(
-          collection(db, "customQuotes"),
-          where("status", "in", ["pending", "pending_review"]),
-          orderBy("submittedAt", "desc")
-        );
-        unsubscribeQuotes = onSnapshot(newQuotesQuery, (snapshot) => {
+        // Query all quotes and filter in memory to avoid composite index requirement
+        const allQuotesQuery = query(collection(db, "customQuotes"));
+        unsubscribeQuotes = onSnapshot(allQuotesQuery, (snapshot) => {
           if (mounted) {
-            setNewQuotesCount(snapshot.size);
+            const pendingCount = snapshot.docs.filter(doc => {
+              const status = doc.data().status;
+              return status === "pending" || status === "pending_review";
+            }).length;
+            setNewQuotesCount(pendingCount);
           }
         }, (error) => {
           console.error("[Dashboard] Error listening to customQuotes:", error);
+        });
+
+        // Listen to partnerApplications for new application notifications
+        const partnerApplicationsQuery = query(collection(db, "partnerApplications"));
+        unsubscribePartnerApplications = onSnapshot(partnerApplicationsQuery, (snapshot) => {
+          if (mounted) {
+            const pendingCount = snapshot.docs.filter(doc => {
+              const status = doc.data().status;
+              return status === "pending";
+            }).length;
+            setNewPartnerApplicationsCount(pendingCount);
+          }
+        }, (error) => {
+          console.error("[Dashboard] Error listening to partnerApplications:", error);
+        });
+
+        // Listen to adminNotifications for notifications
+        const adminNotificationsQuery = query(collection(db, "adminNotifications"));
+        unsubscribeAdminNotifications = onSnapshot(adminNotificationsQuery, (snapshot) => {
+          if (mounted) {
+            const unreadCount = snapshot.docs.filter(doc => {
+              const data = doc.data();
+              return !data.read && (data.type === "partner_application" || data.type === "partner_approved");
+            }).length;
+            // Update partner applications count from notifications
+            if (unreadCount > 0) {
+              setNewPartnerApplicationsCount(unreadCount);
+            }
+          }
+        }, (error) => {
+          console.error("[Dashboard] Error listening to adminNotifications:", error);
         });
       } catch (error) {
         console.error("[Dashboard] Error setting up real-time listeners:", error);
@@ -886,6 +922,8 @@ function DashboardPageContent() {
       if (unsubscribeCleanings) unsubscribeCleanings();
       if (unsubscribeClockIns) unsubscribeClockIns();
       if (unsubscribeQuotes) unsubscribeQuotes();
+      if (unsubscribePartnerApplications) unsubscribePartnerApplications();
+      if (unsubscribeAdminNotifications) unsubscribeAdminNotifications();
     };
   }, [isAdmin, isOperator, userId]);
 
@@ -2601,6 +2639,107 @@ function DashboardPageContent() {
               {/* Admin Tab Navigation */}
               {isAdmin && !isOwner && (
                 <>
+                  {/* New Partner Applications Notification Banner */}
+                  {(isAdmin || isOperator) && newPartnerApplicationsCount > 0 && showPartnerApplicationsNotification && (
+                    <div style={{
+                      marginBottom: "1.5rem",
+                      padding: "1rem 1.25rem",
+                      background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
+                      borderRadius: "12px",
+                      border: "2px solid #3b82f6",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      animation: "fadeInUp 0.3s ease-out",
+                      boxShadow: "0 4px 12px rgba(59, 130, 246, 0.2)"
+                    }}>
+                      <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        flex: 1
+                      }}>
+                        <div style={{
+                          fontSize: "1.5rem"
+                        }}>
+                          📋
+                        </div>
+                        <div>
+                          <div style={{
+                            fontSize: "0.875rem",
+                            fontWeight: "700",
+                            color: "#1e40af",
+                            marginBottom: "0.25rem"
+                          }}>
+                            {newPartnerApplicationsCount} New Partner Application{newPartnerApplicationsCount > 1 ? 's' : ''}
+                          </div>
+                          <div style={{
+                            fontSize: "0.75rem",
+                            color: "#1e3a8a"
+                          }}>
+                            Click to review and approve applications
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{
+                        display: "flex",
+                        gap: "0.5rem",
+                        alignItems: "center"
+                      }}>
+                        <button
+                          onClick={() => {
+                            setAdminActiveTab("partners");
+                            setShowPartnerApplicationsNotification(false);
+                          }}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.875rem",
+                            fontWeight: "600",
+                            color: "#ffffff",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                            boxShadow: "0 2px 4px rgba(37, 99, 235, 0.3)"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-1px)";
+                            e.currentTarget.style.boxShadow = "0 4px 8px rgba(37, 99, 235, 0.4)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "0 2px 4px rgba(37, 99, 235, 0.3)";
+                          }}
+                        >
+                          View Applications
+                        </button>
+                        <button
+                          onClick={() => setShowPartnerApplicationsNotification(false)}
+                          style={{
+                            padding: "0.5rem",
+                            background: "transparent",
+                            border: "none",
+                            fontSize: "1.25rem",
+                            color: "#1e40af",
+                            cursor: "pointer",
+                            lineHeight: 1,
+                            opacity: 0.7,
+                            transition: "opacity 0.2s ease"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.opacity = "1";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = "0.7";
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* New Quotes Notification Banner */}
                   {(isAdmin || isOperator) && newQuotesCount > 0 && showQuotesNotification && (
                     <div style={{
@@ -2778,6 +2917,19 @@ function DashboardPageContent() {
                               fontWeight: "700"
                             }}>
                               {newQuotesCount}
+                            </span>
+                          )}
+                          {tab === "partners" && newPartnerApplicationsCount > 0 && (
+                            <span style={{
+                              marginLeft: "0.5rem",
+                              padding: "0.125rem 0.5rem",
+                              background: "#2563eb",
+                              color: "#ffffff",
+                              borderRadius: "999px",
+                              fontSize: "0.7rem",
+                              fontWeight: "700"
+                            }}>
+                              {newPartnerApplicationsCount}
                             </span>
                           )}
                         </span>

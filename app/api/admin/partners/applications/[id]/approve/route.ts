@@ -206,9 +206,47 @@ export async function POST(
       // Don't fail the approval if user deletion fails - partner document is the source of truth
     }
 
-    // TODO: Send email to partner with signup link
-    const signupLink = `${req.headers.get("origin") || "http://localhost:3000"}/partner?partnerId=${partnerRef.id}`;
+    // Generate signup link
+    const baseUrl = req.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const signupLink = `${baseUrl}/partner?partnerId=${partnerRef.id}`;
+    
     console.log("[Admin] Partner approved. Signup link:", signupLink);
+
+    // Send approval email to partner (non-blocking)
+    try {
+      const { notifyPartnerApproval } = await import("@/lib/email-utils");
+      await notifyPartnerApproval({
+        email: applicationData.email,
+        ownerName: applicationData.ownerName,
+        businessName: applicationData.businessName,
+        referralCode,
+        serviceAreas: serviceAreas.join(", "),
+        revenueSharePartner: partnerShare,
+        revenueSharePlatform: platformShare,
+        signupLink,
+      });
+    } catch (emailError) {
+      console.error("[Admin] Failed to send approval email:", emailError);
+      // Don't fail the approval if email fails
+    }
+
+    // Create admin notification for approval (non-blocking)
+    try {
+      const notificationsRef = doc(collection(db, "adminNotifications"));
+      await setDoc(notificationsRef, {
+        type: "partner_approved",
+        title: "Partner Application Approved",
+        message: `${applicationData.businessName} has been approved and can now sign up`,
+        partnerId: partnerRef.id,
+        applicationId,
+        businessName: applicationData.businessName,
+        read: false,
+        createdAt: serverTimestamp(),
+      });
+    } catch (notificationError) {
+      console.error("[Admin] Failed to create approval notification:", notificationError);
+      // Don't fail the approval if notification creation fails
+    }
 
     return NextResponse.json({
       success: true,

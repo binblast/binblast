@@ -11,15 +11,15 @@ export async function GET(req: NextRequest) {
     const db = await getAdminFirestore();
 
     // Get all employee messages grouped by employee
+    // Query without orderBy to avoid index requirement, sort in memory instead
     const employeeMessagesSnapshot = await db
       .collection("employeeMessages")
-      .orderBy("createdAt", "desc")
       .get();
 
     // Get all partner messages grouped by partner
+    // Query without orderBy to avoid index requirement, sort in memory instead
     const partnerMessagesSnapshot = await db
       .collection("partnerMessages")
-      .orderBy("createdAt", "desc")
       .get();
 
     // Group employee messages by employeeId

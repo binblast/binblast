@@ -95,6 +95,46 @@ export async function POST(req: NextRequest) {
       businessName,
     });
 
+    // Send email notification to admin (non-blocking)
+    try {
+      const { notifyAdminNewApplication } = await import("@/lib/email-utils");
+      await notifyAdminNewApplication({
+        applicationId,
+        businessName,
+        ownerName,
+        email,
+        phone,
+        serviceAreas: Array.isArray(serviceAreas) ? serviceAreas.join(", ") : serviceAreas,
+        businessType,
+        submittedAt: new Date().toLocaleString("en-US", {
+          dateStyle: "full",
+          timeStyle: "short",
+        }),
+      });
+    } catch (emailError) {
+      console.error("[Partner Application] Failed to send admin notification:", emailError);
+      // Don't fail the application if email fails
+    }
+
+    // Create admin notification in Firestore (for dashboard display)
+    try {
+      const notificationsRef = doc(collection(db, "adminNotifications"));
+      await setDoc(notificationsRef, {
+        type: "partner_application",
+        title: "New Partner Application",
+        message: `${businessName} submitted a partnership application`,
+        applicationId,
+        businessName,
+        ownerName,
+        email,
+        read: false,
+        createdAt: serverTimestamp(),
+      });
+    } catch (notificationError) {
+      console.error("[Partner Application] Failed to create notification:", notificationError);
+      // Don't fail the application if notification creation fails
+    }
+
     // Return email data so client can send via EmailJS (EmailJS doesn't work server-side)
     return NextResponse.json({
       success: true,
