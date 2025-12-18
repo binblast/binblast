@@ -3,11 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthInstance } from "@/lib/firebase";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-12-18.acacia",
-});
+import { stripe } from "@/lib/stripe";
 
 export const dynamic = 'force-dynamic';
 
