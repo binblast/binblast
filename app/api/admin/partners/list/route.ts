@@ -10,16 +10,37 @@ export async function GET(req: NextRequest) {
   try {
     const db = await getAdminFirestore();
 
-    // Get all partners
-    const partnersSnapshot = await db
-      .collection("partners")
-      .orderBy("createdAt", "desc")
-      .get();
+    // Get all partners - try with orderBy first, fallback to no ordering if index missing
+    let partnersSnapshot;
+    try {
+      partnersSnapshot = await db
+        .collection("partners")
+        .orderBy("createdAt", "desc")
+        .get();
+    } catch (orderError: any) {
+      // If orderBy fails (likely missing index), try without ordering
+      if (orderError.code === 9 || orderError.message?.includes("index")) {
+        console.warn("[Partners List] Index missing for createdAt, fetching without order");
+        partnersSnapshot = await db
+          .collection("partners")
+          .get();
+      } else {
+        throw orderError;
+      }
+    }
 
     const partners = partnersSnapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data(),
     }));
+
+    // If no partners, return empty array early
+    if (partners.length === 0) {
+      return NextResponse.json({
+        success: true,
+        partners: [],
+      });
+    }
 
     // Calculate stats for each partner
     const partnersWithStats = await Promise.all(
@@ -115,13 +136,34 @@ export async function GET(req: NextRequest) {
           unpaidBalance += doc.data().amount || 0;
         });
 
-        // Get last payout date
-        const paidPayoutsSnapshot = await db
-          .collection("partnerPayouts")
-          .where("partnerId", "==", partner.id)
-          .where("status", "==", "paid")
-          .orderBy("paidAt", "desc")
-          .get();
+        // Get last payout date - try with orderBy, fallback if index missing
+        let paidPayoutsSnapshot;
+        try {
+          paidPayoutsSnapshot = await db
+            .collection("partnerPayouts")
+            .where("partnerId", "==", partner.id)
+            .where("status", "==", "paid")
+            .orderBy("paidAt", "desc")
+            .limit(1)
+            .get();
+        } catch (orderError: any) {
+          // If orderBy fails, get all paid payouts and sort in memory
+          if (orderError.code === 9 || orderError.message?.includes("index")) {
+            const allPaidPayouts = await db
+              .collection("partnerPayouts")
+              .where("partnerId", "==", partner.id)
+              .where("status", "==", "paid")
+              .get();
+            const sortedPayouts = allPaidPayouts.docs.sort((a: any, b: any) => {
+              const aTime = a.data().paidAt?.toMillis?.() || 0;
+              const bTime = b.data().paidAt?.toMillis?.() || 0;
+              return bTime - aTime;
+            });
+            paidPayoutsSnapshot = { docs: sortedPayouts.slice(0, 1) };
+          } else {
+            throw orderError;
+          }
+        }
         const lastPayoutDate = paidPayoutsSnapshot.docs[0]?.data()?.paidAt || null;
 
         return {
