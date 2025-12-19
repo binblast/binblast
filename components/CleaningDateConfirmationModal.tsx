@@ -27,6 +27,7 @@ interface CleaningDateConfirmationModalProps {
   };
   onConfirm: () => void;
   onCancel: () => void;
+  onClearPending?: () => void;
 }
 
 export function CleaningDateConfirmationModal({
