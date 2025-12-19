@@ -133,7 +133,19 @@ export function CleaningDateConfirmationModal({
     }
   };
 
-  const scheduledDate = new Date(pendingCleaningData.preferredServiceDate);
+  // Parse the date - handle both ISO string and date string formats
+  let scheduledDate: Date;
+  try {
+    scheduledDate = new Date(pendingCleaningData.preferredServiceDate);
+    // Validate the date
+    if (isNaN(scheduledDate.getTime())) {
+      throw new Error("Invalid date");
+    }
+  } catch (err) {
+    console.error("[CleaningDateConfirmationModal] Invalid date:", pendingCleaningData.preferredServiceDate);
+    scheduledDate = new Date(); // Fallback to today
+  }
+  
   const formattedDate = scheduledDate.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',

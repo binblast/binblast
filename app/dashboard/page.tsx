@@ -425,8 +425,25 @@ function DashboardPageContent() {
               setUser(userData);
               
               // Check if user has pending cleaning confirmation
+              // This will be checked again in useEffect after state updates
               if (userData.pendingCleaningConfirmation && userData.pendingCleaningData && mounted) {
-                setShowCleaningConfirmation(true);
+                console.log("[Dashboard] Found pending cleaning confirmation:", {
+                  pendingCleaningConfirmation: userData.pendingCleaningConfirmation,
+                  pendingCleaningData: userData.pendingCleaningData,
+                  preferredServiceDate: userData.pendingCleaningData?.preferredServiceDate,
+                });
+                // Use setTimeout to ensure state is set after component renders
+                setTimeout(() => {
+                  if (mounted) {
+                    setShowCleaningConfirmation(true);
+                  }
+                }, 100);
+              } else {
+                console.log("[Dashboard] Not showing confirmation modal:", {
+                  pendingCleaningConfirmation: userData.pendingCleaningConfirmation,
+                  hasPendingCleaningData: !!userData.pendingCleaningData,
+                  pendingCleaningData: userData.pendingCleaningData,
+                });
               }
               
               // Determine roles ONCE and update state atomically
@@ -561,13 +578,13 @@ function DashboardPageContent() {
               setLoading(false);
             }
           }
-        });
-      } catch (err: any) {
-        console.error("[Dashboard] Error initializing Firebase:", err);
-        if (mounted) {
-          setError(err.message || "Failed to initialize: " + String(err));
-          setLoading(false);
         }
+      });
+    } catch (err: any) {
+      console.error("[Dashboard] Error initializing Firebase:", err);
+      if (mounted) {
+        setError(err.message || "Failed to initialize: " + String(err));
+        setLoading(false);
       }
     }
 
@@ -582,6 +599,40 @@ function DashboardPageContent() {
       }
     };
   }, [router]); // Only depend on router, not on isAdmin/isOperator to prevent loops
+
+  // Separate useEffect to check for pending cleaning confirmation after user data loads
+  useEffect(() => {
+    if (user && user.pendingCleaningConfirmation && user.pendingCleaningData && !showCleaningConfirmation) {
+      console.log("[Dashboard] useEffect: Showing cleaning confirmation modal:", {
+        pendingCleaningConfirmation: user.pendingCleaningConfirmation,
+        preferredServiceDate: user.pendingCleaningData?.preferredServiceDate,
+      });
+      setShowCleaningConfirmation(true);
+    }
+  }, [user, showCleaningConfirmation]);
+
+    loadUserData();
+
+    return () => {
+      mounted = false;
+      authListenerSetupRef.current = false; // Reset on cleanup
+      currentUserRef.current = null; // Clear user ref on cleanup
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [router]); // Only depend on router, not on isAdmin/isOperator to prevent loops
+
+  // Separate useEffect to check for pending cleaning confirmation after user data loads
+  useEffect(() => {
+    if (user && user.pendingCleaningConfirmation && user.pendingCleaningData && !showCleaningConfirmation) {
+      console.log("[Dashboard] useEffect: Showing cleaning confirmation modal:", {
+        pendingCleaningConfirmation: user.pendingCleaningConfirmation,
+        preferredServiceDate: user.pendingCleaningData?.preferredServiceDate,
+      });
+      setShowCleaningConfirmation(true);
+    }
+  }, [user, showCleaningConfirmation]);
 
   // Load admin data
   useEffect(() => {
