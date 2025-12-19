@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { getActivePartner } from "@/lib/partner-auth";
+import { getPartner } from "@/lib/partner-auth";
 
 export const dynamic = 'force-dynamic';
 
@@ -45,12 +45,26 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get partner data
-    const partner = await getActivePartner(userId);
+    // Get partner data (any status)
+    const partner = await getPartner(userId);
     if (!partner) {
+      console.error("[Payouts API] Partner not found for userId:", userId);
       return NextResponse.json(
         { error: "Partner not found" },
         { status: 404 }
+      );
+    }
+    
+    console.log("[Payouts API] Found partner:", { id: partner.id, status: partner.status, userId });
+
+    // Only active partners can view payouts
+    if (partner.status !== "active") {
+      return NextResponse.json(
+        { 
+          error: `Partner account is ${partner.status}. Only active partners can view payouts.`,
+          partnerStatus: partner.status
+        },
+        { status: 403 }
       );
     }
 

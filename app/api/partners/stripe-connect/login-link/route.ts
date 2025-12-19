@@ -1,6 +1,6 @@
 // app/api/partners/stripe-connect/login-link/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getActivePartner } from "@/lib/partner-auth";
+import { getPartner } from "@/lib/partner-auth";
 import { stripe } from "@/lib/stripe";
 
 export const dynamic = 'force-dynamic';
@@ -44,14 +44,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get partner data
-    const partner = await getActivePartner(userId);
+    // Get partner data (any status - partners may need to access Stripe during onboarding)
+    const partner = await getPartner(userId);
     if (!partner) {
+      console.error("[Stripe Login Link] Partner not found for userId:", userId);
       return NextResponse.json(
         { error: "Partner not found" },
         { status: 404 }
       );
     }
+    
+    console.log("[Stripe Login Link] Found partner:", { id: partner.id, status: partner.status, userId });
 
     const stripeConnectedAccountId = (partner as any).stripeConnectedAccountId;
 
