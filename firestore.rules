@@ -70,8 +70,8 @@ service cloud.firestore {
          // Only allow updates to operational fields
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['internalNotes', 'servicePaused', 'serviceArea', 'counties', 'zones', 'status', 'lastKnownLocation', 'lastLocationUpdate', 'updatedAt']))
         ||
-        // Server-side: API route updating subscription-related or referral-related fields
-        // This allows the change-subscription API and referral API to update specific fields
+        // Server-side: API route updating subscription-related, referral-related, or geocoding fields
+        // This allows the change-subscription API, referral API, and geocoding API to update specific fields
         // Note: Server-side requests have request.auth == null
         (request.auth == null && 
          request.resource.data.email == resource.data.email && // Can't change email
@@ -86,6 +86,13 @@ service cloud.firestore {
           request.resource.data.lastName == resource.data.lastName &&
           request.resource.data.phone == resource.data.phone &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCount', 'referredBy', 'referredByCode', 'referralCodeUsed', 'updatedAt']))
+         ||
+         // Allow updates to geocoding fields (latitude, longitude, geocodedAt)
+         // These can be updated by the geocoding API
+         (request.resource.data.firstName == resource.data.firstName &&
+          request.resource.data.lastName == resource.data.lastName &&
+          request.resource.data.phone == resource.data.phone &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['latitude', 'longitude', 'geocodedAt', 'updatedAt']))
         )
       );
       
@@ -581,6 +588,14 @@ service cloud.firestore {
       
       // No deletions allowed (data expires automatically)
       allow delete: if false;
+    }
+
+    // Geocoded addresses cache collection
+    // Allow server-side API routes to read and write geocoded addresses
+    // This is used by the geocoding API endpoint
+    match /geocodedAddresses/{addressId} {
+      allow read: if request.auth == null || isAdminOrOperator();
+      allow write: if request.auth == null || isAdminOrOperator();
     }
 
     // Default deny all other collections
