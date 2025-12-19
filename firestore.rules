@@ -557,15 +557,22 @@ service cloud.firestore {
     
     // OnboardingData collection - temporary storage for onboarding data during checkout
     match /onboardingData/{onboardingId} {
+      // Allow unauthenticated reads for unused onboardingData (needed during registration before auth)
       // Allow authenticated users to read their own onboarding data (by email match)
       // Server-side API routes can also read/write
       allow read: if (
-        (isAuthenticated() && resource.data.email == request.auth.token.email)
+        // Unauthenticated users can read unused onboardingData (for registration flow)
+        (!isAuthenticated() && !resource.data.used)
+        // Authenticated users can read their own onboardingData
+        || (isAuthenticated() && resource.data.email == request.auth.token.email)
+        // Server-side can always read
         || request.auth == null
       );
-      // Allow list queries for authenticated users (needed for registration page query)
+      // Allow list queries for unauthenticated users (needed for registration page query)
+      // Also allow for authenticated users and server-side
       allow list: if (
-        isAuthenticated()
+        !isAuthenticated()
+        || isAuthenticated()
         || request.auth == null
       );
       allow create, update: if request.auth == null;
