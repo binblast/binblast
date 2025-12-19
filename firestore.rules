@@ -157,6 +157,7 @@ service cloud.firestore {
       // Employees can update jobs assigned to them (job status, completion data, flags)
       // BUT: Employees can only mark jobs as "completed" if hasRequiredPhotos === true
       // Operators can update any scheduled cleaning (for operations management)
+      // Server-side API routes can update any cleaning (request.auth == null)
       allow update: if (
         (isAuthenticated() 
           && resource.data.userId == request.auth.uid
@@ -170,6 +171,7 @@ service cloud.firestore {
             || (request.resource.data.hasRequiredPhotos == true && request.resource.data.photoDocumentationStatus == "complete")
           ))
         || isAdminOrOperator() // Operators/admins can update any cleaning and assign jobs
+        || request.auth == null // Server-side updates (API routes)
       );
       
       // Users can delete their own scheduled cleanings
