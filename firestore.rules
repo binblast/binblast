@@ -557,8 +557,13 @@ service cloud.firestore {
     
     // OnboardingData collection - temporary storage for onboarding data during checkout
     match /onboardingData/{onboardingId} {
-      // Only server-side API routes can create/read/update onboarding data
-      allow read, create, update: if request.auth == null;
+      // Allow authenticated users to read their own onboarding data (by email match)
+      // Server-side API routes can also read/write
+      allow read: if (
+        (isAuthenticated() && resource.data.email == request.auth.token.email)
+        || request.auth == null
+      );
+      allow create, update: if request.auth == null;
       
       // No deletions allowed (data expires automatically)
       allow delete: if false;
