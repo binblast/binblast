@@ -436,46 +436,34 @@ function RegisterForm() {
               welcomeEmailSent: existingData?.welcomeEmailSent || false, // Preserve existing flag
             }, { merge: true });
 
-            // Create scheduled cleaning if onboarding data is available
+            // Store onboarding data in user document for confirmation popup on dashboard
+            // Don't create scheduled cleaning yet - wait for customer confirmation
             if (onboardingData && onboardingData.preferredServiceDate && db) {
               try {
-                const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
-                const planId = selectedPlanId || onboardingData.planId;
-                const planConfig = planId ? PLAN_CONFIGS[planId as keyof typeof PLAN_CONFIGS] : null;
-                
-                if (planConfig && onboardingData.addressLine1) {
-                  const cleaningRef = doc(collection(db, "scheduledCleanings"));
-                  const preferredDate = new Date(onboardingData.preferredServiceDate);
-                  
-                  // Extract day of week from preferred date
-                  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-                  const preferredDayOfWeek = onboardingData.preferredDayOfWeek || dayNames[preferredDate.getDay()];
-                  
-                  await setDoc(cleaningRef, {
-                    userId: userCredential.user.uid,
-                    customerEmail: email.toLowerCase(),
-                    customerName: `${finalFirstName} ${finalLastName}`,
+                // Store onboarding data in user document so dashboard can show confirmation popup
+                await updateDoc(userDocRef, {
+                  pendingCleaningConfirmation: true,
+                  pendingCleaningData: {
+                    preferredServiceDate: onboardingData.preferredServiceDate,
+                    preferredDayOfWeek: onboardingData.preferredDayOfWeek || null,
+                    preferredTimeWindow: onboardingData.preferredTimeWindow || "Morning",
                     addressLine1: onboardingData.addressLine1,
                     addressLine2: onboardingData.addressLine2 || null,
                     city: onboardingData.city,
                     state: onboardingData.state,
                     zipCode: onboardingData.zipCode,
-                    scheduledDate: preferredDate.toISOString().split('T')[0],
-                    scheduledTime: onboardingData.preferredTimeWindow || "Morning",
-                    trashDay: preferredDayOfWeek, // Store day of week for monthly scheduling
-                    planId: planId,
-                    planName: planConfig.name,
-                    status: "upcoming",
                     notes: onboardingData.notes || null,
-                    createdAt: serverTimestamp(),
-                    updatedAt: serverTimestamp(),
-                  });
-                  
-                  console.log("[Register] Created scheduled cleaning from onboarding data:", cleaningRef.id);
-                }
+                  },
+                  updatedAt: serverTimestamp(),
+                });
+                
+                console.log("[Register] Stored pending cleaning data for confirmation:", {
+                  userId: userCredential.user.uid,
+                  preferredServiceDate: onboardingData.preferredServiceDate,
+                });
               } catch (cleaningErr) {
-                console.error("[Register] Error creating scheduled cleaning:", cleaningErr);
-                // Don't fail registration if cleaning creation fails
+                console.error("[Register] Error storing pending cleaning data:", cleaningErr);
+                // Don't fail registration if storing pending data fails
               }
             }
             

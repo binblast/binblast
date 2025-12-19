@@ -64,19 +64,25 @@
                                             Service Address:
                                         </td>
                                         <td style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                            {{addressLine1}}{{#if addressLine2}}<br>{{addressLine2}}{{/if}}<br>{{city}}, {{state}} {{zipCode}}
+                                            {{addressLine1}}{{addressLine2}}<br>{{city}}, {{state}} {{zipCode}}
                                         </td>
                                     </tr>
-                                    {{#if preferredDayOfWeek}}
                                     <tr>
                                         <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
                                             Monthly Schedule:
                                         </td>
                                         <td style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                            Every {{preferredDayOfWeek}}
+                                            {{preferredDayOfWeek}}
                                         </td>
                                     </tr>
-                                    {{/if}}
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
+                                            Plan:
+                                        </td>
+                                        <td style="padding: 8px 0; color: #111827; font-size: 14px;">
+                                            {{planName}}
+                                        </td>
+                                    </tr>
                                 </table>
                             </div>
                             

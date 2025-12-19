@@ -554,6 +554,15 @@ service cloud.firestore {
       allow update: if isAdminOrOperator() || request.auth == null; // Allow marking as read
       allow delete: if isAdminOrOperator() || request.auth == null;
     }
+    
+    // OnboardingData collection - temporary storage for onboarding data during checkout
+    match /onboardingData/{onboardingId} {
+      // Only server-side API routes can create/read/update onboarding data
+      allow read, create, update: if request.auth == null;
+      
+      // No deletions allowed (data expires automatically)
+      allow delete: if false;
+    }
 
     // Default deny all other collections
     match /{document=**} {

@@ -229,6 +229,14 @@ export async function notifyCleaningScheduled(customerData: {
     day: 'numeric'
   });
 
+  // Format address line 2 for display (empty string if not provided)
+  const addressLine2Display = customerData.addressLine2 ? `<br>${customerData.addressLine2}` : "";
+  
+  // Format preferred day of week for display
+  const preferredDayDisplay = customerData.preferredDayOfWeek 
+    ? `Every ${customerData.preferredDayOfWeek}` 
+    : "Not set";
+
   // Try to send email (non-blocking)
   try {
     await sendEmailJS(templateId, {
@@ -238,11 +246,11 @@ export async function notifyCleaningScheduled(customerData: {
       scheduledDate: scheduledDateFormatted,
       scheduledTime: customerData.scheduledTime || "",
       addressLine1: customerData.addressLine1 || "",
-      addressLine2: customerData.addressLine2 || "",
+      addressLine2: addressLine2Display, // Pre-formatted with <br> if exists
       city: customerData.city || "",
       state: customerData.state || "",
       zipCode: customerData.zipCode || "",
-      preferredDayOfWeek: customerData.preferredDayOfWeek || "",
+      preferredDayOfWeek: preferredDayDisplay, // Pre-formatted
       planName: customerData.planName || "Your Plan",
       dashboardLink: dashboardLink,
     });

@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
 import { EditCleaningModal } from "@/components/EditCleaningModal";
 import { SubscriptionManagerWrapper } from "@/components/SubscriptionManagerWrapper";
+import { CleaningDateConfirmationModal } from "@/components/CleaningDateConfirmationModal";
 import { ReferralRewards } from "@/components/ReferralRewards";
 import { ReferralHistory } from "@/components/ReferralHistory";
 import { LoyaltyBadges } from "@/components/LoyaltyBadges";
@@ -101,6 +102,18 @@ interface UserData {
   createdAt?: any;
   partnerAccepted?: boolean;
   partnerAccountCreated?: boolean;
+  pendingCleaningConfirmation?: boolean;
+  pendingCleaningData?: {
+    preferredServiceDate: string;
+    preferredDayOfWeek?: string;
+    preferredTimeWindow: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    notes?: string;
+  };
 }
 
 const PLAN_NAMES: Record<string, string> = {
@@ -152,6 +165,7 @@ function DashboardPageContent() {
   const [isOwner, setIsOwner] = useState(false);
   const [isOperator, setIsOperator] = useState(false);
   const [roleDetermined, setRoleDetermined] = useState(false); // Track if role has been determined
+  const [showCleaningConfirmation, setShowCleaningConfirmation] = useState(false);
   
   // Admin state
   const [adminStats, setAdminStats] = useState({
@@ -409,6 +423,11 @@ function DashboardPageContent() {
               };
               
               setUser(userData);
+              
+              // Check if user has pending cleaning confirmation
+              if (userData.pendingCleaningConfirmation && userData.pendingCleaningData && mounted) {
+                setShowCleaningConfirmation(true);
+              }
               
               // Determine roles ONCE and update state atomically
               const newIsAdmin = (userRole === "admin") || (userData.email === ADMIN_EMAIL);
@@ -4195,6 +4214,30 @@ function DashboardPageContent() {
                 </div>
               )}
             </div>
+
+            {/* Cleaning Date Confirmation Modal */}
+            {showCleaningConfirmation && user?.pendingCleaningData && (
+              <CleaningDateConfirmationModal
+                isOpen={showCleaningConfirmation}
+                pendingCleaningData={user.pendingCleaningData}
+                userId={userId}
+                userEmail={user.email}
+                userData={{
+                  firstName: user.firstName,
+                  lastName: user.lastName,
+                  selectedPlan: user.selectedPlan,
+                }}
+                onConfirm={() => {
+                  setShowCleaningConfirmation(false);
+                  // Reload to refresh scheduled cleanings
+                  window.location.reload();
+                }}
+                onCancel={() => {
+                  setShowCleaningConfirmation(false);
+                  // User can manually schedule later
+                }}
+              />
+            )}
 
             {/* (C) Schedule a Cleaning - Hidden for admin */}
             {!isAdmin && (
