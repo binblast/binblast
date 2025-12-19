@@ -371,7 +371,7 @@ function DashboardPageContent() {
 
         authListenerSetupRef.current = true; // Mark as set up
         
-        unsubscribe = await onAuthStateChanged(async (firebaseUser) => {
+        unsubscribe = onAuthStateChanged(async (firebaseUser) => {
           if (!firebaseUser) {
             if (mounted) {
               currentUserRef.current = null; // Clear user ref on logout
