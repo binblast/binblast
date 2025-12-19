@@ -244,14 +244,12 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
       const cleaningsRef = collection(db, "scheduledCleanings");
       
       // Find upcoming cleanings for selected customers
-      // For one-time assignments, get cleanings scheduled for today or future dates
+      // Query only by userId to avoid index requirement, then filter in memory
       const cleaningPromises = selectedCustomers.map(async (customerUserId) => {
-        // Query for cleanings for this customer - simplified to avoid index requirement
-        // First try to get cleanings scheduled for today or future dates
+        // Query only by userId (single where clause doesn't need composite index)
         const cleaningQuery = query(
           cleaningsRef,
-          where("userId", "==", customerUserId),
-          where("scheduledDate", ">=", today)
+          where("userId", "==", customerUserId)
         );
         
         const snapshot = await getDocs(cleaningQuery);
@@ -262,7 +260,12 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
             id: doc.id,
             ...doc.data(),
           }))
-          .filter((c: any) => c.status === "upcoming") // Filter by status in memory
+          .filter((c: any) => {
+            // Filter by status and date in memory
+            return c.status === "upcoming" && 
+                   c.scheduledDate && 
+                   c.scheduledDate >= today;
+          })
           .sort((a: any, b: any) => {
             // Sort by date, then prefer unassigned
             const dateCompare = (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
