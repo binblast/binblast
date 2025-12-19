@@ -4222,6 +4222,11 @@ function DashboardPageContent() {
                   onScheduleCreated={() => {
                     window.location.reload();
                   }}
+                  userData={{
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    selectedPlan: user.selectedPlan,
+                  }}
                   existingCleaning={(() => {
                     // Find the next upcoming cleaning
                     const upcomingCleaning = scheduledCleanings

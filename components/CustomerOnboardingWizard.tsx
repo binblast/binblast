@@ -14,6 +14,7 @@ interface OnboardingData {
   state: string;
   zipCode: string;
   preferredServiceDate: string; // Date they want first cleaning
+  preferredDayOfWeek: string; // Day of week for monthly cleanings (e.g., "Monday", "Tuesday")
   preferredTimeWindow: string; // Morning, Afternoon, Evening
   notes: string;
 }
@@ -45,6 +46,7 @@ export function CustomerOnboardingWizard({
     state: "",
     zipCode: "",
     preferredServiceDate: "",
+    preferredDayOfWeek: "",
     preferredTimeWindow: "Morning",
     notes: "",
   });
@@ -499,7 +501,18 @@ export function CustomerOnboardingWizard({
                   <input
                     type="date"
                     value={formData.preferredServiceDate}
-                    onChange={(e) => handleInputChange("preferredServiceDate", e.target.value)}
+                    onChange={(e) => {
+                      const dateValue = e.target.value;
+                      handleInputChange("preferredServiceDate", dateValue);
+                      
+                      // Extract day of week from selected date for monthly scheduling
+                      if (dateValue) {
+                        const selectedDate = new Date(dateValue);
+                        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                        const dayOfWeek = dayNames[selectedDate.getDay()];
+                        handleInputChange("preferredDayOfWeek", dayOfWeek);
+                      }
+                    }}
                     min={getMinDate()}
                     style={{
                       width: "100%",
@@ -511,6 +524,11 @@ export function CustomerOnboardingWizard({
                   />
                   {errors.preferredServiceDate && (
                     <p style={{ margin: "4px 0 0 0", color: "#dc2626", fontSize: "12px" }}>{errors.preferredServiceDate}</p>
+                  )}
+                  {formData.preferredServiceDate && formData.preferredDayOfWeek && (
+                    <p style={{ margin: "8px 0 0 0", fontSize: "13px", color: "#16a34a", fontWeight: "500" }}>
+                      ✓ Monthly cleanings will be scheduled on {formData.preferredDayOfWeek}s
+                    </p>
                   )}
                 </div>
                 <div>
@@ -595,6 +613,11 @@ export function CustomerOnboardingWizard({
                 <p style={{ margin: "4px 0", fontSize: "14px", color: "#374151" }}>
                   First Cleaning: {formData.preferredServiceDate ? new Date(formData.preferredServiceDate).toLocaleDateString() : "Not selected"}
                 </p>
+                {formData.preferredDayOfWeek && (
+                  <p style={{ margin: "4px 0", fontSize: "14px", color: "#374151" }}>
+                    Monthly Schedule: Every {formData.preferredDayOfWeek}
+                  </p>
+                )}
                 <p style={{ margin: "4px 0", fontSize: "14px", color: "#374151" }}>
                   Preferred Time: {formData.preferredTimeWindow}
                 </p>

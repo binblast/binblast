@@ -198,3 +198,56 @@ export async function notifyCustomerWelcome(customerData: {
     // Don't throw - email failure shouldn't block registration
   }
 }
+
+/**
+ * Send confirmation email after customer schedules/confirms cleaning date
+ */
+export async function notifyCleaningScheduled(customerData: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  preferredDayOfWeek?: string;
+  planName?: string;
+}): Promise<void> {
+  // Hardcoded template ID for cleaning scheduled confirmation email
+  const templateId = "template_ent7lyj";
+
+  const dashboardLink = "https://binblast.vercel.app/dashboard";
+
+  // Format scheduled date for display
+  const scheduledDateFormatted = new Date(customerData.scheduledDate).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  // Try to send email (non-blocking)
+  try {
+    await sendEmailJS(templateId, {
+      to_email: customerData.email,
+      firstName: customerData.firstName || "",
+      lastName: customerData.lastName || "",
+      scheduledDate: scheduledDateFormatted,
+      scheduledTime: customerData.scheduledTime || "",
+      addressLine1: customerData.addressLine1 || "",
+      addressLine2: customerData.addressLine2 || "",
+      city: customerData.city || "",
+      state: customerData.state || "",
+      zipCode: customerData.zipCode || "",
+      preferredDayOfWeek: customerData.preferredDayOfWeek || "",
+      planName: customerData.planName || "Your Plan",
+      dashboardLink: dashboardLink,
+    });
+  } catch (error: any) {
+    console.error("[Notify Cleaning Scheduled] Failed to send confirmation email:", error?.message || error);
+    // Don't throw - email failure shouldn't block scheduling
+  }
+}

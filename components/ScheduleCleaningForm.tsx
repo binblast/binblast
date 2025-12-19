@@ -30,9 +30,14 @@ interface ScheduleCleaningFormProps {
     notes?: string;
     status: "upcoming" | "completed" | "cancelled";
   } | null;
+  userData?: {
+    firstName?: string;
+    lastName?: string;
+    selectedPlan?: string;
+  } | null;
 }
 
-export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, existingCleaning }: ScheduleCleaningFormProps) {
+export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, existingCleaning, userData }: ScheduleCleaningFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   
   // Helper to parse date from various formats (including Firestore timestamps)
@@ -292,6 +297,35 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
           notes: notes || null,
           updatedAt: serverTimestamp(),
         });
+        
+        // Send confirmation email after rescheduling
+        try {
+          const { notifyCleaningScheduled } = await import("@/lib/email-utils");
+          const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
+          
+          const planName = userData?.selectedPlan && userData.selectedPlan in PLAN_CONFIGS
+            ? PLAN_CONFIGS[userData.selectedPlan as keyof typeof PLAN_CONFIGS].name
+            : "Your Plan";
+          
+          notifyCleaningScheduled({
+            email: userEmail,
+            firstName: userData?.firstName || "",
+            lastName: userData?.lastName || "",
+            scheduledDate: scheduledDate,
+            scheduledTime: selectedTime,
+            addressLine1,
+            addressLine2,
+            city,
+            state,
+            zipCode,
+            preferredDayOfWeek: trashDay,
+            planName,
+          }).catch((emailErr) => {
+            console.error("[ScheduleCleaningForm] Failed to send confirmation email:", emailErr);
+          });
+        } catch (emailErr) {
+          console.error("[ScheduleCleaningForm] Error sending confirmation email:", emailErr);
+        }
       } else {
         // Create new scheduled cleaning
         const scheduledCleaning = {
@@ -311,6 +345,35 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
         };
 
         await addDoc(collection(db, "scheduledCleanings"), scheduledCleaning);
+        
+        // Send confirmation email after scheduling
+        try {
+          const { notifyCleaningScheduled } = await import("@/lib/email-utils");
+          const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
+          
+          const planName = userData?.selectedPlan && userData.selectedPlan in PLAN_CONFIGS
+            ? PLAN_CONFIGS[userData.selectedPlan as keyof typeof PLAN_CONFIGS].name
+            : "Your Plan";
+          
+          notifyCleaningScheduled({
+            email: userEmail,
+            firstName: userData?.firstName || "",
+            lastName: userData?.lastName || "",
+            scheduledDate: scheduledDate,
+            scheduledTime: selectedTime,
+            addressLine1,
+            addressLine2,
+            city,
+            state,
+            zipCode,
+            preferredDayOfWeek: trashDay,
+            planName,
+          }).catch((emailErr) => {
+            console.error("[ScheduleCleaningForm] Failed to send confirmation email:", emailErr);
+          });
+        } catch (emailErr) {
+          console.error("[ScheduleCleaningForm] Error sending confirmation email:", emailErr);
+        }
       }
 
       // Reset form

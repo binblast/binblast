@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're All Set!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <!-- Logo Header -->
+                    <tr>
+                        <td align="center" style="padding: 30px 30px 20px 30px; background-color: #ffffff;">
+                            <img src="https://binblast.vercel.app/bin-blast-logo.png" alt="Bin Blast Co. Logo" style="max-width: 200px; height: auto; display: block; border: 0;" width="200" />
+                        </td>
+                    </tr>
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 20px 30px 30px 30px; background-color: #16a34a; border-radius: 0 0 8px 8px;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; text-align: center;">
+                                ✅ You're All Set!
+                            </h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 30px;">
+                            <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Hi <strong>{{firstName}}</strong>,
+                            </p>
+                            
+                            <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Great news! Your bin cleaning has been scheduled and confirmed. We're looking forward to keeping your bins fresh and clean.
+                            </p>
+                            
+                            <!-- Scheduled Cleaning Details -->
+                            <div style="background-color: #f9fafb; border-left: 4px solid #16a34a; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                                <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">
+                                    Your Scheduled Cleaning
+                                </h2>
+                                
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 40%; font-weight: 600;">
+                                            Date:
+                                        </td>
+                                        <td style="padding: 8px 0; color: #111827; font-size: 14px;">
+                                            {{scheduledDate}}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
+                                            Time Window:
+                                        </td>
+                                        <td style="padding: 8px 0; color: #111827; font-size: 14px;">
+                                            {{scheduledTime}}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
+                                            Service Address:
+                                        </td>
+                                        <td style="padding: 8px 0; color: #111827; font-size: 14px;">
+                                            {{addressLine1}}{{#if addressLine2}}<br>{{addressLine2}}{{/if}}<br>{{city}}, {{state}} {{zipCode}}
+                                        </td>
+                                    </tr>
+                                    {{#if preferredDayOfWeek}}
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
+                                            Monthly Schedule:
+                                        </td>
+                                        <td style="padding: 8px 0; color: #111827; font-size: 14px;">
+                                            Every {{preferredDayOfWeek}}
+                                        </td>
+                                    </tr>
+                                    {{/if}}
+                                </table>
+                            </div>
+                            
+                            <!-- What to Expect -->
+                            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                                <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">
+                                    What to Expect
+                                </h2>
+                                
+                                <p style="margin: 0 0 15px 0; color: #374151; font-size: 15px; line-height: 1.6;">
+                                    <strong>Before Your Cleaning:</strong><br>
+                                    Please ensure your trash can is empty and accessible. Our team will arrive during your selected time window.
+                                </p>
+                                
+                                <p style="margin: 0 0 15px 0; color: #374151; font-size: 15px; line-height: 1.6;">
+                                    <strong>During Your Cleaning:</strong><br>
+                                    Our professional team will deep clean, sanitize, and deodorize your bin, leaving it fresh and ready to use.
+                                </p>
+                                
+                                <p style="margin: 0 0 0 0; color: #374151; font-size: 15px; line-height: 1.6;">
+                                    <strong>After Your Cleaning:</strong><br>
+                                    You'll receive a confirmation notification, and your next cleaning will be automatically scheduled based on your plan.
+                                </p>
+                            </div>
+                            
+                            <!-- Important Reminder -->
+                            <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                                <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6; font-weight: 600;">
+                                    ⚠️ Important: Please ensure your trash can is empty for faster, more effective cleaning.
+                                </p>
+                            </div>
+                            
+                            <!-- Dashboard Link -->
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="{{dashboardLink}}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                                    View Your Dashboard
+                                </a>
+                            </div>
+                            
+                            <!-- Support -->
+                            <p style="margin: 30px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center;">
+                                Need to reschedule or have questions? You can manage your cleaning schedule from your dashboard, or contact us anytime.
+                            </p>
+                            
+                            <p style="margin: 20px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
+                                Thank you for choosing Bin Blast Co.!<br>
+                                <strong>The Bin Blast Co. Team</strong>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 30px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px; text-align: center;">
+                            <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                                © 2025 Bin Blast Co. All rights reserved.
+                            </p>
+                            <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 12px;">
+                                <a href="https://binblast.vercel.app" style="color: #2563eb; text-decoration: none;">Visit our website</a> | 
+                                <a href="mailto:binblastcompany@gmail.com" style="color: #2563eb; text-decoration: none;">Contact Support</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -425,6 +425,7 @@ function RegisterForm() {
                 city: onboardingData.city || null,
                 state: onboardingData.state || null,
                 zipCode: onboardingData.zipCode || null,
+                preferredDayOfWeek: onboardingData.preferredDayOfWeek || null, // Store preferred day for monthly cleanings
               } : {}),
               // If partner signup, mark as partner account
               ...(isPartnerSignup ? { partnerAccountCreated: true } : {}),
@@ -446,6 +447,10 @@ function RegisterForm() {
                   const cleaningRef = doc(collection(db, "scheduledCleanings"));
                   const preferredDate = new Date(onboardingData.preferredServiceDate);
                   
+                  // Extract day of week from preferred date
+                  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                  const preferredDayOfWeek = onboardingData.preferredDayOfWeek || dayNames[preferredDate.getDay()];
+                  
                   await setDoc(cleaningRef, {
                     userId: userCredential.user.uid,
                     customerEmail: email.toLowerCase(),
@@ -457,6 +462,7 @@ function RegisterForm() {
                     zipCode: onboardingData.zipCode,
                     scheduledDate: preferredDate.toISOString().split('T')[0],
                     scheduledTime: onboardingData.preferredTimeWindow || "Morning",
+                    trashDay: preferredDayOfWeek, // Store day of week for monthly scheduling
                     planId: planId,
                     planName: planConfig.name,
                     status: "upcoming",
