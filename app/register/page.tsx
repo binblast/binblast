@@ -386,14 +386,22 @@ function RegisterForm() {
                 );
                 const onboardingSnapshot = await getDocs(onboardingQuery);
                 if (!onboardingSnapshot.empty) {
-                  onboardingData = onboardingSnapshot.docs[0].data().onboardingData;
-                  console.log("[Register] Found onboarding data:", onboardingData);
+                  const onboardingDoc = onboardingSnapshot.docs[0].data();
+                  onboardingData = onboardingDoc.onboardingData;
+                  console.log("[Register] Found onboarding data:", {
+                    hasPreferredServiceDate: !!onboardingData?.preferredServiceDate,
+                    preferredServiceDate: onboardingData?.preferredServiceDate,
+                    preferredDayOfWeek: onboardingData?.preferredDayOfWeek,
+                    fullData: onboardingData,
+                  });
                   
-                  // Delete onboarding data after use (cleanup)
+                  // Mark onboarding data as used (cleanup)
                   await setDoc(onboardingSnapshot.docs[0].ref, {
                     used: true,
                     usedAt: serverTimestamp(),
                   }, { merge: true });
+                } else {
+                  console.warn("[Register] No onboarding data found for email:", email.toLowerCase(), "sessionId:", sessionId);
                 }
               } catch (onboardingErr) {
                 console.warn("[Register] Error fetching onboarding data:", onboardingErr);
@@ -440,6 +448,11 @@ function RegisterForm() {
             // Don't create scheduled cleaning yet - wait for customer confirmation
             if (onboardingData && onboardingData.preferredServiceDate && db) {
               try {
+                // Validate that we have all required fields
+                if (!onboardingData.addressLine1 || !onboardingData.city || !onboardingData.state || !onboardingData.zipCode) {
+                  console.warn("[Register] Missing required address fields in onboarding data:", onboardingData);
+                }
+                
                 // Store onboarding data in user document so dashboard can show confirmation popup
                 await updateDoc(userDocRef, {
                   pendingCleaningConfirmation: true,
@@ -460,19 +473,27 @@ function RegisterForm() {
                 console.log("[Register] Stored pending cleaning data for confirmation:", {
                   userId: userCredential.user.uid,
                   preferredServiceDate: onboardingData.preferredServiceDate,
+                  preferredDayOfWeek: onboardingData.preferredDayOfWeek,
+                  addressLine1: onboardingData.addressLine1,
                 });
               } catch (cleaningErr) {
                 console.error("[Register] Error storing pending cleaning data:", cleaningErr);
                 // Don't fail registration if storing pending data fails
               }
+            } else {
+              console.warn("[Register] No pending cleaning data stored - missing onboardingData or preferredServiceDate:", {
+                hasOnboardingData: !!onboardingData,
+                hasPreferredServiceDate: !!onboardingData?.preferredServiceDate,
+                onboardingData: onboardingData,
+              });
             }
             
             console.log("[Register] User document created successfully with role:", userRole);
             
-            // Send welcome email if this is a customer (not partner) and they have onboarding data or paid
-            // Only send if email hasn't been sent yet
+            // Send welcome email if this is a customer (not partner) and they have onboarding data with preferredServiceDate
+            // Only send if email hasn't been sent yet AND preferredServiceDate exists
             const welcomeEmailSent = existingData?.welcomeEmailSent || false;
-            if (!isPartnerSignup && (onboardingData || stripeData) && !welcomeEmailSent && db && userCredential.user) {
+            if (!isPartnerSignup && onboardingData?.preferredServiceDate && !welcomeEmailSent && db && userCredential.user) {
               try {
                 const { notifyCustomerWelcome } = await import("@/lib/email-utils");
                 const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
@@ -483,19 +504,20 @@ function RegisterForm() {
                   : "Your Plan";
                 
                 // Send welcome email asking them to confirm cleaning date (non-blocking)
+                // Only send if preferredServiceDate exists (same condition as pendingCleaningData)
                 notifyCustomerWelcome({
                   email: email.toLowerCase(),
-                  firstName: onboardingData?.firstName || firstName,
-                  lastName: onboardingData?.lastName || lastName,
+                  firstName: onboardingData.firstName || firstName,
+                  lastName: onboardingData.lastName || lastName,
                   planName: planName,
-                  addressLine1: onboardingData?.addressLine1,
-                  addressLine2: onboardingData?.addressLine2,
-                  city: onboardingData?.city,
-                  state: onboardingData?.state,
-                  zipCode: onboardingData?.zipCode,
-                  preferredServiceDate: onboardingData?.preferredServiceDate,
-                  preferredDayOfWeek: onboardingData?.preferredDayOfWeek,
-                  preferredTimeWindow: onboardingData?.preferredTimeWindow || "Morning",
+                  addressLine1: onboardingData.addressLine1,
+                  addressLine2: onboardingData.addressLine2,
+                  city: onboardingData.city,
+                  state: onboardingData.state,
+                  zipCode: onboardingData.zipCode,
+                  preferredServiceDate: onboardingData.preferredServiceDate,
+                  preferredDayOfWeek: onboardingData.preferredDayOfWeek,
+                  preferredTimeWindow: onboardingData.preferredTimeWindow || "Morning",
                 }).catch((emailErr) => {
                   console.error("[Register] Failed to send welcome email:", emailErr);
                   // Don't block registration if email fails
