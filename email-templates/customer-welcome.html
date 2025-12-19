@@ -81,26 +81,20 @@
                             <!-- Confirmation Call-to-Action -->
                             <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 20px; margin: 30px 0; border-radius: 4px;">
                                 <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">
-                                    ✅ Confirm Your Cleaning Date
+                                    {{confirmationTitle}}
                                 </h2>
                                 
                                 <p style="margin: 0 0 20px 0; color: #374151; font-size: 15px; line-height: 1.6;">
-                                    We're ready to schedule your first cleaning! Based on your preferences, we've selected <strong>{{preferredServiceDate}}</strong> as your preferred cleaning day.
+                                    {{confirmationMessage}}
                                 </p>
                                 
-                                <p style="margin: 0 0 20px 0; color: #374151; font-size: 15px; line-height: 1.6;">
-                                    Please click the button below to confirm this date or choose a different one that works better for you.
-                                </p>
-                                
-                                <p style="margin: 0 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                                    <strong>Monthly Schedule:</strong> {{preferredDayOfWeek}}
-                                </p>
+                                {{confirmationDetails}}
                             </div>
                             
-                            <!-- Confirmation Button -->
+                            <!-- Action Button -->
                             <div style="text-align: center; margin: 30px 0;">
-                                <a href="{{dashboardLink}}" style="display: inline-block; padding: 14px 28px; background-color: #16a34a; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 18px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                                    Confirm Your Cleaning Date
+                                <a href="{{dashboardLink}}" style="display: inline-block; padding: 14px 28px; background-color: {{buttonColor}}; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 18px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                                    {{buttonText}}
                                 </a>
                             </div>
                             

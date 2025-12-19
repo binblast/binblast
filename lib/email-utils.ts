@@ -181,7 +181,7 @@ export async function notifyCustomerWelcome(customerData: {
 
   const dashboardLink = "https://binblast.vercel.app/dashboard";
 
-  // Format preferred service date for display
+  // Format preferred service date for display (only if provided)
   const preferredDateFormatted = customerData.preferredServiceDate
     ? new Date(customerData.preferredServiceDate).toLocaleDateString('en-US', {
         weekday: 'long',
@@ -189,15 +189,37 @@ export async function notifyCustomerWelcome(customerData: {
         month: 'long',
         day: 'numeric'
       })
-    : "Not set";
+    : "";
 
   // Format address line 2 for display (empty string if not provided)
   const addressLine2Display = customerData.addressLine2 ? `<br>${customerData.addressLine2}` : "";
 
-  // Format preferred day of week for display
+  // Format preferred day of week for display (only if provided)
   const preferredDayDisplay = customerData.preferredDayOfWeek 
     ? `Every ${customerData.preferredDayOfWeek}`
-    : "Not set";
+    : "";
+
+  // Determine email content based on whether preferredServiceDate exists
+  const hasPreferredDate = !!customerData.preferredServiceDate;
+  const confirmationTitle = hasPreferredDate 
+    ? "✅ Confirm Your Cleaning Date"
+    : "What's Next?";
+  
+  const confirmationMessage = hasPreferredDate
+    ? `We're ready to schedule your first cleaning! Based on your preferences, we've selected <strong>${preferredDateFormatted}</strong> as your preferred cleaning day.<br><br>Please click the button below to confirm this date or choose a different one that works better for you.`
+    : `You can now log in to your customer dashboard to view your service schedule, manage your account, and track your cleanings.<br><br>Visit your dashboard to schedule your first cleaning at your convenience.`;
+  
+  const confirmationDetails = hasPreferredDate
+    ? `<p style="margin: 0 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;"><strong>Monthly Schedule:</strong> ${preferredDayDisplay}</p>`
+    : "";
+  
+  const buttonText = hasPreferredDate
+    ? "Confirm Your Cleaning Date"
+    : "Access Your Dashboard";
+  
+  const buttonColor = hasPreferredDate
+    ? "#16a34a"
+    : "#2563eb";
 
   // Try to send email (non-blocking)
   try {
@@ -211,9 +233,14 @@ export async function notifyCustomerWelcome(customerData: {
       city: customerData.city || "",
       state: customerData.state || "",
       zipCode: customerData.zipCode || "",
-      preferredServiceDate: preferredDateFormatted,
-      preferredDayOfWeek: preferredDayDisplay, // Pre-formatted
+      preferredServiceDate: preferredDateFormatted || "Not set",
       preferredTimeWindow: customerData.preferredTimeWindow || "Morning",
+      preferredDayOfWeek: preferredDayDisplay || "Not set",
+      confirmationTitle: confirmationTitle,
+      confirmationMessage: confirmationMessage,
+      confirmationDetails: confirmationDetails,
+      buttonText: buttonText,
+      buttonColor: buttonColor,
       dashboardLink: dashboardLink,
     });
   } catch (error: any) {

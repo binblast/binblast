@@ -490,10 +490,11 @@ function RegisterForm() {
             
             console.log("[Register] User document created successfully with role:", userRole);
             
-            // Send welcome email if this is a customer (not partner) and they have onboarding data with preferredServiceDate
-            // Only send if email hasn't been sent yet AND preferredServiceDate exists
+            // Send welcome email if this is a customer (not partner)
+            // Send email if they have onboarding data with preferredServiceDate (confirmation email)
+            // OR if they don't have onboarding data (general welcome email)
             const welcomeEmailSent = existingData?.welcomeEmailSent || false;
-            if (!isPartnerSignup && onboardingData?.preferredServiceDate && !welcomeEmailSent && db && userCredential.user) {
+            if (!isPartnerSignup && !welcomeEmailSent && db && userCredential.user) {
               try {
                 const { notifyCustomerWelcome } = await import("@/lib/email-utils");
                 const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
@@ -503,25 +504,45 @@ function RegisterForm() {
                   ? PLAN_CONFIGS[planIdForEmail as keyof typeof PLAN_CONFIGS].name 
                   : "Your Plan";
                 
-                // Send welcome email asking them to confirm cleaning date (non-blocking)
-                // Only send if preferredServiceDate exists (same condition as pendingCleaningData)
-                notifyCustomerWelcome({
-                  email: email.toLowerCase(),
-                  firstName: onboardingData.firstName || firstName,
-                  lastName: onboardingData.lastName || lastName,
-                  planName: planName,
-                  addressLine1: onboardingData.addressLine1,
-                  addressLine2: onboardingData.addressLine2,
-                  city: onboardingData.city,
-                  state: onboardingData.state,
-                  zipCode: onboardingData.zipCode,
-                  preferredServiceDate: onboardingData.preferredServiceDate,
-                  preferredDayOfWeek: onboardingData.preferredDayOfWeek,
-                  preferredTimeWindow: onboardingData.preferredTimeWindow || "Morning",
-                }).catch((emailErr) => {
-                  console.error("[Register] Failed to send welcome email:", emailErr);
-                  // Don't block registration if email fails
-                });
+                // Send welcome email - if they have preferredServiceDate, ask them to confirm
+                // Otherwise, send a general welcome email
+                if (onboardingData?.preferredServiceDate) {
+                  // Send confirmation email asking them to confirm cleaning date
+                  notifyCustomerWelcome({
+                    email: email.toLowerCase(),
+                    firstName: onboardingData.firstName || firstName,
+                    lastName: onboardingData.lastName || lastName,
+                    planName: planName,
+                    addressLine1: onboardingData.addressLine1,
+                    addressLine2: onboardingData.addressLine2,
+                    city: onboardingData.city,
+                    state: onboardingData.state,
+                    zipCode: onboardingData.zipCode,
+                    preferredServiceDate: onboardingData.preferredServiceDate,
+                    preferredDayOfWeek: onboardingData.preferredDayOfWeek,
+                    preferredTimeWindow: onboardingData.preferredTimeWindow || "Morning",
+                  }).catch((emailErr) => {
+                    console.error("[Register] Failed to send welcome email:", emailErr);
+                  });
+                } else {
+                  // Send general welcome email without cleaning date confirmation
+                  notifyCustomerWelcome({
+                    email: email.toLowerCase(),
+                    firstName: onboardingData?.firstName || firstName,
+                    lastName: onboardingData?.lastName || lastName,
+                    planName: planName,
+                    addressLine1: onboardingData?.addressLine1,
+                    addressLine2: onboardingData?.addressLine2,
+                    city: onboardingData?.city,
+                    state: onboardingData?.state,
+                    zipCode: onboardingData?.zipCode,
+                    preferredServiceDate: undefined,
+                    preferredDayOfWeek: undefined,
+                    preferredTimeWindow: undefined,
+                  }).catch((emailErr) => {
+                    console.error("[Register] Failed to send welcome email:", emailErr);
+                  });
+                }
                 
                 // Mark welcome email as sent
                 try {
@@ -536,6 +557,16 @@ function RegisterForm() {
                 console.error("[Register] Error sending welcome email:", emailErr);
                 // Don't block registration if email fails
               }
+            } else if (!isPartnerSignup && !welcomeEmailSent) {
+              // Log why email wasn't sent for debugging
+              console.log("[Register] Welcome email not sent:", {
+                isPartnerSignup,
+                welcomeEmailSent,
+                hasOnboardingData: !!onboardingData,
+                hasPreferredServiceDate: !!onboardingData?.preferredServiceDate,
+                hasDb: !!db,
+                hasUser: !!userCredential.user,
+              });
             }
           } catch (userDocErr: any) {
             console.error("[Register] Error creating user document:", userDocErr);
