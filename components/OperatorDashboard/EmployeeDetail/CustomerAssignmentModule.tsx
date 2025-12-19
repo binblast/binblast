@@ -246,21 +246,32 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
       // Find upcoming cleanings for selected customers
       // For one-time assignments, get cleanings scheduled for today or future dates
       const cleaningPromises = selectedCustomers.map(async (customerUserId) => {
-        // Query for cleanings for this customer that are not yet assigned or assigned to this employee
+        // Query for cleanings for this customer - simplified to avoid index requirement
+        // First try to get cleanings scheduled for today or future dates
         const cleaningQuery = query(
           cleaningsRef,
           where("userId", "==", customerUserId),
-          where("scheduledDate", ">=", today),
-          where("status", "==", "upcoming")
+          where("scheduledDate", ">=", today)
         );
         
         const snapshot = await getDocs(cleaningQuery);
         
-        // Find the first unassigned cleaning, or if all are assigned to this employee, use the first one
-        const cleanings = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        // Filter and sort in memory to avoid index requirement
+        const cleanings = snapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter((c: any) => c.status === "upcoming") // Filter by status in memory
+          .sort((a: any, b: any) => {
+            // Sort by date, then prefer unassigned
+            const dateCompare = (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
+            if (dateCompare !== 0) return dateCompare;
+            // Prefer unassigned over assigned
+            if (!a.assignedEmployeeId && b.assignedEmployeeId) return -1;
+            if (a.assignedEmployeeId && !b.assignedEmployeeId) return 1;
+            return 0;
+          });
         
         // Prefer unassigned cleanings, but allow reassigning to same employee
         const unassignedCleaning = cleanings.find(
