@@ -61,7 +61,12 @@ export function CustomerMapView({
   // Calculate clusters
   const clusters = useMemo(() => {
     if (customersWithCoords.length === 0) return [];
-    return clusterCustomers(customersWithCoords, clusterRadius);
+    const rawClusters = clusterCustomers(customersWithCoords, clusterRadius);
+    // Type assertion: customersWithCoords are Customer[], so clusters contain Customer[]
+    return rawClusters.map(cluster => ({
+      ...cluster,
+      customers: cluster.customers as Customer[]
+    }));
   }, [customersWithCoords, clusterRadius]);
 
   // Calculate map bounds
@@ -119,7 +124,7 @@ export function CustomerMapView({
     return "#9ca3af"; // Gray for assigned to others
   };
 
-  const canSelectCustomer = (customer: Customer): boolean => {
+  const canSelectCustomer = (customer: Customer | { id: string; assignedTo?: string | null }): boolean => {
     if (customer.assignedTo && customer.assignedTo !== currentOperatorId) {
       return reassignAllowed;
     }
