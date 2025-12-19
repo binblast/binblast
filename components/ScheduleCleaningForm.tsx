@@ -298,6 +298,20 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
           updatedAt: serverTimestamp(),
         });
         
+        // Clear pending cleaning confirmation data if it exists (user rescheduled via form instead of modal)
+        try {
+          const userDocRef = doc(db, "users", userId);
+          await updateDoc(userDocRef, {
+            pendingCleaningConfirmation: false,
+            pendingCleaningData: null,
+            updatedAt: serverTimestamp(),
+          });
+          console.log("[ScheduleCleaningForm] Cleared pending cleaning confirmation data after rescheduling");
+        } catch (clearErr) {
+          console.error("[ScheduleCleaningForm] Error clearing pending cleaning data:", clearErr);
+          // Don't fail rescheduling if clearing pending data fails
+        }
+        
         // Send confirmation email after rescheduling
         try {
           const { notifyCleaningScheduled } = await import("@/lib/email-utils");
@@ -345,6 +359,21 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
         };
 
         await addDoc(collection(db, "scheduledCleanings"), scheduledCleaning);
+        
+        // Clear pending cleaning confirmation data if it exists (user scheduled via form instead of modal)
+        try {
+          const { doc, updateDoc, serverTimestamp } = firestore;
+          const userDocRef = doc(db, "users", userId);
+          await updateDoc(userDocRef, {
+            pendingCleaningConfirmation: false,
+            pendingCleaningData: null,
+            updatedAt: serverTimestamp(),
+          });
+          console.log("[ScheduleCleaningForm] Cleared pending cleaning confirmation data");
+        } catch (clearErr) {
+          console.error("[ScheduleCleaningForm] Error clearing pending cleaning data:", clearErr);
+          // Don't fail scheduling if clearing pending data fails
+        }
         
         // Send confirmation email after scheduling
         try {

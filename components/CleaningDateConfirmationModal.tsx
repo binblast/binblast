@@ -261,29 +261,10 @@ export function CleaningDateConfirmationModal({
           {/* Action Buttons */}
           <div style={{ display: "flex", gap: "12px" }}>
             <button
-              onClick={async () => {
-                // Clear pending cleaning data from user document
-                try {
-                  const { getDbInstance } = await import("@/lib/firebase");
-                  const db = await getDbInstance();
-                  if (db) {
-                    const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-                    const firestore = await safeImportFirestore();
-                    const { doc, updateDoc, serverTimestamp } = firestore;
-                    const userDocRef = doc(db, "users", userId);
-                    await updateDoc(userDocRef, {
-                      pendingCleaningConfirmation: false,
-                      pendingCleaningData: null,
-                      updatedAt: serverTimestamp(),
-                    });
-                  }
-                } catch (err) {
-                  console.error("[CleaningDateConfirmationModal] Error clearing pending data:", err);
-                }
+              onClick={() => {
+                // Don't clear pending data - just close modal so user can schedule via form
+                // The pending data will be cleared when they actually schedule a cleaning
                 onCancel();
-                if (onClearPending) {
-                  onClearPending();
-                }
               }}
               disabled={loading}
               style={{

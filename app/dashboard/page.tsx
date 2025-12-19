@@ -4263,17 +4263,8 @@ function DashboardPageContent() {
                 }}
                 onCancel={() => {
                   setShowCleaningConfirmation(false);
-                  // User can manually schedule later
-                }}
-                onClearPending={() => {
-                  // Update user state to remove pending data
-                  if (user) {
-                    setUser({
-                      ...user,
-                      pendingCleaningConfirmation: false,
-                      pendingCleaningData: undefined,
-                    });
-                  }
+                  // Don't clear pending data - keep it so modal can reappear if user refreshes or comes back via email link
+                  // User can manually schedule later via the form, which will clear the pending data
                 }}
               />
             )}
