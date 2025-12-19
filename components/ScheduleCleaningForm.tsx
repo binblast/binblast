@@ -17,30 +17,100 @@ interface ScheduleCleaningFormProps {
   userId: string;
   userEmail: string;
   onScheduleCreated?: () => void;
+  existingCleaning?: {
+    id: string;
+    scheduledDate: string;
+    scheduledTime: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    trashDay?: string;
+    notes?: string;
+    status: "upcoming" | "completed" | "cancelled";
+  } | null;
 }
 
-export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: ScheduleCleaningFormProps) {
+export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, existingCleaning }: ScheduleCleaningFormProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [zipCode, setZipCode] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [trashDay, setTrashDay] = useState("");
-  const [selectedDateValue, setSelectedDateValue] = useState(""); // Store the actual date value
+  
+  // Helper to parse date from various formats (including Firestore timestamps)
+  const parseDate = (dateInput: any): Date => {
+    if (!dateInput) return new Date();
+    
+    // If it's a Firestore timestamp
+    if (dateInput?.toDate && typeof dateInput.toDate === 'function') {
+      return dateInput.toDate();
+    }
+    
+    // If it's already a Date object
+    if (dateInput instanceof Date) {
+      return dateInput;
+    }
+    
+    // If it's a string
+    if (typeof dateInput === 'string') {
+      if (dateInput.includes('T')) {
+        return new Date(dateInput);
+      }
+      // If it's YYYY-MM-DD format
+      return new Date(dateInput + 'T00:00:00');
+    }
+    
+    return new Date();
+  };
+
+  // Pre-fill form with existing cleaning data if available
+  const getInitialDate = (): string => {
+    if (existingCleaning?.scheduledDate) {
+      try {
+        const date = parseDate(existingCleaning.scheduledDate);
+        return formatDateForInput(date);
+      } catch (e) {
+        return "";
+      }
+    }
+    return "";
+  };
+
+  const [zipCode, setZipCode] = useState(existingCleaning?.zipCode || "");
+  const [city, setCity] = useState(existingCleaning?.city || "");
+  const [state, setState] = useState(existingCleaning?.state || "");
+  const [trashDay, setTrashDay] = useState(existingCleaning?.trashDay || "");
+  const [selectedDateValue, setSelectedDateValue] = useState(getInitialDate()); // Store the actual date value
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isReady: firebaseReady } = useFirebase();
   
   // Form fields
-  const [addressLine1, setAddressLine1] = useState("");
-  const [addressLine2, setAddressLine2] = useState("");
-  const [selectedTime, setSelectedTime] = useState("");
-  const [notes, setNotes] = useState("");
+  const [addressLine1, setAddressLine1] = useState(existingCleaning?.addressLine1 || "");
+  const [addressLine2, setAddressLine2] = useState(existingCleaning?.addressLine2 || "");
+  const [selectedTime, setSelectedTime] = useState(existingCleaning?.scheduledTime || "");
+  const [notes, setNotes] = useState(existingCleaning?.notes || "");
+  const [isRescheduling, setIsRescheduling] = useState(!!existingCleaning);
 
   const formatDateForInput = (date: Date): string => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  };
+
+  // Check if rescheduling is allowed (within 12 hours before cleaning day)
+  const canReschedule = (cleaningDate: Date): boolean => {
+    if (!existingCleaning) return true;
+    
+    const now = new Date();
+    const cleaningDateTime = new Date(cleaningDate);
+    cleaningDateTime.setHours(0, 0, 0, 0);
+    
+    // Calculate 12 hours before cleaning day
+    const twelveHoursBefore = new Date(cleaningDateTime);
+    twelveHoursBefore.setHours(twelveHoursBefore.getHours() - 12);
+    
+    // Allow rescheduling if current time is more than 12 hours before cleaning day
+    return now < twelveHoursBefore;
   };
 
   // Generate dropdown options for each day within 2-week window
@@ -52,6 +122,29 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
     
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const options: Array<{ dayName: string; date: Date; value: string; label: string }> = [];
+    
+    // If there's an existing cleaning date, include it even if it's outside the normal window
+    if (existingCleaning?.scheduledDate && selectedDateValue) {
+      try {
+        const existingDate = parseDate(existingCleaning.scheduledDate);
+        const existingDateValue = formatDateForInput(existingDate);
+        const dayName = existingDate.toLocaleDateString("en-US", { weekday: "long" });
+        const monthName = existingDate.toLocaleDateString("en-US", { month: "short" });
+        const dayNumber = existingDate.getDate();
+        
+        // Check if rescheduling is allowed
+        const canRescheduleThis = canReschedule(existingDate);
+        
+        options.push({
+          dayName,
+          date: existingDate,
+          value: existingDateValue,
+          label: `${dayName}, ${monthName} ${dayNumber}${canRescheduleThis ? " (Current)" : " (Cannot reschedule - less than 12hrs away)"}`
+        });
+      } catch (e) {
+        console.error("Error parsing existing cleaning date:", e);
+      }
+    }
     
     // For each day of the week, find the next occurrence within 2 weeks
     dayNames.forEach((dayName, dayIndex) => {
@@ -69,7 +162,11 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
       firstOccurrence.setHours(0, 0, 0, 0);
       
       // Only include if date is in the future (not today), and within 2 weeks
-      if (firstOccurrence > today && firstOccurrence <= twoWeeksFromNow) {
+      // Also exclude if it matches the existing cleaning date (already added above)
+      const firstDateValue = formatDateForInput(firstOccurrence);
+      const isExistingDate = existingCleaning && firstDateValue === selectedDateValue;
+      
+      if (firstOccurrence > today && firstOccurrence <= twoWeeksFromNow && !isExistingDate) {
         const dateValue = formatDateForInput(firstOccurrence);
         const monthName = firstOccurrence.toLocaleDateString("en-US", { month: "short" });
         const dayNumber = firstOccurrence.getDate();
@@ -89,7 +186,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
       secondOccurrence.setHours(0, 0, 0, 0);
       
       // Only include if date is in the future (not today), and within 2 weeks
-      if (secondOccurrence > today && secondOccurrence <= twoWeeksFromNow) {
+      const secondDateValue = formatDateForInput(secondOccurrence);
+      const isExistingDate2 = existingCleaning && secondDateValue === selectedDateValue;
+      
+      if (secondOccurrence > today && secondOccurrence <= twoWeeksFromNow && !isExistingDate2) {
         const dateValue = formatDateForInput(secondOccurrence);
         const monthName = secondOccurrence.toLocaleDateString("en-US", { month: "short" });
         const dayNumber = secondOccurrence.getDate();
@@ -164,29 +264,54 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
       // CRITICAL: Use safe import wrapper to ensure Firebase app exists
       const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
       const firestore = await safeImportFirestore();
-      const { collection, addDoc, serverTimestamp } = firestore;
+      const { collection, addDoc, doc, updateDoc, serverTimestamp } = firestore;
 
       // Use the selected date value directly
       const scheduledDate = selectedDateValue;
 
-      // Save scheduled cleaning to Firestore
-      const scheduledCleaning = {
-        userId,
-        userEmail,
-        addressLine1,
-        addressLine2: addressLine2 || null,
-        city,
-        state,
-        zipCode,
-        trashDay,
-        scheduledDate: scheduledDate,
-        scheduledTime: selectedTime,
-        notes: notes || null,
-        status: "upcoming",
-        createdAt: serverTimestamp(),
-      };
+      // Check if rescheduling is allowed
+      if (existingCleaning && isRescheduling) {
+        const cleaningDate = parseDate(existingCleaning.scheduledDate);
+        if (!canReschedule(cleaningDate)) {
+          setError("You can only reschedule a cleaning more than 12 hours before the scheduled date.");
+          setLoading(false);
+          return;
+        }
 
-      await addDoc(collection(db, "scheduledCleanings"), scheduledCleaning);
+        // Update existing cleaning
+        const cleaningRef = doc(db, "scheduledCleanings", existingCleaning.id);
+        await updateDoc(cleaningRef, {
+          addressLine1,
+          addressLine2: addressLine2 || null,
+          city,
+          state,
+          zipCode,
+          trashDay,
+          scheduledDate: scheduledDate,
+          scheduledTime: selectedTime,
+          notes: notes || null,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        // Create new scheduled cleaning
+        const scheduledCleaning = {
+          userId,
+          userEmail,
+          addressLine1,
+          addressLine2: addressLine2 || null,
+          city,
+          state,
+          zipCode,
+          trashDay,
+          scheduledDate: scheduledDate,
+          scheduledTime: selectedTime,
+          notes: notes || null,
+          status: "upcoming",
+          createdAt: serverTimestamp(),
+        };
+
+        await addDoc(collection(db, "scheduledCleanings"), scheduledCleaning);
+      }
 
       // Reset form
       setAddressLine1("");
@@ -218,14 +343,65 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
     "3:00 PM - 6:00 PM",
   ];
 
+  // Get existing cleaning date info for display
+  const existingCleaningDate = existingCleaning?.scheduledDate ? parseDate(existingCleaning.scheduledDate) : null;
+  const canRescheduleExisting = existingCleaningDate ? canReschedule(existingCleaningDate) : true;
+
   return (
     <div>
+      {existingCleaning && existingCleaningDate && (
+        <div style={{
+          background: "#eff6ff",
+          border: "1px solid #3b82f6",
+          borderRadius: "12px",
+          padding: "1rem",
+          marginBottom: "1rem"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+            <div>
+              <p style={{ margin: 0, fontSize: "0.875rem", fontWeight: "600", color: "#1e40af", marginBottom: "0.25rem" }}>
+                Upcoming Cleaning Scheduled
+              </p>
+              <p style={{ margin: 0, fontSize: "0.875rem", color: "#1e3a8a" }}>
+                {existingCleaningDate.toLocaleDateString("en-US", { 
+                  weekday: "long", 
+                  month: "long", 
+                  day: "numeric", 
+                  year: "numeric" 
+                })} at {existingCleaning.scheduledTime}
+              </p>
+              {!canRescheduleExisting && (
+                <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.75rem", color: "#dc2626", fontWeight: "500" }}>
+                  ⚠️ Cannot reschedule - less than 12 hours before cleaning day
+                </p>
+              )}
+            </div>
+            {canRescheduleExisting && (
+              <button
+                onClick={() => {
+                  setIsOpen(true);
+                  setIsRescheduling(true);
+                }}
+                className="btn btn-primary"
+                style={{ 
+                  padding: "0.5rem 1rem",
+                  fontSize: "0.875rem",
+                  whiteSpace: "nowrap"
+                }}
+              >
+                Reschedule
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="btn btn-primary"
         style={{ marginBottom: "1.5rem" }}
       >
-        {isOpen ? "Cancel Scheduling" : "Schedule Cleaning"}
+        {isOpen ? "Cancel" : existingCleaning ? "Schedule Another Cleaning" : "Schedule Cleaning"}
       </button>
 
       {isOpen && (
@@ -240,7 +416,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
           boxSizing: "border-box"
         }}>
           <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
-            Schedule Your Bin Cleaning
+            {isRescheduling ? "Reschedule Your Cleaning" : "Schedule Your Bin Cleaning"}
           </h2>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -432,18 +608,33 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated }: S
               </div>
             )}
 
+            {isRescheduling && existingCleaningDate && !canRescheduleExisting && (
+              <div style={{
+                padding: "0.75rem 1rem",
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: "8px",
+                color: "#dc2626",
+                fontSize: "0.875rem",
+                marginTop: "0.5rem"
+              }}>
+                ⚠️ You can only reschedule a cleaning more than 12 hours before the scheduled date. 
+                Please contact support if you need to change this cleaning.
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading || !selectedDateValue || !selectedTime}
+              disabled={loading || !selectedDateValue || !selectedTime || (isRescheduling && existingCleaningDate ? !canRescheduleExisting : false)}
               className={`btn btn-primary ${loading ? "disabled" : ""}`}
               style={{
                 width: "100%",
                 marginTop: "0.5rem",
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity: loading ? 0.6 : 1
+                cursor: (loading || (isRescheduling && existingCleaningDate ? !canRescheduleExisting : false)) ? "not-allowed" : "pointer",
+                opacity: (loading || (isRescheduling && existingCleaningDate ? !canRescheduleExisting : false)) ? 0.6 : 1
               }}
             >
-              {loading ? "Scheduling..." : "Schedule Cleaning"}
+              {loading ? (isRescheduling ? "Rescheduling..." : "Scheduling...") : (isRescheduling ? "Update Schedule" : "Schedule Cleaning")}
             </button>
           </form>
         </div>

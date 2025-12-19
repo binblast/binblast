@@ -121,7 +121,7 @@ const PLAN_DESCRIPTIONS: Record<string, string> = {
 
 interface ScheduledCleaning {
   id: string;
-  scheduledDate: string;
+  scheduledDate: string | Date | any; // Can be string, Date, or Firestore Timestamp
   scheduledTime: string;
   addressLine1: string;
   addressLine2?: string;
@@ -4222,6 +4222,51 @@ function DashboardPageContent() {
                   onScheduleCreated={() => {
                     window.location.reload();
                   }}
+                  existingCleaning={(() => {
+                    // Find the next upcoming cleaning
+                    const upcomingCleaning = scheduledCleanings
+                      .filter(c => c.status === "upcoming")
+                      .map(c => {
+                        // Parse scheduledDate properly
+                        let cleaningDate: Date;
+                        const dateValue = c.scheduledDate as any; // Type assertion for Firestore timestamp
+                        if (typeof dateValue === 'string') {
+                          cleaningDate = new Date(dateValue);
+                        } else if (dateValue && typeof dateValue.toDate === 'function') {
+                          cleaningDate = dateValue.toDate();
+                        } else if (dateValue instanceof Date) {
+                          cleaningDate = dateValue;
+                        } else {
+                          cleaningDate = new Date();
+                        }
+                        return { ...c, parsedDate: cleaningDate };
+                      })
+                      .filter(c => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return c.parsedDate >= today;
+                      })
+                      .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime())[0];
+                    
+                    if (upcomingCleaning) {
+                      // Convert to format expected by ScheduleCleaningForm
+                      const dateStr = upcomingCleaning.parsedDate.toISOString().split('T')[0];
+                      return {
+                        id: upcomingCleaning.id,
+                        scheduledDate: dateStr,
+                        scheduledTime: upcomingCleaning.scheduledTime,
+                        addressLine1: upcomingCleaning.addressLine1,
+                        addressLine2: upcomingCleaning.addressLine2,
+                        city: upcomingCleaning.city,
+                        state: upcomingCleaning.state,
+                        zipCode: upcomingCleaning.zipCode,
+                        trashDay: upcomingCleaning.trashDay,
+                        notes: upcomingCleaning.notes,
+                        status: upcomingCleaning.status,
+                      };
+                    }
+                    return null;
+                  })()}
                 />
                 <p style={{ 
                   fontSize: "0.875rem", 
