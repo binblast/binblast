@@ -225,31 +225,93 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
 
     setAssigning(true);
     try {
-      // For now, assign one-time stops
-      // In a full implementation, this would handle recurring assignments
-      for (const customerId of selectedCustomers) {
+      // Get the current date for finding scheduled cleanings
+      const today = new Date().toISOString().split('T')[0];
+      
+      // First, find the scheduled cleaning documents for these customers
+      // We need to fetch cleanings that match the selected customer user IDs
+      const { getDbInstance } = await import("@/lib/firebase");
+      const db = await getDbInstance();
+      
+      if (!db) {
+        throw new Error("Database not available");
+      }
+
+      const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+      const firestore = await safeImportFirestore();
+      const { collection, query, where, getDocs } = firestore;
+
+      const cleaningsRef = collection(db, "scheduledCleanings");
+      
+      // Find upcoming cleanings for selected customers
+      // For one-time assignments, get cleanings scheduled for today or future dates
+      const cleaningPromises = selectedCustomers.map(async (customerUserId) => {
+        // Query for cleanings for this customer that are not yet assigned or assigned to this employee
+        const cleaningQuery = query(
+          cleaningsRef,
+          where("userId", "==", customerUserId),
+          where("scheduledDate", ">=", today),
+          where("status", "==", "upcoming")
+        );
+        
+        const snapshot = await getDocs(cleaningQuery);
+        
+        // Find the first unassigned cleaning, or if all are assigned to this employee, use the first one
+        const cleanings = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        
+        // Prefer unassigned cleanings, but allow reassigning to same employee
+        const unassignedCleaning = cleanings.find(
+          (c: any) => !c.assignedEmployeeId || c.assignedEmployeeId === employeeId
+        );
+        
+        return unassignedCleaning || cleanings[0];
+      });
+
+      const cleaningDocs = await Promise.all(cleaningPromises);
+      
+      // Filter out any null/undefined results (customers without scheduled cleanings)
+      const validCleanings = cleaningDocs.filter(c => c !== null && c !== undefined);
+      
+      if (validCleanings.length === 0) {
+        alert("No scheduled cleanings found for the selected customers. Please ensure customers have upcoming cleanings scheduled.");
+        setAssigning(false);
+        return;
+      }
+
+      if (validCleanings.length < selectedCustomers.length) {
+        const missingCount = selectedCustomers.length - validCleanings.length;
+        alert(`Warning: ${missingCount} customer(s) don't have scheduled cleanings. Assigning ${validCleanings.length} cleaning(s).`);
+      }
+
+      // Now assign each cleaning
+      for (const cleaning of validCleanings) {
         const response = await fetch(`/api/operator/employees/${employeeId}/stops`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            cleaningId: customerId,
+            cleaningId: cleaning.id,
             priority,
             assignmentSource: "manual",
           }),
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to assign customer ${customerId}`);
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Failed to assign cleaning ${cleaning.id}`);
         }
       }
       
       // Refresh workload after assignment
       loadWorkload();
 
-      alert(`Successfully assigned ${selectedCustomers.length} customer(s)`);
+      alert(`Successfully assigned ${validCleanings.length} cleaning(s)`);
       setSelectedCustomers([]);
       if (onAssign) onAssign();
     } catch (error: any) {
+      console.error("Error assigning customers:", error);
       alert(error.message || "Failed to assign customers");
     } finally {
       setAssigning(false);
