@@ -596,13 +596,15 @@ export default function PartnerDashboardPage() {
       const response = await fetch('/api/partners/stripe-connect/login-link', {
         method: 'POST',
       });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.loginUrl) {
-          window.open(data.loginUrl, '_blank');
-        }
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success && data.loginUrl) {
+        window.open(data.loginUrl, '_blank');
       } else {
-        alert('Failed to generate Stripe login link. Please try again.');
+        const errorMessage = data.error || 'Failed to generate Stripe login link. Please try again.';
+        console.error("Stripe login link error:", data);
+        alert(errorMessage);
       }
     } catch (err) {
       console.error("Error getting Stripe login link:", err);

@@ -63,16 +63,46 @@ export async function POST(req: NextRequest) {
     // Create login link for the connected account
     // Note: redirect_url is not supported in the current Stripe API version
     // Users will be redirected to Stripe's default page after logout
-    const loginLink = await stripe.accounts.createLoginLink(stripeConnectedAccountId);
+    try {
+      const loginLink = await stripe.accounts.createLoginLink(stripeConnectedAccountId);
+      
+      if (!loginLink || !loginLink.url) {
+        console.error("[Stripe Login Link] Invalid response from Stripe:", loginLink);
+        return NextResponse.json(
+          { error: "Invalid response from Stripe", success: false },
+          { status: 500 }
+        );
+      }
 
-    return NextResponse.json({
-      success: true,
-      loginUrl: loginLink.url,
-    });
+      return NextResponse.json({
+        success: true,
+        loginUrl: loginLink.url,
+      });
+    } catch (stripeError: any) {
+      console.error("[Stripe Login Link] Stripe API error:", stripeError);
+      console.error("[Stripe Login Link] Error details:", {
+        type: stripeError.type,
+        code: stripeError.code,
+        message: stripeError.message,
+        statusCode: stripeError.statusCode,
+      });
+      
+      return NextResponse.json(
+        { 
+          error: stripeError.message || "Failed to create login link",
+          success: false,
+          details: stripeError.type || "unknown_error"
+        },
+        { status: stripeError.statusCode || 500 }
+      );
+    }
   } catch (error: any) {
-    console.error("[Stripe Login Link] Error:", error);
+    console.error("[Stripe Login Link] Unexpected error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create login link" },
+      { 
+        error: error.message || "Failed to create login link",
+        success: false
+      },
       { status: 500 }
     );
   }
