@@ -158,12 +158,17 @@ export async function GET(req: NextRequest) {
         county: c.county || c.city || "",
         city: c.city || "",
         address: c.addressLine1 || "",
+        addressLine2: c.addressLine2 || "",
+        zipCode: c.zipCode || "",
+        state: c.state || "",
         plan: c.selectedPlan || "",
         status: c.subscriptionStatus || "",
         assignedTo: assignment?.employeeId || null,
         assignedToName: assignment?.employeeName || null,
         assignmentSource: assignment?.assignmentSource || null,
         matchesZone: matchesZone,
+        latitude: c.latitude || null,
+        longitude: c.longitude || null,
       };
     });
 

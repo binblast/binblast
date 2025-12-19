@@ -1,8 +1,12 @@
 // components/OperatorDashboard/EmployeeDetail/CustomerAssignmentModule.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { georgiaCounties } from "@/data/gaCounties";
+import { ViewToggle } from "./ViewToggle";
+import { CustomerMapView } from "./CustomerMapView";
+import { CustomerNearbyView } from "./CustomerNearbyView";
+import { AssignmentConfirmationModal } from "./AssignmentConfirmationModal";
 
 interface Customer {
   id: string;
@@ -13,6 +17,11 @@ interface Customer {
   address: string;
   plan: string;
   status: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  zipCode?: string;
+  addressLine2?: string;
+  state?: string;
 }
 
 interface CustomerAssignmentModuleProps {
@@ -57,17 +66,99 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
     availableCapacity: number;
   }>>([]);
   const [reassigning, setReassigning] = useState(false);
+  
+  // New proximity view state
+  const [currentView, setCurrentView] = useState<"list" | "map" | "nearby">("list");
+  const [operatorStartLocation, setOperatorStartLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [geocodingCustomers, setGeocodingCustomers] = useState(false);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [operatorName, setOperatorName] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     loadEmployeeCoverage();
     loadWorkload();
+    loadOperatorLocation();
+    loadOperatorName();
   }, [employeeId]);
 
+  // Debounce search
   useEffect(() => {
-    if (search || filterCounty || filterCity || filterPlan || filterStatus || filterByZone) {
-      searchCustomers();
-    }
+    const timer = setTimeout(() => {
+      if (search || filterCounty || filterCity || filterPlan || filterStatus || filterByZone) {
+        searchCustomers();
+      }
+    }, 300);
+    return () => clearTimeout(timer);
   }, [search, filterCounty, filterCity, filterPlan, filterStatus, filterServiceType, filterByZone, employeeZones, employeeCounties]);
+
+  const loadOperatorLocation = async () => {
+    try {
+      const response = await fetch(`/api/operator/employees/${employeeId}/location`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.location) {
+          setOperatorStartLocation({
+            latitude: data.location.latitude,
+            longitude: data.location.longitude,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading operator location:", error);
+    }
+  };
+
+  const loadOperatorName = async () => {
+    try {
+      const response = await fetch(`/api/operator/employee-status`);
+      if (response.ok) {
+        const data = await response.json();
+        const foundEmployee = data.employees?.find((emp: any) => emp.id === employeeId);
+        if (foundEmployee) {
+          setOperatorName(foundEmployee.name || "");
+        }
+      }
+    } catch (error) {
+      console.error("Error loading operator name:", error);
+    }
+  };
+
+  const handleGeocodeCustomers = async () => {
+    const customersWithoutCoords = customers.filter(
+      (c) => !c.latitude || !c.longitude
+    );
+    
+    if (customersWithoutCoords.length === 0) {
+      alert("All customers already have coordinates.");
+      return;
+    }
+
+    setGeocodingCustomers(true);
+    try {
+      const response = await fetch("/api/operator/customers/geocode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerIds: customersWithoutCoords.map((c) => c.id),
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Refresh customers to get updated coordinates
+        await searchCustomers();
+        alert(`Geocoded ${data.summary.geocoded} customer(s). ${data.summary.failed} failed.`);
+      } else {
+        throw new Error("Failed to geocode customers");
+      }
+    } catch (error: any) {
+      console.error("Error geocoding customers:", error);
+      alert(error.message || "Failed to geocode customers");
+    } finally {
+      setGeocodingCustomers(false);
+    }
+  };
 
   const loadEmployeeCoverage = async () => {
     try {
@@ -217,13 +308,41 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
     }
   }, [selectedCustomers, customers]);
 
-  const handleAssign = async () => {
+  const handleAssignClick = () => {
     if (selectedCustomers.length === 0) {
       alert("Please select at least one customer");
       return;
     }
+    // Check if any selected customers are assigned to others
+    const selectedCustomerData = customers.filter((c) => selectedCustomers.includes(c.id));
+    const hasReassignments = selectedCustomerData.some(
+      (c) => c.assignedTo && c.assignedTo !== employeeId
+    );
+    setShowAssignmentModal(true);
+  };
+
+  const handleAssignConfirm = async (reassign: boolean) => {
+    if (selectedCustomers.length === 0) {
+      return;
+    }
+
+    // Filter out customers assigned to others if reassign is false
+    let customersToAssign = selectedCustomers;
+    if (!reassign) {
+      const selectedCustomerData = customers.filter((c) => selectedCustomers.includes(c.id));
+      customersToAssign = selectedCustomerData
+        .filter((c) => !c.assignedTo || c.assignedTo === employeeId)
+        .map((c) => c.id);
+    }
+
+    if (customersToAssign.length === 0) {
+      alert("No customers to assign. Enable 'Reassign' to include customers assigned to others.");
+      setShowAssignmentModal(false);
+      return;
+    }
 
     setAssigning(true);
+    setShowAssignmentModal(false);
     try {
       // First, find the scheduled cleaning documents for these customers via API
       // This avoids Firestore permission issues by querying server-side
@@ -243,26 +362,32 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
       const cleaningsData = await cleaningsResponse.json();
       const validCleanings = cleaningsData.cleanings || [];
       
-      // Filter to prefer unassigned cleanings or cleanings assigned to this employee
-      const preferredCleanings = validCleanings.filter((c: any) => 
-        !c.assignedEmployeeId || c.assignedEmployeeId === employeeId
-      );
+      // Filter cleanings based on reassign flag
+      let cleaningsToAssign = validCleanings;
+      if (!reassign) {
+        cleaningsToAssign = validCleanings.filter((c: any) => 
+          !c.assignedEmployeeId || c.assignedEmployeeId === employeeId
+        );
+      }
       
-      const cleaningsToAssign = preferredCleanings.length > 0 ? preferredCleanings : validCleanings;
+      // If no cleanings after filtering, use all valid cleanings
+      if (cleaningsToAssign.length === 0) {
+        cleaningsToAssign = validCleanings;
+      }
       
-      if (validCleanings.length === 0) {
+      if (cleaningsToAssign.length === 0) {
         alert("No scheduled cleanings found for the selected customers. Please ensure customers have upcoming cleanings scheduled.");
         setAssigning(false);
         return;
       }
 
-      if (validCleanings.length < selectedCustomers.length) {
-        const missingCount = selectedCustomers.length - validCleanings.length;
-        alert(`Warning: ${missingCount} customer(s) don't have scheduled cleanings. Assigning ${validCleanings.length} cleaning(s).`);
+      if (cleaningsToAssign.length < customersToAssign.length) {
+        const missingCount = customersToAssign.length - cleaningsToAssign.length;
+        alert(`Warning: ${missingCount} customer(s) don't have scheduled cleanings. Assigning ${cleaningsToAssign.length} cleaning(s).`);
       }
 
       // Now assign each cleaning
-      for (const cleaning of validCleanings) {
+      for (const cleaning of cleaningsToAssign) {
         const response = await fetch(`/api/operator/employees/${employeeId}/stops`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -300,6 +425,38 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
         : [...prev, customerId]
     );
   };
+
+  const handleCustomerSelect = (customerId: string) => {
+    if (!selectedCustomers.includes(customerId)) {
+      setSelectedCustomers([...selectedCustomers, customerId]);
+    }
+  };
+
+  const handleCustomerDeselect = (customerId: string) => {
+    setSelectedCustomers(selectedCustomers.filter((id) => id !== customerId));
+  };
+
+  const selectedCustomerData = customers.filter((c) => selectedCustomers.includes(c.id));
+  const hasReassignments = selectedCustomerData.some(
+    (c) => c.assignedTo && c.assignedTo !== employeeId
+  );
+  
+  // Check if user is admin (for reassign permission)
+  useEffect(() => {
+    // Check user role from auth context or API
+    const checkAdmin = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (response.ok) {
+          const data = await response.json();
+          setIsAdmin(data.role === "admin" || data.role === "operator");
+        }
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+      }
+    };
+    checkAdmin();
+  }, []);
 
   return (
     <div style={{
@@ -454,6 +611,34 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
         </div>
       )}
 
+      {/* View Toggle */}
+      <ViewToggle currentView={currentView} onViewChange={setCurrentView} />
+
+      {/* Geocode Button (for Map/Nearby views) */}
+      {(currentView === "map" || currentView === "nearby") && (
+        <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <button
+            onClick={handleGeocodeCustomers}
+            disabled={geocodingCustomers}
+            style={{
+              padding: "0.5rem 1rem",
+              fontSize: "0.875rem",
+              border: "1px solid #3b82f6",
+              borderRadius: "6px",
+              background: "#ffffff",
+              color: "#3b82f6",
+              cursor: geocodingCustomers ? "not-allowed" : "pointer",
+              opacity: geocodingCustomers ? 0.5 : 1,
+            }}
+          >
+            {geocodingCustomers ? "Geocoding..." : "Geocode Missing Addresses"}
+          </button>
+          <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+            {customers.filter((c) => c.latitude && c.longitude).length} / {customers.length} customers geocoded
+          </div>
+        </div>
+      )}
+
       {/* Assignment Options */}
       <div style={{ marginBottom: "1.5rem" }}>
         <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
@@ -491,7 +676,7 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
         </select>
       </div>
 
-      {/* Customer List */}
+      {/* Customer Views */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
           Loading customers...
@@ -501,79 +686,110 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
           No customers found. Try adjusting your filters.
         </div>
       ) : (
-        <div style={{
-          maxHeight: "400px",
-          overflowY: "auto",
-          border: "1px solid #e5e7eb",
-          borderRadius: "6px",
-          marginBottom: "1rem",
-        }}>
-          {customers.map((customer) => (
-            <div
-              key={customer.id}
-              style={{
-                padding: "1rem",
-                borderBottom: "1px solid #f3f4f6",
-                display: "flex",
-                alignItems: "start",
-                gap: "1rem",
-                background: selectedCustomers.includes(customer.id) ? "#f0fdf4" : "transparent",
-                cursor: "pointer",
-              }}
-              onClick={() => toggleCustomer(customer.id)}
-            >
-              <input
-                type="checkbox"
-                checked={selectedCustomers.includes(customer.id)}
-                onChange={() => toggleCustomer(customer.id)}
-                onClick={(e) => e.stopPropagation()}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                  <span style={{ fontWeight: "600", color: "#111827" }}>
-                    {customer.name}
-                  </span>
-                  {customer.assignmentSource && (
-                    <span style={{
-                      fontSize: "0.75rem",
-                      padding: "0.125rem 0.5rem",
-                      borderRadius: "4px",
-                      background: customer.assignmentSource === "auto" ? "#dbeafe" : "#f3f4f6",
-                      color: customer.assignmentSource === "auto" ? "#1e40af" : "#6b7280",
-                    }}>
-                      {customer.assignmentSource === "auto" ? "Auto" : "Manual"}
-                    </span>
-                  )}
-                  {customer.matchesZone === false && (
-                    <span style={{
-                      fontSize: "0.75rem",
-                      padding: "0.125rem 0.5rem",
-                      borderRadius: "4px",
-                      background: "#fee2e2",
-                      color: "#991b1b",
-                    }}>
-                      Outside Zone
-                    </span>
-                  )}
-                  {customer.assignedTo && customer.assignedTo !== employeeId && (
-                    <span style={{
-                      fontSize: "0.75rem",
-                      padding: "0.125rem 0.5rem",
-                      borderRadius: "4px",
-                      background: "#fef3c7",
-                      color: "#92400e",
-                    }}>
-                      Assigned to {customer.assignedToName || "Another Employee"}
-                    </span>
-                  )}
+        <>
+          {currentView === "list" && (
+            <div style={{
+              maxHeight: "400px",
+              overflowY: "auto",
+              border: "1px solid #e5e7eb",
+              borderRadius: "6px",
+              marginBottom: "1rem",
+            }}>
+              {customers.map((customer) => (
+                <div
+                  key={customer.id}
+                  style={{
+                    padding: "1rem",
+                    borderBottom: "1px solid #f3f4f6",
+                    display: "flex",
+                    alignItems: "start",
+                    gap: "1rem",
+                    background: selectedCustomers.includes(customer.id) ? "#f0fdf4" : "transparent",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => toggleCustomer(customer.id)}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedCustomers.includes(customer.id)}
+                    onChange={() => toggleCustomer(customer.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                      <span style={{ fontWeight: "600", color: "#111827" }}>
+                        {customer.name}
+                      </span>
+                      {customer.assignmentSource && (
+                        <span style={{
+                          fontSize: "0.75rem",
+                          padding: "0.125rem 0.5rem",
+                          borderRadius: "4px",
+                          background: customer.assignmentSource === "auto" ? "#dbeafe" : "#f3f4f6",
+                          color: customer.assignmentSource === "auto" ? "#1e40af" : "#6b7280",
+                        }}>
+                          {customer.assignmentSource === "auto" ? "Auto" : "Manual"}
+                        </span>
+                      )}
+                      {customer.matchesZone === false && (
+                        <span style={{
+                          fontSize: "0.75rem",
+                          padding: "0.125rem 0.5rem",
+                          borderRadius: "4px",
+                          background: "#fee2e2",
+                          color: "#991b1b",
+                        }}>
+                          Outside Zone
+                        </span>
+                      )}
+                      {customer.assignedTo && customer.assignedTo !== employeeId && (
+                        <span style={{
+                          fontSize: "0.75rem",
+                          padding: "0.125rem 0.5rem",
+                          borderRadius: "4px",
+                          background: "#fef3c7",
+                          color: "#92400e",
+                        }}>
+                          Assigned to {customer.assignedToName || "Another Employee"}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                      {customer.county || customer.city} — {customer.address} — {customer.plan}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                  {customer.county || customer.city} — {customer.address} — {customer.plan}
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+
+          {currentView === "map" && (
+            <div style={{ height: "600px", marginBottom: "1rem" }}>
+              <CustomerMapView
+                customers={customers}
+                selectedCustomerIds={selectedCustomers}
+                onCustomerSelect={handleCustomerSelect}
+                onCustomerDeselect={handleCustomerDeselect}
+                currentOperatorId={employeeId}
+                reassignAllowed={isAdmin}
+              />
+            </div>
+          )}
+
+          {currentView === "nearby" && (
+            <div style={{ height: "600px", marginBottom: "1rem" }}>
+              <CustomerNearbyView
+                customers={customers}
+                selectedCustomerIds={selectedCustomers}
+                onCustomerSelect={handleCustomerSelect}
+                onCustomerDeselect={handleCustomerDeselect}
+                currentOperatorId={employeeId}
+                operatorStartLocation={operatorStartLocation}
+                reassignAllowed={isAdmin}
+              />
+            </div>
+          )}
+        </>
       )}
 
       {/* Action Buttons */}
@@ -600,7 +816,7 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
           </button>
         )}
         <button
-          onClick={handleAssign}
+          onClick={handleAssignClick}
           disabled={selectedCustomers.length === 0 || assigning}
           style={{
             padding: "0.75rem 1.5rem",
@@ -700,6 +916,18 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
           </div>
         </div>
       )}
+
+      {/* Assignment Confirmation Modal */}
+      <AssignmentConfirmationModal
+        isOpen={showAssignmentModal}
+        onClose={() => setShowAssignmentModal(false)}
+        onConfirm={handleAssignConfirm}
+        operatorName={operatorName || "Operator"}
+        selectedCount={selectedCustomers.length}
+        hasReassignments={hasReassignments}
+        reassignAllowed={isAdmin}
+        warnings={warnings}
+      />
     </div>
   );
 }
