@@ -371,7 +371,7 @@ function DashboardPageContent() {
 
         authListenerSetupRef.current = true; // Mark as set up
         
-        unsubscribe = await onAuthStateChanged(async (firebaseUser) => {
+        const unsubscribeFn = await onAuthStateChanged(async (firebaseUser) => {
           if (!firebaseUser) {
             if (mounted) {
               currentUserRef.current = null; // Clear user ref on logout
@@ -579,6 +579,7 @@ function DashboardPageContent() {
             }
           }
         });
+        unsubscribe = unsubscribeFn;
     } catch (err: any) {
       console.error("[Dashboard] Error initializing Firebase:", err);
       if (mounted) {
