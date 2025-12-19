@@ -616,26 +616,41 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
 
       {/* Geocode Button (for Map/Nearby views) */}
       {(currentView === "map" || currentView === "nearby") && (
-        <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <button
-            onClick={handleGeocodeCustomers}
-            disabled={geocodingCustomers}
-            style={{
-              padding: "0.5rem 1rem",
-              fontSize: "0.875rem",
-              border: "1px solid #3b82f6",
-              borderRadius: "6px",
-              background: "#ffffff",
-              color: "#3b82f6",
-              cursor: geocodingCustomers ? "not-allowed" : "pointer",
-              opacity: geocodingCustomers ? 0.5 : 1,
-            }}
-          >
-            {geocodingCustomers ? "Geocoding..." : "Geocode Missing Addresses"}
-          </button>
-          <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-            {customers.filter((c) => c.latitude && c.longitude).length} / {customers.length} customers geocoded
+        <div style={{ marginBottom: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+            <button
+              onClick={handleGeocodeCustomers}
+              disabled={geocodingCustomers}
+              style={{
+                padding: "0.5rem 1rem",
+                fontSize: "0.875rem",
+                border: "1px solid #3b82f6",
+                borderRadius: "6px",
+                background: "#ffffff",
+                color: "#3b82f6",
+                cursor: geocodingCustomers ? "not-allowed" : "pointer",
+                opacity: geocodingCustomers ? 0.5 : 1,
+              }}
+            >
+              {geocodingCustomers ? "Geocoding..." : "Geocode Missing Addresses"}
+            </button>
+            <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+              {customers.filter((c) => c.latitude && c.longitude).length} / {customers.length} customers geocoded
+            </div>
           </div>
+          {customers.filter((c) => !c.latitude || !c.longitude).length > 0 && (
+            <div style={{
+              padding: "0.75rem",
+              background: "#fef3c7",
+              border: "1px solid #f59e0b",
+              borderRadius: "6px",
+              fontSize: "0.875rem",
+              color: "#92400e",
+            }}>
+              ⚠️ {customers.filter((c) => !c.latitude || !c.longitude).length} customer(s) don't have coordinates and won't appear on the map. 
+              Click "Geocode Missing Addresses" to add them, or use the List view to select them.
+            </div>
+          )}
         </div>
       )}
 

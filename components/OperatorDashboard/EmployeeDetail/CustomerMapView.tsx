@@ -251,7 +251,16 @@ export function CustomerMapView({
           </div>
         </div>
 
-        {clusters.length === 0 ? (
+        {customersWithCoords.length === 0 ? (
+          <div style={{ color: "#6b7280", fontSize: "0.875rem", textAlign: "center", padding: "2rem" }}>
+            <div style={{ marginBottom: "0.5rem", fontWeight: "600" }}>No customers with coordinates</div>
+            <div style={{ fontSize: "0.75rem" }}>
+              {customers.length} customer(s) found, but none have geocoded addresses.
+              <br />
+              Click "Geocode Missing Addresses" above to add coordinates.
+            </div>
+          </div>
+        ) : clusters.length === 0 ? (
           <div style={{ color: "#6b7280", fontSize: "0.875rem", textAlign: "center", padding: "2rem" }}>
             No clusters found. Adjust radius or geocode more addresses.
           </div>
@@ -326,18 +335,28 @@ export function CustomerMapView({
                           <input
                             type="checkbox"
                             checked={selectedCustomerIds.includes(customer.id)}
+                            disabled={!canSelectCustomer(customer)}
                             onChange={() => {
                               if (selectedCustomerIds.includes(customer.id)) {
                                 onCustomerDeselect(customer.id);
                               } else {
                                 if (canSelectCustomer(customer)) {
                                   onCustomerSelect(customer.id);
+                                } else {
+                                  alert("This customer is assigned to another operator. Enable 'Reassign' to select.");
                                 }
                               }
                             }}
                             onClick={(e) => e.stopPropagation()}
                           />
-                          <span>{customer.name}</span>
+                          <span style={{ opacity: canSelectCustomer(customer) ? 1 : 0.5 }}>
+                            {customer.name}
+                            {customer.assignedTo && customer.assignedTo !== currentOperatorId && (
+                              <span style={{ fontSize: "0.7rem", color: "#ef4444", marginLeft: "0.25rem" }}>
+                                (Assigned to {customer.assignedToName || "another operator"})
+                              </span>
+                            )}
+                          </span>
                         </div>
                       ))}
                     </div>
