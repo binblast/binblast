@@ -474,6 +474,61 @@ function RegisterForm() {
             }
             
             console.log("[Register] User document created successfully with role:", userRole);
+            
+            // Send welcome email if this is a customer (not partner) and they have onboarding data or paid
+            // Only send if email hasn't been sent yet
+            const welcomeEmailSent = existingData?.welcomeEmailSent || false;
+            if (!isPartnerSignup && (onboardingData || stripeData) && !welcomeEmailSent && db && userCredential.user) {
+              try {
+                const { notifyCustomerWelcome } = await import("@/lib/email-utils");
+                const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
+                
+                const planIdForEmail = selectedPlanId || onboardingData?.planId;
+                const planName = planIdForEmail && planIdForEmail in PLAN_CONFIGS 
+                  ? PLAN_CONFIGS[planIdForEmail as keyof typeof PLAN_CONFIGS].name 
+                  : "Your Plan";
+                
+                // Get next cleaning date from onboarding data or scheduled cleaning
+                let nextCleaningDate = "";
+                if (onboardingData?.preferredServiceDate) {
+                  nextCleaningDate = new Date(onboardingData.preferredServiceDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  });
+                }
+                
+                // Send email (non-blocking)
+                notifyCustomerWelcome({
+                  email: email.toLowerCase(),
+                  firstName: onboardingData?.firstName || firstName,
+                  lastName: onboardingData?.lastName || lastName,
+                  planName: planName,
+                  addressLine1: onboardingData?.addressLine1,
+                  addressLine2: onboardingData?.addressLine2,
+                  city: onboardingData?.city,
+                  state: onboardingData?.state,
+                  zipCode: onboardingData?.zipCode,
+                  nextCleaningDate: nextCleaningDate,
+                }).catch((emailErr) => {
+                  console.error("[Register] Failed to send welcome email:", emailErr);
+                  // Don't block registration if email fails
+                });
+                
+                // Mark welcome email as sent
+                try {
+                  await updateDoc(userDocRef, {
+                    welcomeEmailSent: true,
+                    updatedAt: serverTimestamp(),
+                  });
+                } catch (updateErr) {
+                  console.error("[Register] Failed to mark welcome email as sent:", updateErr);
+                }
+              } catch (emailErr) {
+                console.error("[Register] Error sending welcome email:", emailErr);
+                // Don't block registration if email fails
+              }
+            }
           } catch (userDocErr: any) {
             console.error("[Register] Error creating user document:", userDocErr);
             // If it's a permission error, provide a more helpful message
@@ -550,63 +605,6 @@ function RegisterForm() {
           // If so, allow it (they're applying for partnership)
           if (redirectParam === "/partners/apply") {
             finalRedirect = redirectParam;
-          }
-        }
-        
-        // Send welcome email if this is a customer (not partner) and they have onboarding data or paid
-        // Only send if email hasn't been sent yet
-        const isPartner = !partnersSnapshot.empty || !partnersByEmailSnapshot.empty;
-        // Check if welcome email was already sent (from existing user doc or just created)
-        const welcomeEmailSent = existingData?.welcomeEmailSent || false;
-        if (!isPartnerSignup && !isPartner && (onboardingData || stripeData) && !welcomeEmailSent && db && userCredential.user) {
-          try {
-            const { notifyCustomerWelcome } = await import("@/lib/email-utils");
-            const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
-            
-            const planIdForEmail = selectedPlanId || onboardingData?.planId;
-            const planName = planIdForEmail && planIdForEmail in PLAN_CONFIGS 
-              ? PLAN_CONFIGS[planIdForEmail as keyof typeof PLAN_CONFIGS].name 
-              : "Your Plan";
-            
-            // Get next cleaning date from onboarding data or scheduled cleaning
-            let nextCleaningDate = "";
-            if (onboardingData?.preferredServiceDate) {
-              nextCleaningDate = new Date(onboardingData.preferredServiceDate).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              });
-            }
-            
-            // Send email (non-blocking)
-            notifyCustomerWelcome({
-              email: email.toLowerCase(),
-              firstName: onboardingData?.firstName || firstName,
-              lastName: onboardingData?.lastName || lastName,
-              planName: planName,
-              addressLine1: onboardingData?.addressLine1,
-              addressLine2: onboardingData?.addressLine2,
-              city: onboardingData?.city,
-              state: onboardingData?.state,
-              zipCode: onboardingData?.zipCode,
-              nextCleaningDate: nextCleaningDate,
-            }).catch((emailErr) => {
-              console.error("[Register] Failed to send welcome email:", emailErr);
-              // Don't block registration if email fails
-            });
-            
-            // Mark welcome email as sent
-            try {
-              await updateDoc(userDocRef, {
-                welcomeEmailSent: true,
-                updatedAt: serverTimestamp(),
-              });
-            } catch (updateErr) {
-              console.error("[Register] Failed to mark welcome email as sent:", updateErr);
-            }
-          } catch (emailErr) {
-            console.error("[Register] Error sending welcome email:", emailErr);
-            // Don't block registration if email fails
           }
         }
         
