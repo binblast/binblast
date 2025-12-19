@@ -4266,6 +4266,12 @@ function DashboardPageContent() {
                   // Don't clear pending data - keep it so modal can reappear if user refreshes or comes back via email link
                   // User can manually schedule later via the form, which will clear the pending data
                 }}
+                onChangeDate={() => {
+                  // Scroll to the schedule section and the form will be pre-filled with pending data
+                  if (scheduleSectionRef.current) {
+                    scheduleSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
               />
             )}
 
@@ -4301,6 +4307,25 @@ function DashboardPageContent() {
                     selectedPlan: user.selectedPlan,
                   }}
                   existingCleaning={(() => {
+                    // If user has pending cleaning data, use that to pre-fill the form
+                    if (user.pendingCleaningData && user.pendingCleaningConfirmation) {
+                      const pendingDate = new Date(user.pendingCleaningData.preferredServiceDate);
+                      const dateStr = pendingDate.toISOString().split('T')[0];
+                      return {
+                        id: '', // Not an existing cleaning, so no ID
+                        scheduledDate: dateStr,
+                        scheduledTime: user.pendingCleaningData.preferredTimeWindow,
+                        addressLine1: user.pendingCleaningData.addressLine1,
+                        addressLine2: user.pendingCleaningData.addressLine2,
+                        city: user.pendingCleaningData.city,
+                        state: user.pendingCleaningData.state,
+                        zipCode: user.pendingCleaningData.zipCode,
+                        trashDay: user.pendingCleaningData.preferredDayOfWeek || '',
+                        notes: user.pendingCleaningData.notes,
+                        status: 'upcoming' as const,
+                      };
+                    }
+                    
                     // Find the next upcoming cleaning
                     const upcomingCleaning = scheduledCleanings
                       .filter(c => c.status === "upcoming")

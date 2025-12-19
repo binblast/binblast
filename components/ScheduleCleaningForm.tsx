@@ -95,6 +95,31 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
   const [notes, setNotes] = useState(existingCleaning?.notes || "");
   const [isRescheduling, setIsRescheduling] = useState(!!existingCleaning);
 
+  // Update form fields when existingCleaning prop changes (e.g., when pending data is available)
+  useEffect(() => {
+    if (existingCleaning) {
+      setAddressLine1(existingCleaning.addressLine1 || "");
+      setAddressLine2(existingCleaning.addressLine2 || "");
+      setCity(existingCleaning.city || "");
+      setState(existingCleaning.state || "");
+      setZipCode(existingCleaning.zipCode || "");
+      setTrashDay(existingCleaning.trashDay || "");
+      setSelectedTime(existingCleaning.scheduledTime || "");
+      setNotes(existingCleaning.notes || "");
+      setIsRescheduling(!!existingCleaning.id); // Only rescheduling if it has an ID (existing cleaning)
+      
+      // Update date
+      if (existingCleaning.scheduledDate) {
+        try {
+          const date = parseDate(existingCleaning.scheduledDate);
+          setSelectedDateValue(formatDateForInput(date));
+        } catch (e) {
+          console.error("[ScheduleCleaningForm] Error parsing date:", e);
+        }
+      }
+    }
+  }, [existingCleaning]);
+
   const formatDateForInput = (date: Date): string => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');

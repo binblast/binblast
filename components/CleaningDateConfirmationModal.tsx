@@ -28,6 +28,7 @@ interface CleaningDateConfirmationModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   onClearPending?: () => void;
+  onChangeDate?: () => void; // Callback to handle "Change Date" - scroll to form, etc.
 }
 
 export function CleaningDateConfirmationModal({
@@ -39,6 +40,7 @@ export function CleaningDateConfirmationModal({
   onConfirm,
   onCancel,
   onClearPending,
+  onChangeDate,
 }: CleaningDateConfirmationModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -262,9 +264,12 @@ export function CleaningDateConfirmationModal({
           <div style={{ display: "flex", gap: "12px" }}>
             <button
               onClick={() => {
-                // Don't clear pending data - just close modal so user can schedule via form
+                // Don't clear pending data - just close modal and scroll to form
                 // The pending data will be cleared when they actually schedule a cleaning
                 onCancel();
+                if (onChangeDate) {
+                  onChangeDate();
+                }
               }}
               disabled={loading}
               style={{
