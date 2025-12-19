@@ -77,73 +77,42 @@ export async function GET(
     // Geocoding is disabled to prevent API timeouts
     // Coordinates should be added via separate geocoding process
 
-    // Get today's stops
-    let todayStops: any[];
-    try {
-      const todayStopsQuery = query(
-        cleaningsRef,
-        where("assignedEmployeeId", "==", employeeId),
-        where("scheduledDate", "==", today),
-        orderBy("scheduledTime", "asc")
-      );
-      const todaySnapshot = await getDocs(todayStopsQuery);
-      todayStops = todaySnapshot.docs.map(doc => ({
+    // Get today's stops - simplified to avoid index requirement
+    // Query without orderBy, then sort in memory
+    const todayStopsQuery = query(
+      cleaningsRef,
+      where("assignedEmployeeId", "==", employeeId),
+      where("scheduledDate", "==", today)
+    );
+    const todaySnapshot = await getDocs(todayStopsQuery);
+    const todayStops = todaySnapshot.docs
+      .map(doc => ({
         id: doc.id,
         ...doc.data(),
-      }));
-    } catch (error: any) {
-      // If orderBy fails (missing index), try without orderBy and sort manually
-      console.warn("OrderBy query failed, trying without orderBy:", error.message);
-      const todayStopsQuery = query(
-        cleaningsRef,
-        where("assignedEmployeeId", "==", employeeId),
-        where("scheduledDate", "==", today)
-      );
-      const todaySnapshot = await getDocs(todayStopsQuery);
-      todayStops = todaySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      // Sort manually by scheduledTime
-      todayStops.sort((a: any, b: any) => {
+      }))
+      // Sort manually by scheduledTime to avoid index requirement
+      .sort((a: any, b: any) => {
         const timeA = a.scheduledTime || "";
         const timeB = b.scheduledTime || "";
         return timeA.localeCompare(timeB);
       });
-    }
 
-    // Get next 7 days stops
-    let upcomingStops: any[];
-    try {
-      const upcomingStopsQuery = query(
-        cleaningsRef,
-        where("assignedEmployeeId", "==", employeeId),
-        where("scheduledDate", ">=", next7Days[1]),
-        where("scheduledDate", "<=", next7Days[6]),
-        orderBy("scheduledDate", "asc"),
-        orderBy("scheduledTime", "asc")
-      );
-      const upcomingSnapshot = await getDocs(upcomingStopsQuery);
-      upcomingStops = upcomingSnapshot.docs.map(doc => ({
+    // Get next 7 days stops - simplified to avoid index requirement
+    // Query without orderBy, then sort in memory
+    const upcomingStopsQuery = query(
+      cleaningsRef,
+      where("assignedEmployeeId", "==", employeeId),
+      where("scheduledDate", ">=", next7Days[1]),
+      where("scheduledDate", "<=", next7Days[6])
+    );
+    const upcomingSnapshot = await getDocs(upcomingStopsQuery);
+    const upcomingStops = upcomingSnapshot.docs
+      .map(doc => ({
         id: doc.id,
         ...doc.data(),
-      }));
-    } catch (error: any) {
-      // Fallback without orderBy
-      console.warn("OrderBy query failed for upcoming stops:", error.message);
-      const upcomingStopsQuery = query(
-        cleaningsRef,
-        where("assignedEmployeeId", "==", employeeId),
-        where("scheduledDate", ">=", next7Days[1]),
-        where("scheduledDate", "<=", next7Days[6])
-      );
-      const upcomingSnapshot = await getDocs(upcomingStopsQuery);
-      upcomingStops = upcomingSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      // Sort manually
-      upcomingStops.sort((a: any, b: any) => {
+      }))
+      // Sort manually by date then time to avoid index requirement
+      .sort((a: any, b: any) => {
         const dateA = a.scheduledDate || "";
         const dateB = b.scheduledDate || "";
         if (dateA !== dateB) return dateA.localeCompare(dateB);
@@ -151,7 +120,6 @@ export async function GET(
         const timeB = b.scheduledTime || "";
         return timeA.localeCompare(timeB);
       });
-    }
 
     // Process stops to add coordinates (non-blocking - don't wait for geocoding)
     // Skip geocoding if it causes issues - just return stops with existing coordinates
