@@ -586,9 +586,9 @@ function DashboardPageContent() {
         setLoading(false);
       }
     }
+    }
 
     loadUserData();
-  }
 
     return () => {
       mounted = false;
