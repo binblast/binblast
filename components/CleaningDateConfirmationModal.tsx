@@ -194,6 +194,7 @@ export function CleaningDateConfirmationModal({
             background: "#16a34a",
             borderTopLeftRadius: "12px",
             borderTopRightRadius: "12px",
+            textAlign: "center",
           }}
         >
           <h2 style={{ margin: 0, fontSize: "24px", fontWeight: "700", color: "#ffffff" }}>
