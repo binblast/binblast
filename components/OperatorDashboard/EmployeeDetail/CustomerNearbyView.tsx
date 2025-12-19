@@ -272,6 +272,8 @@ export function CustomerNearbyView({
               <option value="3">3 miles</option>
               <option value="5">5 miles</option>
               <option value="10">10 miles</option>
+              <option value="30">30 miles</option>
+              <option value="50">50 miles</option>
             </select>
             {radiusFilter && (
               <button
