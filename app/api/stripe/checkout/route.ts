@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { planId, userId, applyCredit, referralCode, partnerCode } = body; // applyCredit: boolean flag from user, referralCode: string code, partnerCode: partner's unique code
+    const { planId, userId, applyCredit, referralCode, partnerCode, onboardingData } = body; // onboardingData: customer info collected before checkout
 
     if (!planId) {
       return NextResponse.json(
@@ -61,6 +61,20 @@ export async function POST(req: NextRequest) {
       },
       line_items: [],
     };
+
+    // If onboarding data is provided, add customer info and store in metadata
+    if (onboardingData) {
+      // Pre-fill customer email and name in checkout
+      sessionParams.customer_email = onboardingData.email;
+      sessionParams.customer_creation = "always";
+      
+      // Store onboarding data in metadata (JSON stringified)
+      sessionParams.metadata = {
+        ...sessionParams.metadata,
+        onboardingData: JSON.stringify(onboardingData),
+        hasOnboardingData: "true",
+      };
+    }
 
     // Handle referral code discount (for both logged-in and non-logged-in users)
     let referralCodeDiscount = 0;

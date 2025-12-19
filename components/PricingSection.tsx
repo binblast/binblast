@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PlanConfirmationModal } from "./PlanConfirmationModal";
 import { CustomQuoteWizard } from "./CustomQuoteWizard";
+import { CustomerOnboardingWizard } from "./CustomerOnboardingWizard";
 import { useFirebase } from "@/lib/firebase-context";
 
 
@@ -110,6 +111,8 @@ export function PricingSection() {
   const [availableCredit, setAvailableCredit] = useState<number>(0);
   const [loadingCredit, setLoadingCredit] = useState(false);
   const [showQuoteWizard, setShowQuoteWizard] = useState(false);
+  const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
+  const [onboardingData, setOnboardingData] = useState<any>(null);
   
   // Get referral code and partner code from URL
   const referralCodeFromUrl = searchParams.get("ref") || "";
@@ -195,19 +198,81 @@ export function PricingSection() {
       return;
     }
 
-    // Show confirmation modal instead of immediately redirecting
-    console.log("[PricingSection] Setting selectedPlanId to:", planId);
+    // If user is not logged in, show onboarding wizard first
+    if (!userId) {
+      console.log("[PricingSection] User not logged in, showing onboarding wizard");
+      setSelectedPlanId(planId);
+      setShowOnboardingWizard(true);
+      return;
+    }
+
+    // If user is logged in, show confirmation modal
+    console.log("[PricingSection] User logged in, showing confirmation modal");
     setSelectedPlanId(planId);
+  };
+
+  const handleOnboardingComplete = async (data: any) => {
+    console.log("[PricingSection] Onboarding completed:", data);
+    setOnboardingData(data);
+    setShowOnboardingWizard(false);
+    
+    // If user is not logged in, proceed directly to checkout with onboarding data
+    // The checkout will create the account after payment
+    if (!userId && selectedPlanId) {
+      try {
+        setLoadingPlanId(selectedPlanId);
+        const response = await fetch("/api/stripe/checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ 
+            planId: selectedPlanId,
+            onboardingData: data,
+            referralCode: referralCodeFromUrl || undefined,
+            partnerCode: partnerCodeFromUrl || undefined,
+          }),
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+          throw new Error(responseData.error || "Failed to create checkout session");
+        }
+
+        // Redirect to Stripe Checkout
+        setSelectedPlanId(null);
+        setOnboardingData(null);
+        if (responseData.url) {
+          window.location.href = responseData.url;
+        } else {
+          throw new Error("No checkout URL returned");
+        }
+      } catch (error: any) {
+        console.error("Error creating checkout session:", error);
+        alert(error.message || "Failed to start checkout. Please try again.");
+        setLoadingPlanId(null);
+      }
+    } else {
+      // User is logged in, show confirmation modal
+      // The confirmation modal will handle checkout with onboarding data
+    }
   };
 
   const handleConfirmCheckout = async (applyCredit: boolean, referralCode?: string) => {
     if (!selectedPlanId) return;
 
+    // If onboarding data exists but user is not logged in, they need to complete onboarding first
+    if (onboardingData && !userId) {
+      setShowOnboardingWizard(true);
+      return;
+    }
+
     setLoadingPlanId(selectedPlanId);
     setLoadingCredit(true);
 
     try {
-      // Create Stripe checkout session with userId, applyCredit flag, referral code, and partner code
+      // Create Stripe checkout session with userId, applyCredit flag, referral code, partner code, and onboarding data
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: {
@@ -219,6 +284,7 @@ export function PricingSection() {
           applyCredit: applyCredit && availableCredit > 0, // Only apply if user selected it and has credit
           referralCode: referralCode || referralCodeFromUrl || undefined, // Pass referral code if provided
           partnerCode: partnerCodeFromUrl || undefined, // Pass partner code from URL if present
+          onboardingData: onboardingData || undefined, // Pass onboarding data if available
         }),
       });
 
@@ -251,7 +317,20 @@ export function PricingSection() {
 
   return (
     <>
-      {selectedPlanId && selectedPlanId !== "commercial" && (
+      {showOnboardingWizard && selectedPlanId && selectedPlanId !== "commercial" && (
+        <CustomerOnboardingWizard
+          planId={selectedPlanId}
+          planName={PLANS.find(p => p.id === selectedPlanId)?.name || ADDITIONAL_PLANS.find(p => p.id === selectedPlanId)?.name || "Plan"}
+          isOpen={showOnboardingWizard}
+          onClose={() => {
+            setShowOnboardingWizard(false);
+            setSelectedPlanId(null);
+            setOnboardingData(null);
+          }}
+          onComplete={handleOnboardingComplete}
+        />
+      )}
+      {selectedPlanId && selectedPlanId !== "commercial" && !showOnboardingWizard && (
         <PlanConfirmationModal
           planId={selectedPlanId}
           isOpen={true}

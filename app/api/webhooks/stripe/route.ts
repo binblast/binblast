@@ -98,6 +98,38 @@ export async function POST(req: NextRequest) {
               userId = emailUsers.docs[0].id;
             }
           }
+
+          // Parse onboarding data from metadata if available
+          let onboardingData: any = null;
+          if (session.metadata?.hasOnboardingData === "true" && session.metadata?.onboardingData) {
+            try {
+              onboardingData = JSON.parse(session.metadata.onboardingData);
+              console.log("[Webhook] Parsed onboarding data:", onboardingData);
+            } catch (parseError) {
+              console.error("[Webhook] Error parsing onboarding data:", parseError);
+            }
+          }
+
+          // Store onboarding data in a temporary collection for use during registration
+          // This allows the register page to access the data when creating the account
+          if (onboardingData && customerEmail && !userId) {
+            try {
+              const onboardingRef = doc(collection(db, "onboardingData"));
+              await setDoc(onboardingRef, {
+                email: customerEmail.toLowerCase(),
+                sessionId: session.id,
+                onboardingData: onboardingData,
+                createdAt: serverTimestamp(),
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Expire after 24 hours
+              });
+              console.log("[Webhook] Stored onboarding data for registration:", {
+                email: customerEmail,
+                sessionId: session.id,
+              });
+            } catch (onboardingError) {
+              console.error("[Webhook] Error storing onboarding data:", onboardingError);
+            }
+          }
           
           // Mark credits as used if they were applied in checkout (idempotent)
           if (session.metadata?.creditsToUse && session.payment_status === 'paid' && userId) {

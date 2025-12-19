@@ -248,7 +248,7 @@ function RegisterForm() {
       // CRITICAL: Use safe import wrapper to ensure Firebase app exists
       const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
       const firestore = await safeImportFirestore();
-      const { collection, doc, setDoc, serverTimestamp, query, where, getDocs } = firestore;
+      const { collection, doc, setDoc, updateDoc, serverTimestamp, query, where, getDocs } = firestore;
       
       if (db && userCredential.user) {
         // IMPORTANT: Check if user is already a partner - partners should NOT have user documents
@@ -375,11 +375,41 @@ function RegisterForm() {
             const existingUserDoc = await getDocCheck(userDocRef);
             const existingData = existingUserDoc.exists() ? existingUserDoc.data() : null;
 
+            // Fetch onboarding data if available (from checkout session)
+            let onboardingData: any = null;
+            if (sessionId && db) {
+              try {
+                const onboardingQuery = query(
+                  collection(db, "onboardingData"),
+                  where("email", "==", email.toLowerCase()),
+                  where("sessionId", "==", sessionId)
+                );
+                const onboardingSnapshot = await getDocs(onboardingQuery);
+                if (!onboardingSnapshot.empty) {
+                  onboardingData = onboardingSnapshot.docs[0].data().onboardingData;
+                  console.log("[Register] Found onboarding data:", onboardingData);
+                  
+                  // Delete onboarding data after use (cleanup)
+                  await setDoc(onboardingSnapshot.docs[0].ref, {
+                    used: true,
+                    usedAt: serverTimestamp(),
+                  }, { merge: true });
+                }
+              } catch (onboardingErr) {
+                console.warn("[Register] Error fetching onboarding data:", onboardingErr);
+              }
+            }
+
+            // Use onboarding data if available, otherwise use form data
+            const finalFirstName = onboardingData?.firstName || firstName;
+            const finalLastName = onboardingData?.lastName || lastName;
+            const finalPhone = onboardingData?.phone || phone || null;
+
             await setDoc(userDocRef, {
-              firstName,
-              lastName,
+              firstName: finalFirstName,
+              lastName: finalLastName,
               email: email.toLowerCase(), // Store email in lowercase to match Firebase Auth token
-              phone: phone || null,
+              phone: finalPhone,
               selectedPlan: selectedPlanId || null,
               stripeCustomerId: stripeData?.customerId || null,
               stripeSubscriptionId: stripeData?.subscriptionId || null,
@@ -388,13 +418,60 @@ function RegisterForm() {
               referralCode: generatedCode, // Generate unique code on registration
               referralCount: 0, // Initialize referral count
               role: userRole, // Set role based on email check (customer, operator, etc.)
+              // Add address from onboarding data if available
+              ...(onboardingData ? {
+                addressLine1: onboardingData.addressLine1 || null,
+                addressLine2: onboardingData.addressLine2 || null,
+                city: onboardingData.city || null,
+                state: onboardingData.state || null,
+                zipCode: onboardingData.zipCode || null,
+              } : {}),
               // If partner signup, mark as partner account
               ...(isPartnerSignup ? { partnerAccountCreated: true } : {}),
               // If user already exists and was accepted as partner, preserve that status
               ...(existingData?.partnerAccepted === true ? { partnerAccepted: true } : {}),
               createdAt: existingUserDoc.exists() ? existingData?.createdAt : serverTimestamp(),
               updatedAt: serverTimestamp(),
+              welcomeEmailSent: existingData?.welcomeEmailSent || false, // Preserve existing flag
             }, { merge: true });
+
+            // Create scheduled cleaning if onboarding data is available
+            if (onboardingData && onboardingData.preferredServiceDate && db) {
+              try {
+                const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
+                const planId = selectedPlanId || onboardingData.planId;
+                const planConfig = planId ? PLAN_CONFIGS[planId as keyof typeof PLAN_CONFIGS] : null;
+                
+                if (planConfig && onboardingData.addressLine1) {
+                  const cleaningRef = doc(collection(db, "scheduledCleanings"));
+                  const preferredDate = new Date(onboardingData.preferredServiceDate);
+                  
+                  await setDoc(cleaningRef, {
+                    userId: userCredential.user.uid,
+                    customerEmail: email.toLowerCase(),
+                    customerName: `${finalFirstName} ${finalLastName}`,
+                    addressLine1: onboardingData.addressLine1,
+                    addressLine2: onboardingData.addressLine2 || null,
+                    city: onboardingData.city,
+                    state: onboardingData.state,
+                    zipCode: onboardingData.zipCode,
+                    scheduledDate: preferredDate.toISOString().split('T')[0],
+                    scheduledTime: onboardingData.preferredTimeWindow || "Morning",
+                    planId: planId,
+                    planName: planConfig.name,
+                    status: "upcoming",
+                    notes: onboardingData.notes || null,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                  });
+                  
+                  console.log("[Register] Created scheduled cleaning from onboarding data:", cleaningRef.id);
+                }
+              } catch (cleaningErr) {
+                console.error("[Register] Error creating scheduled cleaning:", cleaningErr);
+                // Don't fail registration if cleaning creation fails
+              }
+            }
             
             console.log("[Register] User document created successfully with role:", userRole);
           } catch (userDocErr: any) {
@@ -473,6 +550,63 @@ function RegisterForm() {
           // If so, allow it (they're applying for partnership)
           if (redirectParam === "/partners/apply") {
             finalRedirect = redirectParam;
+          }
+        }
+        
+        // Send welcome email if this is a customer (not partner) and they have onboarding data or paid
+        // Only send if email hasn't been sent yet
+        const isPartner = !partnersSnapshot.empty || !partnersByEmailSnapshot.empty;
+        // Check if welcome email was already sent (from existing user doc or just created)
+        const welcomeEmailSent = existingData?.welcomeEmailSent || false;
+        if (!isPartnerSignup && !isPartner && (onboardingData || stripeData) && !welcomeEmailSent && db && userCredential.user) {
+          try {
+            const { notifyCustomerWelcome } = await import("@/lib/email-utils");
+            const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
+            
+            const planIdForEmail = selectedPlanId || onboardingData?.planId;
+            const planName = planIdForEmail && planIdForEmail in PLAN_CONFIGS 
+              ? PLAN_CONFIGS[planIdForEmail as keyof typeof PLAN_CONFIGS].name 
+              : "Your Plan";
+            
+            // Get next cleaning date from onboarding data or scheduled cleaning
+            let nextCleaningDate = "";
+            if (onboardingData?.preferredServiceDate) {
+              nextCleaningDate = new Date(onboardingData.preferredServiceDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              });
+            }
+            
+            // Send email (non-blocking)
+            notifyCustomerWelcome({
+              email: email.toLowerCase(),
+              firstName: onboardingData?.firstName || firstName,
+              lastName: onboardingData?.lastName || lastName,
+              planName: planName,
+              addressLine1: onboardingData?.addressLine1,
+              addressLine2: onboardingData?.addressLine2,
+              city: onboardingData?.city,
+              state: onboardingData?.state,
+              zipCode: onboardingData?.zipCode,
+              nextCleaningDate: nextCleaningDate,
+            }).catch((emailErr) => {
+              console.error("[Register] Failed to send welcome email:", emailErr);
+              // Don't block registration if email fails
+            });
+            
+            // Mark welcome email as sent
+            try {
+              await updateDoc(userDocRef, {
+                welcomeEmailSent: true,
+                updatedAt: serverTimestamp(),
+              });
+            } catch (updateErr) {
+              console.error("[Register] Failed to mark welcome email as sent:", updateErr);
+            }
+          } catch (emailErr) {
+            console.error("[Register] Error sending welcome email:", emailErr);
+            // Don't block registration if email fails
           }
         }
         

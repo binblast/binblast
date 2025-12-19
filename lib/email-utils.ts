@@ -157,3 +157,44 @@ export async function notifyTeamMemberInvitation(teamMemberData: {
     // Don't throw - email failure shouldn't block team member creation
   }
 }
+
+/**
+ * Send welcome email to new customer after account creation
+ */
+export async function notifyCustomerWelcome(customerData: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  planName: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  nextCleaningDate?: string;
+}): Promise<void> {
+  // Hardcoded template ID for customer welcome email
+  const templateId = "template_ent7lyj";
+
+  const dashboardLink = "https://binblast.vercel.app/dashboard";
+
+  // Try to send email (non-blocking)
+  try {
+    await sendEmailJS(templateId, {
+      to_email: customerData.email,
+      firstName: customerData.firstName || "",
+      lastName: customerData.lastName || "",
+      planName: customerData.planName || "Your Plan",
+      addressLine1: customerData.addressLine1 || "",
+      addressLine2: customerData.addressLine2 || "",
+      city: customerData.city || "",
+      state: customerData.state || "",
+      zipCode: customerData.zipCode || "",
+      nextCleaningDate: customerData.nextCleaningDate || "",
+      dashboardLink: dashboardLink,
+    });
+  } catch (error: any) {
+    console.error("[Notify Customer Welcome] Failed to send welcome email:", error?.message || error);
+    // Don't throw - email failure shouldn't block registration
+  }
+}
