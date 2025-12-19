@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 /**
  * Verify Firebase ID token from Authorization header
  */
-async function verifyAuthToken(req: NextRequest): Promise<string | null> {
+async function verifyAuthToken(req: NextRequest): Promise<{ uid: string; email?: string } | null> {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -26,7 +26,10 @@ async function verifyAuthToken(req: NextRequest): Promise<string | null> {
     const adminAuth = adminApp.auth();
     
     const decodedToken = await adminAuth.verifyIdToken(idToken);
-    return decodedToken.uid;
+    return {
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+    };
   } catch (error) {
     console.error("[Payouts API] Token verification error:", error);
     return null;
@@ -36,26 +39,28 @@ async function verifyAuthToken(req: NextRequest): Promise<string | null> {
 export async function GET(req: NextRequest) {
   try {
     // Verify authentication token
-    const userId = await verifyAuthToken(req);
+    const authData = await verifyAuthToken(req);
     
-    if (!userId) {
+    if (!authData) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    // Get partner data (any status)
-    const partner = await getPartner(userId);
+    const { uid: userId, email: userEmail } = authData;
+
+    // Get partner data (any status) - try userId first, then email as fallback
+    const partner = await getPartner(userId, userEmail);
     if (!partner) {
-      console.error("[Payouts API] Partner not found for userId:", userId);
+      console.error("[Payouts API] Partner not found for userId:", userId, "email:", userEmail);
       return NextResponse.json(
         { error: "Partner not found" },
         { status: 404 }
       );
     }
     
-    console.log("[Payouts API] Found partner:", { id: partner.id, status: partner.status, userId });
+    console.log("[Payouts API] Found partner:", { id: partner.id, status: partner.status, userId, userEmail });
 
     // Only active partners can view payouts
     if (partner.status !== "active") {

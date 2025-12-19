@@ -7,9 +7,10 @@ import { safeImportFirestore } from "./firebase-module-loader";
 /**
  * Check if a user is a partner (any status)
  * @param userId Firebase user ID
+ * @param userEmail Optional email to use as fallback if userId lookup fails
  * @returns Partner data if user is a partner, null otherwise
  */
-export async function getPartner(userId: string): Promise<{
+export async function getPartner(userId: string, userEmail?: string | null): Promise<{
   id: string;
   businessName: string;
   referralCode: string;
@@ -22,12 +23,21 @@ export async function getPartner(userId: string): Promise<{
     const firestore = await safeImportFirestore();
     const { collection, query, where, getDocs } = firestore;
 
-    // Check for any partner status (not just active)
-    const partnersQuery = query(
+    // First, try to find by userId
+    let partnersQuery = query(
       collection(db, "partners"),
       where("userId", "==", userId)
     );
-    const partnersSnapshot = await getDocs(partnersQuery);
+    let partnersSnapshot = await getDocs(partnersQuery);
+
+    // If not found by userId and email is provided, try email as fallback
+    if (partnersSnapshot.empty && userEmail) {
+      partnersQuery = query(
+        collection(db, "partners"),
+        where("email", "==", userEmail)
+      );
+      partnersSnapshot = await getDocs(partnersQuery);
+    }
 
     if (partnersSnapshot.empty) {
       return null;
