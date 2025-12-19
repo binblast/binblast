@@ -172,7 +172,7 @@ export default function EmployeeDashboardPage() {
   }, [employee?.id]);
 
   const setupJobsListener = useCallback(async (): Promise<(() => void) | undefined> => {
-    if (!employee?.id || !clockInStatus?.isActive) return;
+    if (!employee?.id) return; // Show jobs even if not clocked in
 
     try {
       const db = await getDbInstance();
@@ -184,18 +184,25 @@ export default function EmployeeDashboardPage() {
 
       const today = getTodayDateString();
       const cleaningsRef = collection(db, "scheduledCleanings");
+      
+      // Query for jobs assigned to this employee (today and future)
+      // Use >= today to show all assigned jobs, not just today's
       const jobsQuery = query(
         cleaningsRef,
         where("assignedEmployeeId", "==", employee.id),
-        where("scheduledDate", "==", today)
+        where("scheduledDate", ">=", today)
       );
 
       const unsubscribe = onSnapshot(jobsQuery, (snapshot) => {
-        const updatedJobs = snapshot.docs.map((doc) => ({
+        const allJobs = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         })) as Job[];
-        setJobs(updatedJobs);
+        
+        // Filter to only show today's jobs for the main display
+        // But keep all jobs in state for reference
+        const todayJobs = allJobs.filter((job: any) => job.scheduledDate === today);
+        setJobs(todayJobs);
         loadPayPreview(); // Refresh pay preview when jobs change
       });
 
@@ -204,7 +211,7 @@ export default function EmployeeDashboardPage() {
       console.error("Error setting up jobs listener:", error);
       return undefined;
     }
-  }, [employee?.id, clockInStatus?.isActive, loadPayPreview]);
+  }, [employee?.id, loadPayPreview]);
 
   useEffect(() => {
     if (employee?.id) {
@@ -230,9 +237,9 @@ export default function EmployeeDashboardPage() {
   }, [employee?.id, loadCertificationStatus, loadClockInStatus, loadJobs, loadPayPreview]);
 
   useEffect(() => {
-    if (!clockInStatus?.isActive || !employee?.id) return;
+    if (!employee?.id) return;
     
-    // Set up real-time listener for jobs
+    // Set up real-time listener for jobs (even if not clocked in, so employees can see assigned jobs)
     let unsubscribe: (() => void) | undefined;
     let isMounted = true;
     
@@ -251,7 +258,7 @@ export default function EmployeeDashboardPage() {
         unsubscribe();
       }
     };
-  }, [clockInStatus?.isActive, employee?.id, setupJobsListener]);
+  }, [employee?.id, setupJobsListener]);
 
   const loadEmployeeData = async (userId: string) => {
     try {
