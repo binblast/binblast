@@ -362,7 +362,6 @@ export default function EmployeeDetailPage() {
                   <div style={{ fontSize: "1rem", fontWeight: "600", color: "#111827" }}>
                     Current Shift: {shiftStatus?.shiftStatus === "clocked_in" ? "Clocked In" :
                                    shiftStatus?.shiftStatus === "completed" ? "Completed" : "Not Started"}
-                    {shiftStatus?.shiftStartTime && ` • Started: ${formatTime(shiftStatus.shiftStartTime)}`}
                   </div>
                 </div>
                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>

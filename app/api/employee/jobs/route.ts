@@ -61,18 +61,23 @@ export async function GET(req: NextRequest) {
     const today = getTodayDateString();
     const cleaningsRef = collection(db, "scheduledCleanings");
     
-    // Get jobs assigned to this employee for today
+    // Get jobs assigned to this employee
+    // Query only by assignedEmployeeId to avoid index requirement, then filter by date in memory
     const jobsQuery = query(
       cleaningsRef,
-      where("assignedEmployeeId", "==", employeeId),
-      where("scheduledDate", "==", today)
+      where("assignedEmployeeId", "==", employeeId)
     );
 
     const snapshot = await getDocs(jobsQuery);
-    const jobs = snapshot.docs.map((doc) => ({
+    const allJobs = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    })) as Array<{ id: string; addressLine1?: string; [key: string]: any }>;
+    })) as Array<{ id: string; addressLine1?: string; scheduledDate?: string; [key: string]: any }>;
+    
+    // Filter to only show today's jobs
+    const jobs = allJobs.filter((job) => {
+      return job.scheduledDate === today;
+    });
     
     // Sort by address on client side for route planning
     jobs.sort((a, b) => {
