@@ -185,22 +185,31 @@ export default function EmployeeDashboardPage() {
       const today = getTodayDateString();
       const cleaningsRef = collection(db, "scheduledCleanings");
       
-      // Query for jobs assigned to this employee (today and future)
-      // Use >= today to show all assigned jobs, not just today's
+      // Query for jobs assigned to this employee
+      // Query only by assignedEmployeeId to avoid index requirement, then filter by date in memory
       const jobsQuery = query(
         cleaningsRef,
-        where("assignedEmployeeId", "==", employee.id),
-        where("scheduledDate", ">=", today)
+        where("assignedEmployeeId", "==", employee.id)
       );
 
       const unsubscribe = onSnapshot(jobsQuery, (snapshot) => {
-        const allJobs = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Job[];
+        const allJobs = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as Job[]
+          // Filter to only show today's and future jobs (scheduledDate >= today)
+          .filter((job: any) => {
+            return job.scheduledDate && job.scheduledDate >= today;
+          })
+          // Sort by date (today's first)
+          .sort((a: any, b: any) => {
+            const dateA = a.scheduledDate || "";
+            const dateB = b.scheduledDate || "";
+            return dateA.localeCompare(dateB);
+          });
         
         // Filter to only show today's jobs for the main display
-        // But keep all jobs in state for reference
         const todayJobs = allJobs.filter((job: any) => job.scheduledDate === today);
         setJobs(todayJobs);
         loadPayPreview(); // Refresh pay preview when jobs change
