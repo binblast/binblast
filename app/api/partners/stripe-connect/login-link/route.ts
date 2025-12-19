@@ -1,57 +1,59 @@
 // app/api/partners/stripe-connect/login-link/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthInstance } from "@/lib/firebase";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { getActivePartner } from "@/lib/partner-auth";
 import { stripe } from "@/lib/stripe";
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Verify Firebase ID token from Authorization header
+ */
+async function verifyAuthToken(req: NextRequest): Promise<string | null> {
+  try {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return null;
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    if (!idToken) {
+      return null;
+    }
+
+    const { getAdminApp } = await import("@/lib/firebase-admin");
+    const adminApp = await getAdminApp();
+    const adminAuth = adminApp.auth();
+    
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    return decodedToken.uid;
+  } catch (error) {
+    console.error("[Stripe Login Link] Token verification error:", error);
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // Get authenticated user
-    const auth = await getAuthInstance();
-    const user = auth?.currentUser;
+    // Verify authentication token
+    const userId = await verifyAuthToken(req);
     
-    if (!user) {
+    if (!userId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 500 }
-      );
-    }
-
-    const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs } = firestore;
-
-    // Find partner by userId or email
-    const partnersRef = collection(db, "partners");
-    let partnerQuery = query(partnersRef, where("userId", "==", user.uid));
-    let partnerSnapshot = await getDocs(partnerQuery);
-
-    if (partnerSnapshot.empty) {
-      // Try finding by email as fallback
-      partnerQuery = query(partnersRef, where("email", "==", user.email));
-      partnerSnapshot = await getDocs(partnerQuery);
-    }
-
-    if (partnerSnapshot.empty) {
+    // Get partner data
+    const partner = await getActivePartner(userId);
+    if (!partner) {
       return NextResponse.json(
         { error: "Partner not found" },
         { status: 404 }
       );
     }
 
-    const partnerDoc = partnerSnapshot.docs[0];
-    const partnerData = partnerDoc.data();
-    const stripeConnectedAccountId = partnerData.stripeConnectedAccountId;
+    const stripeConnectedAccountId = (partner as any).stripeConnectedAccountId;
 
     if (!stripeConnectedAccountId) {
       return NextResponse.json(

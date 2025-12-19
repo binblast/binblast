@@ -2,22 +2,59 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { getAuthInstance } from "@/lib/firebase";
+import { getActivePartner } from "@/lib/partner-auth";
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Verify Firebase ID token from Authorization header
+ */
+async function verifyAuthToken(req: NextRequest): Promise<string | null> {
+  try {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return null;
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    if (!idToken) {
+      return null;
+    }
+
+    const { getAdminApp } = await import("@/lib/firebase-admin");
+    const adminApp = await getAdminApp();
+    const adminAuth = adminApp.auth();
+    
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    return decodedToken.uid;
+  } catch (error) {
+    console.error("[Payouts API] Token verification error:", error);
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
-    // Get authenticated user
-    const auth = await getAuthInstance();
-    const user = auth?.currentUser;
+    // Verify authentication token
+    const userId = await verifyAuthToken(req);
     
-    if (!user) {
+    if (!userId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
+
+    // Get partner data
+    const partner = await getActivePartner(userId);
+    if (!partner) {
+      return NextResponse.json(
+        { error: "Partner not found" },
+        { status: 404 }
+      );
+    }
+
+    const partnerId = partner.id;
 
     const db = await getDbInstance();
     if (!db) {
@@ -29,27 +66,6 @@ export async function GET(req: NextRequest) {
 
     const firestore = await safeImportFirestore();
     const { collection, query, where, getDocs, orderBy } = firestore;
-
-    // Find partner by userId or email
-    const partnersRef = collection(db, "partners");
-    let partnerQuery = query(partnersRef, where("userId", "==", user.uid));
-    let partnerSnapshot = await getDocs(partnerQuery);
-
-    if (partnerSnapshot.empty) {
-      // Try finding by email as fallback
-      partnerQuery = query(partnersRef, where("email", "==", user.email));
-      partnerSnapshot = await getDocs(partnerQuery);
-    }
-
-    if (partnerSnapshot.empty) {
-      return NextResponse.json(
-        { error: "Partner not found" },
-        { status: 404 }
-      );
-    }
-
-    const partnerDoc = partnerSnapshot.docs[0];
-    const partnerId = partnerDoc.id;
 
     // Get payout history
     const payoutsRef = collection(db, "partnerPayouts");

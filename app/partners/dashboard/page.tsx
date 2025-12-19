@@ -575,10 +575,33 @@ export default function PartnerDashboardPage() {
     }
   }
 
+  async function getAuthToken(): Promise<string | null> {
+    try {
+      const { getAuthInstance } = await import("@/lib/firebase");
+      const auth = await getAuthInstance();
+      const user = auth?.currentUser;
+      if (user) {
+        return await user.getIdToken();
+      }
+      return null;
+    } catch (error) {
+      console.error("Error getting auth token:", error);
+      return null;
+    }
+  }
+
   async function loadPayouts() {
     try {
       setLoadingPayouts(true);
-      const response = await fetch('/api/partners/payouts');
+      const token = await getAuthToken();
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch('/api/partners/payouts', {
+        headers,
+      });
       if (response.ok) {
         const data = await response.json();
         setPayouts(data.payouts || []);
@@ -593,8 +616,17 @@ export default function PartnerDashboardPage() {
   async function handleViewStripeAccount() {
     try {
       setLoadingStripeLink(true);
+      const token = await getAuthToken();
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch('/api/partners/stripe-connect/login-link', {
         method: 'POST',
+        headers,
       });
       
       const data = await response.json();
