@@ -197,20 +197,22 @@ export default function EmployeeDashboardPage() {
           .map((doc) => ({
             id: doc.id,
             ...doc.data(),
-          })) as Job[]
-          // Filter to only show today's and future jobs (scheduledDate >= today)
-          .filter((job: any) => {
-            return job.scheduledDate && job.scheduledDate >= today;
-          })
-          // Sort by date (today's first)
-          .sort((a: any, b: any) => {
-            const dateA = a.scheduledDate || "";
-            const dateB = b.scheduledDate || "";
-            return dateA.localeCompare(dateB);
-          });
+          })) as Job[];
+        
+        // Filter to only show today's and future jobs (scheduledDate >= today)
+        const filteredJobs = allJobs.filter((job: any) => {
+          return job.scheduledDate && job.scheduledDate >= today;
+        });
+        
+        // Sort by date (today's first)
+        filteredJobs.sort((a: any, b: any) => {
+          const dateA = a.scheduledDate || "";
+          const dateB = b.scheduledDate || "";
+          return dateA.localeCompare(dateB);
+        });
         
         // Filter to only show today's jobs for the main display
-        const todayJobs = allJobs.filter((job: any) => job.scheduledDate === today);
+        const todayJobs = filteredJobs.filter((job: any) => job.scheduledDate === today);
         setJobs(todayJobs);
         loadPayPreview(); // Refresh pay preview when jobs change
       });
