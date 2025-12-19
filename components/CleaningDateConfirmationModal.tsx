@@ -197,7 +197,7 @@ export function CleaningDateConfirmationModal({
           }}
         >
           <h2 style={{ margin: 0, fontSize: "24px", fontWeight: "700", color: "#ffffff" }}>
-            ✅ Confirm Your Cleaning Date
+            Confirm Your Cleaning Date
           </h2>
         </div>
 
@@ -266,10 +266,14 @@ export function CleaningDateConfirmationModal({
               onClick={() => {
                 // Don't clear pending data - just close modal and scroll to form
                 // The pending data will be cleared when they actually schedule a cleaning
-                onCancel();
+                // Call onChangeDate first to scroll, then close modal
                 if (onChangeDate) {
                   onChangeDate();
                 }
+                // Small delay to ensure scroll happens before modal closes
+                setTimeout(() => {
+                  onCancel();
+                }, 100);
               }}
               disabled={loading}
               style={{

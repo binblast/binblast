@@ -4268,9 +4268,14 @@ function DashboardPageContent() {
                 }}
                 onChangeDate={() => {
                   // Scroll to the schedule section and the form will be pre-filled with pending data
-                  if (scheduleSectionRef.current) {
-                    scheduleSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
+                  // Use setTimeout to ensure this happens after modal starts closing
+                  setTimeout(() => {
+                    if (scheduleSectionRef.current) {
+                      scheduleSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      // Also add a small offset to account for any fixed headers
+                      window.scrollBy(0, -20);
+                    }
+                  }, 150);
                 }}
               />
             )}
