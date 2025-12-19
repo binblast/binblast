@@ -247,6 +247,9 @@ export function CustomerMapView({
               <option value={0.5}>0.5 mi</option>
               <option value={1}>1 mi</option>
               <option value={3}>3 mi</option>
+              <option value={5}>5 mi</option>
+              <option value={10}>10 mi</option>
+              <option value={15}>15 mi</option>
             </select>
           </div>
         </div>
