@@ -482,17 +482,7 @@ function RegisterForm() {
                   ? PLAN_CONFIGS[planIdForEmail as keyof typeof PLAN_CONFIGS].name 
                   : "Your Plan";
                 
-                // Get next cleaning date from onboarding data or scheduled cleaning
-                let nextCleaningDate = "";
-                if (onboardingData?.preferredServiceDate) {
-                  nextCleaningDate = new Date(onboardingData.preferredServiceDate).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  });
-                }
-                
-                // Send email (non-blocking)
+                // Send welcome email asking them to confirm cleaning date (non-blocking)
                 notifyCustomerWelcome({
                   email: email.toLowerCase(),
                   firstName: onboardingData?.firstName || firstName,
@@ -503,7 +493,9 @@ function RegisterForm() {
                   city: onboardingData?.city,
                   state: onboardingData?.state,
                   zipCode: onboardingData?.zipCode,
-                  nextCleaningDate: nextCleaningDate,
+                  preferredServiceDate: onboardingData?.preferredServiceDate,
+                  preferredDayOfWeek: onboardingData?.preferredDayOfWeek,
+                  preferredTimeWindow: onboardingData?.preferredTimeWindow || "Morning",
                 }).catch((emailErr) => {
                   console.error("[Register] Failed to send welcome email:", emailErr);
                   // Don't block registration if email fails

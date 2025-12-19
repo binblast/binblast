@@ -160,6 +160,7 @@ export async function notifyTeamMemberInvitation(teamMemberData: {
 
 /**
  * Send welcome email to new customer after account creation
+ * This email asks them to confirm their cleaning date
  */
 export async function notifyCustomerWelcome(customerData: {
   email: string;
@@ -171,12 +172,32 @@ export async function notifyCustomerWelcome(customerData: {
   city?: string;
   state?: string;
   zipCode?: string;
-  nextCleaningDate?: string;
+  preferredServiceDate?: string;
+  preferredDayOfWeek?: string;
+  preferredTimeWindow?: string;
 }): Promise<void> {
   // Hardcoded template ID for customer welcome email
   const templateId = "template_ent7lyj";
 
   const dashboardLink = "https://binblast.vercel.app/dashboard";
+
+  // Format preferred service date for display
+  const preferredDateFormatted = customerData.preferredServiceDate
+    ? new Date(customerData.preferredServiceDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    : "Not set";
+
+  // Format address line 2 for display (empty string if not provided)
+  const addressLine2Display = customerData.addressLine2 ? `<br>${customerData.addressLine2}` : "";
+
+  // Format preferred day of week for display
+  const preferredDayDisplay = customerData.preferredDayOfWeek 
+    ? `Every ${customerData.preferredDayOfWeek}`
+    : "Not set";
 
   // Try to send email (non-blocking)
   try {
@@ -186,11 +207,13 @@ export async function notifyCustomerWelcome(customerData: {
       lastName: customerData.lastName || "",
       planName: customerData.planName || "Your Plan",
       addressLine1: customerData.addressLine1 || "",
-      addressLine2: customerData.addressLine2 || "",
+      addressLine2: addressLine2Display, // Pre-formatted with <br> if exists
       city: customerData.city || "",
       state: customerData.state || "",
       zipCode: customerData.zipCode || "",
-      nextCleaningDate: customerData.nextCleaningDate || "",
+      preferredServiceDate: preferredDateFormatted,
+      preferredDayOfWeek: preferredDayDisplay, // Pre-formatted
+      preferredTimeWindow: customerData.preferredTimeWindow || "Morning",
       dashboardLink: dashboardLink,
     });
   } catch (error: any) {

@@ -56,49 +56,69 @@
                                             Service Address:
                                         </td>
                                         <td style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                            {{addressLine1}}{{#if addressLine2}}<br>{{addressLine2}}{{/if}}<br>{{city}}, {{state}} {{zipCode}}
+                                            {{addressLine1}}{{addressLine2}}<br>{{city}}, {{state}} {{zipCode}}
                                         </td>
                                     </tr>
-                                    {{#if nextCleaningDate}}
                                     <tr>
                                         <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
-                                            Next Cleaning:
+                                            Preferred Cleaning Date:
                                         </td>
                                         <td style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                            {{nextCleaningDate}}
+                                            {{preferredServiceDate}}
                                         </td>
                                     </tr>
-                                    {{/if}}
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
+                                            Time Window:
+                                        </td>
+                                        <td style="padding: 8px 0; color: #111827; font-size: 14px;">
+                                            {{preferredTimeWindow}}
+                                        </td>
+                                    </tr>
                                 </table>
                             </div>
                             
-                            <!-- What's Next -->
-                            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                            <!-- Confirmation Call-to-Action -->
+                            <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 20px; margin: 30px 0; border-radius: 4px;">
                                 <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">
-                                    What's Next?
+                                    ✅ Confirm Your Cleaning Date
                                 </h2>
                                 
-                                <p style="margin: 0 0 15px 0; color: #374151; font-size: 15px; line-height: 1.6;">
-                                    <strong>1. Access Your Dashboard</strong><br>
-                                    You can now log in to your customer dashboard to view your service schedule, manage your account, and track your cleanings.
+                                <p style="margin: 0 0 20px 0; color: #374151; font-size: 15px; line-height: 1.6;">
+                                    We're ready to schedule your first cleaning! Based on your preferences, we've selected <strong>{{preferredServiceDate}}</strong> as your preferred cleaning day.
                                 </p>
                                 
-                                <p style="margin: 0 0 15px 0; color: #374151; font-size: 15px; line-height: 1.6;">
-                                    <strong>2. Prepare for Your First Cleaning</strong><br>
-                                    Make sure your bins are accessible on your scheduled cleaning day. Our team will arrive during your preferred time window.
+                                <p style="margin: 0 0 20px 0; color: #374151; font-size: 15px; line-height: 1.6;">
+                                    Please click the button below to confirm this date or choose a different one that works better for you.
                                 </p>
                                 
-                                <p style="margin: 0 0 0 0; color: #374151; font-size: 15px; line-height: 1.6;">
-                                    <strong>3. Stay Connected</strong><br>
-                                    You'll receive notifications about your upcoming cleanings and can always reach out to us with any questions or special requests.
+                                <p style="margin: 0 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                    <strong>Monthly Schedule:</strong> {{preferredDayOfWeek}}
                                 </p>
                             </div>
                             
-                            <!-- Dashboard Link -->
+                            <!-- Confirmation Button -->
                             <div style="text-align: center; margin: 30px 0;">
-                                <a href="{{dashboardLink}}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                                    Access Your Dashboard
+                                <a href="{{dashboardLink}}" style="display: inline-block; padding: 14px 28px; background-color: #16a34a; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 18px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                                    Confirm Your Cleaning Date
                                 </a>
+                            </div>
+                            
+                            <!-- What to Expect -->
+                            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                                <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">
+                                    What to Expect
+                                </h2>
+                                
+                                <p style="margin: 0 0 15px 0; color: #374151; font-size: 15px; line-height: 1.6;">
+                                    <strong>After Confirmation:</strong><br>
+                                    You'll receive a confirmation email with all the details of your scheduled cleaning, and your monthly schedule will be set up automatically.
+                                </p>
+                                
+                                <p style="margin: 0 0 0 0; color: #374151; font-size: 15px; line-height: 1.6;">
+                                    <strong>Before Your Cleaning:</strong><br>
+                                    Please ensure your trash can is empty and accessible. Our team will arrive during your selected time window.
+                                </p>
                             </div>
                             
                             <!-- Support -->
