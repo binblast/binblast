@@ -64,9 +64,14 @@ export async function POST(req: NextRequest) {
 
     // If onboarding data is provided, add customer info and store in metadata
     if (onboardingData) {
-      // Pre-fill customer email and name in checkout
+      // Pre-fill customer email in checkout
       sessionParams.customer_email = onboardingData.email;
-      sessionParams.customer_creation = "always";
+      
+      // customer_creation can only be used in "payment" mode, not "subscription" mode
+      // For subscription mode, Stripe will create the customer automatically
+      if (!plan.isRecurring) {
+        sessionParams.customer_creation = "always";
+      }
       
       // Store onboarding data in metadata (JSON stringified)
       sessionParams.metadata = {
