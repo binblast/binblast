@@ -578,8 +578,7 @@ function DashboardPageContent() {
               setLoading(false);
             }
           }
-        }
-      });
+        });
     } catch (err: any) {
       console.error("[Dashboard] Error initializing Firebase:", err);
       if (mounted) {
