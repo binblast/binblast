@@ -4236,6 +4236,16 @@ function DashboardPageContent() {
                   setShowCleaningConfirmation(false);
                   // User can manually schedule later
                 }}
+                onClearPending={() => {
+                  // Update user state to remove pending data
+                  if (user) {
+                    setUser({
+                      ...user,
+                      pendingCleaningConfirmation: false,
+                      pendingCleaningData: undefined,
+                    });
+                  }
+                }}
               />
             )}
 
