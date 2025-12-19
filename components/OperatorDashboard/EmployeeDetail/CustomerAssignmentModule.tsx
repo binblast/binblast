@@ -225,69 +225,30 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
 
     setAssigning(true);
     try {
-      // Get the current date for finding scheduled cleanings
-      const today = new Date().toISOString().split('T')[0];
-      
-      // First, find the scheduled cleaning documents for these customers
-      // We need to fetch cleanings that match the selected customer user IDs
-      const { getDbInstance } = await import("@/lib/firebase");
-      const db = await getDbInstance();
-      
-      if (!db) {
-        throw new Error("Database not available");
-      }
-
-      const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-      const firestore = await safeImportFirestore();
-      const { collection, query, where, getDocs } = firestore;
-
-      const cleaningsRef = collection(db, "scheduledCleanings");
-      
-      // Find upcoming cleanings for selected customers
-      // Query only by userId to avoid index requirement, then filter in memory
-      const cleaningPromises = selectedCustomers.map(async (customerUserId) => {
-        // Query only by userId (single where clause doesn't need composite index)
-        const cleaningQuery = query(
-          cleaningsRef,
-          where("userId", "==", customerUserId)
-        );
-        
-        const snapshot = await getDocs(cleaningQuery);
-        
-        // Filter and sort in memory to avoid index requirement
-        const cleanings = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-          .filter((c: any) => {
-            // Filter by status and date in memory
-            return c.status === "upcoming" && 
-                   c.scheduledDate && 
-                   c.scheduledDate >= today;
-          })
-          .sort((a: any, b: any) => {
-            // Sort by date, then prefer unassigned
-            const dateCompare = (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
-            if (dateCompare !== 0) return dateCompare;
-            // Prefer unassigned over assigned
-            if (!a.assignedEmployeeId && b.assignedEmployeeId) return -1;
-            if (a.assignedEmployeeId && !b.assignedEmployeeId) return 1;
-            return 0;
-          });
-        
-        // Prefer unassigned cleanings, but allow reassigning to same employee
-        const unassignedCleaning = cleanings.find(
-          (c: any) => !c.assignedEmployeeId || c.assignedEmployeeId === employeeId
-        );
-        
-        return unassignedCleaning || cleanings[0];
+      // First, find the scheduled cleaning documents for these customers via API
+      // This avoids Firestore permission issues by querying server-side
+      const cleaningsResponse = await fetch(`/api/operator/cleanings/by-customers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerUserIds: selectedCustomers,
+        }),
       });
 
-      const cleaningDocs = await Promise.all(cleaningPromises);
+      if (!cleaningsResponse.ok) {
+        const errorData = await cleaningsResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to get cleanings for customers");
+      }
+
+      const cleaningsData = await cleaningsResponse.json();
+      const validCleanings = cleaningsData.cleanings || [];
       
-      // Filter out any null/undefined results (customers without scheduled cleanings)
-      const validCleanings = cleaningDocs.filter(c => c !== null && c !== undefined);
+      // Filter to prefer unassigned cleanings or cleanings assigned to this employee
+      const preferredCleanings = validCleanings.filter((c: any) => 
+        !c.assignedEmployeeId || c.assignedEmployeeId === employeeId
+      );
+      
+      const cleaningsToAssign = preferredCleanings.length > 0 ? preferredCleanings : validCleanings;
       
       if (validCleanings.length === 0) {
         alert("No scheduled cleanings found for the selected customers. Please ensure customers have upcoming cleanings scheduled.");
