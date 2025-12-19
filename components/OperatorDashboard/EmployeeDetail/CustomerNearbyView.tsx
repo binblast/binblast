@@ -109,7 +109,7 @@ export function CustomerNearbyView({
     return filtered;
   }, [customersWithCoords, anchorPoint, radiusFilter]);
 
-  const canSelectCustomer = (customer: Customer): boolean => {
+  const canSelectCustomer = (customer: Customer | { id: string; assignedTo?: string | null }): boolean => {
     if (customer.assignedTo && customer.assignedTo !== currentOperatorId) {
       return reassignAllowed;
     }
