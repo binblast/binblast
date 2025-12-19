@@ -563,6 +563,11 @@ service cloud.firestore {
         (isAuthenticated() && resource.data.email == request.auth.token.email)
         || request.auth == null
       );
+      // Allow list queries for authenticated users (needed for registration page query)
+      allow list: if (
+        isAuthenticated()
+        || request.auth == null
+      );
       allow create, update: if request.auth == null;
       
       // No deletions allowed (data expires automatically)
