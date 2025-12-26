@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
         id: doc.id,
         ...doc.data(),
       }))
-      .filter((job: any) => job.scheduledDate === today);
+      .filter((job: any) => job.scheduledDate === today) as any[];
 
     // Count completed jobs today (with required photos)
     const completedToday = todayJobs.filter((job: any) => {
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
 
     // Get route name (if available from first job or employee data)
     const routeName = todayJobs.length > 0 
-      ? todayJobs[0].routeName || employee.serviceArea?.[0] || undefined
+      ? (todayJobs[0] as any).routeName || employee.serviceArea?.[0] || undefined
       : undefined;
 
     // Estimate time (rough calculation: ~15 min per job)
