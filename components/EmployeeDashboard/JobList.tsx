@@ -126,10 +126,11 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
     <div>
       {/* Route Board Header */}
       <div
+        className="route-board-header"
         style={{
           background: "#ffffff",
           borderRadius: "12px",
-          padding: "1.25rem",
+          padding: "clamp(1rem, 4vw, 1.25rem)",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
           border: "1px solid #e5e7eb",
           marginBottom: "1rem",
@@ -143,6 +144,7 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
             marginBottom: "0.75rem",
             flexWrap: "wrap",
             gap: "0.75rem",
+            width: "100%",
           }}
         >
           <div>
@@ -169,10 +171,12 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
           </div>
           {nextJob && (
             <div
+              className="route-actions"
               style={{
                 display: "flex",
                 gap: "0.5rem",
                 flexWrap: "wrap",
+                width: "100%",
               }}
             >
               {onStartNextJob && (
@@ -182,15 +186,18 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
                     onStartNextJob(nextJob);
                   }}
                   style={{
-                    padding: "0.5rem 1rem",
+                    padding: "clamp(0.5rem, 2vw, 0.625rem) clamp(1rem, 4vw, 1.25rem)",
                     borderRadius: "8px",
                     border: "none",
-                    fontSize: "0.875rem",
+                    fontSize: "clamp(0.8125rem, 3vw, 0.875rem)",
                     fontWeight: "600",
                     cursor: "pointer",
                     background: "#16a34a",
                     color: "#ffffff",
                     transition: "all 0.2s",
+                    minHeight: "44px",
+                    touchAction: "manipulation",
+                    WebkitTapHighlightColor: "transparent",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "scale(1.05)";
@@ -213,15 +220,18 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
                   }
                 }}
                 style={{
-                  padding: "0.5rem 1rem",
+                  padding: "clamp(0.5rem, 2vw, 0.625rem) clamp(1rem, 4vw, 1.25rem)",
                   borderRadius: "8px",
                   border: "1px solid #e5e7eb",
-                  fontSize: "0.875rem",
+                  fontSize: "clamp(0.8125rem, 3vw, 0.875rem)",
                   fontWeight: "600",
                   cursor: "pointer",
                   background: "#ffffff",
                   color: "#2563eb",
                   transition: "all 0.2s",
+                  minHeight: "44px",
+                  touchAction: "manipulation",
+                  WebkitTapHighlightColor: "transparent",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "#f3f4f6";
@@ -258,6 +268,7 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
 
       {/* Filter Tabs */}
       <div
+        className="filter-tabs"
         style={{
           display: "flex",
           gap: "0.5rem",
@@ -333,10 +344,11 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
 
       {/* Load Board Grid */}
       <div
+        className="job-list-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: "1rem",
+          gap: "clamp(0.75rem, 3vw, 1rem)",
         }}
       >
         {filteredJobs.map((job) => {
@@ -348,17 +360,19 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
         return (
           <div
             key={job.id}
+            className="job-card"
             onClick={() => onJobClick(job)}
             style={{
               background: "#ffffff",
               borderRadius: "12px",
-              padding: "1.25rem",
+              padding: "clamp(1rem, 4vw, 1.25rem)",
               boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
               border: `2px solid ${statusColors.border}`,
               borderLeft: `4px solid ${statusColors.text}`,
               cursor: "pointer",
               transition: "transform 0.2s, box-shadow 0.2s",
               position: "relative",
+              touchAction: "manipulation",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "translateY(-4px)";
@@ -388,10 +402,10 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
               {job.jobStatus || "pending"}
             </span>
 
-            <div style={{ marginBottom: "0.75rem", paddingRight: "4rem" }}>
+            <div className="job-header" style={{ marginBottom: "0.75rem", paddingRight: "4rem" }}>
               <div
                 style={{
-                  fontSize: "1rem",
+                  fontSize: "clamp(0.9375rem, 4vw, 1rem)",
                   fontWeight: "700",
                   marginBottom: "0.5rem",
                   color: "#111827",
@@ -401,14 +415,16 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
                 {job.customerName || job.userEmail || "Customer"}
               </div>
               <div
+                className="job-address"
                 onClick={(e) => openMap(fullAddress, e)}
                 style={{
-                  fontSize: "0.8125rem",
+                  fontSize: "clamp(0.75rem, 3vw, 0.8125rem)",
                   color: "#2563eb",
                   textDecoration: "underline",
                   cursor: "pointer",
                   fontWeight: "500",
                   lineHeight: "1.4",
+                  touchAction: "manipulation",
                 }}
                 title="Tap to open in maps"
               >
@@ -418,12 +434,13 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
 
             {/* Quick Info Grid */}
             <div
+              className="quick-info-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(2, 1fr)",
-                gap: "0.5rem",
+                gap: "clamp(0.5rem, 2vw, 0.75rem)",
                 marginBottom: "0.75rem",
-                fontSize: "0.8125rem",
+                fontSize: "clamp(0.75rem, 3vw, 0.8125rem)",
               }}
             >
               <div

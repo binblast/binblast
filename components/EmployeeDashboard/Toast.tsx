@@ -118,6 +118,7 @@ export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
 
   return (
     <div
+      className="toast-container"
       style={{
         position: "fixed",
         top: "100px",

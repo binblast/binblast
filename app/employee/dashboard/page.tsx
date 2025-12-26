@@ -5,6 +5,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import "../../employee-dashboard-mobile.css";
 import { DailyMissionCard } from "@/components/EmployeeDashboard/DailyMissionCard";
 import { JobList } from "@/components/EmployeeDashboard/JobList";
 import { JobDetailModal } from "@/components/EmployeeDashboard/JobDetailModal";
@@ -574,8 +575,9 @@ export default function EmployeeDashboardPage() {
           {/* Certification Warning Banner */}
           {certificationStatus && !certificationStatus.isCertified && (
             <div
+              className="certification-banner"
               style={{
-                padding: "1rem",
+                padding: "clamp(0.875rem, 3vw, 1rem)",
                 background: certificationStatus.status === "expired" ? "#fee2e2" : "#fef3c7",
                 border: `2px solid ${certificationStatus.status === "expired" ? "#fecaca" : "#fde68a"}`,
                 borderRadius: "8px",
@@ -640,6 +642,7 @@ export default function EmployeeDashboardPage() {
 
           {/* Tab Navigation */}
           <div
+            className="tab-navigation"
             style={{
               display: "flex",
               gap: "0.5rem",
@@ -767,7 +770,7 @@ export default function EmployeeDashboardPage() {
                 >
                   <h2
                     style={{
-                      fontSize: "1.5rem",
+                      fontSize: "clamp(1.25rem, 5vw, 1.5rem)",
                       fontWeight: "700",
                       color: "#111827",
                     }}

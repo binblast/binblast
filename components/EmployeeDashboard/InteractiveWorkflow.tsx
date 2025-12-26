@@ -201,6 +201,7 @@ export function InteractiveWorkflow({
     return (
       <button
         key={stepId}
+        className="workflow-step"
         onClick={() => {
           if (isClickable && !isDisabled) {
             handleStepClick(stepId, activeJob?.id);
@@ -209,18 +210,20 @@ export function InteractiveWorkflow({
         disabled={isDisabled}
         style={{
           width: '100%',
-          minHeight: '64px',
-          padding: '1rem',
+          minHeight: 'clamp(56px, 10vw, 64px)',
+          padding: 'clamp(0.875rem, 3vw, 1rem)',
           background: colors.bg,
           border: `2px solid ${colors.border}`,
           borderRadius: '12px',
           display: 'flex',
           alignItems: 'center',
-          gap: '1rem',
+          gap: 'clamp(0.75rem, 3vw, 1rem)',
           cursor: isClickable && !isDisabled ? 'pointer' : 'not-allowed',
           opacity: isDisabled ? 0.6 : 1,
           transition: 'all 0.2s',
           textAlign: 'left',
+          touchAction: 'manipulation',
+          WebkitTapHighlightColor: 'transparent',
         }}
         onMouseEnter={(e) => {
           if (isClickable && !isDisabled) {
@@ -236,10 +239,11 @@ export function InteractiveWorkflow({
       >
         {/* Step Icon */}
         <div
+          className="step-icon"
           style={{
-            width: 'clamp(40px, 6vw, 48px)',
-            height: 'clamp(40px, 6vw, 48px)',
-            minWidth: 'clamp(40px, 6vw, 48px)',
+            width: 'clamp(36px, 6vw, 48px)',
+            height: 'clamp(36px, 6vw, 48px)',
+            minWidth: 'clamp(36px, 6vw, 48px)',
             borderRadius: '50%',
             background: colors.iconBg,
             color: colors.iconText,
@@ -247,7 +251,7 @@ export function InteractiveWorkflow({
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: '700',
-            fontSize: 'clamp(1rem, 2vw, 1.25rem)',
+            fontSize: 'clamp(0.9375rem, 3vw, 1.25rem)',
             flexShrink: 0,
           }}
         >
@@ -319,6 +323,7 @@ export function InteractiveWorkflow({
 
   return (
     <div
+      className="interactive-workflow"
       style={{
         background: '#ffffff',
         borderRadius: '12px',

@@ -1,0 +1,258 @@
+/* Mobile and Tablet Optimizations for Employee Dashboard */
+
+/* Base mobile styles */
+@media (max-width: 768px) {
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Employee Dashboard Main Container */
+  .employee-dashboard {
+    padding-left: clamp(0.75rem, 3vw, 1rem) !important;
+    padding-right: clamp(0.75rem, 3vw, 1rem) !important;
+  }
+
+  /* Tab Navigation - Horizontal scroll on mobile */
+  .employee-dashboard .tab-navigation {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    gap: 0.25rem;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .employee-dashboard .tab-navigation::-webkit-scrollbar {
+    display: none;
+  }
+
+  .employee-dashboard .tab-navigation button {
+    min-width: 100px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* Daily Mission Card */
+  .employee-dashboard .daily-mission-card {
+    padding: clamp(1rem, 4vw, 1.25rem) !important;
+    border-radius: 12px;
+  }
+
+  .employee-dashboard .daily-mission-card h2 {
+    font-size: clamp(1rem, 4vw, 1.125rem) !important;
+  }
+
+  .employee-dashboard .daily-mission-card .mission-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+    padding: 0.75rem !important;
+  }
+
+  .employee-dashboard .daily-mission-card button {
+    min-height: 48px !important;
+    font-size: clamp(1rem, 4vw, 1.125rem) !important;
+    padding: 0.875rem 1rem !important;
+  }
+
+  /* Live Earnings Tracker */
+  .employee-dashboard .earnings-tracker {
+    padding: clamp(1rem, 4vw, 1.25rem) !important;
+  }
+
+  .employee-dashboard .earnings-tracker .progress-bar {
+    height: 28px !important;
+  }
+
+  /* Job List Grid - Stack on mobile */
+  .employee-dashboard .job-list-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .employee-dashboard .job-card {
+    padding: 1rem !important;
+    min-height: auto;
+  }
+
+  .employee-dashboard .job-card .job-header {
+    font-size: clamp(0.9375rem, 4vw, 1rem) !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .employee-dashboard .job-card .job-address {
+    font-size: clamp(0.75rem, 3vw, 0.8125rem) !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Route Board Header */
+  .employee-dashboard .route-board-header {
+    padding: 1rem !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  .employee-dashboard .route-board-header .route-actions {
+    width: 100% !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .employee-dashboard .route-board-header button {
+    width: 100% !important;
+    min-height: 44px !important;
+  }
+
+  /* Bin Blaster Level */
+  .employee-dashboard .bin-blaster-level {
+    padding: clamp(1rem, 4vw, 1.25rem) !important;
+  }
+
+  .employee-dashboard .bin-blaster-level .level-icon {
+    font-size: 1.5rem !important;
+  }
+
+  .employee-dashboard .bin-blaster-level .level-name {
+    font-size: clamp(1rem, 4vw, 1.125rem) !important;
+  }
+
+  /* Filter Tabs */
+  .employee-dashboard .filter-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex-wrap: nowrap !important;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .employee-dashboard .filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .employee-dashboard .filter-tabs button {
+    min-width: 90px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  /* Toast Container - Better positioning on mobile */
+  .toast-container {
+    top: 80px !important;
+    right: 0.75rem !important;
+    left: 0.75rem !important;
+    max-width: calc(100% - 1.5rem) !important;
+  }
+
+  /* Progress Tracker */
+  .employee-dashboard .progress-tracker {
+    padding: clamp(1rem, 4vw, 1.25rem) !important;
+  }
+
+  /* Interactive Workflow */
+  .employee-dashboard .workflow-step {
+    min-height: 56px !important;
+    padding: 0.875rem !important;
+  }
+
+  .employee-dashboard .workflow-step .step-icon {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    font-size: 1rem !important;
+  }
+
+  /* Certification Banner */
+  .employee-dashboard .certification-banner {
+    padding: clamp(0.875rem, 3vw, 1rem) !important;
+    font-size: clamp(0.875rem, 3vw, 0.9375rem) !important;
+  }
+
+  .employee-dashboard .certification-banner button {
+    min-height: 44px !important;
+    width: 100% !important;
+    margin-top: 0.5rem !important;
+  }
+
+  /* Touch-friendly buttons */
+  .employee-dashboard button,
+  .employee-dashboard .btn {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent text selection on buttons */
+  .employee-dashboard button {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Better spacing for mobile */
+  .employee-dashboard > div {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Section headings */
+  .employee-dashboard h2 {
+    font-size: clamp(1.25rem, 5vw, 1.5rem) !important;
+  }
+}
+
+/* Tablet optimizations (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .employee-dashboard .job-list-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .employee-dashboard .daily-mission-card .mission-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .employee-dashboard .route-board-header {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+
+  .employee-dashboard .route-board-header .route-actions {
+    width: auto !important;
+    flex-direction: row !important;
+  }
+}
+
+/* Small phones (max-width: 480px) */
+@media (max-width: 480px) {
+  .employee-dashboard {
+    padding-top: clamp(0.75rem, 3vw, 1rem) !important;
+    padding-bottom: clamp(0.75rem, 3vw, 1rem) !important;
+  }
+
+  .employee-dashboard .daily-mission-card .mission-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .employee-dashboard .job-card .quick-info-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Landscape orientation optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+  .employee-dashboard .daily-mission-card {
+    position: relative !important;
+    top: 0 !important;
+  }
+}
+

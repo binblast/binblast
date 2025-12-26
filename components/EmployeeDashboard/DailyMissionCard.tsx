@@ -55,10 +55,11 @@ export function DailyMissionCard({
 
   return (
     <div
+      className="daily-mission-card"
       style={{
         background: "linear-gradient(135deg, #ffffff 0%, #f9fafb 100%)",
         borderRadius: "16px",
-        padding: "1.5rem",
+        padding: "clamp(1rem, 4vw, 1.5rem)",
         boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
         border: "2px solid #e5e7eb",
         marginBottom: "1.5rem",
@@ -81,7 +82,7 @@ export function DailyMissionCard({
         <div>
           <div
             style={{
-              fontSize: "0.875rem",
+              fontSize: "clamp(0.75rem, 3vw, 0.875rem)",
               fontWeight: "600",
               color: "#6b7280",
               textTransform: "uppercase",
@@ -93,7 +94,7 @@ export function DailyMissionCard({
           </div>
           <div
             style={{
-              fontSize: "1.25rem",
+              fontSize: "clamp(1rem, 4vw, 1.25rem)",
               fontWeight: "700",
               color: "#111827",
             }}
@@ -162,12 +163,13 @@ export function DailyMissionCard({
       {/* Mission Stats Grid */}
       {isClockedIn && jobsTotal > 0 && (
         <div
+          className="mission-stats"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-            gap: "1rem",
+            gap: "clamp(0.75rem, 3vw, 1rem)",
             marginBottom: "1rem",
-            padding: "1rem",
+            padding: "clamp(0.75rem, 3vw, 1rem)",
             background: "#ffffff",
             borderRadius: "12px",
             border: "1px solid #e5e7eb",
@@ -275,11 +277,11 @@ export function DailyMissionCard({
         title={!isClockedIn && !canClockIn ? "Complete training to unlock Clock In" : undefined}
         style={{
           width: "100%",
-          minHeight: "56px",
-          padding: "0.75rem 1rem",
+          minHeight: "clamp(48px, 8vw, 56px)",
+          padding: "clamp(0.75rem, 3vw, 0.875rem) clamp(1rem, 4vw, 1.25rem)",
           borderRadius: "12px",
           border: "none",
-          fontSize: "1.125rem",
+          fontSize: "clamp(1rem, 4vw, 1.125rem)",
           fontWeight: "700",
           color: "#ffffff",
           background: isClockedIn
@@ -296,6 +298,8 @@ export function DailyMissionCard({
           boxShadow: isClockedIn || canClockIn
             ? "0 2px 8px rgba(0, 0, 0, 0.1)"
             : "none",
+          touchAction: "manipulation",
+          WebkitTapHighlightColor: "transparent",
         }}
         onMouseDown={(e) => {
           if (!isClockInLoading && (isClockedIn || canClockIn)) {

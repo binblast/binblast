@@ -97,10 +97,11 @@ export function BinBlasterLevel({
 
   return (
     <div
+      className="bin-blaster-level"
       style={{
         background: "#ffffff",
         borderRadius: "12px",
-        padding: "1.5rem",
+        padding: "clamp(1rem, 4vw, 1.5rem)",
         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
         border: "1px solid #e5e7eb",
         marginBottom: "1.5rem",
@@ -108,7 +109,7 @@ export function BinBlasterLevel({
     >
       <div
         style={{
-          fontSize: "1rem",
+          fontSize: "clamp(0.9375rem, 4vw, 1rem)",
           fontWeight: "600",
           marginBottom: "1rem",
           color: "#111827",
@@ -131,8 +132,9 @@ export function BinBlasterLevel({
       >
         {currentLevel.icon && (
           <div
+            className="level-icon"
             style={{
-              fontSize: "2rem",
+              fontSize: "clamp(1.5rem, 5vw, 2rem)",
               lineHeight: "1",
             }}
           >
@@ -141,8 +143,9 @@ export function BinBlasterLevel({
         )}
         <div style={{ flex: 1 }}>
           <div
+            className="level-name"
             style={{
-              fontSize: "1.25rem",
+              fontSize: "clamp(1rem, 4vw, 1.25rem)",
               fontWeight: "700",
               color: currentLevel.color,
               marginBottom: "0.25rem",

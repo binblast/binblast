@@ -16,10 +16,11 @@ export function ProgressTracker({
 
   return (
     <div
+      className="progress-tracker"
       style={{
         background: "#ffffff",
         borderRadius: "12px",
-        padding: "1.5rem",
+        padding: "clamp(1rem, 4vw, 1.5rem)",
         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
         border: "1px solid #e5e7eb",
         marginBottom: "1.5rem",

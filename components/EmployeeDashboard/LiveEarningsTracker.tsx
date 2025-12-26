@@ -98,10 +98,11 @@ export function LiveEarningsTracker({
 
   return (
     <div
+      className="earnings-tracker"
       style={{
         background: "#ffffff",
         borderRadius: "12px",
-        padding: "1.5rem",
+        padding: "clamp(1rem, 4vw, 1.5rem)",
         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
         border: "1px solid #e5e7eb",
         marginBottom: "1.5rem",
@@ -109,7 +110,7 @@ export function LiveEarningsTracker({
     >
       <div
         style={{
-          fontSize: "1rem",
+          fontSize: "clamp(0.9375rem, 4vw, 1rem)",
           fontWeight: "600",
           marginBottom: "1rem",
           color: "#111827",
@@ -120,9 +121,10 @@ export function LiveEarningsTracker({
 
       {/* Earnings Progress Bar */}
       <div
+        className="progress-bar"
         style={{
           width: "100%",
-          height: "32px",
+          height: "clamp(28px, 6vw, 32px)",
           background: "#f3f4f6",
           borderRadius: "16px",
           overflow: "hidden",
