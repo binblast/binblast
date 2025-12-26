@@ -88,8 +88,8 @@ export function DailyMissionCard({
               letterSpacing: "0.5px",
               marginBottom: "0.25rem",
             }}
-          >
-            🔥 Today&apos;s Mission
+            >
+            Today&apos;s Mission
           </div>
           <div
             style={{
@@ -133,7 +133,7 @@ export function DailyMissionCard({
               color: isClockedIn ? "#065f46" : "#6b7280",
             }}
           >
-            {isClockedIn ? "🟢 On Shift" : "⚪ Off Shift"}
+            {isClockedIn ? "On Shift" : "Off Shift"}
             {clockInTime && isClockedIn && ` • ${clockInTime}`}
           </div>
 
@@ -149,7 +149,7 @@ export function DailyMissionCard({
                 color: "#065f46",
               }}
             >
-              Certified ✅
+              Certified
               {certificationDaysRemaining !== undefined &&
                 certificationDaysRemaining < 30 && (
                   <span> • {certificationDaysRemaining}d left</span>

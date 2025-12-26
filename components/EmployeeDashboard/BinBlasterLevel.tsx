@@ -21,28 +21,28 @@ const LEVELS: LevelInfo[] = [
     minJobs: 0,
     color: "#6b7280",
     bgColor: "#f3f4f6",
-    icon: "🌱",
+    icon: "",
   },
   {
     name: "Pro",
     minJobs: 25,
     color: "#2563eb",
     bgColor: "#dbeafe",
-    icon: "⭐",
+    icon: "",
   },
   {
     name: "Elite",
     minJobs: 100,
     color: "#7c3aed",
     bgColor: "#ede9fe",
-    icon: "🏆",
+    icon: "",
   },
   {
     name: "Master",
     minJobs: 250,
     color: "#f59e0b",
     bgColor: "#fef3c7",
-    icon: "👑",
+    icon: "",
   },
 ];
 
@@ -82,15 +82,15 @@ export function BinBlasterLevel({
       : 100;
 
   const commonBadges = [
-    { name: "10 Jobs Day", icon: "🔥", earned: lifetimeJobs >= 10 },
+    { name: "10 Jobs Day", icon: "", earned: lifetimeJobs >= 10 },
     {
       name: "Perfect Proof-of-Work",
-      icon: "📸",
+      icon: "",
       earned: badges.includes("perfect_photos"),
     },
     {
       name: "On-time Streak",
-      icon: "⏰",
+      icon: "",
       earned: todayStreak >= 5,
     },
   ];
@@ -117,7 +117,7 @@ export function BinBlasterLevel({
           gap: "0.5rem",
         }}
       >
-        🧨 Bin Blaster Level
+        Bin Blaster Level
       </div>
 
       {/* Current Level */}
@@ -129,14 +129,16 @@ export function BinBlasterLevel({
           marginBottom: "1rem",
         }}
       >
-        <div
-          style={{
-            fontSize: "2rem",
-            lineHeight: "1",
-          }}
-        >
-          {currentLevel.icon}
-        </div>
+        {currentLevel.icon && (
+          <div
+            style={{
+              fontSize: "2rem",
+              lineHeight: "1",
+            }}
+          >
+            {currentLevel.icon}
+          </div>
+        )}
         <div style={{ flex: 1 }}>
           <div
             style={{
@@ -211,7 +213,7 @@ export function BinBlasterLevel({
             textAlign: "center",
           }}
         >
-          🔥 {todayStreak} job{todayStreak !== 1 ? "s" : ""} completed today
+          {todayStreak} job{todayStreak !== 1 ? "s" : ""} completed today
         </div>
       )}
 
@@ -255,7 +257,7 @@ export function BinBlasterLevel({
                     }}
                     title={badge.name}
                   >
-                    <span>{badge.icon}</span>
+                    {badge.icon && <span>{badge.icon}</span>}
                     <span>{badge.name}</span>
                   </div>
                 )

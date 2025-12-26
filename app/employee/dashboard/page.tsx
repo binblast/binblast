@@ -477,7 +477,7 @@ export default function EmployeeDashboardPage() {
       }
 
       // Show celebration toast
-      addToast(`✅ Bin Blasted! +$${payPreview.payRatePerJob.toFixed(2)}`, "success");
+      addToast(`Bin Blasted! +$${payPreview.payRatePerJob.toFixed(2)}`, "success");
 
       // Refresh jobs and pay preview immediately
       await loadJobs();

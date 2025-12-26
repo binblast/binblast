@@ -63,7 +63,6 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
           color: "#6b7280",
         }}
       >
-        <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>🚛</div>
         <div style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem", color: "#111827" }}>
           No route assigned yet
         </div>
@@ -231,7 +230,7 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
                   e.currentTarget.style.background = "#ffffff";
                 }}
               >
-                📍 Open Maps
+                Open Maps
               </button>
             </div>
           )}

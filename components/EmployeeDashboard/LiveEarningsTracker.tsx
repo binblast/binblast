@@ -84,7 +84,7 @@ export function LiveEarningsTracker({
             color: "#111827",
           }}
         >
-          💰 Earnings Today
+          Earnings Today
         </div>
         <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
           Clock in to start earning
@@ -115,7 +115,7 @@ export function LiveEarningsTracker({
           color: "#111827",
         }}
       >
-        💰 Earnings Today
+        Earnings Today
       </div>
 
       {/* Earnings Progress Bar */}
@@ -224,7 +224,7 @@ export function LiveEarningsTracker({
             textAlign: "center",
           }}
         >
-          🎉 Great work! Keep it up!
+          Great work! Keep it up!
         </div>
       )}
     </div>

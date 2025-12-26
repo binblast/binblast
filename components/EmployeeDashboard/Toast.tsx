@@ -31,21 +31,21 @@ function ToastItem({ toast, onRemove }: ToastProps) {
           bg: "#fee2e2",
           border: "#fecaca",
           text: "#991b1b",
-          icon: "❌",
+          icon: "",
         };
       case "info":
         return {
           bg: "#dbeafe",
           border: "#bae6fd",
           text: "#1e40af",
-          icon: "ℹ️",
+          icon: "",
         };
       default: // success
         return {
           bg: "#d1fae5",
           border: "#86efac",
           text: "#065f46",
-          icon: "✅",
+          icon: "",
         };
     }
   };
@@ -71,7 +71,7 @@ function ToastItem({ toast, onRemove }: ToastProps) {
         maxWidth: "100%",
       }}
     >
-      <span style={{ fontSize: "1.25rem" }}>{styles.icon}</span>
+      {styles.icon && <span style={{ fontSize: "1.25rem" }}>{styles.icon}</span>}
       <span style={{ flex: 1 }}>{toast.message}</span>
       <button
         onClick={() => onRemove(toast.id)}
