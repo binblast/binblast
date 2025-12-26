@@ -5,11 +5,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { TodayStatusBar } from "@/components/EmployeeDashboard/TodayStatusBar";
+import { DailyMissionCard } from "@/components/EmployeeDashboard/DailyMissionCard";
 import { JobList } from "@/components/EmployeeDashboard/JobList";
 import { JobDetailModal } from "@/components/EmployeeDashboard/JobDetailModal";
 import { ProgressTracker } from "@/components/EmployeeDashboard/ProgressTracker";
-import { PayPreview } from "@/components/EmployeeDashboard/PayPreview";
+import { LiveEarningsTracker } from "@/components/EmployeeDashboard/LiveEarningsTracker";
+import { BinBlasterLevel } from "@/components/EmployeeDashboard/BinBlasterLevel";
+import { ToastContainer, Toast } from "@/components/EmployeeDashboard/Toast";
 import { TrainingSection } from "@/components/EmployeeDashboard/TrainingSection";
 import { EquipmentChecklist } from "@/components/EmployeeDashboard/EquipmentChecklist";
 import { InteractiveWorkflow } from "@/components/EmployeeDashboard/InteractiveWorkflow";
@@ -69,6 +71,13 @@ export default function EmployeeDashboardPage() {
     payRatePerJob: 0,
     estimatedPay: 0,
   });
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [dashboardData, setDashboardData] = useState<{
+    lifetimeJobs: number;
+    todayStreak: number;
+    routeName?: string;
+    estimatedTime?: string;
+  } | null>(null);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -171,6 +180,35 @@ export default function EmployeeDashboardPage() {
     }
   }, [employee?.id]);
 
+  const loadDashboardData = useCallback(async () => {
+    if (!employee?.id) return;
+    try {
+      const response = await fetch(
+        `/api/employee/dashboard?employeeId=${employee.id}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardData({
+          lifetimeJobs: data.lifetimeJobs || 0,
+          todayStreak: data.todayStreak || 0,
+          routeName: data.routeName,
+          estimatedTime: data.estimatedTime,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+    }
+  }, [employee?.id]);
+
+  const addToast = useCallback((message: string, type: Toast["type"] = "success") => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   const setupJobsListener = useCallback(async (): Promise<(() => void) | undefined> => {
     if (!employee?.id) return; // Show jobs even if not clocked in
 
@@ -215,6 +253,7 @@ export default function EmployeeDashboardPage() {
         const todayJobs = filteredJobs.filter((job: any) => job.scheduledDate === today);
         setJobs(todayJobs);
         loadPayPreview(); // Refresh pay preview when jobs change
+        loadDashboardData(); // Refresh dashboard data when jobs change
       });
 
       return unsubscribe;
@@ -222,7 +261,7 @@ export default function EmployeeDashboardPage() {
       console.error("Error setting up jobs listener:", error);
       return undefined;
     }
-  }, [employee?.id, loadPayPreview]);
+  }, [employee?.id, loadPayPreview, loadDashboardData]);
 
   useEffect(() => {
     if (employee?.id) {
@@ -230,6 +269,7 @@ export default function EmployeeDashboardPage() {
       loadClockInStatus();
       loadJobs();
       loadPayPreview();
+      loadDashboardData();
     }
 
     // Listen for training progress updates to refresh certification status
@@ -245,7 +285,7 @@ export default function EmployeeDashboardPage() {
     return () => {
       window.removeEventListener('trainingProgressUpdated', handleTrainingProgressUpdate);
     };
-  }, [employee?.id, loadCertificationStatus, loadClockInStatus, loadJobs, loadPayPreview]);
+  }, [employee?.id, loadCertificationStatus, loadClockInStatus, loadJobs, loadPayPreview, loadDashboardData]);
 
   useEffect(() => {
     if (!employee?.id) return;
@@ -335,6 +375,7 @@ export default function EmployeeDashboardPage() {
       await loadClockInStatus();
       await loadJobs();
       await loadPayPreview();
+      await loadDashboardData();
       // Set up real-time listener for jobs
       await setupJobsListener();
     } catch (error: any) {
@@ -416,6 +457,10 @@ export default function EmployeeDashboardPage() {
   ) => {
     if (!employee) return;
 
+    // Optimistic UI update
+    const previousCompleted = jobs.filter((j) => j.jobStatus === "completed").length;
+    const job = jobs.find((j) => j.id === jobId);
+    
     try {
       const response = await fetch(`/api/employee/jobs/${jobId}/complete`, {
         method: "POST",
@@ -431,13 +476,30 @@ export default function EmployeeDashboardPage() {
         throw new Error(error.message || "Failed to complete job");
       }
 
+      // Show celebration toast
+      addToast(`✅ Bin Blasted! +$${payPreview.payRatePerJob.toFixed(2)}`, "success");
+
       // Refresh jobs and pay preview immediately
       await loadJobs();
       await loadPayPreview();
+      await loadDashboardData();
       // Also refresh clock-in status to update jobs remaining count
       await loadClockInStatus();
     } catch (error: any) {
+      // Rollback optimistic update on error
+      addToast(`Failed to complete job: ${error.message}`, "error");
       throw error;
+    }
+  };
+
+  const handleStartNextJob = async (job: Job) => {
+    if (!employee) return;
+    try {
+      await handleStartJob(job.id);
+      setSelectedJob(job);
+      setIsModalOpen(true);
+    } catch (error: any) {
+      addToast(`Failed to start job: ${error.message}`, "error");
     }
   };
 
@@ -558,10 +620,13 @@ export default function EmployeeDashboardPage() {
             </div>
           )}
 
-          <TodayStatusBar
+          <DailyMissionCard
             employeeName={`${employee.firstName} ${employee.lastName}`}
             clockInStatus={clockInStatus}
-            jobsRemaining={remainingJobs}
+            jobsTotal={jobs.length}
+            jobsCompleted={completedJobs}
+            estimatedPay={payPreview.estimatedPay}
+            payRatePerJob={payPreview.payRatePerJob}
             onClockIn={handleClockIn}
             onClockOut={handleClockOut}
             isClockInLoading={isClockInLoading}
@@ -569,6 +634,8 @@ export default function EmployeeDashboardPage() {
             certificationStatus={certificationStatus?.status}
             certificationExpiresAt={certificationStatus?.expiresAt}
             certificationDaysRemaining={certificationStatus?.daysUntilExpiration}
+            routeName={dashboardData?.routeName}
+            estimatedTime={dashboardData?.estimatedTime}
           />
 
           {/* Tab Navigation */}
@@ -728,13 +795,23 @@ export default function EmployeeDashboardPage() {
                       total={jobs.length}
                     />
 
-                    <PayPreview
+                    <LiveEarningsTracker
                       completedJobs={payPreview.completedJobs}
                       payRatePerJob={payPreview.payRatePerJob}
                       estimatedPay={payPreview.estimatedPay}
                       isClockedIn={isClockedIn}
+                      totalJobs={jobs.length}
                     />
                   </>
+                )}
+
+                {/* Bin Blaster Level Card */}
+                {isClockedIn && dashboardData && (
+                  <BinBlasterLevel
+                    lifetimeJobs={dashboardData.lifetimeJobs}
+                    todayStreak={dashboardData.todayStreak}
+                    badges={[]}
+                  />
                 )}
 
                 <JobList
@@ -744,6 +821,7 @@ export default function EmployeeDashboardPage() {
                     setIsModalOpen(true);
                   }}
                   isClockedIn={isClockedIn}
+                  onStartNextJob={handleStartNextJob}
                 />
               </div>
             </>
@@ -798,6 +876,9 @@ export default function EmployeeDashboardPage() {
           }
         }}
       />
+
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </>
   );
 }

@@ -26,10 +26,12 @@ interface JobListProps {
   jobs: Job[];
   onJobClick: (job: Job) => void;
   isClockedIn: boolean;
+  onStartNextJob?: (job: Job) => void;
 }
 
-export function JobList({ jobs, onJobClick, isClockedIn }: JobListProps) {
+export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobListProps) {
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all");
+  
   if (!isClockedIn) {
     return (
       <div
@@ -61,7 +63,13 @@ export function JobList({ jobs, onJobClick, isClockedIn }: JobListProps) {
           color: "#6b7280",
         }}
       >
-        No jobs assigned for today
+        <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>🚛</div>
+        <div style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem", color: "#111827" }}>
+          No route assigned yet
+        </div>
+        <div style={{ fontSize: "0.875rem", color: "#6b7280", lineHeight: "1.5" }}>
+          Your manager is building today&apos;s route. You&apos;ll see stops here as soon as they&apos;re assigned.
+        </div>
       </div>
     );
   }
@@ -109,9 +117,146 @@ export function JobList({ jobs, onJobClick, isClockedIn }: JobListProps) {
   const pendingCount = jobs.filter((j) => j.jobStatus === "pending" || !j.jobStatus).length;
   const inProgressCount = jobs.filter((j) => j.jobStatus === "in_progress").length;
   const completedCount = jobs.filter((j) => j.jobStatus === "completed").length;
+  
+  // Find next pending job
+  const nextJob = jobs.find((j) => j.jobStatus === "pending" || !j.jobStatus);
+  const currentStopIndex = jobs.findIndex((j) => j.jobStatus === "pending" || !j.jobStatus);
+  const currentStopNumber = currentStopIndex >= 0 ? currentStopIndex + 1 : completedCount + 1;
 
   return (
     <div>
+      {/* Route Board Header */}
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: "12px",
+          padding: "1.25rem",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+          border: "1px solid #e5e7eb",
+          marginBottom: "1rem",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "0.75rem",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                color: "#6b7280",
+                textTransform: "uppercase",
+                marginBottom: "0.25rem",
+              }}
+            >
+              Today&apos;s Route
+            </div>
+            <div
+              style={{
+                fontSize: "1.5rem",
+                fontWeight: "700",
+                color: "#111827",
+              }}
+            >
+              Stop {currentStopNumber} of {jobs.length}
+            </div>
+          </div>
+          {nextJob && (
+            <div
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                flexWrap: "wrap",
+              }}
+            >
+              {onStartNextJob && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartNextJob(nextJob);
+                  }}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    borderRadius: "8px",
+                    border: "none",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    background: "#16a34a",
+                    color: "#ffffff",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "scale(1.05)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "scale(1)";
+                  }}
+                >
+                  Start Next Stop
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (nextJob) {
+                    const fullAddress = `${nextJob.addressLine1}${
+                      nextJob.addressLine2 ? `, ${nextJob.addressLine2}` : ""
+                    }, ${nextJob.city}, ${nextJob.state} ${nextJob.zipCode}`;
+                    openMap(fullAddress, e);
+                  }
+                }}
+                style={{
+                  padding: "0.5rem 1rem",
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  background: "#ffffff",
+                  color: "#2563eb",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#f3f4f6";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#ffffff";
+                }}
+              >
+                📍 Open Maps
+              </button>
+            </div>
+          )}
+        </div>
+        {nextJob && (
+          <div
+            style={{
+              padding: "0.75rem",
+              background: "#f9fafb",
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              color: "#6b7280",
+            }}
+          >
+            <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "#111827" }}>
+              Next Stop:
+            </div>
+            <div>
+              {nextJob.addressLine1}
+              {nextJob.addressLine2 ? `, ${nextJob.addressLine2}` : ""}, {nextJob.city}, {nextJob.state}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Filter Tabs */}
       <div
         style={{
