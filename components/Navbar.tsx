@@ -387,16 +387,18 @@ export function Navbar() {
                 <Link 
                   href="/partners" 
                   onClick={(e) => {
-                    e.stopPropagation();
+                    e.preventDefault();
                     closePortals();
                     setIsMenuOpen(false);
+                    router.push("/partners");
                   }}
                   style={{
                     display: "block",
                     padding: "0.75rem 1rem",
                     color: "var(--text-dark)",
                     textDecoration: "none",
-                    transition: "background-color 0.2s"
+                    transition: "background-color 0.2s",
+                    cursor: "pointer"
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = "#f9fafb";
@@ -405,44 +407,23 @@ export function Navbar() {
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
-                  Partners
+                  Blast Partners
                 </Link>
                 <Link 
                   href="/employee" 
                   onClick={(e) => {
-                    e.stopPropagation();
+                    e.preventDefault();
                     closePortals();
                     setIsMenuOpen(false);
+                    router.push("/employee");
                   }}
                   style={{
                     display: "block",
                     padding: "0.75rem 1rem",
                     color: "var(--text-dark)",
                     textDecoration: "none",
-                    transition: "background-color 0.2s"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f9fafb";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }}
-                >
-                  Employees
-                </Link>
-                <Link 
-                  href="/customer" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closePortals();
-                    setIsMenuOpen(false);
-                  }}
-                  style={{
-                    display: "block",
-                    padding: "0.75rem 1rem",
-                    color: "var(--text-dark)",
-                    textDecoration: "none",
-                    transition: "background-color 0.2s"
+                    transition: "background-color 0.2s",
+                    cursor: "pointer"
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = "#f9fafb";
@@ -454,18 +435,20 @@ export function Navbar() {
                   Bin Blasters
                 </Link>
                 <Link 
-                  href="/operator" 
+                  href="/customer" 
                   onClick={(e) => {
-                    e.stopPropagation();
+                    e.preventDefault();
                     closePortals();
                     setIsMenuOpen(false);
+                    router.push("/customer");
                   }}
                   style={{
                     display: "block",
                     padding: "0.75rem 1rem",
                     color: "var(--text-dark)",
                     textDecoration: "none",
-                    transition: "background-color 0.2s"
+                    transition: "background-color 0.2s",
+                    cursor: "pointer"
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = "#f9fafb";
@@ -474,7 +457,32 @@ export function Navbar() {
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
-                  Admin/Operator
+                  Blast Clients
+                </Link>
+                <Link 
+                  href="/operator" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    closePortals();
+                    setIsMenuOpen(false);
+                    router.push("/operator");
+                  }}
+                  style={{
+                    display: "block",
+                    padding: "0.75rem 1rem",
+                    color: "var(--text-dark)",
+                    textDecoration: "none",
+                    transition: "background-color 0.2s",
+                    cursor: "pointer"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#f9fafb";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  Blast Command
                 </Link>
               </div>
             )}

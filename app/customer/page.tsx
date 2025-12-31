@@ -157,8 +157,8 @@ export default function BlastClientsPortalPage() {
                   </p>
                 </div>
                 <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-                  {isEmployee && <Link href="/employee" className="btn btn-primary">Go to Employee Portal</Link>}
-                  {isOperator && <Link href="/operator" className="btn btn-primary">Go to Admin Portal</Link>}
+                  {isEmployee && <Link href="/employee" className="btn btn-primary">Go to Bin Blasters Portal</Link>}
+                  {isOperator && <Link href="/operator" className="btn btn-primary">Go to Blast Command Portal</Link>}
                   <Link href="/" className="btn" style={{ background: "#ffffff", border: "1px solid #e5e7eb" }}>Return Home</Link>
                 </div>
               </div>

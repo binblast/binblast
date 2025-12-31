@@ -153,8 +153,8 @@ export default function OperatorPortalPage() {
                   </p>
                 </div>
                 <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-                  {isEmployee && <Link href="/employee" className="btn btn-primary">Go to Employee Portal</Link>}
-                  <Link href="/customer" className="btn btn-primary">Go to Bin Blasters Portal</Link>
+                  {isEmployee && <Link href="/employee" className="btn btn-primary">Go to Bin Blasters Portal</Link>}
+                  <Link href="/customer" className="btn btn-primary">Go to Blast Clients Portal</Link>
                   <Link href="/" className="btn" style={{ background: "#ffffff", border: "1px solid #e5e7eb" }}>Return Home</Link>
                 </div>
               </div>
