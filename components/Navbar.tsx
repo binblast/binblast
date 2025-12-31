@@ -337,7 +337,12 @@ export function Navbar() {
           <li 
             style={{ position: "relative" }}
             onMouseEnter={() => !isMenuOpen && setIsPortalsOpen(true)}
-            onMouseLeave={() => !isMenuOpen && setIsPortalsOpen(false)}
+            onMouseLeave={(e) => {
+              // Only close if we're leaving the entire li element (not moving into the dropdown)
+              if (!isMenuOpen && !e.currentTarget.contains(e.relatedTarget as Node)) {
+                setIsPortalsOpen(false);
+              }
+            }}
           >
             <button
               onClick={togglePortals}
@@ -362,6 +367,8 @@ export function Navbar() {
             </button>
             {isPortalsOpen && (
               <div
+                onMouseEnter={() => setIsPortalsOpen(true)}
+                onMouseLeave={() => setIsPortalsOpen(false)}
                 style={{
                   position: isMenuOpen ? "static" : "absolute",
                   top: isMenuOpen ? "auto" : "100%",
@@ -379,7 +386,8 @@ export function Navbar() {
               >
                 <Link 
                   href="/partners" 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     closePortals();
                     setIsMenuOpen(false);
                   }}
@@ -401,7 +409,8 @@ export function Navbar() {
                 </Link>
                 <Link 
                   href="/employee" 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     closePortals();
                     setIsMenuOpen(false);
                   }}
@@ -423,7 +432,8 @@ export function Navbar() {
                 </Link>
                 <Link 
                   href="/customer" 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     closePortals();
                     setIsMenuOpen(false);
                   }}
@@ -441,11 +451,12 @@ export function Navbar() {
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
-                  Customers
+                  Bin Blasters
                 </Link>
                 <Link 
                   href="/operator" 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     closePortals();
                     setIsMenuOpen(false);
                   }}

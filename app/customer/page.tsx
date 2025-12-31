@@ -12,7 +12,7 @@ const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navba
   loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
 });
 
-export default function CustomerPortalPage() {
+export default function BinBlastersPortalPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -142,7 +142,7 @@ export default function CustomerPortalPage() {
             <div className="container">
               <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
                 <h1 className="section-title" style={{ marginBottom: "1rem" }}>
-                  Customer Portal
+                  Bin Blasters Portal
                 </h1>
                 <div style={{
                   background: "#fef2f2",
@@ -153,7 +153,7 @@ export default function CustomerPortalPage() {
                   marginBottom: "2rem"
                 }}>
                   <p style={{ margin: 0, fontSize: "1rem" }}>
-                    This portal is for customers only. Please visit the appropriate portal for your role.
+                    This portal is for Bin Blasters only. Please visit the appropriate portal for your role.
                   </p>
                 </div>
                 <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
@@ -176,7 +176,7 @@ export default function CustomerPortalPage() {
         <div className="container">
           <div style={{ maxWidth: "900px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
-              Customer Portal
+              Bin Blasters Portal
             </h1>
             <p style={{ 
               fontSize: "1.125rem", 
@@ -302,12 +302,12 @@ export default function CustomerPortalPage() {
               ) : (
                 <div>
                   <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                    Customer Login
+                    Bin Blasters Login
                   </h2>
                   <PortalLoginForm 
                     expectedRole="customer" 
                     redirectPath="/dashboard"
-                    portalName="Customer Portal"
+                    portalName="Bin Blasters Portal"
                   />
                   <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid #e5e7eb" }}>
                     <p style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.75rem" }}>
