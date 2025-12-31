@@ -135,7 +135,7 @@ export async function POST(
               <p>To accept this offer or discuss any questions, please contact us:</p>
               <p>
                 <strong>Phone:</strong> ${quoteData.phone || "Contact us"}<br>
-                <strong>Email:</strong> ${process.env.ADMIN_EMAIL || "info@binblast.com"}
+                <strong>Email:</strong> ${process.env.ADMIN_EMAIL || "support@binblastco.com"}
               </p>
 
               <p>We look forward to serving you!</p>
