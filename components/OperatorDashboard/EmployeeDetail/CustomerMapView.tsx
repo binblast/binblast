@@ -136,77 +136,86 @@ export function CustomerMapView({
       {/* Map Section (60% height) */}
       <div style={{ height: "60%", minHeight: "400px", position: "relative", border: "1px solid #e5e7eb", borderRadius: "8px", marginBottom: "1rem" }}>
         {customersWithCoords.length > 0 ? (
-          <MapContainer
-            center={mapCenter}
-            zoom={mapZoom}
-            style={{ height: "100%", width: "100%", borderRadius: "8px" }}
-            whenReady={() => {
-              // Map is ready
-            }}
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            />
-            
-            {customersWithCoords.map((customer) => {
-              const isSelected = selectedCustomerIds.includes(customer.id);
-              const canSelect = canSelectCustomer(customer);
+          typeof window !== "undefined" && MapContainer && TileLayer && CircleMarker && Popup ? (
+            <MapContainer
+              center={mapCenter}
+              zoom={mapZoom}
+              style={{ height: "100%", width: "100%", borderRadius: "8px" }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
               
-              return (
-                <CircleMarker
-                  key={customer.id}
-                  center={[customer.latitude, customer.longitude]}
-                  radius={isSelected ? 10 : 6}
-                  pathOptions={{
-                    color: getMarkerColor(customer),
-                    fillColor: getMarkerColor(customer),
-                    fillOpacity: isSelected ? 0.8 : 0.6,
-                    weight: isSelected ? 3 : 2,
-                  }}
-                  eventHandlers={{
-                    click: () => {
-                      if (!canSelect) {
-                        alert("This customer is assigned to another operator. Enable 'Reassign' to select.");
-                        return;
-                      }
-                      if (isSelected) {
-                        onCustomerDeselect(customer.id);
-                      } else {
-                        onCustomerSelect(customer.id);
-                      }
-                    },
-                  }}
-                >
-                  <Popup>
-                    <div style={{ minWidth: "200px" }}>
-                      <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>{customer.name}</div>
-                      <div style={{ fontSize: "0.875rem", marginBottom: "0.25rem" }}>{customer.address}</div>
-                      <div style={{ fontSize: "0.875rem", marginBottom: "0.25rem" }}>
-                        {customer.city}{customer.zipCode ? ` ${customer.zipCode}` : ""}
-                      </div>
-                      <div style={{ fontSize: "0.875rem", marginBottom: "0.25rem" }}>
-                        Plan: {customer.plan || "N/A"}
-                      </div>
-                      <div style={{ fontSize: "0.875rem", marginBottom: "0.25rem" }}>
-                        Status: {customer.status || "N/A"}
-                      </div>
-                      {customer.assignedTo && (
-                        <div style={{ fontSize: "0.875rem", color: customer.assignedTo === currentOperatorId ? "#10b981" : "#ef4444" }}>
-                          {customer.assignedTo === currentOperatorId
-                            ? "Assigned to this operator"
-                            : `Assigned to: ${customer.assignedToName || "Unknown"}`}
+              {customersWithCoords.map((customer) => {
+                const isSelected = selectedCustomerIds.includes(customer.id);
+                const canSelect = canSelectCustomer(customer);
+                
+                return (
+                  <CircleMarker
+                    key={customer.id}
+                    center={[customer.latitude, customer.longitude]}
+                    radius={isSelected ? 10 : 6}
+                    pathOptions={{
+                      color: getMarkerColor(customer),
+                      fillColor: getMarkerColor(customer),
+                      fillOpacity: isSelected ? 0.8 : 0.6,
+                      weight: isSelected ? 3 : 2,
+                    }}
+                    eventHandlers={{
+                      click: () => {
+                        if (!canSelect) {
+                          alert("This customer is assigned to another operator. Enable 'Reassign' to select.");
+                          return;
+                        }
+                        if (isSelected) {
+                          onCustomerDeselect(customer.id);
+                        } else {
+                          onCustomerSelect(customer.id);
+                        }
+                      },
+                    }}
+                  >
+                    <Popup>
+                      <div style={{ minWidth: "200px" }}>
+                        <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>{customer.name}</div>
+                        <div style={{ fontSize: "0.875rem", marginBottom: "0.25rem" }}>{customer.address}</div>
+                        <div style={{ fontSize: "0.875rem", marginBottom: "0.25rem" }}>
+                          {customer.city}{customer.zipCode ? ` ${customer.zipCode}` : ""}
                         </div>
-                      )}
-                      {!customer.assignedTo && (
-                        <div style={{ fontSize: "0.875rem", color: "#3b82f6" }}>Unassigned</div>
-                      )}
-                    </div>
-                  </Popup>
-                </CircleMarker>
-              );
-            })}
-          </MapContainer>
+                        <div style={{ fontSize: "0.875rem", marginBottom: "0.25rem" }}>
+                          Plan: {customer.plan || "N/A"}
+                        </div>
+                        <div style={{ fontSize: "0.875rem", marginBottom: "0.25rem" }}>
+                          Status: {customer.status || "N/A"}
+                        </div>
+                        {customer.assignedTo && (
+                          <div style={{ fontSize: "0.875rem", color: customer.assignedTo === currentOperatorId ? "#10b981" : "#ef4444" }}>
+                            {customer.assignedTo === currentOperatorId
+                              ? "Assigned to this operator"
+                              : `Assigned to: ${customer.assignedToName || "Unknown"}`}
+                          </div>
+                        )}
+                        {!customer.assignedTo && (
+                          <div style={{ fontSize: "0.875rem", color: "#3b82f6" }}>Unassigned</div>
+                        )}
+                      </div>
+                    </Popup>
+                  </CircleMarker>
+                );
+              })}
+            </MapContainer>
+          ) : (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+              color: "#6b7280",
+            }}>
+              Map loading...
+            </div>
+          )
         ) : (
           <div style={{
             display: "flex",
