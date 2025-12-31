@@ -158,7 +158,7 @@ export function QuoteStep3Contact({
               minHeight: "44px",
               boxSizing: "border-box"
             }}
-            placeholder="(555) 123-4567"
+            placeholder="(470) 305-0823"
           />
           {errors.phone && (
             <p style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "0.25rem" }}>

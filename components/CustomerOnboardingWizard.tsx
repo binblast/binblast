@@ -360,7 +360,7 @@ export function CustomerOnboardingWizard({
                       borderRadius: "6px",
                       fontSize: "14px",
                     }}
-                    placeholder="(555) 123-4567"
+                    placeholder="(470) 305-0823"
                   />
                   {errors.phone && (
                     <p style={{ margin: "4px 0 0 0", color: "#dc2626", fontSize: "12px" }}>{errors.phone}</p>

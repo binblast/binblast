@@ -515,7 +515,7 @@ export default function HomePage() {
               <div className="footer-info">
                 <div className="footer-section">
                   <h3 className="footer-heading">Contact Us</h3>
-                  <p>Phone: (555) 123-4567</p>
+                  <p>Phone: <a href="tel:+14703050823" style={{ color: "inherit", textDecoration: "none" }}>(470) 305-0823</a></p>
                   <p>Email: info@binblastco.com</p>
                 </div>
                 <div className="footer-section">

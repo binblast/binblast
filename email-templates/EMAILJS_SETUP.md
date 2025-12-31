@@ -64,7 +64,7 @@ The email template uses these variables (automatically populated from the form):
 | `{{businessName}}` | Business name | "ABC Cleaning Services" |
 | `{{ownerName}}` | Owner's name | "John Doe" |
 | `{{email}}` | Contact email | "john@example.com" |
-| `{{phone}}` | Contact phone | "(555) 123-4567" |
+| `{{phone}}` | Contact phone | "(470) 305-0823" |
 | `{{websiteOrInstagram}}` | Website or Instagram URL | "https://instagram.com/abc" |
 | `{{serviceAreas}}` | Service areas (comma-separated) | "Downtown, Uptown, Midtown" |
 | `{{businessType}}` | Type of business | "Residential Cleaning" |
