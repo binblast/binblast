@@ -1,4 +1,4 @@
-// app/partners/page.tsx
+// app/customer/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,7 +12,7 @@ const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navba
   loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
 });
 
-export default function PartnersPage() {
+export default function CustomerPortalPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export default function PartnersPage() {
           const user = auth.currentUser;
           setUserId(user.uid);
           
-          // Check user role and partner status
+          // Check user role
           const db = await getDbInstance();
           if (db) {
             const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
@@ -38,13 +38,21 @@ export default function PartnersPage() {
             
             if (userDoc.exists()) {
               const userData = userDoc.data();
-              setUserRole(userData.role);
+              const role = userData.role;
+              const userEmail = user.email || "";
+              const ADMIN_EMAIL = "binblastcompany@gmail.com";
               
-              // Check if user is a partner and redirect to dashboard
+              setUserRole(role);
+              
+              // Check if user is customer (not employee, partner, or operator/admin)
+              const isOperator = role === "operator" || role === "admin" || userEmail === ADMIN_EMAIL;
               const { getDashboardUrl } = await import("@/lib/partner-auth");
               const dashboardUrl = await getDashboardUrl(user.uid);
-              if (dashboardUrl !== "/dashboard") {
-                router.push("/partners/dashboard");
+              const isPartner = dashboardUrl !== "/dashboard";
+              
+              if (role !== "employee" && !isPartner && !isOperator) {
+                // Customer - redirect to dashboard
+                router.push("/dashboard");
                 return;
               }
             }
@@ -55,7 +63,7 @@ export default function PartnersPage() {
           if (user) {
             setUserId(user.uid);
             
-            // Check user role and partner status
+            // Check user role
             const db = await getDbInstance();
             if (db) {
               const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
@@ -65,13 +73,21 @@ export default function PartnersPage() {
               
               if (userDoc.exists()) {
                 const userData = userDoc.data();
-                setUserRole(userData.role);
+                const role = userData.role;
+                const userEmail = user.email || "";
+                const ADMIN_EMAIL = "binblastcompany@gmail.com";
                 
-                // Check if user is a partner and redirect to dashboard
+                setUserRole(role);
+                
+                // Check if user is customer
+                const isOperator = role === "operator" || role === "admin" || userEmail === ADMIN_EMAIL;
                 const { getDashboardUrl } = await import("@/lib/partner-auth");
                 const dashboardUrl = await getDashboardUrl(user.uid);
-                if (dashboardUrl !== "/dashboard") {
-                  router.push("/partners/dashboard");
+                const isPartner = dashboardUrl !== "/dashboard";
+                
+                if (role !== "employee" && !isPartner && !isOperator) {
+                  // Customer - redirect to dashboard
+                  router.push("/dashboard");
                   return;
                 }
               }
@@ -83,6 +99,8 @@ export default function PartnersPage() {
           setLoading(false);
         });
         
+        setLoading(false);
+        
         return () => {
           if (unsubscribe) unsubscribe();
         };
@@ -93,7 +111,7 @@ export default function PartnersPage() {
     }
     
     checkAuth();
-  }, []);
+  }, [router]);
 
   if (loading) {
     return (
@@ -108,6 +126,49 @@ export default function PartnersPage() {
     );
   }
 
+  // If user is logged in but not a customer, show message
+  if (userId && userRole) {
+    const userEmail = userId; // We'll check this properly
+    const ADMIN_EMAIL = "binblastcompany@gmail.com";
+    const isOperator = userRole === "operator" || userRole === "admin";
+    const isEmployee = userRole === "employee";
+    
+    // We need to check if partner, but for now show message if employee or operator
+    if (isEmployee || isOperator) {
+      return (
+        <>
+          <Navbar />
+          <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+            <div className="container">
+              <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
+                <h1 className="section-title" style={{ marginBottom: "1rem" }}>
+                  Customer Portal
+                </h1>
+                <div style={{
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: "12px",
+                  padding: "2rem",
+                  color: "#dc2626",
+                  marginBottom: "2rem"
+                }}>
+                  <p style={{ margin: 0, fontSize: "1rem" }}>
+                    This portal is for customers only. Please visit the appropriate portal for your role.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
+                  {isEmployee && <Link href="/employee" className="btn btn-primary">Go to Employee Portal</Link>}
+                  {isOperator && <Link href="/operator" className="btn btn-primary">Go to Admin Portal</Link>}
+                  <Link href="/" className="btn" style={{ background: "#ffffff", border: "1px solid #e5e7eb" }}>Return Home</Link>
+                </div>
+              </div>
+            </div>
+          </main>
+        </>
+      );
+    }
+  }
+
   return (
     <>
       <Navbar />
@@ -115,7 +176,7 @@ export default function PartnersPage() {
         <div className="container">
           <div style={{ maxWidth: "900px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
-              Business Partner Program
+              Customer Portal
             </h1>
             <p style={{ 
               fontSize: "1.125rem", 
@@ -123,7 +184,7 @@ export default function PartnersPage() {
               textAlign: "center",
               marginBottom: "3rem"
             }}>
-              Grow your business by offering Bin Blast Co. services to your customers
+              Manage your cleaning plan, schedule cleanings, track loyalty rewards, view referrals
             </p>
 
             <div style={{
@@ -140,10 +201,10 @@ export default function PartnersPage() {
                 border: "1px solid #e5e7eb"
               }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                  Earn Revenue Share
+                  Manage Your Plan
                 </h3>
                 <p style={{ color: "var(--text-light)", fontSize: "0.95rem" }}>
-                  Get 60% of every booking that comes through your unique partner link. No upfront costs or fees.
+                  View your current subscription, billing status, and upcoming cleanings at a glance.
                 </p>
               </div>
 
@@ -155,10 +216,10 @@ export default function PartnersPage() {
                 border: "1px solid #e5e7eb"
               }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                  Your Own Booking Link
+                  Schedule Cleanings
                 </h3>
                 <p style={{ color: "var(--text-light)", fontSize: "0.95rem" }}>
-                  Share your unique link with customers. All bookings are automatically tracked and attributed to you.
+                  Choose your trash day, confirm your address, and add special instructions for our team.
                 </p>
               </div>
 
@@ -170,10 +231,10 @@ export default function PartnersPage() {
                 border: "1px solid #e5e7eb"
               }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                  Track Everything
+                  Track Rewards
                 </h3>
                 <p style={{ color: "var(--text-light)", fontSize: "0.95rem" }}>
-                  View all your bookings, earnings, and customer details in your dedicated partner dashboard.
+                  Monitor your loyalty levels, referral credits, and cleaning history.
                 </p>
               </div>
             </div>
@@ -186,110 +247,30 @@ export default function PartnersPage() {
               marginBottom: "2rem"
             }}>
               <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
-                How It Works
+                Your Dashboard Features
               </h2>
-              <ol style={{ 
-                listStyle: "decimal",
+              <ul style={{ 
+                listStyle: "disc",
                 paddingLeft: "1.5rem",
                 color: "#0c4a6e",
                 lineHeight: "1.8"
               }}>
                 <li style={{ marginBottom: "0.75rem" }}>
-                  <strong>Apply to become a partner</strong> - Fill out a simple application form
+                  <strong>Plan Overview</strong> - See your current plan and billing status
                 </li>
                 <li style={{ marginBottom: "0.75rem" }}>
-                  <strong>Get approved</strong> - We review your application (usually within 24-48 hours)
+                  <strong>Schedule Management</strong> - Pick your trash day and preferred time window
                 </li>
                 <li style={{ marginBottom: "0.75rem" }}>
-                  <strong>Receive your booking link</strong> - Share it with your customers
+                  <strong>Loyalty Levels</strong> - Track your progress from Level 1 up
                 </li>
                 <li style={{ marginBottom: "0.75rem" }}>
-                  <strong>Earn 60% revenue share</strong> - Track all bookings and earnings in your dashboard
+                  <strong>Referral Rewards</strong> - Access your referral link and view credits
                 </li>
-              </ol>
-            </div>
-
-            <div style={{
-              background: "#ffffff",
-              borderRadius: "20px",
-              padding: "2rem",
-              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-              border: "1px solid #e5e7eb",
-              textAlign: "center",
-              marginBottom: "2rem"
-            }}>
-              <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                Perfect For
-              </h2>
-              <div style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "1rem",
-                justifyContent: "center",
-                marginBottom: "2rem"
-              }}>
-                {["Car Detailers", "Pressure Washers", "Landscapers", "Property Managers", "HVAC Companies", "Other Service Businesses"].map((business) => (
-                  <span key={business} style={{
-                    padding: "0.5rem 1rem",
-                    background: "#f0f9ff",
-                    borderRadius: "8px",
-                    color: "#0369a1",
-                    fontSize: "0.875rem",
-                    fontWeight: "600"
-                  }}>
-                    {business}
-                  </span>
-                ))}
-              </div>
-              
-              {userId ? (
-                <Link 
-                  href="/partners/apply"
-                  className="btn btn-primary"
-                  style={{
-                    display: "inline-block",
-                    padding: "0.75rem 2rem",
-                    fontSize: "1rem",
-                    fontWeight: "600"
-                  }}
-                >
-                  Apply Now
-                </Link>
-              ) : (
-                <div>
-                  <p style={{ marginBottom: "1rem", color: "var(--text-light)" }}>
-                    Sign up or log in to apply for the Partner Program
-                  </p>
-                  <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
-                    <Link 
-                      href="/register?partner=true"
-                      className="btn btn-primary"
-                      style={{
-                        display: "inline-block",
-                        padding: "0.75rem 2rem",
-                        fontSize: "1rem",
-                        fontWeight: "600"
-                      }}
-                    >
-                      Sign Up
-                    </Link>
-                    <Link 
-                      href="/login"
-                      className="btn"
-                      style={{
-                        display: "inline-block",
-                        padding: "0.75rem 2rem",
-                        fontSize: "1rem",
-                        fontWeight: "600",
-                        background: "#ffffff",
-                        border: "1px solid #e5e7eb"
-                      }}
-                    >
-                      Log In
-                    </Link>
-                  </div>
-                </div>
-              )}
+                <li style={{ marginBottom: "0.75rem" }}>
+                  <strong>Cleaning History</strong> - Review past and upcoming appointments
+                </li>
+              </ul>
             </div>
 
             <div style={{
@@ -303,10 +284,10 @@ export default function PartnersPage() {
               {userId ? (
                 <div>
                   <p style={{ marginBottom: "1rem", color: "var(--text-light)" }}>
-                    You are already logged in. Access your partner dashboard to manage your account.
+                    You are already logged in. Access your dashboard to manage your account.
                   </p>
                   <Link 
-                    href="/partners/dashboard"
+                    href="/dashboard"
                     className="btn btn-primary"
                     style={{
                       display: "inline-block",
@@ -321,13 +302,29 @@ export default function PartnersPage() {
               ) : (
                 <div>
                   <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                    Partner Login
+                    Customer Login
                   </h2>
                   <PortalLoginForm 
-                    expectedRole="partner" 
-                    redirectPath="/partners/dashboard"
-                    portalName="Partner Portal"
+                    expectedRole="customer" 
+                    redirectPath="/dashboard"
+                    portalName="Customer Portal"
                   />
+                  <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid #e5e7eb" }}>
+                    <p style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.75rem" }}>
+                      Don&apos;t have an account yet?
+                    </p>
+                    <Link 
+                      href="/#pricing"
+                      style={{
+                        color: "var(--primary-color)",
+                        fontWeight: "600",
+                        textDecoration: "none",
+                        fontSize: "0.875rem"
+                      }}
+                    >
+                      Sign up for a cleaning plan
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -337,3 +334,4 @@ export default function PartnersPage() {
     </>
   );
 }
+

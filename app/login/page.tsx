@@ -77,7 +77,7 @@ function LoginForm() {
           return;
         }
 
-        // Check if user is an employee (including partner employees)
+        // Check user role and redirect accordingly
         try {
           const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
           const db = await getDbInstance();
@@ -89,12 +89,26 @@ function LoginForm() {
             
             if (userDoc.exists()) {
               const userData = userDoc.data();
-              console.log(`[Login] User role: ${userData.role}, partnerId: ${userData.partnerId || "none"}`);
+              const userRole = userData.role;
+              const userEmail = user.email || "";
+              const ADMIN_EMAIL = "binblastcompany@gmail.com";
               
-              if (userData.role === "employee") {
+              console.log(`[Login] User role: ${userRole}, partnerId: ${userData.partnerId || "none"}`);
+              
+              // Check if user is operator/admin
+              const isOperator = userRole === "operator" || userRole === "admin" || userEmail === ADMIN_EMAIL;
+              
+              // Redirect based on role
+              if (userRole === "employee") {
                 // Employee (including partner employees) - redirect to employee dashboard
                 const redirectPath = redirectParam || "/employee/dashboard";
                 console.log(`[Login] Redirecting employee to: ${redirectPath}`);
+                router.push(redirectPath);
+                return;
+              } else if (isOperator) {
+                // Operator/Admin - redirect to dashboard
+                const redirectPath = redirectParam || "/dashboard";
+                console.log(`[Login] Redirecting operator/admin to: ${redirectPath}`);
                 router.push(redirectPath);
                 return;
               }
@@ -103,13 +117,15 @@ function LoginForm() {
             }
           }
         } catch (err) {
-          console.error("[Login] Error checking employee status:", err);
+          console.error("[Login] Error checking user role:", err);
         }
 
-        // Check if user is a partner and redirect accordingly
+        // Check if user is a partner and redirect accordingly (for customers, this will return /dashboard)
         const { getDashboardUrl } = await import("@/lib/partner-auth");
         const dashboardUrl = await getDashboardUrl(user.uid);
-        router.push(dashboardUrl);
+        const redirectPath = redirectParam || dashboardUrl;
+        console.log(`[Login] Redirecting to: ${redirectPath}`);
+        router.push(redirectPath);
       } else {
         // Fallback to regular dashboard if user not found
         const redirectParam = searchParams.get("redirect");

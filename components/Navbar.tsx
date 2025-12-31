@@ -9,6 +9,7 @@ import { useFirebase } from "@/lib/firebase-context";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isPortalsOpen, setIsPortalsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [accountUrl, setAccountUrl] = useState("/dashboard");
   const [isEmployee, setIsEmployee] = useState(false);
@@ -254,6 +255,14 @@ export function Navbar() {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  const togglePortals = () => {
+    setIsPortalsOpen(!isPortalsOpen);
+  };
+
+  const closePortals = () => {
+    setIsPortalsOpen(false);
+  };
+
   const handleLogout = async () => {
     try {
       const { signOut } = await import("@/lib/firebase");
@@ -325,23 +334,138 @@ export function Navbar() {
               <Link href={getHomeSectionHref("pricing")}>Services</Link>
             )}
           </li>
-          <li>
-            {isLoggedIn ? (
-              <Link href={accountUrl}>{isEmployee ? "Dashboard" : "Account"}</Link>
-            ) : (
-              <Link href={getHomeSectionHref("account")}>Account</Link>
-            )}
-          </li>
-          {!isEmployee && (
-            <li>
-              <Link href="/partners">Partners</Link>
-            </li>
-          )}
-          <li>
-            {isEmployee ? (
-              <Link href="/employee/dashboard">Employee Portal</Link>
-            ) : (
-              <Link href="/login?redirect=/employee/dashboard">Employee Portal</Link>
+          <li 
+            style={{ position: "relative" }}
+            onMouseEnter={() => !isMenuOpen && setIsPortalsOpen(true)}
+            onMouseLeave={() => !isMenuOpen && setIsPortalsOpen(false)}
+          >
+            <button
+              onClick={togglePortals}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "var(--text-dark)",
+                fontWeight: "500",
+                padding: "0.5rem 1rem",
+                cursor: "pointer",
+                fontSize: "inherit",
+                fontFamily: "inherit",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                width: "100%",
+                textAlign: "left"
+              }}
+            >
+              Portals
+              <span style={{ fontSize: "0.75rem", marginLeft: "auto" }}>{isPortalsOpen ? "▲" : "▼"}</span>
+            </button>
+            {isPortalsOpen && (
+              <div
+                style={{
+                  position: isMenuOpen ? "static" : "absolute",
+                  top: isMenuOpen ? "auto" : "100%",
+                  left: isMenuOpen ? "auto" : "0",
+                  background: "#ffffff",
+                  borderRadius: "8px",
+                  boxShadow: isMenuOpen ? "none" : "0 4px 16px rgba(0, 0, 0, 0.1)",
+                  border: isMenuOpen ? "none" : "1px solid #e5e7eb",
+                  minWidth: isMenuOpen ? "100%" : "180px",
+                  zIndex: 1000,
+                  marginTop: isMenuOpen ? "0" : "0.5rem",
+                  padding: "0.5rem 0",
+                  marginLeft: isMenuOpen ? "1rem" : "0"
+                }}
+              >
+                <Link 
+                  href="/partners" 
+                  onClick={() => {
+                    closePortals();
+                    setIsMenuOpen(false);
+                  }}
+                  style={{
+                    display: "block",
+                    padding: "0.75rem 1rem",
+                    color: "var(--text-dark)",
+                    textDecoration: "none",
+                    transition: "background-color 0.2s"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#f9fafb";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  Partners
+                </Link>
+                <Link 
+                  href="/employee" 
+                  onClick={() => {
+                    closePortals();
+                    setIsMenuOpen(false);
+                  }}
+                  style={{
+                    display: "block",
+                    padding: "0.75rem 1rem",
+                    color: "var(--text-dark)",
+                    textDecoration: "none",
+                    transition: "background-color 0.2s"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#f9fafb";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  Employees
+                </Link>
+                <Link 
+                  href="/customer" 
+                  onClick={() => {
+                    closePortals();
+                    setIsMenuOpen(false);
+                  }}
+                  style={{
+                    display: "block",
+                    padding: "0.75rem 1rem",
+                    color: "var(--text-dark)",
+                    textDecoration: "none",
+                    transition: "background-color 0.2s"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#f9fafb";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  Customers
+                </Link>
+                <Link 
+                  href="/operator" 
+                  onClick={() => {
+                    closePortals();
+                    setIsMenuOpen(false);
+                  }}
+                  style={{
+                    display: "block",
+                    padding: "0.75rem 1rem",
+                    color: "var(--text-dark)",
+                    textDecoration: "none",
+                    transition: "background-color 0.2s"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#f9fafb";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  Admin/Operator
+                </Link>
+              </div>
             )}
           </li>
           {!loading && (
