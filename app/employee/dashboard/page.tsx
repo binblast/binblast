@@ -5,7 +5,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import "../../employee-dashboard-mobile.css";
+import "../employee-dashboard-mobile.css";
 import { DailyMissionCard } from "@/components/EmployeeDashboard/DailyMissionCard";
 import { JobList } from "@/components/EmployeeDashboard/JobList";
 import { JobDetailModal } from "@/components/EmployeeDashboard/JobDetailModal";

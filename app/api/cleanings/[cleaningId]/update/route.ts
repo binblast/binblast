@@ -65,17 +65,7 @@ export async function PUT(
     // In production, you'd want to verify the user is authenticated and matches
     userId = cleaningData.userId;
 
-    // Check if cleaning is more than 12 hours away
-    const scheduledDate = cleaningData.scheduledDate?.toDate?.() || new Date(cleaningData.scheduledDate);
-    const now = new Date();
-    const hoursUntilCleaning = (scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-    if (hoursUntilCleaning <= 12) {
-      return NextResponse.json(
-        { error: "Cleaning details can only be edited up to 12 hours before the scheduled service time" },
-        { status: 400 }
-      );
-    }
+    // Rescheduling is now allowed at any time - no time restriction
 
     // Check if cleaning is already completed or cancelled
     if (cleaningData.status === "completed" || cleaningData.status === "cancelled") {

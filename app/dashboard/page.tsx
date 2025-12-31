@@ -4681,7 +4681,8 @@ function DashboardPageContent() {
                         const cleaningDate = getCleaningDate(cleaning);
                         const customer = isAdmin ? allCustomers.find((c: any) => c.id === cleaning.userId) : null;
                         const isCompleted = cleaning.status === "completed" || (cleaning as any).jobStatus === "completed";
-                        const canEdit = !isAdmin && !isCompleted && cleaning.status !== "cancelled" && cleaningDate.getTime() > new Date().getTime() + (12 * 60 * 60 * 1000);
+                        // Allow editing at any time - no 12 hour restriction
+                        const canEdit = !isAdmin && !isCompleted && cleaning.status !== "cancelled";
                         
                         return (
                           <div
@@ -4746,11 +4747,6 @@ function DashboardPageContent() {
                                 >
                                   Edit
                                 </button>
-                              )}
-                              {!canEdit && !isCompleted && cleaning.status !== "cancelled" && (
-                                <div style={{ fontSize: "0.75rem", color: "#dc2626", textAlign: "right" }}>
-                                  Editing not available within 12 hours of service
-                                </div>
                               )}
                           <span style={{
                             padding: "0.25rem 0.75rem",

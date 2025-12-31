@@ -128,20 +128,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
     }
   }, [existingCleaning]);
 
-  // Check if rescheduling is allowed (within 12 hours before cleaning day)
+  // Check if rescheduling is allowed - now always allowed
   const canReschedule = (cleaningDate: Date): boolean => {
-    if (!existingCleaning) return true;
-    
-    const now = new Date();
-    const cleaningDateTime = new Date(cleaningDate);
-    cleaningDateTime.setHours(0, 0, 0, 0);
-    
-    // Calculate 12 hours before cleaning day
-    const twelveHoursBefore = new Date(cleaningDateTime);
-    twelveHoursBefore.setHours(twelveHoursBefore.getHours() - 12);
-    
-    // Allow rescheduling if current time is more than 12 hours before cleaning day
-    return now < twelveHoursBefore;
+    // Allow rescheduling at any time
+    return true;
   };
 
   // Generate dropdown options for each day within 2-week window
@@ -170,7 +160,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
           dayName,
           date: existingDate,
           value: existingDateValue,
-          label: `${dayName}, ${monthName} ${dayNumber}${canRescheduleThis ? " (Current)" : " (Cannot reschedule - less than 12hrs away)"}`
+          label: `${dayName}, ${monthName} ${dayNumber} (Current)`
         });
       } catch (e) {
         console.error("Error parsing existing cleaning date:", e);
@@ -300,14 +290,9 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
       // Use the selected date value directly
       const scheduledDate = selectedDateValue;
 
-      // Check if rescheduling is allowed
+      // Rescheduling is now always allowed
       if (existingCleaning && isRescheduling) {
-        const cleaningDate = parseDate(existingCleaning.scheduledDate);
-        if (!canReschedule(cleaningDate)) {
-          setError("You can only reschedule a cleaning more than 12 hours before the scheduled date.");
-          setLoading(false);
-          return;
-        }
+        // No time restriction - allow rescheduling at any time
 
         // Update existing cleaning
         const cleaningRef = doc(db, "scheduledCleanings", existingCleaning.id);
@@ -488,28 +473,21 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
                   year: "numeric" 
                 })} at {existingCleaning.scheduledTime}
               </p>
-              {!canRescheduleExisting && (
-                <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.75rem", color: "#dc2626", fontWeight: "500" }}>
-                  ⚠️ Cannot reschedule - less than 12 hours before cleaning day
-                </p>
-              )}
             </div>
-            {canRescheduleExisting && (
-              <button
-                onClick={() => {
-                  setIsOpen(true);
-                  setIsRescheduling(true);
-                }}
-                className="btn btn-primary"
-                style={{ 
-                  padding: "0.5rem 1rem",
-                  fontSize: "0.875rem",
-                  whiteSpace: "nowrap"
-                }}
-              >
-                Reschedule
-              </button>
-            )}
+            <button
+              onClick={() => {
+                setIsOpen(true);
+                setIsRescheduling(true);
+              }}
+              className="btn btn-primary"
+              style={{ 
+                padding: "0.5rem 1rem",
+                fontSize: "0.875rem",
+                whiteSpace: "nowrap"
+              }}
+            >
+              Reschedule
+            </button>
           </div>
         </div>
       )}
@@ -726,24 +704,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
               </div>
             )}
 
-            {isRescheduling && existingCleaningDate && !canRescheduleExisting && (
-              <div style={{
-                padding: "0.75rem 1rem",
-                background: "#fef2f2",
-                border: "1px solid #fecaca",
-                borderRadius: "8px",
-                color: "#dc2626",
-                fontSize: "0.875rem",
-                marginTop: "0.5rem"
-              }}>
-                ⚠️ You can only reschedule a cleaning more than 12 hours before the scheduled date. 
-                Please contact support if you need to change this cleaning.
-              </div>
-            )}
 
             <button
               type="submit"
-              disabled={loading || !selectedDateValue || !selectedTime || (isRescheduling && existingCleaningDate ? !canRescheduleExisting : false)}
+              disabled={loading || !selectedDateValue || !selectedTime}
               className={`btn btn-primary ${loading ? "disabled" : ""}`}
               style={{
                 width: "100%",
