@@ -1,7 +1,7 @@
 // components/ScheduleCleaningForm.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useFirebase } from "@/lib/firebase-context";
 
 interface ScheduledCleaning {
@@ -128,10 +128,15 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
     }
   }, [existingCleaning]);
 
-  // Check if rescheduling is allowed - now always allowed
+  // Check if rescheduling is allowed - must be at least 12 hours ahead
   const canReschedule = (cleaningDate: Date): boolean => {
-    // Allow rescheduling at any time
-    return true;
+    const now = new Date();
+    
+    // Calculate 12 hours from now
+    const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+    
+    // Check if the cleaning date/time is at least 12 hours away
+    return cleaningDate > twelveHoursFromNow;
   };
 
   // Generate dropdown options for each day within 2-week window
@@ -143,9 +148,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
     
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const options: Array<{ dayName: string; date: Date; value: string; label: string }> = [];
+    const usedValues = new Set<string>();
     
     // If there's an existing cleaning date, include it even if it's outside the normal window
-    if (existingCleaning?.scheduledDate && selectedDateValue) {
+    if (existingCleaning?.scheduledDate) {
       try {
         const existingDate = parseDate(existingCleaning.scheduledDate);
         const existingDateValue = formatDateForInput(existingDate);
@@ -153,15 +159,13 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
         const monthName = existingDate.toLocaleDateString("en-US", { month: "short" });
         const dayNumber = existingDate.getDate();
         
-        // Check if rescheduling is allowed
-        const canRescheduleThis = canReschedule(existingDate);
-        
         options.push({
           dayName,
           date: existingDate,
           value: existingDateValue,
           label: `${dayName}, ${monthName} ${dayNumber} (Current)`
         });
+        usedValues.add(existingDateValue);
       } catch (e) {
         console.error("Error parsing existing cleaning date:", e);
       }
@@ -185,9 +189,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
       // Only include if date is in the future (not today), and within 2 weeks
       // Also exclude if it matches the existing cleaning date (already added above)
       const firstDateValue = formatDateForInput(firstOccurrence);
-      const isExistingDate = existingCleaning && firstDateValue === selectedDateValue;
       
-      if (firstOccurrence > today && firstOccurrence <= twoWeeksFromNow && !isExistingDate) {
+      if (firstOccurrence > today && firstOccurrence <= twoWeeksFromNow && !usedValues.has(firstDateValue)) {
         const dateValue = formatDateForInput(firstOccurrence);
         const monthName = firstOccurrence.toLocaleDateString("en-US", { month: "short" });
         const dayNumber = firstOccurrence.getDate();
@@ -199,6 +202,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
           value: dateValue,
           label
         });
+        usedValues.add(dateValue);
       }
       
       // Also check the second occurrence (next week) if within 2 weeks
@@ -208,9 +212,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
       
       // Only include if date is in the future (not today), and within 2 weeks
       const secondDateValue = formatDateForInput(secondOccurrence);
-      const isExistingDate2 = existingCleaning && secondDateValue === selectedDateValue;
       
-      if (secondOccurrence > today && secondOccurrence <= twoWeeksFromNow && !isExistingDate2) {
+      if (secondOccurrence > today && secondOccurrence <= twoWeeksFromNow && !usedValues.has(secondDateValue)) {
         const dateValue = formatDateForInput(secondOccurrence);
         const monthName = secondOccurrence.toLocaleDateString("en-US", { month: "short" });
         const dayNumber = secondOccurrence.getDate();
@@ -222,6 +225,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
           value: dateValue,
           label
         });
+        usedValues.add(dateValue);
       }
     });
     
@@ -231,7 +235,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
     return options;
   };
 
-  const dayOptions = getDayOptions();
+  // Memoize dayOptions to ensure consistency when selectedDateValue changes
+  const dayOptions = useMemo(() => getDayOptions(), [selectedDateValue, existingCleaning?.scheduledDate]);
 
   // Calculate the scheduled date based on selected date value
   const getCalculatedDate = () => {
@@ -263,6 +268,21 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
     if (!addressLine1 || !city || !state || !zipCode || !selectedDateValue || !selectedTime) {
       setError("Please fill in all required fields");
       return;
+    }
+
+    // Check 12-hour advance requirement for rescheduling
+    if (isRescheduling && existingCleaning?.scheduledDate) {
+      const existingDate = parseDate(existingCleaning.scheduledDate);
+      const now = new Date();
+      
+      // Calculate 12 hours from now
+      const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+      
+      // Check if the existing cleaning is less than 12 hours away
+      if (existingDate <= twelveHoursFromNow) {
+        setError("Changes must be made at least 12 hours before the scheduled cleaning time.");
+        return;
+      }
     }
 
     // Don't submit if Firebase is not ready
@@ -522,7 +542,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
                 Preferred Cleaning Day
               </label>
               <select
-                value={selectedDateValue}
+                key={`day-select-${selectedDateValue}`}
+                value={selectedDateValue || ""}
                 onChange={handleDayChange}
                 required
                 style={{
@@ -707,13 +728,13 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
 
             <button
               type="submit"
-              disabled={loading || !selectedDateValue || !selectedTime}
+              disabled={loading || !selectedDateValue || !selectedTime || (isRescheduling && existingCleaningDate ? !canRescheduleExisting : false)}
               className={`btn btn-primary ${loading ? "disabled" : ""}`}
               style={{
                 width: "100%",
                 marginTop: "0.5rem",
-                cursor: (loading || (isRescheduling && existingCleaningDate ? !canRescheduleExisting : false)) ? "not-allowed" : "pointer",
-                opacity: (loading || (isRescheduling && existingCleaningDate ? !canRescheduleExisting : false)) ? 0.6 : 1
+                cursor: (loading || !selectedDateValue || !selectedTime || (isRescheduling && existingCleaningDate ? !canRescheduleExisting : false)) ? "not-allowed" : "pointer",
+                opacity: (loading || !selectedDateValue || !selectedTime || (isRescheduling && existingCleaningDate ? !canRescheduleExisting : false)) ? 0.6 : 1
               }}
             >
               {loading ? (isRescheduling ? "Rescheduling..." : "Scheduling...") : (isRescheduling ? "Update Schedule" : "Schedule Cleaning")}
