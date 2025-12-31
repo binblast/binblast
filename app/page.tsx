@@ -520,9 +520,8 @@ export default function HomePage() {
                 </div>
                 <div className="footer-section">
                   <h3 className="footer-heading">Hours</h3>
-                  <p>Monday - Friday: 8am - 6pm</p>
-                  <p>Saturday: 9am - 4pm</p>
-                  <p>Sunday: Closed</p>
+                  <p>Monday – Saturday: 8:00 AM – 6:00 PM</p>
+                  <p>Sunday: Closed (or AI-only)</p>
                 </div>
                 <div className="footer-section">
                   <h3 className="footer-heading">For Businesses</h3>
