@@ -115,7 +115,7 @@ export default function PartnersPage() {
         <div className="container">
           <div style={{ maxWidth: "900px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
-              Business Partner Program
+              Blast Partners Portal
             </h1>
             <p style={{ 
               fontSize: "1.125rem", 
@@ -321,12 +321,12 @@ export default function PartnersPage() {
               ) : (
                 <div>
                   <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                    Partner Login
+                    Blast Partners Login
                   </h2>
                   <PortalLoginForm 
                     expectedRole="partner" 
                     redirectPath="/partners/dashboard"
-                    portalName="Partner Portal"
+                    portalName="Blast Partners Portal"
                   />
                 </div>
               )}

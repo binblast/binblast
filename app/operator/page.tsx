@@ -138,7 +138,7 @@ export default function OperatorPortalPage() {
             <div className="container">
               <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
                 <h1 className="section-title" style={{ marginBottom: "1rem" }}>
-                  Admin/Operator Portal
+                  Blast Command Portal
                 </h1>
                 <div style={{
                   background: "#fef2f2",
@@ -149,7 +149,7 @@ export default function OperatorPortalPage() {
                   marginBottom: "2rem"
                 }}>
                   <p style={{ margin: 0, fontSize: "1rem" }}>
-                    This portal is for administrators and operators only. Please visit the appropriate portal for your role.
+                    This portal is for Blast Command only. Please visit the appropriate portal for your role.
                   </p>
                 </div>
                 <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
@@ -172,7 +172,7 @@ export default function OperatorPortalPage() {
         <div className="container">
           <div style={{ maxWidth: "900px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
-              Admin/Operator Portal
+              Blast Command Portal
             </h1>
             <p style={{ 
               fontSize: "1.125rem", 
@@ -298,12 +298,12 @@ export default function OperatorPortalPage() {
               ) : (
                 <div>
                   <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                    Admin/Operator Login
+                    Blast Command Login
                   </h2>
                   <PortalLoginForm 
                     expectedRole="operator" 
                     redirectPath="/dashboard"
-                    portalName="Admin/Operator Portal"
+                    portalName="Blast Command Portal"
                   />
                   <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid #e5e7eb" }}>
                     <p style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.75rem" }}>

@@ -116,21 +116,21 @@ export default function EmployeePortalPage() {
         <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
           <div className="container">
             <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
-              <h1 className="section-title" style={{ marginBottom: "1rem" }}>
-                Employee Portal
-              </h1>
-              <div style={{
-                background: "#fef2f2",
-                border: "1px solid #fecaca",
-                borderRadius: "12px",
-                padding: "2rem",
-                color: "#dc2626",
-                marginBottom: "2rem"
-              }}>
-                <p style={{ margin: 0, fontSize: "1rem" }}>
-                  This portal is for employees only. Please log in with an employee account or visit the appropriate portal for your role.
-                </p>
-              </div>
+                <h1 className="section-title" style={{ marginBottom: "1rem" }}>
+                  Bin Blasters Portal
+                </h1>
+                <div style={{
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: "12px",
+                  padding: "2rem",
+                  color: "#dc2626",
+                  marginBottom: "2rem"
+                }}>
+                  <p style={{ margin: 0, fontSize: "1rem" }}>
+                    This portal is for Bin Blasters only. Please log in with an employee account or visit the appropriate portal for your role.
+                  </p>
+                </div>
               <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
                 <Link href="/login" className="btn btn-primary">Go to Login</Link>
                 <Link href="/" className="btn" style={{ background: "#ffffff", border: "1px solid #e5e7eb" }}>Return Home</Link>
@@ -149,7 +149,7 @@ export default function EmployeePortalPage() {
         <div className="container">
           <div style={{ maxWidth: "900px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
-              Employee Portal
+              Bin Blasters Portal
             </h1>
             <p style={{ 
               fontSize: "1.125rem", 
@@ -256,16 +256,16 @@ export default function EmployeePortalPage() {
               ) : (
                 <div>
                   <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                    Employee Login
+                    Bin Blasters Login
                   </h2>
                   <PortalLoginForm 
                     expectedRole="employee" 
                     redirectPath="/employee/dashboard"
-                    portalName="Employee Portal"
+                    portalName="Bin Blasters Portal"
                   />
                   <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid #e5e7eb" }}>
                     <p style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.75rem" }}>
-                      Need access to the Employee Portal?
+                      Need access to the Bin Blasters Portal?
                     </p>
                     <Link 
                       href="/employee/register"
