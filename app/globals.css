@@ -278,6 +278,24 @@
     overflow-x: hidden;
   }
   
+  /* Mobile dropdown alignment */
+  .nav-links li button {
+    text-align: left !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+  
+  .nav-links .portals-dropdown {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    width: 100% !important;
+  }
+  
+  .nav-links .portals-dropdown a {
+    padding-left: 1.25rem !important;
+    text-align: left !important;
+  }
+  
   /* Responsive tables - convert to cards */
   .table-responsive {
     display: block;

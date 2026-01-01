@@ -335,7 +335,7 @@ export function Navbar() {
             )}
           </li>
           <li 
-            style={{ position: "relative" }}
+            style={{ position: "relative", width: "100%" }}
             onMouseEnter={() => {
               if (!isMenuOpen) {
                 setIsPortalsOpen(true);
@@ -359,22 +359,24 @@ export function Navbar() {
                 border: "none",
                 color: "var(--text-dark)",
                 fontWeight: "500",
-                padding: "0.5rem 1rem",
+                padding: isMenuOpen ? "1.25rem" : "0.5rem 1rem",
                 cursor: "pointer",
                 fontSize: "inherit",
                 fontFamily: "inherit",
                 display: "flex",
                 alignItems: "center",
-                gap: "0.25rem",
+                justifyContent: "space-between",
+                gap: "0.5rem",
                 width: "100%",
                 textAlign: "left"
               }}
             >
-              Portals
-              <span style={{ fontSize: "0.75rem", marginLeft: "auto" }}>{isPortalsOpen ? "▲" : "▼"}</span>
+              <span>Portals</span>
+              <span style={{ fontSize: "0.75rem", flexShrink: 0 }}>{isPortalsOpen ? "▲" : "▼"}</span>
             </button>
             {isPortalsOpen && (
               <div
+                className="portals-dropdown"
                 onMouseEnter={() => setIsPortalsOpen(true)}
                 onMouseLeave={(e) => {
                   // Only close if mouse is leaving the dropdown and not going to button
@@ -390,15 +392,15 @@ export function Navbar() {
                   position: isMenuOpen ? "static" : "absolute",
                   top: isMenuOpen ? "auto" : "100%",
                   left: isMenuOpen ? "auto" : "0",
-                  background: "#ffffff",
-                  borderRadius: "8px",
+                  background: isMenuOpen ? "#f9fafb" : "#ffffff",
+                  borderRadius: isMenuOpen ? "0" : "8px",
                   boxShadow: isMenuOpen ? "none" : "0 4px 16px rgba(0, 0, 0, 0.1)",
                   border: isMenuOpen ? "none" : "1px solid #e5e7eb",
-                  minWidth: isMenuOpen ? "100%" : "180px",
+                  width: "100%",
                   zIndex: 1000,
                   marginTop: isMenuOpen ? "0" : "2px",
-                  padding: "0.5rem 0",
-                  marginLeft: isMenuOpen ? "1rem" : "0"
+                  padding: "0",
+                  marginLeft: "0"
                 }}
               >
                 <Link 
@@ -411,17 +413,26 @@ export function Navbar() {
                   }}
                   style={{
                     display: "block",
-                    padding: "0.75rem 1rem",
+                    padding: isMenuOpen ? "1rem 1.25rem 1rem 2.5rem" : "0.75rem 1rem",
                     color: "var(--text-dark)",
                     textDecoration: "none",
                     transition: "background-color 0.2s",
-                    cursor: "pointer"
+                    cursor: "pointer",
+                    width: "100%",
+                    textAlign: "left",
+                    borderLeft: isMenuOpen ? "3px solid transparent" : "none"
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f9fafb";
+                    e.currentTarget.style.backgroundColor = "#f3f4f6";
+                    if (isMenuOpen) {
+                      e.currentTarget.style.borderLeftColor = "#3b82f6";
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.backgroundColor = isMenuOpen ? "#f9fafb" : "transparent";
+                    if (isMenuOpen) {
+                      e.currentTarget.style.borderLeftColor = "transparent";
+                    }
                   }}
                 >
                   Blast Clients
@@ -436,17 +447,26 @@ export function Navbar() {
                   }}
                   style={{
                     display: "block",
-                    padding: "0.75rem 1rem",
+                    padding: isMenuOpen ? "1rem 1.25rem 1rem 2.5rem" : "0.75rem 1rem",
                     color: "var(--text-dark)",
                     textDecoration: "none",
                     transition: "background-color 0.2s",
-                    cursor: "pointer"
+                    cursor: "pointer",
+                    width: "100%",
+                    textAlign: "left",
+                    borderLeft: isMenuOpen ? "3px solid transparent" : "none"
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f9fafb";
+                    e.currentTarget.style.backgroundColor = "#f3f4f6";
+                    if (isMenuOpen) {
+                      e.currentTarget.style.borderLeftColor = "#f59e0b";
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.backgroundColor = isMenuOpen ? "#f9fafb" : "transparent";
+                    if (isMenuOpen) {
+                      e.currentTarget.style.borderLeftColor = "transparent";
+                    }
                   }}
                 >
                   Bin Blasters
@@ -461,17 +481,26 @@ export function Navbar() {
                   }}
                   style={{
                     display: "block",
-                    padding: "0.75rem 1rem",
+                    padding: isMenuOpen ? "1rem 1.25rem 1rem 2.5rem" : "0.75rem 1rem",
                     color: "var(--text-dark)",
                     textDecoration: "none",
                     transition: "background-color 0.2s",
-                    cursor: "pointer"
+                    cursor: "pointer",
+                    width: "100%",
+                    textAlign: "left",
+                    borderLeft: isMenuOpen ? "3px solid transparent" : "none"
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f9fafb";
+                    e.currentTarget.style.backgroundColor = "#f3f4f6";
+                    if (isMenuOpen) {
+                      e.currentTarget.style.borderLeftColor = "#10b981";
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.backgroundColor = isMenuOpen ? "#f9fafb" : "transparent";
+                    if (isMenuOpen) {
+                      e.currentTarget.style.borderLeftColor = "transparent";
+                    }
                   }}
                 >
                   Blast Partners
@@ -486,17 +515,26 @@ export function Navbar() {
                   }}
                   style={{
                     display: "block",
-                    padding: "0.75rem 1rem",
+                    padding: isMenuOpen ? "1rem 1.25rem 1rem 2.5rem" : "0.75rem 1rem",
                     color: "var(--text-dark)",
                     textDecoration: "none",
                     transition: "background-color 0.2s",
-                    cursor: "pointer"
+                    cursor: "pointer",
+                    width: "100%",
+                    textAlign: "left",
+                    borderLeft: isMenuOpen ? "3px solid transparent" : "none"
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f9fafb";
+                    e.currentTarget.style.backgroundColor = "#f3f4f6";
+                    if (isMenuOpen) {
+                      e.currentTarget.style.borderLeftColor = "#8b5cf6";
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.backgroundColor = isMenuOpen ? "#f9fafb" : "transparent";
+                    if (isMenuOpen) {
+                      e.currentTarget.style.borderLeftColor = "transparent";
+                    }
                   }}
                 >
                   Blast Command
