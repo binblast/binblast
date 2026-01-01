@@ -112,13 +112,13 @@ html, body {
 .nav-links a.nav-login,
 .nav-login {
     padding: 0.55rem 1.1rem !important;
-    border: 2px solid #dc2626 !important;   /* red border */
+    border: none !important;
     border-radius: 999px !important;        /* round pill shape */
     color: #ffffff !important;              /* white text */
     font-weight: 600 !important;
     font-size: 0.95rem !important;
     text-decoration: none !important;
-    background: transparent !important;
+    background: #dc2626 !important;         /* red background */
     display: inline-block !important;
 }
 
@@ -126,8 +126,7 @@ html, body {
 .nav-links a.nav-login:hover,
 .nav-login:hover {
     color: #ffffff !important;              /* white text stays white */
-    border-color: #dc2626 !important;        /* red border stays red */
-    background: transparent !important;      /* stay transparent */
+    background: #b91c1c !important;         /* darker red on hover */
 }
 
 .nav-toggle {
@@ -1194,20 +1193,19 @@ html {
         margin-top: 0.75rem !important;
         width: fit-content !important;
         padding: 0.55rem 1.1rem !important;
-        border: 2px solid #dc2626 !important;   /* red border */
+        border: none !important;
         border-radius: 999px !important;        /* round pill shape */
         color: #ffffff !important;              /* white text */
         font-weight: 600 !important;
         font-size: 0.95rem !important;
         text-decoration: none !important;
-        background: transparent !important;
+        background: #dc2626 !important;         /* red background */
     }
     
     .nav-links a.nav-login:hover,
     .nav-login:hover {
         color: #ffffff !important;              /* white text stays white */
-        border-color: #dc2626 !important;      /* red border stays red */
-        background: transparent !important;     /* stay transparent */
+        background: #b91c1c !important;         /* darker red on hover */
     }
 
     .nav-toggle {
