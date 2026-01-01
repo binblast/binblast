@@ -326,45 +326,48 @@ export default function BlastClientsPortalPage() {
           </div>
           
           {/* Decorative elements */}
-          <div style={{
+          <div className="decorative-element" style={{
             position: "absolute",
             top: "-50%",
             right: "-10%",
-            width: "500px",
-            height: "500px",
+            width: "clamp(200px, 50vw, 500px)",
+            height: "clamp(200px, 50vw, 500px)",
             background: "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
             borderRadius: "50%",
-            zIndex: 0
+            zIndex: 0,
+            display: "none"
           }} />
-          <div style={{
+          <div className="decorative-element" style={{
             position: "absolute",
             bottom: "-30%",
             left: "-5%",
-            width: "400px",
-            height: "400px",
+            width: "clamp(150px, 40vw, 400px)",
+            height: "clamp(150px, 40vw, 400px)",
             background: "radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)",
             borderRadius: "50%",
-            zIndex: 0
+            zIndex: 0,
+            display: "none"
           }} />
         </section>
 
-        <div className="container" style={{ padding: "clamp(2rem, 5vw, 3rem) 0" }}>
+        <div className="container" style={{ padding: "clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 1.5rem)" }}>
           <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
             {/* Status Snapshot */}
             {userId && nextCleaning && (
               <div style={{
                 background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                borderRadius: "16px",
-                padding: "1.5rem",
-                marginBottom: "3rem",
+                borderRadius: "clamp(12px, 3vw, 16px)",
+                padding: "clamp(1rem, 3vw, 1.5rem)",
+                marginBottom: "clamp(2rem, 5vw, 3rem)",
                 boxShadow: "0 4px 16px rgba(16, 185, 129, 0.2)",
                 color: "#ffffff",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
+                justifyContent: "center",
                 flexWrap: "wrap",
-                gap: "1rem",
-                animation: "fadeInUp 0.6s ease-out 0.4s both"
+                gap: "clamp(0.75rem, 2vw, 1rem)",
+                animation: "fadeInUp 0.6s ease-out 0.4s both",
+                textAlign: "center"
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
                   <div style={{ textAlign: "center" }}>
@@ -375,14 +378,19 @@ export default function BlastClientsPortalPage() {
                 <Link
                   href="/dashboard"
                   style={{
-                    padding: "0.5rem 1.5rem",
+                    padding: "clamp(0.5rem, 2vw, 0.75rem) clamp(1rem, 4vw, 1.5rem)",
                     background: "rgba(255, 255, 255, 0.2)",
-                    borderRadius: "8px",
+                    borderRadius: "clamp(6px, 2vw, 8px)",
                     color: "#ffffff",
                     textDecoration: "none",
                     fontWeight: "600",
                     border: "1px solid rgba(255, 255, 255, 0.3)",
-                    transition: "all 0.2s ease"
+                    transition: "all 0.2s ease",
+                    fontSize: "clamp(0.875rem, 2.5vw, 1rem)",
+                    minHeight: "44px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center"
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
@@ -414,18 +422,18 @@ export default function BlastClientsPortalPage() {
               }}
               onClick={() => userId ? router.push("/dashboard") : null}
               >
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#1e40af", textAlign: "center" }}>
+                <h3 style={{ fontSize: "clamp(1.125rem, 3vw, 1.25rem)", fontWeight: "700", marginBottom: "clamp(0.5rem, 2vw, 0.75rem)", color: "#1e40af", textAlign: "center" }}>
                   Manage Your Plan
                 </h3>
-                <p style={{ color: "#64748b", fontSize: "0.95rem", textAlign: "center", lineHeight: "1.6" }}>
+                <p style={{ color: "#64748b", fontSize: "clamp(0.875rem, 2.5vw, 0.95rem)", textAlign: "center", lineHeight: "1.6" }}>
                   View your subscription, billing status, and upcoming cleanings at a glance.
                 </p>
               </div>
 
               <div className="action-card fade-in-up" style={{
                 background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-                borderRadius: "20px",
-                padding: "2rem",
+                borderRadius: "clamp(16px, 4vw, 20px)",
+                padding: "clamp(1.25rem, 4vw, 2rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "2px solid #e0e7ff",
                 cursor: "pointer",
@@ -433,18 +441,18 @@ export default function BlastClientsPortalPage() {
               }}
               onClick={() => userId ? router.push("/dashboard") : null}
               >
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#1e40af", textAlign: "center" }}>
+                <h3 style={{ fontSize: "clamp(1.125rem, 3vw, 1.25rem)", fontWeight: "700", marginBottom: "clamp(0.5rem, 2vw, 0.75rem)", color: "#1e40af", textAlign: "center" }}>
                   Schedule Cleanings
                 </h3>
-                <p style={{ color: "#64748b", fontSize: "0.95rem", textAlign: "center", lineHeight: "1.6" }}>
+                <p style={{ color: "#64748b", fontSize: "clamp(0.875rem, 2.5vw, 0.95rem)", textAlign: "center", lineHeight: "1.6" }}>
                   Choose your trash day, confirm your address, and add special instructions.
                 </p>
               </div>
 
               <div className="action-card fade-in-up" style={{
                 background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-                borderRadius: "20px",
-                padding: "2rem",
+                borderRadius: "clamp(16px, 4vw, 20px)",
+                padding: "clamp(1.25rem, 4vw, 2rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "2px solid #e0e7ff",
                 cursor: "pointer",
@@ -452,10 +460,10 @@ export default function BlastClientsPortalPage() {
               }}
               onClick={() => userId ? router.push("/dashboard") : null}
               >
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#1e40af", textAlign: "center" }}>
+                <h3 style={{ fontSize: "clamp(1.125rem, 3vw, 1.25rem)", fontWeight: "700", marginBottom: "clamp(0.5rem, 2vw, 0.75rem)", color: "#1e40af", textAlign: "center" }}>
                   Track Rewards
                 </h3>
-                <p style={{ color: "#64748b", fontSize: "0.95rem", textAlign: "center", lineHeight: "1.6" }}>
+                <p style={{ color: "#64748b", fontSize: "clamp(0.875rem, 2.5vw, 0.95rem)", textAlign: "center", lineHeight: "1.6" }}>
                   Monitor loyalty levels, referral credits, and cleaning history.
                 </p>
               </div>
@@ -493,8 +501,8 @@ export default function BlastClientsPortalPage() {
                     padding: "1.25rem",
                     textAlign: "center",
                     transition: "transform 0.2s ease",
-                    flex: "0 1 250px",
-                    minWidth: "250px",
+                    flex: "0 1 min(100%, 250px)",
+                    minWidth: "min(100%, 250px)",
                     maxWidth: "100%"
                   }}
                   onMouseEnter={(e) => {
@@ -538,11 +546,14 @@ export default function BlastClientsPortalPage() {
                     className="btn btn-primary"
                     style={{
                       display: "inline-block",
-                      padding: "0.875rem 2.5rem",
-                      fontSize: "1.125rem",
+                      padding: "clamp(0.75rem, 3vw, 0.875rem) clamp(1.5rem, 5vw, 2.5rem)",
+                      fontSize: "clamp(1rem, 3vw, 1.125rem)",
                       fontWeight: "600",
-                      borderRadius: "12px",
-                      transition: "all 0.3s ease"
+                      borderRadius: "clamp(10px, 3vw, 12px)",
+                      transition: "all 0.3s ease",
+                      minHeight: "44px",
+                      width: "100%",
+                      maxWidth: "400px"
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = "translateY(-2px)";

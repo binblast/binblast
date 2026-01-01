@@ -206,6 +206,19 @@ export default function EmployeePortalPage() {
         .icon-rotate:hover {
           animation: rotate 2s linear infinite;
         }
+        @media (max-width: 768px) {
+          .action-card {
+            padding: 1.5rem !important;
+          }
+          .decorative-element {
+            display: none;
+          }
+        }
+        @media (max-width: 480px) {
+          .action-card {
+            padding: 1.25rem !important;
+          }
+        }
       `}</style>
       <main style={{ minHeight: "calc(100vh - 80px)", padding: "0", background: "linear-gradient(to bottom, #fef3c7 0%, #ffffff 40%)" }}>
         {/* Hero Section */}
@@ -283,35 +296,37 @@ export default function EmployeePortalPage() {
           </div>
           
           {/* Decorative elements */}
-          <div style={{
+          <div className="decorative-element" style={{
             position: "absolute",
             top: "-50%",
             right: "-10%",
-            width: "500px",
-            height: "500px",
+            width: "clamp(200px, 50vw, 500px)",
+            height: "clamp(200px, 50vw, 500px)",
             background: "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
             borderRadius: "50%",
-            zIndex: 0
+            zIndex: 0,
+            display: "none"
           }} />
         </section>
 
-        <div className="container" style={{ padding: "clamp(2rem, 5vw, 3rem) 0" }}>
+        <div className="container" style={{ padding: "clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 1.5rem)" }}>
           <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
             {/* Status Snapshot */}
             {userId && todaysJobs !== null && (
               <div style={{
                 background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                borderRadius: "16px",
-                padding: "1.5rem",
-                marginBottom: "3rem",
+                borderRadius: "clamp(12px, 3vw, 16px)",
+                padding: "clamp(1rem, 3vw, 1.5rem)",
+                marginBottom: "clamp(2rem, 5vw, 3rem)",
                 boxShadow: "0 4px 16px rgba(245, 158, 11, 0.3)",
                 color: "#ffffff",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
+                justifyContent: "center",
                 flexWrap: "wrap",
-                gap: "1rem",
-                animation: "fadeInUp 0.6s ease-out 0.4s both"
+                gap: "clamp(0.75rem, 2vw, 1rem)",
+                animation: "fadeInUp 0.6s ease-out 0.4s both",
+                textAlign: "center"
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
                   <div style={{ textAlign: "center" }}>
@@ -322,14 +337,19 @@ export default function EmployeePortalPage() {
                 <Link
                   href="/employee/dashboard"
                   style={{
-                    padding: "0.5rem 1.5rem",
+                    padding: "clamp(0.5rem, 2vw, 0.75rem) clamp(1rem, 4vw, 1.5rem)",
                     background: "rgba(255, 255, 255, 0.2)",
-                    borderRadius: "8px",
+                    borderRadius: "clamp(6px, 2vw, 8px)",
                     color: "#ffffff",
                     textDecoration: "none",
                     fontWeight: "600",
                     border: "1px solid rgba(255, 255, 255, 0.3)",
-                    transition: "all 0.2s ease"
+                    transition: "all 0.2s ease",
+                    fontSize: "clamp(0.875rem, 2.5vw, 1rem)",
+                    minHeight: "44px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center"
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
@@ -346,14 +366,14 @@ export default function EmployeePortalPage() {
             {/* Interactive Action Cards */}
             <div style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "1.5rem",
-              marginBottom: "3rem"
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
+              gap: "clamp(1rem, 3vw, 1.5rem)",
+              marginBottom: "clamp(2rem, 5vw, 3rem)"
             }}>
               <div className="action-card fade-in-up" style={{
                 background: "linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)",
-                borderRadius: "20px",
-                padding: "2rem",
+                borderRadius: "clamp(16px, 4vw, 20px)",
+                padding: "clamp(1.25rem, 4vw, 2rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "2px solid #fde68a",
                 cursor: "pointer",
@@ -361,18 +381,18 @@ export default function EmployeePortalPage() {
               }}
               onClick={() => userId ? router.push("/employee/dashboard") : null}
               >
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#92400e", textAlign: "center" }}>
+                <h3 style={{ fontSize: "clamp(1.125rem, 3vw, 1.25rem)", fontWeight: "700", marginBottom: "clamp(0.5rem, 2vw, 0.75rem)", color: "#92400e", textAlign: "center" }}>
                   Clock In/Out
                 </h3>
-                <p style={{ color: "#78716c", fontSize: "0.95rem", textAlign: "center", lineHeight: "1.6" }}>
+                <p style={{ color: "#78716c", fontSize: "clamp(0.875rem, 2.5vw, 0.95rem)", textAlign: "center", lineHeight: "1.6" }}>
                   Track your work hours and manage your schedule from anywhere.
                 </p>
               </div>
 
               <div className="action-card fade-in-up" style={{
                 background: "linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)",
-                borderRadius: "20px",
-                padding: "2rem",
+                borderRadius: "clamp(16px, 4vw, 20px)",
+                padding: "clamp(1.25rem, 4vw, 2rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "2px solid #fde68a",
                 cursor: "pointer",
@@ -380,18 +400,18 @@ export default function EmployeePortalPage() {
               }}
               onClick={() => userId ? router.push("/employee/dashboard") : null}
               >
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#92400e", textAlign: "center" }}>
+                <h3 style={{ fontSize: "clamp(1.125rem, 3vw, 1.25rem)", fontWeight: "700", marginBottom: "clamp(0.5rem, 2vw, 0.75rem)", color: "#92400e", textAlign: "center" }}>
                   View Your Route
                 </h3>
-                <p style={{ color: "#78716c", fontSize: "0.95rem", textAlign: "center", lineHeight: "1.6" }}>
+                <p style={{ color: "#78716c", fontSize: "clamp(0.875rem, 2.5vw, 0.95rem)", textAlign: "center", lineHeight: "1.6" }}>
                   See all assigned jobs for the day with customer addresses and special instructions.
                 </p>
               </div>
 
               <div className="action-card fade-in-up" style={{
                 background: "linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)",
-                borderRadius: "20px",
-                padding: "2rem",
+                borderRadius: "clamp(16px, 4vw, 20px)",
+                padding: "clamp(1.25rem, 4vw, 2rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "2px solid #fde68a",
                 cursor: "pointer",
@@ -399,10 +419,10 @@ export default function EmployeePortalPage() {
               }}
               onClick={() => userId ? router.push("/employee/dashboard") : null}
               >
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#92400e", textAlign: "center" }}>
+                <h3 style={{ fontSize: "clamp(1.125rem, 3vw, 1.25rem)", fontWeight: "700", marginBottom: "clamp(0.5rem, 2vw, 0.75rem)", color: "#92400e", textAlign: "center" }}>
                   Upload Photos
                 </h3>
-                <p style={{ color: "#78716c", fontSize: "0.95rem", textAlign: "center", lineHeight: "1.6" }}>
+                <p style={{ color: "#78716c", fontSize: "clamp(0.875rem, 2.5vw, 0.95rem)", textAlign: "center", lineHeight: "1.6" }}>
                   Upload before and after photos for each job to track your work quality.
                 </p>
               </div>
@@ -425,9 +445,9 @@ export default function EmployeePortalPage() {
               </p>
               <div style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "1rem",
-                marginTop: "2rem"
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))",
+                gap: "clamp(0.75rem, 2vw, 1rem)",
+                marginTop: "clamp(1.5rem, 4vw, 2rem)"
               }}>
                 {[
                   { title: "Pay Per Job", desc: "See your rate for each cleaning" },
@@ -482,14 +502,17 @@ export default function EmployeePortalPage() {
                     className="btn btn-primary"
                     style={{
                       display: "inline-block",
-                      padding: "0.875rem 2.5rem",
-                      fontSize: "1.125rem",
+                      padding: "clamp(0.75rem, 3vw, 0.875rem) clamp(1.5rem, 5vw, 2.5rem)",
+                      fontSize: "clamp(1rem, 3vw, 1.125rem)",
                       fontWeight: "600",
-                      borderRadius: "12px",
+                      borderRadius: "clamp(10px, 3vw, 12px)",
                       background: "#f59e0b",
                       border: "none",
                       color: "#ffffff",
-                      transition: "all 0.3s ease"
+                      transition: "all 0.3s ease",
+                      minHeight: "44px",
+                      width: "100%",
+                      maxWidth: "400px"
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = "translateY(-2px)";
