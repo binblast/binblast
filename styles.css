@@ -21,12 +21,21 @@
     --shadow-blue: 0 8px 24px rgba(0, 102, 204, 0.2);
 }
 
-body {
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     line-height: 1.6;
     color: var(--text-dark);
     overflow-x: hidden;
     background: var(--bg-white);
+}
+
+#__next {
+    min-height: 100vh;
+    width: 100%;
 }
 
 .container {
@@ -43,6 +52,8 @@ body {
     box-shadow: var(--shadow);
     z-index: 1000;
     padding: 1.25rem 0;
+    width: 100%;
+    margin: 0;
 }
 
 .nav-container {
@@ -52,6 +63,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
 }
 
 .nav-logo {
@@ -99,20 +111,23 @@ body {
 
 .nav-login {
     padding: 0.55rem 1.1rem;
-    border: 2px solid #16a34a;   /* green border */
+    border: 2px solid #dc2626;   /* red border */
     border-radius: 999px;        /* round pill shape */
-    color: #16a34a;              /* green text */
+    color: #ffffff;              /* white text */
     font-weight: 600;
     font-size: 0.95rem;
     text-decoration: none;
     transition: 0.25s ease;
     background: transparent;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
 }
 
 /* Hover effect */
 .nav-login:hover {
-    background: #16a34a;         /* fills with green */
+    background: #dc2626;         /* fills with red */
     color: #ffffff;              /* white text */
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+    transform: translateY(-1px);
 }
 
 .nav-toggle {
@@ -137,12 +152,16 @@ body {
     background: url("/cover-picture.png") center/cover no-repeat;
     color: white;
     min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
     position: relative;
     overflow: hidden;
+    margin: 0;
+    padding: 0;
 }
 
 .hero::before {
