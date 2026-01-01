@@ -20,6 +20,7 @@ export default function OperatorPortalPage() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [systemStatus, setSystemStatus] = useState<{ active: number; total: number } | null>(null);
 
   useEffect(() => {
     async function checkAuth() {
@@ -37,7 +38,7 @@ export default function OperatorPortalPage() {
           if (db) {
             const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
             const firestore = await safeImportFirestore();
-            const { doc, getDoc } = firestore;
+            const { doc, getDoc, collection, getDocs } = firestore;
             const userDoc = await getDoc(doc(db, "users", user.uid));
             
             if (userDoc.exists()) {
@@ -47,9 +48,26 @@ export default function OperatorPortalPage() {
               
               setUserRole(role);
               
-              // Check if user is operator/admin
+              // Get system status if operator/admin
               const isOperator = role === "operator" || role === "admin" || email === ADMIN_EMAIL;
+              if (isOperator) {
+                // Get active employees count
+                const employeesSnapshot = await getDocs(collection(db, "users"));
+                let activeCount = 0;
+                let totalCount = 0;
+                employeesSnapshot.forEach((doc) => {
+                  const data = doc.data();
+                  if (data.role === "employee") {
+                    totalCount++;
+                    if (data.isActive !== false) {
+                      activeCount++;
+                    }
+                  }
+                });
+                setSystemStatus({ active: activeCount, total: totalCount });
+              }
               
+              // Check if user is operator/admin
               if (isOperator) {
                 // Operator/Admin - redirect to dashboard
                 router.push("/dashboard");
@@ -69,7 +87,7 @@ export default function OperatorPortalPage() {
             if (db) {
               const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
               const firestore = await safeImportFirestore();
-              const { doc, getDoc } = firestore;
+              const { doc, getDoc, collection, getDocs } = firestore;
               const userDoc = await getDoc(doc(db, "users", user.uid));
               
               if (userDoc.exists()) {
@@ -79,9 +97,25 @@ export default function OperatorPortalPage() {
                 
                 setUserRole(role);
                 
-                // Check if user is operator/admin
+                // Get system status if operator/admin
                 const isOperator = role === "operator" || role === "admin" || email === ADMIN_EMAIL;
+                if (isOperator) {
+                  const employeesSnapshot = await getDocs(collection(db, "users"));
+                  let activeCount = 0;
+                  let totalCount = 0;
+                  employeesSnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.role === "employee") {
+                      totalCount++;
+                      if (data.isActive !== false) {
+                        activeCount++;
+                      }
+                    }
+                  });
+                  setSystemStatus({ active: activeCount, total: totalCount });
+                }
                 
+                // Check if user is operator/admin
                 if (isOperator) {
                   // Operator/Admin - redirect to dashboard
                   router.push("/dashboard");
@@ -93,6 +127,7 @@ export default function OperatorPortalPage() {
             setUserId(null);
             setUserRole(null);
             setUserEmail(null);
+            setSystemStatus(null);
           }
           setLoading(false);
         });
@@ -168,136 +203,361 @@ export default function OperatorPortalPage() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
-        <div className="container">
-          <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-            <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
-              Blast Command Portal
-            </h1>
-            <p style={{ 
-              fontSize: "1.125rem", 
-              color: "var(--text-light)", 
-              textAlign: "center",
-              marginBottom: "3rem"
-            }}>
-              Manage employees, view customer routes, track operations, monitor performance
-            </p>
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+        @keyframes glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); }
+          50% { box-shadow: 0 0 30px rgba(139, 92, 246, 0.5); }
+        }
+        .fade-in-up {
+          animation: fadeInUp 0.6s ease-out;
+        }
+        .action-card {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .action-card:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+        }
+        .icon-bounce:hover {
+          animation: pulse 0.6s ease-in-out;
+        }
+        .glow-effect {
+          animation: glow 2s ease-in-out infinite;
+        }
+      `}</style>
+      <main style={{ minHeight: "calc(100vh - 80px)", padding: "0", background: "linear-gradient(to bottom, #faf5ff 0%, #ffffff 40%)" }}>
+        {/* Hero Section */}
+        <section style={{ 
+          padding: "clamp(3rem, 8vw, 5rem) 0 clamp(2rem, 5vw, 3rem) 0",
+          background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+          color: "#ffffff",
+          position: "relative",
+          overflow: "hidden"
+        }}>
+          <div className="container" style={{ position: "relative", zIndex: 1 }}>
+            <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center" }}>
+              {/* Large Icon */}
+              <div style={{
+                fontSize: "5rem",
+                marginBottom: "1.5rem",
+                animation: "fadeInUp 0.8s ease-out"
+              }}>
+                🎛️
+              </div>
+              
+              {/* Headline */}
+              <h1 style={{
+                fontSize: "clamp(2rem, 6vw, 3.5rem)",
+                fontWeight: "800",
+                marginBottom: "1rem",
+                lineHeight: "1.2",
+                animation: "fadeInUp 0.8s ease-out 0.1s both"
+              }}>
+                Blast Command Portal
+              </h1>
+              
+              {/* Description */}
+              <p style={{
+                fontSize: "clamp(1rem, 3vw, 1.25rem)",
+                marginBottom: "2rem",
+                opacity: 0.95,
+                maxWidth: "600px",
+                margin: "0 auto 2rem auto",
+                animation: "fadeInUp 0.8s ease-out 0.2s both"
+              }}>
+                Your mission control center. Manage employees, monitor operations, track performance, and keep everything running smoothly.
+              </p>
+              
+              {/* Primary CTA */}
+              {userId ? (
+                <Link
+                  href="/dashboard"
+                  className="btn btn-primary"
+                  style={{
+                    display: "inline-block",
+                    padding: "1rem 2.5rem",
+                    fontSize: "1.125rem",
+                    fontWeight: "700",
+                    background: "#ffffff",
+                    color: "#7c3aed",
+                    border: "none",
+                    borderRadius: "12px",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                    transition: "all 0.3s ease",
+                    animation: "fadeInUp 0.8s ease-out 0.3s both"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.2)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                  }}
+                >
+                  Go to Dashboard →
+                </Link>
+              ) : (
+                <div style={{ animation: "fadeInUp 0.8s ease-out 0.3s both" }}>
+                  <p style={{ marginBottom: "1rem", fontSize: "1rem", opacity: 0.9 }}>
+                    Ready to take command?
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Decorative elements */}
+          <div style={{
+            position: "absolute",
+            top: "-50%",
+            right: "-10%",
+            width: "500px",
+            height: "500px",
+            background: "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
+            borderRadius: "50%",
+            zIndex: 0
+          }} />
+        </section>
 
+        <div className="container" style={{ padding: "clamp(2rem, 5vw, 3rem) 0" }}>
+          <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+            {/* Status Snapshot */}
+            {userId && systemStatus && (
+              <div style={{
+                background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                borderRadius: "16px",
+                padding: "1.5rem",
+                marginBottom: "3rem",
+                boxShadow: "0 4px 16px rgba(139, 92, 246, 0.3)",
+                color: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "1rem",
+                animation: "fadeInUp 0.6s ease-out 0.4s both"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <div style={{ fontSize: "2rem" }}>⚡</div>
+                  <div>
+                    <div style={{ fontSize: "0.875rem", opacity: 0.9, marginBottom: "0.25rem" }}>System Status</div>
+                    <div style={{ fontSize: "1.25rem", fontWeight: "700" }}>
+                      {systemStatus.active} / {systemStatus.total} Active Employees
+                    </div>
+                  </div>
+                </div>
+                <Link
+                  href="/dashboard"
+                  style={{
+                    padding: "0.5rem 1.5rem",
+                    background: "rgba(255, 255, 255, 0.2)",
+                    borderRadius: "8px",
+                    color: "#ffffff",
+                    textDecoration: "none",
+                    fontWeight: "600",
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                  }}
+                >
+                  View Dashboard →
+                </Link>
+              </div>
+            )}
+
+            {/* Interactive Action Cards */}
             <div style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "2rem",
+              gap: "1.5rem",
               marginBottom: "3rem"
             }}>
-              <div style={{
-                background: "#ffffff",
+              <div className="action-card fade-in-up" style={{
+                background: "linear-gradient(135deg, #ffffff 0%, #faf5ff 100%)",
                 borderRadius: "20px",
                 padding: "2rem",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb"
-              }}>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                border: "2px solid #c4b5fd",
+                cursor: "pointer",
+                animation: "fadeInUp 0.6s ease-out 0.5s both"
+              }}
+              onClick={() => userId ? router.push("/dashboard") : null}
+              >
+                <div style={{ fontSize: "3rem", marginBottom: "1rem", textAlign: "center" }} className="icon-bounce">👥</div>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#6d28d9", textAlign: "center" }}>
                   Manage Employees
                 </h3>
-                <p style={{ color: "var(--text-light)", fontSize: "0.95rem" }}>
+                <p style={{ color: "#6b7280", fontSize: "0.95rem", textAlign: "center", lineHeight: "1.6" }}>
                   View employee details, track performance, manage schedules, and monitor clock-in/out status.
                 </p>
               </div>
 
-              <div style={{
-                background: "#ffffff",
+              <div className="action-card fade-in-up" style={{
+                background: "linear-gradient(135deg, #ffffff 0%, #faf5ff 100%)",
                 borderRadius: "20px",
                 padding: "2rem",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb"
-              }}>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                border: "2px solid #c4b5fd",
+                cursor: "pointer",
+                animation: "fadeInUp 0.6s ease-out 0.6s both"
+              }}
+              onClick={() => userId ? router.push("/dashboard") : null}
+              >
+                <div style={{ fontSize: "3rem", marginBottom: "1rem", textAlign: "center" }} className="icon-bounce">🗺️</div>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#6d28d9", textAlign: "center" }}>
                   View Customer Routes
                 </h3>
-                <p style={{ color: "var(--text-light)", fontSize: "0.95rem" }}>
+                <p style={{ color: "#6b7280", fontSize: "0.95rem", textAlign: "center", lineHeight: "1.6" }}>
                   Monitor all scheduled cleanings, assign jobs to employees, and track completion status.
                 </p>
               </div>
 
-              <div style={{
-                background: "#ffffff",
+              <div className="action-card fade-in-up" style={{
+                background: "linear-gradient(135deg, #ffffff 0%, #faf5ff 100%)",
                 borderRadius: "20px",
                 padding: "2rem",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb"
-              }}>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                border: "2px solid #c4b5fd",
+                cursor: "pointer",
+                animation: "fadeInUp 0.6s ease-out 0.7s both"
+              }}
+              onClick={() => userId ? router.push("/dashboard") : null}
+              >
+                <div style={{ fontSize: "3rem", marginBottom: "1rem", textAlign: "center" }} className="icon-bounce">📊</div>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#6d28d9", textAlign: "center" }}>
                   Track Operations
                 </h3>
-                <p style={{ color: "var(--text-light)", fontSize: "0.95rem" }}>
+                <p style={{ color: "#6b7280", fontSize: "0.95rem", textAlign: "center", lineHeight: "1.6" }}>
                   Monitor system performance, view analytics, and manage platform-wide settings.
                 </p>
               </div>
             </div>
 
+            {/* Administrative Features Section */}
             <div style={{
-              background: "#f0f9ff",
-              borderRadius: "20px",
-              padding: "2.5rem",
-              border: "2px solid #bae6fd",
-              marginBottom: "2rem"
+              background: "linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)",
+              borderRadius: "24px",
+              padding: "clamp(2rem, 5vw, 3rem)",
+              border: "2px solid #c4b5fd",
+              marginBottom: "3rem",
+              animation: "fadeInUp 0.6s ease-out 0.8s both"
             }}>
-              <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
+              <h2 style={{ fontSize: "clamp(1.5rem, 4vw, 2rem)", fontWeight: "700", marginBottom: "1.5rem", color: "#6d28d9", textAlign: "center" }}>
                 Administrative Features
               </h2>
-              <ul style={{ 
-                listStyle: "disc",
-                paddingLeft: "1.5rem",
-                color: "#0c4a6e",
-                lineHeight: "1.8"
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                gap: "1.5rem"
               }}>
-                <li style={{ marginBottom: "0.75rem" }}>
-                  <strong>Employee Management</strong> - View and manage all employees, their routes, and performance
-                </li>
-                <li style={{ marginBottom: "0.75rem" }}>
-                  <strong>Customer Overview</strong> - Monitor all customers, subscriptions, and cleaning schedules
-                </li>
-                <li style={{ marginBottom: "0.75rem" }}>
-                  <strong>Route Assignment</strong> - Assign jobs to employees and track completion
-                </li>
-                <li style={{ marginBottom: "0.75rem" }}>
-                  <strong>Analytics & Reporting</strong> - View platform statistics and performance metrics
-                </li>
-                <li style={{ marginBottom: "0.75rem" }}>
-                  <strong>System Administration</strong> - Manage platform settings and configurations
-                </li>
-              </ul>
+                {[
+                  { icon: "👥", title: "Employee Management", desc: "View and manage all employees, their routes, and performance" },
+                  { icon: "🏠", title: "Customer Overview", desc: "Monitor all customers, subscriptions, and cleaning schedules" },
+                  { icon: "📍", title: "Route Assignment", desc: "Assign jobs to employees and track completion" },
+                  { icon: "📈", title: "Analytics & Reporting", desc: "View platform statistics and performance metrics" },
+                  { icon: "⚙️", title: "System Administration", desc: "Manage platform settings and configurations" },
+                  { icon: "🔔", title: "Notifications", desc: "Send alerts and updates to employees and customers" }
+                ].map((feature, idx) => (
+                  <div key={idx} style={{
+                    background: "#ffffff",
+                    borderRadius: "12px",
+                    padding: "1.25rem",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "1rem",
+                    transition: "transform 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateX(4px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateX(0)";
+                  }}
+                  >
+                    <div style={{ fontSize: "1.5rem", flexShrink: 0 }}>{feature.icon}</div>
+                    <div>
+                      <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.25rem", color: "#6d28d9" }}>
+                        {feature.title}
+                      </h4>
+                      <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0, lineHeight: "1.5" }}>
+                        {feature.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
+            {/* Login Section */}
             <div style={{
               background: "#ffffff",
-              borderRadius: "20px",
-              padding: "2rem",
-              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-              border: "1px solid #e5e7eb",
-              textAlign: "center"
+              borderRadius: "24px",
+              padding: "clamp(2rem, 5vw, 3rem)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.08)",
+              border: "2px solid #c4b5fd",
+              textAlign: "center",
+              animation: "fadeInUp 0.6s ease-out 0.9s both"
             }}>
               {userId ? (
                 <div>
-                  <p style={{ marginBottom: "1rem", color: "var(--text-light)" }}>
-                    You are already logged in. Access your dashboard to manage operations.
+                  <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✅</div>
+                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                    You&apos;re All Set!
+                  </h2>
+                  <p style={{ marginBottom: "1.5rem", color: "var(--text-light)", fontSize: "1rem" }}>
+                    Access your dashboard to manage operations and monitor system performance.
                   </p>
                   <Link 
                     href="/dashboard"
                     className="btn btn-primary"
                     style={{
                       display: "inline-block",
-                      padding: "0.75rem 2rem",
-                      fontSize: "1rem",
-                      fontWeight: "600"
+                      padding: "0.875rem 2.5rem",
+                      fontSize: "1.125rem",
+                      fontWeight: "600",
+                      borderRadius: "12px",
+                      background: "#8b5cf6",
+                      border: "none",
+                      color: "#ffffff",
+                      transition: "all 0.3s ease"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 8px 16px rgba(139, 92, 246, 0.4)";
+                      e.currentTarget.style.background = "#7c3aed";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.background = "#8b5cf6";
                     }}
                   >
-                    Go to Dashboard
+                    Go to Dashboard →
                   </Link>
                 </div>
               ) : (
                 <div>
-                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
                     Blast Command Login
                   </h2>
                   <PortalLoginForm 
@@ -322,4 +582,3 @@ export default function OperatorPortalPage() {
     </>
   );
 }
-
