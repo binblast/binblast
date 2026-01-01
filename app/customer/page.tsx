@@ -236,6 +236,19 @@ export default function BlastClientsPortalPage() {
         .icon-bounce:hover {
           animation: pulse 0.6s ease-in-out;
         }
+        @media (max-width: 768px) {
+          .action-card {
+            padding: 1.5rem !important;
+          }
+          .decorative-element {
+            display: none;
+          }
+        }
+        @media (max-width: 480px) {
+          .action-card {
+            padding: 1.25rem !important;
+          }
+        }
       `}</style>
       <main style={{ minHeight: "calc(100vh - 80px)", padding: "0", background: "linear-gradient(to bottom, #f0f9ff 0%, #ffffff 40%)" }}>
         {/* Hero Section */}
@@ -386,14 +399,14 @@ export default function BlastClientsPortalPage() {
             {/* Interactive Action Cards */}
             <div style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "1.5rem",
-              marginBottom: "3rem"
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
+              gap: "clamp(1rem, 3vw, 1.5rem)",
+              marginBottom: "clamp(2rem, 5vw, 3rem)"
             }}>
               <div className="action-card fade-in-up" style={{
                 background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-                borderRadius: "20px",
-                padding: "2rem",
+                borderRadius: "clamp(16px, 4vw, 20px)",
+                padding: "clamp(1.25rem, 4vw, 2rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "2px solid #e0e7ff",
                 cursor: "pointer",
