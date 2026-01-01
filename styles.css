@@ -118,19 +118,16 @@ html, body {
     font-weight: 600 !important;
     font-size: 0.95rem !important;
     text-decoration: none !important;
-    transition: all 0.25s ease !important;
     background: transparent !important;
-    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2) !important;
+    display: inline-block !important;
 }
 
-/* Hover effect */
+/* Hover effect - keep it simple */
 .nav-links a.nav-login:hover,
 .nav-login:hover {
-    background: #dc2626 !important;         /* fills with red */
-    color: #ffffff !important;              /* white text */
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4) !important;
-    transform: translateY(-1px) !important;
-    border-color: #dc2626 !important;
+    color: #ffffff !important;              /* white text stays white */
+    border-color: #dc2626 !important;        /* red border stays red */
+    background: transparent !important;      /* stay transparent */
 }
 
 .nav-toggle {
@@ -1204,14 +1201,13 @@ html {
         font-size: 0.95rem !important;
         text-decoration: none !important;
         background: transparent !important;
-        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2) !important;
     }
     
     .nav-links a.nav-login:hover,
     .nav-login:hover {
-        background: #dc2626 !important;
-        color: #ffffff !important;
-        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4) !important;
+        color: #ffffff !important;              /* white text stays white */
+        border-color: #dc2626 !important;      /* red border stays red */
+        background: transparent !important;     /* stay transparent */
     }
 
     .nav-toggle {
