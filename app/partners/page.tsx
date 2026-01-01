@@ -196,21 +196,13 @@ export default function PartnersPage() {
         }}>
           <div className="container" style={{ position: "relative", zIndex: 1 }}>
             <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center" }}>
-              {/* Large Icon */}
-              <div style={{
-                fontSize: "5rem",
-                marginBottom: "1.5rem",
-                animation: "fadeInUp 0.8s ease-out"
-              }}>
-                🤝
-              </div>
-              
               {/* Headline */}
               <h1 style={{
                 fontSize: "clamp(2rem, 6vw, 3.5rem)",
                 fontWeight: "800",
                 marginBottom: "1rem",
                 lineHeight: "1.2",
+                textAlign: "center",
                 animation: "fadeInUp 0.8s ease-out 0.1s both"
               }}>
                 Blast Partners Portal
@@ -223,6 +215,7 @@ export default function PartnersPage() {
                 opacity: 0.95,
                 maxWidth: "600px",
                 margin: "0 auto 2rem auto",
+                textAlign: "center",
                 animation: "fadeInUp 0.8s ease-out 0.2s both"
               }}>
                 Grow your business with Bin Blast Co. Earn 60% revenue share on every booking through your unique partner link.
@@ -259,7 +252,7 @@ export default function PartnersPage() {
                 </Link>
               ) : (
                 <div style={{ animation: "fadeInUp 0.8s ease-out 0.3s both" }}>
-                  <p style={{ marginBottom: "1rem", fontSize: "1rem", opacity: 0.9 }}>
+                  <p style={{ marginBottom: "1rem", fontSize: "1rem", opacity: 0.9, textAlign: "center" }}>
                     Ready to start earning?
                   </p>
                 </div>
@@ -298,11 +291,10 @@ export default function PartnersPage() {
                 gap: "1rem",
                 animation: "fadeInUp 0.6s ease-out 0.4s both"
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                  <div style={{ fontSize: "2rem" }}>💰</div>
-                  <div>
-                    <div style={{ fontSize: "0.875rem", opacity: 0.9, marginBottom: "0.25rem" }}>Total Earnings</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: "700" }}>{totalEarnings}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "0.875rem", opacity: 0.9, marginBottom: "0.25rem", textAlign: "center" }}>Total Earnings</div>
+                    <div style={{ fontSize: "1.25rem", fontWeight: "700", textAlign: "center" }}>{totalEarnings}</div>
                   </div>
                 </div>
                 <Link
@@ -347,7 +339,6 @@ export default function PartnersPage() {
               }}
               onClick={() => userId ? router.push("/partners/dashboard") : null}
               >
-                <div style={{ fontSize: "3rem", marginBottom: "1rem", textAlign: "center" }} className="icon-bounce">💵</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#065f46", textAlign: "center" }}>
                   Earn Revenue Share
                 </h3>
@@ -367,7 +358,6 @@ export default function PartnersPage() {
               }}
               onClick={() => userId ? router.push("/partners/dashboard") : null}
               >
-                <div style={{ fontSize: "3rem", marginBottom: "1rem", textAlign: "center" }} className="icon-bounce">🔗</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#065f46", textAlign: "center" }}>
                   Your Own Booking Link
                 </h3>
@@ -387,7 +377,6 @@ export default function PartnersPage() {
               }}
               onClick={() => userId ? router.push("/partners/dashboard") : null}
               >
-                <div style={{ fontSize: "3rem", marginBottom: "1rem", textAlign: "center" }} className="icon-bounce">📊</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#065f46", textAlign: "center" }}>
                   Track Everything
                 </h3>
@@ -416,10 +405,10 @@ export default function PartnersPage() {
                 marginTop: "2rem"
               }}>
                 {[
-                  { step: "1", icon: "📝", title: "Apply", desc: "Fill out a simple application form" },
-                  { step: "2", icon: "✅", title: "Get Approved", desc: "We review within 24-48 hours" },
-                  { step: "3", icon: "🔗", title: "Get Your Link", desc: "Receive your unique booking link" },
-                  { step: "4", icon: "💰", title: "Start Earning", desc: "Track bookings and earnings" }
+                  { step: "1", title: "Apply", desc: "Fill out a simple application form" },
+                  { step: "2", title: "Get Approved", desc: "We review within 24-48 hours" },
+                  { step: "3", title: "Get Your Link", desc: "Receive your unique booking link" },
+                  { step: "4", title: "Start Earning", desc: "Track bookings and earnings" }
                 ].map((item, idx) => (
                   <div key={idx} style={{
                     background: "#ffffff",
@@ -454,11 +443,10 @@ export default function PartnersPage() {
                     }}>
                       {item.step}
                     </div>
-                    <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem", marginTop: "0.5rem" }}>{item.icon}</div>
-                    <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem", color: "#065f46" }}>
+                    <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem", color: "#065f46", textAlign: "center", marginTop: "0.5rem" }}>
                       {item.title}
                     </h4>
-                    <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0, lineHeight: "1.5" }}>
+                    <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0, lineHeight: "1.5", textAlign: "center" }}>
                       {item.desc}
                     </p>
                   </div>
@@ -477,7 +465,7 @@ export default function PartnersPage() {
               marginBottom: "3rem",
               animation: "fadeInUp 0.6s ease-out 0.9s both"
             }}>
-              <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
+              <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)", textAlign: "center" }}>
                 Perfect For
               </h2>
               <div style={{
@@ -542,7 +530,7 @@ export default function PartnersPage() {
                 </Link>
               ) : (
                 <div>
-                  <p style={{ marginBottom: "1rem", color: "var(--text-light)" }}>
+                  <p style={{ marginBottom: "1rem", color: "var(--text-light)", textAlign: "center" }}>
                     Sign up or log in to apply for the Partner Program
                   </p>
                   <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
@@ -593,11 +581,10 @@ export default function PartnersPage() {
             }}>
               {userId ? (
                 <div>
-                  <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✅</div>
-                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "0.75rem", color: "var(--text-dark)", textAlign: "center" }}>
                     You&apos;re All Set!
                   </h2>
-                  <p style={{ marginBottom: "1.5rem", color: "var(--text-light)", fontSize: "1rem" }}>
+                  <p style={{ marginBottom: "1.5rem", color: "var(--text-light)", fontSize: "1rem", textAlign: "center" }}>
                     Access your partner dashboard to manage your account and track earnings.
                   </p>
                   <Link 
@@ -630,7 +617,7 @@ export default function PartnersPage() {
                 </div>
               ) : (
                 <div>
-                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)", textAlign: "center" }}>
                     Blast Partners Login
                   </h2>
                   <PortalLoginForm 

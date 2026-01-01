@@ -218,21 +218,13 @@ export default function EmployeePortalPage() {
         }}>
           <div className="container" style={{ position: "relative", zIndex: 1 }}>
             <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center" }}>
-              {/* Large Icon */}
-              <div style={{
-                fontSize: "5rem",
-                marginBottom: "1.5rem",
-                animation: "fadeInUp 0.8s ease-out"
-              }}>
-                ⚡
-              </div>
-              
               {/* Headline */}
               <h1 style={{
                 fontSize: "clamp(2rem, 6vw, 3.5rem)",
                 fontWeight: "800",
                 marginBottom: "1rem",
                 lineHeight: "1.2",
+                textAlign: "center",
                 animation: "fadeInUp 0.8s ease-out 0.1s both"
               }}>
                 Bin Blasters Portal
@@ -245,6 +237,7 @@ export default function EmployeePortalPage() {
                 opacity: 0.95,
                 maxWidth: "600px",
                 margin: "0 auto 2rem auto",
+                textAlign: "center",
                 animation: "fadeInUp 0.8s ease-out 0.2s both"
               }}>
                 Your mobile command center. Clock in, view routes, upload photos, and track your earnings—all from your phone.
@@ -281,7 +274,7 @@ export default function EmployeePortalPage() {
                 </Link>
               ) : (
                 <div style={{ animation: "fadeInUp 0.8s ease-out 0.3s both" }}>
-                  <p style={{ marginBottom: "1rem", fontSize: "1rem", opacity: 0.9 }}>
+                  <p style={{ marginBottom: "1rem", fontSize: "1rem", opacity: 0.9, textAlign: "center" }}>
                     Ready to start your shift?
                   </p>
                 </div>
@@ -320,11 +313,10 @@ export default function EmployeePortalPage() {
                 gap: "1rem",
                 animation: "fadeInUp 0.6s ease-out 0.4s both"
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                  <div style={{ fontSize: "2rem" }}>📋</div>
-                  <div>
-                    <div style={{ fontSize: "0.875rem", opacity: 0.9, marginBottom: "0.25rem" }}>Today&apos;s Jobs</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: "700" }}>{todaysJobs} {todaysJobs === 1 ? 'job' : 'jobs'} assigned</div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "0.875rem", opacity: 0.9, marginBottom: "0.25rem", textAlign: "center" }}>Today&apos;s Jobs</div>
+                    <div style={{ fontSize: "1.25rem", fontWeight: "700", textAlign: "center" }}>{todaysJobs} {todaysJobs === 1 ? 'job' : 'jobs'} assigned</div>
                   </div>
                 </div>
                 <Link
@@ -369,7 +361,6 @@ export default function EmployeePortalPage() {
               }}
               onClick={() => userId ? router.push("/employee/dashboard") : null}
               >
-                <div style={{ fontSize: "3rem", marginBottom: "1rem", textAlign: "center" }} className="icon-bounce">⏰</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#92400e", textAlign: "center" }}>
                   Clock In/Out
                 </h3>
@@ -389,7 +380,6 @@ export default function EmployeePortalPage() {
               }}
               onClick={() => userId ? router.push("/employee/dashboard") : null}
               >
-                <div style={{ fontSize: "3rem", marginBottom: "1rem", textAlign: "center" }} className="icon-bounce">🗺️</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#92400e", textAlign: "center" }}>
                   View Your Route
                 </h3>
@@ -409,7 +399,6 @@ export default function EmployeePortalPage() {
               }}
               onClick={() => userId ? router.push("/employee/dashboard") : null}
               >
-                <div style={{ fontSize: "3rem", marginBottom: "1rem", textAlign: "center" }} className="icon-bounce">📸</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#92400e", textAlign: "center" }}>
                   Upload Photos
                 </h3>
@@ -441,9 +430,9 @@ export default function EmployeePortalPage() {
                 marginTop: "2rem"
               }}>
                 {[
-                  { icon: "💰", title: "Pay Per Job", desc: "See your rate for each cleaning" },
-                  { icon: "✅", title: "Completed Jobs", desc: "Track your completed work" },
-                  { icon: "📊", title: "Total Earnings", desc: "View your lifetime earnings" }
+                  { title: "Pay Per Job", desc: "See your rate for each cleaning" },
+                  { title: "Completed Jobs", desc: "Track your completed work" },
+                  { title: "Total Earnings", desc: "View your lifetime earnings" }
                 ].map((feature, idx) => (
                   <div key={idx} style={{
                     background: "#ffffff",
@@ -459,11 +448,10 @@ export default function EmployeePortalPage() {
                     e.currentTarget.style.transform = "translateY(0)";
                   }}
                   >
-                    <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>{feature.icon}</div>
-                    <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.25rem", color: "#92400e" }}>
+                    <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.25rem", color: "#92400e", textAlign: "center" }}>
                       {feature.title}
                     </h4>
-                    <p style={{ fontSize: "0.875rem", color: "#78716c", margin: 0 }}>
+                    <p style={{ fontSize: "0.875rem", color: "#78716c", margin: 0, textAlign: "center" }}>
                       {feature.desc}
                     </p>
                   </div>
@@ -483,11 +471,10 @@ export default function EmployeePortalPage() {
             }}>
               {userId ? (
                 <div>
-                  <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✅</div>
-                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "0.75rem", color: "var(--text-dark)", textAlign: "center" }}>
                     You&apos;re All Set!
                   </h2>
-                  <p style={{ marginBottom: "1.5rem", color: "var(--text-light)", fontSize: "1rem" }}>
+                  <p style={{ marginBottom: "1.5rem", color: "var(--text-light)", fontSize: "1rem", textAlign: "center" }}>
                     Access your dashboard to clock in and view your route.
                   </p>
                   <Link 
@@ -520,7 +507,7 @@ export default function EmployeePortalPage() {
                 </div>
               ) : (
                 <div>
-                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)", textAlign: "center" }}>
                     Bin Blasters Login
                   </h2>
                   <PortalLoginForm 
@@ -529,7 +516,7 @@ export default function EmployeePortalPage() {
                     portalName="Bin Blasters Portal"
                   />
                   <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid #e5e7eb" }}>
-                    <p style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.75rem" }}>
+                    <p style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.75rem", textAlign: "center" }}>
                       Need access to the Bin Blasters Portal?
                     </p>
                     <Link 

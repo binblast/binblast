@@ -250,21 +250,13 @@ export default function OperatorPortalPage() {
         }}>
           <div className="container" style={{ position: "relative", zIndex: 1 }}>
             <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center" }}>
-              {/* Large Icon */}
-              <div style={{
-                fontSize: "5rem",
-                marginBottom: "1.5rem",
-                animation: "fadeInUp 0.8s ease-out"
-              }}>
-                🎛️
-              </div>
-              
               {/* Headline */}
               <h1 style={{
                 fontSize: "clamp(2rem, 6vw, 3.5rem)",
                 fontWeight: "800",
                 marginBottom: "1rem",
                 lineHeight: "1.2",
+                textAlign: "center",
                 animation: "fadeInUp 0.8s ease-out 0.1s both"
               }}>
                 Blast Command Portal
@@ -277,6 +269,7 @@ export default function OperatorPortalPage() {
                 opacity: 0.95,
                 maxWidth: "600px",
                 margin: "0 auto 2rem auto",
+                textAlign: "center",
                 animation: "fadeInUp 0.8s ease-out 0.2s both"
               }}>
                 Your mission control center. Manage employees, monitor operations, track performance, and keep everything running smoothly.
@@ -313,7 +306,7 @@ export default function OperatorPortalPage() {
                 </Link>
               ) : (
                 <div style={{ animation: "fadeInUp 0.8s ease-out 0.3s both" }}>
-                  <p style={{ marginBottom: "1rem", fontSize: "1rem", opacity: 0.9 }}>
+                  <p style={{ marginBottom: "1rem", fontSize: "1rem", opacity: 0.9, textAlign: "center" }}>
                     Ready to take command?
                   </p>
                 </div>
@@ -352,11 +345,10 @@ export default function OperatorPortalPage() {
                 gap: "1rem",
                 animation: "fadeInUp 0.6s ease-out 0.4s both"
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                  <div style={{ fontSize: "2rem" }}>⚡</div>
-                  <div>
-                    <div style={{ fontSize: "0.875rem", opacity: 0.9, marginBottom: "0.25rem" }}>System Status</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: "700" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "0.875rem", opacity: 0.9, marginBottom: "0.25rem", textAlign: "center" }}>System Status</div>
+                    <div style={{ fontSize: "1.25rem", fontWeight: "700", textAlign: "center" }}>
                       {systemStatus.active} / {systemStatus.total} Active Employees
                     </div>
                   </div>
@@ -403,7 +395,6 @@ export default function OperatorPortalPage() {
               }}
               onClick={() => userId ? router.push("/dashboard") : null}
               >
-                <div style={{ fontSize: "3rem", marginBottom: "1rem", textAlign: "center" }} className="icon-bounce">👥</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#6d28d9", textAlign: "center" }}>
                   Manage Employees
                 </h3>
@@ -423,7 +414,6 @@ export default function OperatorPortalPage() {
               }}
               onClick={() => userId ? router.push("/dashboard") : null}
               >
-                <div style={{ fontSize: "3rem", marginBottom: "1rem", textAlign: "center" }} className="icon-bounce">🗺️</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#6d28d9", textAlign: "center" }}>
                   View Customer Routes
                 </h3>
@@ -443,7 +433,6 @@ export default function OperatorPortalPage() {
               }}
               onClick={() => userId ? router.push("/dashboard") : null}
               >
-                <div style={{ fontSize: "3rem", marginBottom: "1rem", textAlign: "center" }} className="icon-bounce">📊</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "0.75rem", color: "#6d28d9", textAlign: "center" }}>
                   Track Operations
                 </h3>
@@ -471,38 +460,33 @@ export default function OperatorPortalPage() {
                 gap: "1.5rem"
               }}>
                 {[
-                  { icon: "👥", title: "Employee Management", desc: "View and manage all employees, their routes, and performance" },
-                  { icon: "🏠", title: "Customer Overview", desc: "Monitor all customers, subscriptions, and cleaning schedules" },
-                  { icon: "📍", title: "Route Assignment", desc: "Assign jobs to employees and track completion" },
-                  { icon: "📈", title: "Analytics & Reporting", desc: "View platform statistics and performance metrics" },
-                  { icon: "⚙️", title: "System Administration", desc: "Manage platform settings and configurations" },
-                  { icon: "🔔", title: "Notifications", desc: "Send alerts and updates to employees and customers" }
+                  { title: "Employee Management", desc: "View and manage all employees, their routes, and performance" },
+                  { title: "Customer Overview", desc: "Monitor all customers, subscriptions, and cleaning schedules" },
+                  { title: "Route Assignment", desc: "Assign jobs to employees and track completion" },
+                  { title: "Analytics & Reporting", desc: "View platform statistics and performance metrics" },
+                  { title: "System Administration", desc: "Manage platform settings and configurations" },
+                  { title: "Notifications", desc: "Send alerts and updates to employees and customers" }
                 ].map((feature, idx) => (
                   <div key={idx} style={{
                     background: "#ffffff",
                     borderRadius: "12px",
                     padding: "1.25rem",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "1rem",
+                    textAlign: "center",
                     transition: "transform 0.2s ease"
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateX(4px)";
+                    e.currentTarget.style.transform = "translateY(-4px)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateX(0)";
+                    e.currentTarget.style.transform = "translateY(0)";
                   }}
                   >
-                    <div style={{ fontSize: "1.5rem", flexShrink: 0 }}>{feature.icon}</div>
-                    <div>
-                      <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.25rem", color: "#6d28d9" }}>
-                        {feature.title}
-                      </h4>
-                      <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0, lineHeight: "1.5" }}>
-                        {feature.desc}
-                      </p>
-                    </div>
+                    <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.25rem", color: "#6d28d9", textAlign: "center" }}>
+                      {feature.title}
+                    </h4>
+                    <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0, lineHeight: "1.5", textAlign: "center" }}>
+                      {feature.desc}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -520,11 +504,10 @@ export default function OperatorPortalPage() {
             }}>
               {userId ? (
                 <div>
-                  <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✅</div>
-                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "0.75rem", color: "var(--text-dark)", textAlign: "center" }}>
                     You&apos;re All Set!
                   </h2>
-                  <p style={{ marginBottom: "1.5rem", color: "var(--text-light)", fontSize: "1rem" }}>
+                  <p style={{ marginBottom: "1.5rem", color: "var(--text-light)", fontSize: "1rem", textAlign: "center" }}>
                     Access your dashboard to manage operations and monitor system performance.
                   </p>
                   <Link 
@@ -557,7 +540,7 @@ export default function OperatorPortalPage() {
                 </div>
               ) : (
                 <div>
-                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                  <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem", color: "var(--text-dark)", textAlign: "center" }}>
                     Blast Command Login
                   </h2>
                   <PortalLoginForm 
@@ -566,10 +549,10 @@ export default function OperatorPortalPage() {
                     portalName="Blast Command Portal"
                   />
                   <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid #e5e7eb" }}>
-                    <p style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.75rem" }}>
+                    <p style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.75rem", textAlign: "center" }}>
                       Need administrative access?
                     </p>
-                    <p style={{ fontSize: "0.875rem", color: "var(--text-light)" }}>
+                    <p style={{ fontSize: "0.875rem", color: "var(--text-light)", textAlign: "center" }}>
                       Please contact your system administrator for access credentials.
                     </p>
                   </div>
