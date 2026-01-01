@@ -120,6 +120,7 @@ html, body {
     text-decoration: none !important;
     background: #dc2626 !important;         /* red background */
     display: inline-block !important;
+    white-space: nowrap !important;         /* keep text on one line */
 }
 
 /* Hover effect - keep it simple */
@@ -1200,6 +1201,7 @@ html {
         font-size: 0.95rem !important;
         text-decoration: none !important;
         background: #dc2626 !important;         /* red background */
+        white-space: nowrap !important;         /* keep text on one line */
     }
     
     .nav-links a.nav-login:hover,
