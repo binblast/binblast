@@ -336,12 +336,16 @@ export function Navbar() {
           </li>
           <li 
             style={{ position: "relative" }}
-            onMouseEnter={() => !isMenuOpen && setIsPortalsOpen(true)}
-            onMouseLeave={(e) => {
-              // Only close if we're leaving the entire li element (not moving into the dropdown)
+            onMouseEnter={() => {
               if (!isMenuOpen) {
-                // Check if we're moving to the dropdown
+                setIsPortalsOpen(true);
+              }
+            }}
+            onMouseLeave={(e) => {
+              // Only close if we're truly leaving the li element
+              if (!isMenuOpen) {
                 const relatedTarget = e.relatedTarget as HTMLElement;
+                // Check if we're moving to a child element (dropdown)
                 if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
                   setIsPortalsOpen(false);
                 }
@@ -372,9 +376,14 @@ export function Navbar() {
             {isPortalsOpen && (
               <div
                 onMouseEnter={() => setIsPortalsOpen(true)}
-                onMouseLeave={() => {
+                onMouseLeave={(e) => {
+                  // Only close if mouse is leaving the dropdown and not going to button
                   if (!isMenuOpen) {
-                    setIsPortalsOpen(false);
+                    const relatedTarget = e.relatedTarget as HTMLElement;
+                    const button = e.currentTarget.previousElementSibling as HTMLElement;
+                    if (!relatedTarget || (relatedTarget !== button && !button?.contains(relatedTarget))) {
+                      setIsPortalsOpen(false);
+                    }
                   }
                 }}
                 style={{
@@ -387,14 +396,9 @@ export function Navbar() {
                   border: isMenuOpen ? "none" : "1px solid #e5e7eb",
                   minWidth: isMenuOpen ? "100%" : "180px",
                   zIndex: 1000,
-                  marginTop: isMenuOpen ? "0" : "0",
-                  paddingTop: isMenuOpen ? "0.5rem" : "0.75rem",
-                  paddingBottom: "0.5rem",
-                  paddingLeft: "0",
-                  paddingRight: "0",
-                  marginLeft: isMenuOpen ? "1rem" : "0",
-                  // Add invisible padding at top to bridge gap
-                  clipPath: isMenuOpen ? "none" : "polygon(0 8px, 100% 8px, 100% 100%, 0 100%)"
+                  marginTop: isMenuOpen ? "0" : "2px",
+                  padding: "0.5rem 0",
+                  marginLeft: isMenuOpen ? "1rem" : "0"
                 }}
               >
                 <Link 
