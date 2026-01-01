@@ -148,7 +148,14 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
     }}>
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         <div>
-          <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+          <label style={{ 
+            display: "block", 
+            fontSize: "0.9rem", 
+            fontWeight: "500", 
+            marginBottom: "0.5rem", 
+            color: "var(--text-dark)",
+            textAlign: "left"
+          }}>
             Email
           </label>
           <input
@@ -163,7 +170,8 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
               border: "1px solid #e5e7eb",
               borderRadius: "8px",
               fontSize: "0.95rem",
-              transition: "border-color 0.2s"
+              transition: "border-color 0.2s",
+              textAlign: "left"
             }}
             onFocus={(e) => e.currentTarget.style.borderColor = "#16a34a"}
             onBlur={(e) => e.currentTarget.style.borderColor = "#e5e7eb"}
@@ -171,8 +179,21 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
         </div>
 
         <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-            <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", color: "var(--text-dark)" }}>
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "space-between", 
+            marginBottom: "0.5rem",
+            width: "100%"
+          }}>
+            <label style={{ 
+              display: "block", 
+              fontSize: "0.9rem", 
+              fontWeight: "500", 
+              color: "var(--text-dark)",
+              textAlign: "left",
+              margin: 0
+            }}>
               Password
             </label>
             <Link 
@@ -181,7 +202,9 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
                 fontSize: "0.875rem", 
                 color: "var(--primary-color)", 
                 fontWeight: "500",
-                textDecoration: "none"
+                textDecoration: "none",
+                flexShrink: 0,
+                marginLeft: "1rem"
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.textDecoration = "underline";
@@ -205,7 +228,8 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
               border: "1px solid #e5e7eb",
               borderRadius: "8px",
               fontSize: "0.95rem",
-              transition: "border-color 0.2s"
+              transition: "border-color 0.2s",
+              textAlign: "left"
             }}
             onFocus={(e) => e.currentTarget.style.borderColor = "#16a34a"}
             onBlur={(e) => e.currentTarget.style.borderColor = "#e5e7eb"}
