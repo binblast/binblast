@@ -339,8 +339,12 @@ export function Navbar() {
             onMouseEnter={() => !isMenuOpen && setIsPortalsOpen(true)}
             onMouseLeave={(e) => {
               // Only close if we're leaving the entire li element (not moving into the dropdown)
-              if (!isMenuOpen && !e.currentTarget.contains(e.relatedTarget as Node)) {
-                setIsPortalsOpen(false);
+              if (!isMenuOpen) {
+                // Check if we're moving to the dropdown
+                const relatedTarget = e.relatedTarget as HTMLElement;
+                if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
+                  setIsPortalsOpen(false);
+                }
               }
             }}
           >
@@ -368,10 +372,14 @@ export function Navbar() {
             {isPortalsOpen && (
               <div
                 onMouseEnter={() => setIsPortalsOpen(true)}
-                onMouseLeave={() => setIsPortalsOpen(false)}
+                onMouseLeave={() => {
+                  if (!isMenuOpen) {
+                    setIsPortalsOpen(false);
+                  }
+                }}
                 style={{
                   position: isMenuOpen ? "static" : "absolute",
-                  top: isMenuOpen ? "auto" : "100%",
+                  top: isMenuOpen ? "auto" : "calc(100% - 4px)",
                   left: isMenuOpen ? "auto" : "0",
                   background: "#ffffff",
                   borderRadius: "8px",
@@ -379,7 +387,7 @@ export function Navbar() {
                   border: isMenuOpen ? "none" : "1px solid #e5e7eb",
                   minWidth: isMenuOpen ? "100%" : "180px",
                   zIndex: 1000,
-                  marginTop: isMenuOpen ? "0" : "0.5rem",
+                  marginTop: isMenuOpen ? "0" : "4px",
                   padding: "0.5rem 0",
                   marginLeft: isMenuOpen ? "1rem" : "0"
                 }}
