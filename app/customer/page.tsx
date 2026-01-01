@@ -461,8 +461,9 @@ export default function BlastClientsPortalPage() {
                 Your Dashboard Features
               </h2>
               <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
                 gap: "1.5rem"
               }}>
                 {[
@@ -478,7 +479,10 @@ export default function BlastClientsPortalPage() {
                     borderRadius: "12px",
                     padding: "1.25rem",
                     textAlign: "center",
-                    transition: "transform 0.2s ease"
+                    transition: "transform 0.2s ease",
+                    flex: "0 1 250px",
+                    minWidth: "250px",
+                    maxWidth: "100%"
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "translateY(-4px)";
