@@ -402,12 +402,12 @@ export function Navbar() {
                 }}
               >
                 <Link 
-                  href="/partners" 
+                  href="/customer" 
                   onClick={(e) => {
                     e.preventDefault();
                     closePortals();
                     setIsMenuOpen(false);
-                    router.push("/partners");
+                    router.push("/customer");
                   }}
                   style={{
                     display: "block",
@@ -424,7 +424,7 @@ export function Navbar() {
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
-                  Blast Partners
+                  Blast Clients
                 </Link>
                 <Link 
                   href="/employee" 
@@ -452,12 +452,12 @@ export function Navbar() {
                   Bin Blasters
                 </Link>
                 <Link 
-                  href="/customer" 
+                  href="/partners" 
                   onClick={(e) => {
                     e.preventDefault();
                     closePortals();
                     setIsMenuOpen(false);
-                    router.push("/customer");
+                    router.push("/partners");
                   }}
                   style={{
                     display: "block",
@@ -474,7 +474,7 @@ export function Navbar() {
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
-                  Blast Clients
+                  Blast Partners
                 </Link>
                 <Link 
                   href="/operator" 
