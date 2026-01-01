@@ -379,7 +379,7 @@ export function Navbar() {
                 }}
                 style={{
                   position: isMenuOpen ? "static" : "absolute",
-                  top: isMenuOpen ? "auto" : "calc(100% - 4px)",
+                  top: isMenuOpen ? "auto" : "100%",
                   left: isMenuOpen ? "auto" : "0",
                   background: "#ffffff",
                   borderRadius: "8px",
@@ -387,9 +387,14 @@ export function Navbar() {
                   border: isMenuOpen ? "none" : "1px solid #e5e7eb",
                   minWidth: isMenuOpen ? "100%" : "180px",
                   zIndex: 1000,
-                  marginTop: isMenuOpen ? "0" : "4px",
-                  padding: "0.5rem 0",
-                  marginLeft: isMenuOpen ? "1rem" : "0"
+                  marginTop: isMenuOpen ? "0" : "0",
+                  paddingTop: isMenuOpen ? "0.5rem" : "0.75rem",
+                  paddingBottom: "0.5rem",
+                  paddingLeft: "0",
+                  paddingRight: "0",
+                  marginLeft: isMenuOpen ? "1rem" : "0",
+                  // Add invisible padding at top to bridge gap
+                  clipPath: isMenuOpen ? "none" : "polygon(0 8px, 100% 8px, 100% 100%, 0 100%)"
                 }}
               >
                 <Link 
