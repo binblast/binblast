@@ -232,6 +232,8 @@ export default function EmployeeDashboardPage() {
       );
 
       const unsubscribe = onSnapshot(jobsQuery, (snapshot) => {
+        console.log(`[Employee Dashboard] Jobs listener triggered. Found ${snapshot.docs.length} assigned jobs`);
+        
         const allJobs = snapshot.docs
           .map((doc) => ({
             id: doc.id,
@@ -252,9 +254,12 @@ export default function EmployeeDashboardPage() {
         
         // Filter to only show today's jobs for the main display
         const todayJobs = filteredJobs.filter((job: any) => job.scheduledDate === today);
+        console.log(`[Employee Dashboard] Setting ${todayJobs.length} jobs for today`);
         setJobs(todayJobs);
         loadPayPreview(); // Refresh pay preview when jobs change
         loadDashboardData(); // Refresh dashboard data when jobs change
+      }, (error) => {
+        console.error("[Employee Dashboard] Error in jobs listener:", error);
       });
 
       return unsubscribe;
