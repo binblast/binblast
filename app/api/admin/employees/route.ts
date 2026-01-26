@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { firstName, lastName, email, phone, serviceArea, payRatePerJob, password } = body;
+    const { firstName, lastName, email, phone, serviceArea, payRatePerJob } = body;
 
     if (!firstName || !lastName || !email) {
       return NextResponse.json(
@@ -165,8 +165,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create user with email/password
-    const tempPassword = password || `Temp${Math.random().toString(36).slice(-8)}!`;
+    // Generate a secure temporary password
+    function generateTemporaryPassword(): string {
+      const length = 12;
+      const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const lowercase = "abcdefghijklmnopqrstuvwxyz";
+      const numbers = "0123456789";
+      const special = "!@#$%^&*";
+      const allChars = uppercase + lowercase + numbers + special;
+      
+      let password = "";
+      // Ensure at least one character from each set
+      password += uppercase[Math.floor(Math.random() * uppercase.length)];
+      password += lowercase[Math.floor(Math.random() * lowercase.length)];
+      password += numbers[Math.floor(Math.random() * numbers.length)];
+      password += special[Math.floor(Math.random() * special.length)];
+      
+      // Fill the rest randomly
+      for (let i = password.length; i < length; i++) {
+        password += allChars[Math.floor(Math.random() * allChars.length)];
+      }
+      
+      // Shuffle the password
+      return password.split("").sort(() => Math.random() - 0.5).join("");
+    }
+
+    // Always generate a temporary password
+    const tempPassword = generateTemporaryPassword();
     const userCredential = await createUserWithEmailAndPassword(email, tempPassword);
     
     // Update profile
@@ -187,6 +212,8 @@ export async function POST(req: NextRequest) {
       hiringStatus: "active",
       hiredDate: serverTimestamp(),
       hiredBy: userId || "admin",
+      tempPassword: tempPassword, // Store temp password temporarily (should be cleared after first login)
+      hasChangedPassword: false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -209,7 +236,8 @@ export async function POST(req: NextRequest) {
         firstName,
         lastName,
       },
-      message: "Employee account created successfully",
+      tempPassword: tempPassword, // Return temp password so admin can share it with employee
+      message: "Employee account created successfully. Temporary password has been generated.",
     });
   } catch (error: any) {
     console.error("Error creating employee:", error);

@@ -17,26 +17,39 @@ export default function EmployeeRegisterPage() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [payRatePerJob, setPayRatePerJob] = useState("10.00");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Generate a secure temporary password
+  function generateTemporaryPassword(): string {
+    const length = 12;
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+    const special = "!@#$%^&*";
+    const allChars = uppercase + lowercase + numbers + special;
+    
+    let password = "";
+    // Ensure at least one character from each set
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += special[Math.floor(Math.random() * special.length)];
+    
+    // Fill the rest randomly
+    for (let i = password.length; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    // Shuffle the password
+    return password.split("").sort(() => Math.random() - 0.5).join("");
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
 
     setLoading(true);
 
@@ -44,8 +57,11 @@ export default function EmployeeRegisterPage() {
       const { createUserWithEmailAndPassword, updateProfile, getDbInstance } = await import("@/lib/firebase");
       const db = await getDbInstance();
       
-      // Create Firebase user
-      const userCredential = await createUserWithEmailAndPassword(email, password);
+      // Generate temporary password automatically
+      const tempPassword = generateTemporaryPassword();
+      
+      // Create Firebase user with temporary password
+      const userCredential = await createUserWithEmailAndPassword(email, tempPassword);
       
       // Update profile with display name
       await updateProfile(userCredential.user, {
@@ -254,51 +270,15 @@ export default function EmployeeRegisterPage() {
                     />
                   </div>
 
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "#111827" }}>
-                      Password *
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      autoComplete="new-password"
-                      minLength={6}
-                      style={{
-                        width: "100%",
-                        padding: "0.75rem 1rem",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "8px",
-                        fontSize: "0.95rem",
-                        transition: "border-color 0.2s"
-                      }}
-                      onFocus={(e) => e.currentTarget.style.borderColor = "#16a34a"}
-                      onBlur={(e) => e.currentTarget.style.borderColor = "#e5e7eb"}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "#111827" }}>
-                      Confirm Password *
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      minLength={6}
-                      style={{
-                        width: "100%",
-                        padding: "0.75rem 1rem",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "8px",
-                        fontSize: "0.95rem",
-                        transition: "border-color 0.2s"
-                      }}
-                      onFocus={(e) => e.currentTarget.style.borderColor = "#16a34a"}
-                      onBlur={(e) => e.currentTarget.style.borderColor = "#e5e7eb"}
-                    />
+                  <div style={{
+                    padding: "1rem",
+                    background: "#f0f9ff",
+                    border: "1px solid #bae6fd",
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                    color: "#0369a1"
+                  }}>
+                    <strong>Note:</strong> A temporary password will be automatically generated for this employee account. The employee will need to reset their password on first login.
                   </div>
 
                   {error && (
