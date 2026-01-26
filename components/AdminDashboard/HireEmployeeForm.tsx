@@ -16,7 +16,6 @@ export function HireEmployeeForm({ onSuccess, onCancel }: HireEmployeeFormProps)
     phone: "",
     serviceArea: "",
     payRatePerJob: "10",
-    password: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +40,6 @@ export function HireEmployeeForm({ onSuccess, onCancel }: HireEmployeeFormProps)
           phone: formData.phone || null,
           serviceArea: serviceAreas,
           payRatePerJob: parseFloat(formData.payRatePerJob),
-          password: formData.password || undefined,
         }),
       });
 
@@ -63,7 +61,6 @@ export function HireEmployeeForm({ onSuccess, onCancel }: HireEmployeeFormProps)
         phone: "",
         serviceArea: "",
         payRatePerJob: "10",
-        password: "",
       });
     } catch (err: any) {
       setError(err.message || "Failed to create employee account");
@@ -179,24 +176,6 @@ export function HireEmployeeForm({ onSuccess, onCancel }: HireEmployeeFormProps)
           min="0"
           value={formData.payRatePerJob}
           onChange={(e) => setFormData({ ...formData, payRatePerJob: e.target.value })}
-          style={{
-            width: "100%",
-            padding: "0.75rem 1rem",
-            border: "1px solid #e5e7eb",
-            borderRadius: "8px",
-            fontSize: "0.95rem",
-          }}
-        />
-      </div>
-
-      <div>
-        <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "#111827" }}>
-          Initial Password (optional - will generate if not provided)
-        </label>
-        <input
-          type="password"
-          value={formData.password}
-          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           style={{
             width: "100%",
             padding: "0.75rem 1rem",
