@@ -3,23 +3,218 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useFirebase } from "@/lib/firebase-context";
 
+type PortalIconType = "customer" | "partner" | "employee" | "command";
+
+interface PortalMenuItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  href: string;
+  icon: PortalIconType;
+  showDividerBefore?: boolean;
+}
+
+function PortalIcon({ type }: { type: PortalIconType }) {
+  const iconProps = {
+    width: 22,
+    height: 22,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.75,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  switch (type) {
+    case "customer":
+      return (
+        <svg {...iconProps}>
+          <path d="M3 10.5L12 3l9 7.5" />
+          <path d="M5 9.5V20h14V9.5" />
+          <path d="M10 20v-6h4v6" />
+        </svg>
+      );
+    case "partner":
+      return (
+        <svg {...iconProps}>
+          <path d="M7 11V8a5 5 0 0 1 10 0v3" />
+          <path d="M5 11h14v10H5z" />
+          <path d="M9 15h6" />
+        </svg>
+      );
+    case "employee":
+      return (
+        <svg {...iconProps}>
+          <rect x="3" y="7" width="18" height="13" rx="2" />
+          <path d="M8 7V6a4 4 0 0 1 8 0v1" />
+          <path d="M3 12h18" />
+        </svg>
+      );
+    case "command":
+      return (
+        <svg {...iconProps}>
+          <path d="M12 3l7 4v5c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V7l7-4z" />
+          <path d="M9.5 12.5l1.8 1.8 3.7-3.7" />
+        </svg>
+      );
+  }
+}
+
+function PortalDropdownItem({
+  item,
+  isMobileMenu,
+  onNavigate,
+}: {
+  item: PortalMenuItem;
+  isMobileMenu: boolean;
+  onNavigate: () => void;
+}) {
+  const router = useRouter();
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    onNavigate();
+    router.push(item.href);
+  };
+
+  return (
+    <>
+      {item.showDividerBefore && (
+        <div
+          role="separator"
+          style={{
+            height: "1px",
+            background: "#e5e7eb",
+            margin: isMobileMenu ? "0.25rem 1.25rem" : "0.25rem 0.75rem",
+          }}
+        />
+      )}
+      <Link
+        href={item.href}
+        role="menuitem"
+        onClick={handleClick}
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "0.875rem",
+          padding: isMobileMenu ? "1rem 1.25rem 1rem 2rem" : "0.875rem 1rem",
+          color: "var(--text-dark)",
+          textDecoration: "none",
+          transition: "background-color 0.2s",
+          cursor: "pointer",
+          textAlign: "left",
+          borderLeft: isMobileMenu ? "3px solid transparent" : "none",
+          borderRadius: isMobileMenu ? "0" : "8px",
+          margin: isMobileMenu ? "0" : "0 0.375rem",
+          width: isMobileMenu ? "100%" : "calc(100% - 0.75rem)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = "#f3f4f6";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = "transparent";
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.backgroundColor = "#f3f4f6";
+          e.currentTarget.style.outline = "2px solid #16a34a";
+          e.currentTarget.style.outlineOffset = "-2px";
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.backgroundColor = "transparent";
+          e.currentTarget.style.outline = "none";
+        }}
+      >
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "2.25rem",
+            height: "2.25rem",
+            borderRadius: "8px",
+            background: "#f0fdf4",
+            color: "#16a34a",
+            flexShrink: 0,
+          }}
+        >
+          <PortalIcon type={item.icon} />
+        </span>
+        <span style={{ display: "flex", flexDirection: "column", gap: "0.2rem", minWidth: 0 }}>
+          <span style={{ fontWeight: "600", fontSize: "0.95rem", lineHeight: 1.3, color: "var(--text-dark)" }}>
+            {item.title}
+          </span>
+          <span style={{ fontSize: "0.8rem", lineHeight: 1.4, color: "#6b7280" }}>
+            {item.subtitle}
+          </span>
+        </span>
+      </Link>
+    </>
+  );
+}
+
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isPortalsOpen, setIsPortalsOpen] = useState(false);
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [accountUrl, setAccountUrl] = useState("/dashboard");
   const [isEmployee, setIsEmployee] = useState(false);
+  const [isStandardCustomer, setIsStandardCustomer] = useState(false);
   const [loading, setLoading] = useState(true);
+  const signInRef = useRef<HTMLLIElement>(null);
+  const signInButtonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const isHomePage = pathname === "/";
   const isDashboard = pathname === "/dashboard" || pathname === "/partners/dashboard" || pathname === "/employee/dashboard";
   const showTextLogo = isHomePage || isDashboard;
   const { isReady: firebaseReady } = useFirebase();
+
+  const closeSignIn = useCallback(() => {
+    setIsSignInOpen(false);
+  }, []);
+
+  const portalMenuItems: PortalMenuItem[] = [
+    {
+      id: "customer",
+      title: isLoggedIn && isStandardCustomer ? "My Account" : "Customer Portal",
+      subtitle: "Manage cleanings, payments, rewards, and referrals.",
+      href: isLoggedIn && isStandardCustomer ? accountUrl : "/customer",
+      icon: "customer",
+    },
+    {
+      id: "partner",
+      title: "Partner Portal",
+      subtitle: "Track referrals, commissions, and partner performance.",
+      href: "/partners",
+      icon: "partner",
+    },
+    {
+      id: "employee",
+      title: "Employee Portal",
+      subtitle: "View routes, schedules, and assigned jobs.",
+      href: "/employee",
+      icon: "employee",
+    },
+    {
+      id: "command",
+      title: "Blast Command",
+      subtitle: "Admin dashboard and business operations.",
+      href: "/operator",
+      icon: "command",
+      showDividerBefore: true,
+    },
+  ];
+
+  const handlePortalNavigate = () => {
+    closeSignIn();
+    setIsMenuOpen(false);
+  };
 
   useEffect(() => {
     // Check Firebase auth state - only on client side
@@ -32,151 +227,120 @@ export function Navbar() {
     let mounted = true;
     let retryCount = 0;
     const maxRetries = 5;
-    const retryDelay = 500; // 500ms between retries
+    const retryDelay = 500;
+
+    async function updateUserNavigation(user: { uid: string; email: string | null }) {
+      try {
+        const { getDbInstance } = await import("@/lib/firebase");
+        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+        const db = await getDbInstance();
+
+        if (!db) {
+          setIsEmployee(false);
+          setIsStandardCustomer(false);
+          setAccountUrl("/dashboard");
+          return;
+        }
+
+        const firestore = await safeImportFirestore();
+        const { doc, getDoc } = firestore;
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const role = userData.role;
+          const userEmail = user.email || "";
+          const ADMIN_EMAIL = "binblastcompany@gmail.com";
+          const isOperator = role === "operator" || role === "admin" || userEmail === ADMIN_EMAIL;
+          const isEmployeeRole = role === "employee";
+
+          setIsEmployee(isEmployeeRole);
+
+          const { getDashboardUrl } = await import("@/lib/partner-auth");
+          const dashboardUrl = await getDashboardUrl(user.uid);
+          setAccountUrl(isEmployeeRole ? "/employee/dashboard" : dashboardUrl);
+
+          const isPartner = dashboardUrl !== "/dashboard" && !isEmployeeRole;
+          setIsStandardCustomer(!isEmployeeRole && !isPartner && !isOperator);
+        } else {
+          setIsEmployee(false);
+          setIsStandardCustomer(true);
+          setAccountUrl("/dashboard");
+        }
+      } catch (err) {
+        console.error("[Navbar] Error getting dashboard URL:", err);
+        setIsEmployee(false);
+        setIsStandardCustomer(false);
+        setAccountUrl("/dashboard");
+      }
+    }
 
     async function checkAuthState() {
       try {
         const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
-        
+
         if (!mounted) return;
-        
-          // Only proceed if auth is available and valid
+
         if (auth && typeof auth === "object" && "currentUser" in auth) {
-          // Check current user immediately
           if (auth.currentUser && mounted) {
             setIsLoggedIn(true);
-              
-              // Update account URL based on partner/employee status
-              try {
-                const { getDbInstance } = await import("@/lib/firebase");
-                const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-                const db = await getDbInstance();
-                
-                if (db) {
-                  const firestore = await safeImportFirestore();
-                  const { doc, getDoc } = firestore;
-                  const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-                  
-                  if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    if (userData.role === "employee") {
-                      setIsEmployee(true);
-                      setAccountUrl("/employee/dashboard");
-                    } else {
-                      setIsEmployee(false);
-                      const { getDashboardUrl } = await import("@/lib/partner-auth");
-                      const dashboardUrl = await getDashboardUrl(auth.currentUser.uid);
-                      setAccountUrl(dashboardUrl);
-                    }
-                  } else {
-                    setIsEmployee(false);
-                    setAccountUrl("/dashboard");
-                  }
-                } else {
-                  setIsEmployee(false);
-                  setAccountUrl("/dashboard");
-                }
-              } catch (err) {
-                console.error("[Navbar] Error getting dashboard URL:", err);
-                setIsEmployee(false);
-                setAccountUrl("/dashboard");
-              }
-              
+            await updateUserNavigation(auth.currentUser);
             setLoading(false);
             console.log("[Navbar] User is logged in:", auth.currentUser.email);
           } else if (mounted) {
             setIsLoggedIn(false);
             setIsEmployee(false);
-              setAccountUrl("/dashboard");
+            setIsStandardCustomer(false);
+            setAccountUrl("/dashboard");
             setLoading(false);
             console.log("[Navbar] No user logged in");
           }
-          
-          // Use safe wrapper function to listen for changes
+
           unsubscribe = await onAuthStateChanged(async (user) => {
             if (mounted) {
               setIsLoggedIn(!!user);
-              
-              // Update account URL based on partner/employee status
+
               if (user) {
-                try {
-                  // Check if user is an employee
-                  const { getDbInstance } = await import("@/lib/firebase");
-                  const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-                  const db = await getDbInstance();
-                  
-                  if (db) {
-                    const firestore = await safeImportFirestore();
-                    const { doc, getDoc } = firestore;
-                    const userDoc = await getDoc(doc(db, "users", user.uid));
-                    
-                    if (userDoc.exists()) {
-                      const userData = userDoc.data();
-                      if (userData.role === "employee") {
-                        setIsEmployee(true);
-                        setAccountUrl("/employee/dashboard");
-                      } else {
-                        setIsEmployee(false);
-                        const { getDashboardUrl } = await import("@/lib/partner-auth");
-                        const dashboardUrl = await getDashboardUrl(user.uid);
-                        setAccountUrl(dashboardUrl);
-                      }
-                    } else {
-                      setIsEmployee(false);
-                      setAccountUrl("/dashboard");
-                    }
-                  } else {
-                    setIsEmployee(false);
-                    setAccountUrl("/dashboard");
-                  }
-                } catch (err) {
-                  console.error("[Navbar] Error getting dashboard URL:", err);
-                  setIsEmployee(false);
-                  setAccountUrl("/dashboard");
-                }
+                await updateUserNavigation(user);
               } else {
                 setIsEmployee(false);
+                setIsStandardCustomer(false);
                 setAccountUrl("/dashboard");
               }
-              
+
               setLoading(false);
               console.log("[Navbar] Auth state changed:", user ? user.email : "logged out");
             }
           });
         } else {
-          // Auth not available yet - retry if we haven't exceeded max retries
           if (retryCount < maxRetries && mounted) {
             retryCount++;
             console.log(`[Navbar] Auth not ready, retrying (${retryCount}/${maxRetries})...`);
             setTimeout(checkAuthState, retryDelay);
-        } else {
-          // Firebase not available or not configured - just show logged out state
-          if (mounted) {
-            setIsLoggedIn(false);
-            setLoading(false);
+          } else {
+            if (mounted) {
+              setIsLoggedIn(false);
+              setLoading(false);
               console.log("[Navbar] Auth check failed after retries");
             }
           }
         }
       } catch (err: any) {
-        // Retry on error if we haven't exceeded max retries
         if (retryCount < maxRetries && mounted) {
           retryCount++;
           console.log(`[Navbar] Auth check error, retrying (${retryCount}/${maxRetries}):`, err?.message || err);
           setTimeout(checkAuthState, retryDelay);
         } else {
-        // Silently handle errors - don't crash the page
           console.warn("[Navbar] Firebase auth check failed after retries:", err?.message || err);
-        if (mounted) {
-          setIsLoggedIn(false);
-          setLoading(false);
+          if (mounted) {
+            setIsLoggedIn(false);
+            setLoading(false);
           }
         }
       }
     }
 
-    // Start checking auth state (don't wait for firebaseReady since Firebase is clearly initializing)
     checkAuthState();
 
     return () => {
@@ -185,82 +349,99 @@ export function Navbar() {
         unsubscribe();
       }
     };
-  }, []); // Remove firebaseReady dependency - check auth state regardless
+  }, []);
 
-  // Helper function to get the correct href for homepage sections
   const getHomeSectionHref = (sectionId: string) => {
-    // If we're on the homepage, use hash link directly
-    // Otherwise, navigate to homepage with hash
     return isHomePage ? `#${sectionId}` : `/#${sectionId}`;
   };
 
   useEffect(() => {
-    // Handle smooth scrolling for anchor links on the homepage
     const handleAnchorClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const anchor = target.closest('a[href^="#"]') as HTMLAnchorElement;
-      if (anchor && anchor.getAttribute('href')?.startsWith('#')) {
-        // Only handle smooth scroll if we're on the homepage and it's a direct hash link (not /#section)
-        const href = anchor.getAttribute('href') || '';
-        if (isHomePage && href.startsWith('#') && !href.startsWith('/#')) {
+      if (anchor && anchor.getAttribute("href")?.startsWith("#")) {
+        const href = anchor.getAttribute("href") || "";
+        if (isHomePage && href.startsWith("#") && !href.startsWith("/#")) {
           e.preventDefault();
           const targetId = href.slice(1);
-          const targetElement = document.getElementById(targetId || '');
+          const targetElement = document.getElementById(targetId || "");
           if (targetElement) {
-            const offsetTop = targetElement.offsetTop - 80; // Account for sticky navbar
+            const offsetTop = targetElement.offsetTop - 80;
             window.scrollTo({
               top: offsetTop,
-              behavior: 'smooth'
+              behavior: "smooth",
             });
-            // Close mobile menu after clicking
             setIsMenuOpen(false);
+            closeSignIn();
           }
         }
-        // If not on homepage or href starts with /#, let Next.js Link handle navigation
-        // Then scroll after page loads (handled in next useEffect)
       }
     };
 
-    document.addEventListener('click', handleAnchorClick);
-    return () => document.removeEventListener('click', handleAnchorClick);
-  }, [isHomePage]);
+    document.addEventListener("click", handleAnchorClick);
+    return () => document.removeEventListener("click", handleAnchorClick);
+  }, [isHomePage, closeSignIn]);
 
-  // Handle smooth scrolling when landing on homepage with hash from another page
   useEffect(() => {
-    if (isHomePage && typeof window !== 'undefined') {
+    if (isHomePage && typeof window !== "undefined") {
       const hash = window.location.hash;
       if (hash) {
-        // Small delay to ensure page is fully rendered
         const scrollToSection = () => {
           const targetId = hash.slice(1);
           const targetElement = document.getElementById(targetId);
           if (targetElement) {
-            const offsetTop = targetElement.offsetTop - 80; // Account for sticky navbar
+            const offsetTop = targetElement.offsetTop - 80;
             window.scrollTo({
               top: offsetTop,
-              behavior: 'smooth'
+              behavior: "smooth",
             });
           }
         };
-        
-        // Try immediately, then retry after a short delay to handle dynamic content
+
         scrollToSection();
         setTimeout(scrollToSection, 100);
-        setTimeout(scrollToSection, 500); // Extra retry for slower content
+        setTimeout(scrollToSection, 500);
       }
     }
   }, [isHomePage, pathname]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (signInRef.current && !signInRef.current.contains(event.target as Node)) {
+        closeSignIn();
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeSignIn();
+        signInButtonRef.current?.focus();
+      }
+    };
+
+    if (isSignInOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isSignInOpen, closeSignIn]);
+
+  useEffect(() => {
+    closeSignIn();
+    setIsMenuOpen(false);
+  }, [pathname, closeSignIn]);
+
   const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+    setIsMenuOpen((prev) => !prev);
+    closeSignIn();
   };
 
-  const togglePortals = () => {
-    setIsPortalsOpen(!isPortalsOpen);
-  };
-
-  const closePortals = () => {
-    setIsPortalsOpen(false);
+  const toggleSignIn = () => {
+    setIsSignInOpen((prev) => !prev);
   };
 
   const handleLogout = async () => {
@@ -270,9 +451,7 @@ export function Navbar() {
       router.push("/");
       router.refresh();
     } catch (err: any) {
-      // Handle error - Firebase might not be configured
       console.warn("[Navbar] Logout failed:", err?.message || err);
-      // Still redirect to home page
       router.push("/");
       router.refresh();
     }
@@ -283,43 +462,47 @@ export function Navbar() {
       <div className="nav-container">
         <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", height: "40px" }}>
           {showTextLogo ? (
-            <span style={{ 
-              fontSize: "1.5rem", 
-              fontWeight: "700", 
-              color: "var(--text-dark)",
-              letterSpacing: "0.02em"
-            }}>
-          Bin Blast Co.
+            <span
+              style={{
+                fontSize: "1.5rem",
+                fontWeight: "700",
+                color: "var(--text-dark)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              Bin Blast Co.
             </span>
           ) : (
-            <div style={{ 
-              width: "100px", 
-              height: "40px", 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "flex-start", 
-              overflow: "hidden", 
-              position: "relative",
-              padding: "2px 0"
-            }}>
-              <Image 
-                src="/logo.png" 
-                alt="Bin Blast Co. Logo" 
-                width={100} 
+            <div
+              style={{
+                width: "100px",
+                height: "40px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                overflow: "hidden",
+                position: "relative",
+                padding: "2px 0",
+              }}
+            >
+              <Image
+                src="/logo.png"
+                alt="Bin Blast Co. Logo"
+                width={100}
                 height={40}
-                style={{ 
-                  objectFit: "contain", 
-                  objectPosition: "left center", 
-                  width: "auto", 
+                style={{
+                  objectFit: "contain",
+                  objectPosition: "left center",
+                  width: "auto",
                   height: "100%",
-                  maxWidth: "100%"
+                  maxWidth: "100%",
                 }}
                 priority
               />
             </div>
           )}
         </Link>
-        <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
+        <ul className={`nav-links ${isMenuOpen ? "active" : ""}`}>
           <li>
             {isLoggedIn ? (
               <Link href="/">Home</Link>
@@ -334,26 +517,31 @@ export function Navbar() {
               <Link href={getHomeSectionHref("pricing")}>Services</Link>
             )}
           </li>
-          <li 
+          <li
+            ref={signInRef}
             style={{ position: "relative", width: "100%" }}
             onMouseEnter={() => {
               if (!isMenuOpen) {
-                setIsPortalsOpen(true);
+                setIsSignInOpen(true);
               }
             }}
             onMouseLeave={(e) => {
-              // Only close if we're truly leaving the li element
               if (!isMenuOpen) {
                 const relatedTarget = e.relatedTarget as HTMLElement;
-                // Check if we're moving to a child element (dropdown)
                 if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
-                  setIsPortalsOpen(false);
+                  closeSignIn();
                 }
               }
             }}
           >
             <button
-              onClick={togglePortals}
+              ref={signInButtonRef}
+              type="button"
+              onClick={toggleSignIn}
+              aria-haspopup="menu"
+              aria-expanded={isSignInOpen}
+              aria-controls="sign-in-menu"
+              id="sign-in-button"
               style={{
                 background: "transparent",
                 border: "none",
@@ -368,220 +556,105 @@ export function Navbar() {
                 justifyContent: "space-between",
                 gap: "0.5rem",
                 width: "100%",
-                textAlign: "left"
+                textAlign: "left",
+                borderRadius: "6px",
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.outline = "2px solid #16a34a";
+                e.currentTarget.style.outlineOffset = "2px";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.outline = "none";
               }}
             >
-              <span>Portals</span>
-              <span style={{ fontSize: "0.75rem", flexShrink: 0 }}>{isPortalsOpen ? "▲" : "▼"}</span>
+              <span>Sign In</span>
+              <span style={{ fontSize: "0.75rem", flexShrink: 0 }} aria-hidden="true">
+                {isSignInOpen ? "▲" : "▼"}
+              </span>
             </button>
-            {isPortalsOpen && (
+            {isSignInOpen && (
               <div
-                className="portals-dropdown"
-                onMouseEnter={() => setIsPortalsOpen(true)}
+                id="sign-in-menu"
+                role="menu"
+                aria-labelledby="sign-in-button"
+                className="sign-in-dropdown"
+                onMouseEnter={() => setIsSignInOpen(true)}
                 onMouseLeave={(e) => {
-                  // Only close if mouse is leaving the dropdown and not going to button
                   if (!isMenuOpen) {
                     const relatedTarget = e.relatedTarget as HTMLElement;
                     const button = e.currentTarget.previousElementSibling as HTMLElement;
                     if (!relatedTarget || (relatedTarget !== button && !button?.contains(relatedTarget))) {
-                      setIsPortalsOpen(false);
+                      closeSignIn();
                     }
                   }
                 }}
                 style={{
                   position: isMenuOpen ? "static" : "absolute",
                   top: isMenuOpen ? "auto" : "100%",
-                  left: isMenuOpen ? "auto" : "0",
+                  left: isMenuOpen ? "auto" : "50%",
+                  transform: isMenuOpen ? "none" : "translateX(-50%)",
                   background: isMenuOpen ? "#f9fafb" : "#ffffff",
-                  borderRadius: isMenuOpen ? "0" : "8px",
-                  boxShadow: isMenuOpen ? "none" : "0 4px 16px rgba(0, 0, 0, 0.1)",
+                  borderRadius: isMenuOpen ? "0" : "12px",
+                  boxShadow: isMenuOpen ? "none" : "0 10px 30px rgba(15, 23, 42, 0.12)",
                   border: isMenuOpen ? "none" : "1px solid #e5e7eb",
-                  width: "100%",
+                  minWidth: isMenuOpen ? "100%" : "360px",
+                  maxWidth: isMenuOpen ? "100%" : "400px",
                   zIndex: 1000,
-                  marginTop: isMenuOpen ? "0" : "2px",
-                  padding: "0",
-                  marginLeft: "0"
+                  marginTop: isMenuOpen ? "0" : "8px",
+                  padding: isMenuOpen ? "0.5rem 0" : "0.5rem 0",
+                  marginLeft: "0",
                 }}
               >
-                <Link 
-                  href="/customer" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    closePortals();
-                    setIsMenuOpen(false);
-                    router.push("/customer");
-                  }}
-                  style={{
-                    display: "block",
-                    padding: isMenuOpen ? "1rem 1.25rem 1rem 2.5rem" : "0.75rem 1rem",
-                    color: "var(--text-dark)",
-                    textDecoration: "none",
-                    transition: "background-color 0.2s",
-                    cursor: "pointer",
-                    width: "100%",
-                    textAlign: "left",
-                    borderLeft: isMenuOpen ? "3px solid transparent" : "none"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f3f4f6";
-                    if (isMenuOpen) {
-                      e.currentTarget.style.borderLeftColor = "#3b82f6";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = isMenuOpen ? "#f9fafb" : "transparent";
-                    if (isMenuOpen) {
-                      e.currentTarget.style.borderLeftColor = "transparent";
-                    }
-                  }}
-                >
-                  Blast Clients
-                </Link>
-                <Link 
-                  href="/employee" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    closePortals();
-                    setIsMenuOpen(false);
-                    router.push("/employee");
-                  }}
-                  style={{
-                    display: "block",
-                    padding: isMenuOpen ? "1rem 1.25rem 1rem 2.5rem" : "0.75rem 1rem",
-                    color: "var(--text-dark)",
-                    textDecoration: "none",
-                    transition: "background-color 0.2s",
-                    cursor: "pointer",
-                    width: "100%",
-                    textAlign: "left",
-                    borderLeft: isMenuOpen ? "3px solid transparent" : "none"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f3f4f6";
-                    if (isMenuOpen) {
-                      e.currentTarget.style.borderLeftColor = "#f59e0b";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = isMenuOpen ? "#f9fafb" : "transparent";
-                    if (isMenuOpen) {
-                      e.currentTarget.style.borderLeftColor = "transparent";
-                    }
-                  }}
-                >
-                  Bin Blasters
-                </Link>
-                <Link 
-                  href="/partners" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    closePortals();
-                    setIsMenuOpen(false);
-                    router.push("/partners");
-                  }}
-                  style={{
-                    display: "block",
-                    padding: isMenuOpen ? "1rem 1.25rem 1rem 2.5rem" : "0.75rem 1rem",
-                    color: "var(--text-dark)",
-                    textDecoration: "none",
-                    transition: "background-color 0.2s",
-                    cursor: "pointer",
-                    width: "100%",
-                    textAlign: "left",
-                    borderLeft: isMenuOpen ? "3px solid transparent" : "none"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f3f4f6";
-                    if (isMenuOpen) {
-                      e.currentTarget.style.borderLeftColor = "#10b981";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = isMenuOpen ? "#f9fafb" : "transparent";
-                    if (isMenuOpen) {
-                      e.currentTarget.style.borderLeftColor = "transparent";
-                    }
-                  }}
-                >
-                  Blast Partners
-                </Link>
-                <Link 
-                  href="/operator" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    closePortals();
-                    setIsMenuOpen(false);
-                    router.push("/operator");
-                  }}
-                  style={{
-                    display: "block",
-                    padding: isMenuOpen ? "1rem 1.25rem 1rem 2.5rem" : "0.75rem 1rem",
-                    color: "var(--text-dark)",
-                    textDecoration: "none",
-                    transition: "background-color 0.2s",
-                    cursor: "pointer",
-                    width: "100%",
-                    textAlign: "left",
-                    borderLeft: isMenuOpen ? "3px solid transparent" : "none"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f3f4f6";
-                    if (isMenuOpen) {
-                      e.currentTarget.style.borderLeftColor = "#8b5cf6";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = isMenuOpen ? "#f9fafb" : "transparent";
-                    if (isMenuOpen) {
-                      e.currentTarget.style.borderLeftColor = "transparent";
-                    }
-                  }}
-                >
-                  Blast Command
-                </Link>
+                {portalMenuItems.map((item) => (
+                  <PortalDropdownItem
+                    key={item.id}
+                    item={item}
+                    isMobileMenu={isMenuOpen}
+                    onNavigate={handlePortalNavigate}
+                  />
+                ))}
               </div>
             )}
           </li>
-          {!loading && (
+          {!loading && isLoggedIn && (
             <li>
-              {isLoggedIn ? (
-                <button
-                  onClick={handleLogout}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: "var(--text-dark)",
-                    fontWeight: "500",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontSize: "inherit",
-                    fontFamily: "inherit",
-                    transition: "color 0.3s"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = "var(--primary-color)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = "var(--text-dark)";
-                  }}
-                >
-                  Logout
-                </button>
-              ) : (
-                <Link href="/login">Login</Link>
-              )}
+              <button
+                onClick={handleLogout}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-dark)",
+                  fontWeight: "500",
+                  padding: "0.5rem 1rem",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontSize: "inherit",
+                  fontFamily: "inherit",
+                  transition: "color 0.3s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "var(--primary-color)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "var(--text-dark)";
+                }}
+              >
+                Logout
+              </button>
             </li>
           )}
           <li>
-            <Link href={getHomeSectionHref("pricing")} className="nav-login">Get Started</Link>
+            <Link href={getHomeSectionHref("pricing")} className="nav-login">
+              Get Started
+            </Link>
           </li>
         </ul>
-        <button className="nav-toggle" onClick={toggleMenu} aria-label="Toggle menu">
-          <span></span><span></span><span></span>
+        <button className="nav-toggle" onClick={toggleMenu} aria-label="Toggle menu" aria-expanded={isMenuOpen}>
+          <span></span>
+          <span></span>
+          <span></span>
         </button>
       </div>
     </nav>
   );
 }
-
