@@ -78,7 +78,7 @@ export async function GET(
       });
 
       const page = await browser.newPage();
-      await page.setContent(pdfHTML, { waitUntil: 'networkidle0' });
+      await page.setContent(pdfHTML, { waitUntil: "domcontentloaded" });
       
       // Generate PDF
       const pdfBuffer = await page.pdf({
