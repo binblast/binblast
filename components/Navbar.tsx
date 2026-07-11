@@ -525,12 +525,9 @@ export function Navbar() {
                 setIsSignInOpen(true);
               }
             }}
-            onMouseLeave={(e) => {
+            onMouseLeave={() => {
               if (!isMenuOpen) {
-                const relatedTarget = e.relatedTarget as HTMLElement;
-                if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
-                  closeSignIn();
-                }
+                closeSignIn();
               }
             }}
           >
@@ -574,45 +571,40 @@ export function Navbar() {
             </button>
             {isSignInOpen && (
               <div
-                id="sign-in-menu"
-                role="menu"
-                aria-labelledby="sign-in-button"
-                className="sign-in-dropdown"
-                onMouseEnter={() => setIsSignInOpen(true)}
-                onMouseLeave={(e) => {
-                  if (!isMenuOpen) {
-                    const relatedTarget = e.relatedTarget as HTMLElement;
-                    const button = e.currentTarget.previousElementSibling as HTMLElement;
-                    if (!relatedTarget || (relatedTarget !== button && !button?.contains(relatedTarget))) {
-                      closeSignIn();
-                    }
-                  }
-                }}
                 style={{
                   position: isMenuOpen ? "static" : "absolute",
                   top: isMenuOpen ? "auto" : "100%",
                   left: isMenuOpen ? "auto" : "50%",
                   transform: isMenuOpen ? "none" : "translateX(-50%)",
-                  background: isMenuOpen ? "#f9fafb" : "#ffffff",
-                  borderRadius: isMenuOpen ? "0" : "12px",
-                  boxShadow: isMenuOpen ? "none" : "0 10px 30px rgba(15, 23, 42, 0.12)",
-                  border: isMenuOpen ? "none" : "1px solid #e5e7eb",
-                  minWidth: isMenuOpen ? "100%" : "360px",
-                  maxWidth: isMenuOpen ? "100%" : "400px",
+                  paddingTop: isMenuOpen ? "0" : "8px",
                   zIndex: 1000,
-                  marginTop: isMenuOpen ? "0" : "8px",
-                  padding: isMenuOpen ? "0.5rem 0" : "0.5rem 0",
-                  marginLeft: "0",
+                  width: isMenuOpen ? "100%" : "auto",
                 }}
               >
-                {portalMenuItems.map((item) => (
-                  <PortalDropdownItem
-                    key={item.id}
-                    item={item}
-                    isMobileMenu={isMenuOpen}
-                    onNavigate={handlePortalNavigate}
-                  />
-                ))}
+                <div
+                  id="sign-in-menu"
+                  role="menu"
+                  aria-labelledby="sign-in-button"
+                  className="sign-in-dropdown"
+                  style={{
+                    background: isMenuOpen ? "#f9fafb" : "#ffffff",
+                    borderRadius: isMenuOpen ? "0" : "12px",
+                    boxShadow: isMenuOpen ? "none" : "0 10px 30px rgba(15, 23, 42, 0.12)",
+                    border: isMenuOpen ? "none" : "1px solid #e5e7eb",
+                    minWidth: isMenuOpen ? "100%" : "360px",
+                    maxWidth: isMenuOpen ? "100%" : "400px",
+                    padding: "0.5rem 0",
+                  }}
+                >
+                  {portalMenuItems.map((item) => (
+                    <PortalDropdownItem
+                      key={item.id}
+                      item={item}
+                      isMobileMenu={isMenuOpen}
+                      onNavigate={handlePortalNavigate}
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </li>
