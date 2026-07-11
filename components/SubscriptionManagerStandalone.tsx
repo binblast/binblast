@@ -301,10 +301,10 @@ export function SubscriptionManagerStandalone({
                   <p style={{ margin: 0, color: "#6b7280", lineHeight: 1.6 }}>
                     {successDetails.message}
                   </p>
-                  {successDetails.cleaningCreditsRollover > 0 && (
+                  {(successDetails.cleaningCreditsRollover || 0) > 0 && (
                     <p style={{ margin: "1rem 0 0", color: "#16a34a", fontWeight: "600" }}>
                       {successDetails.cleaningCreditsRollover} unused cleaning
-                      {successDetails.cleaningCreditsRollover > 1 ? "s have" : " has"} been rolled over to your new plan.
+                      {(successDetails.cleaningCreditsRollover || 0) > 1 ? "s have" : " has"} been rolled over to your new plan.
                     </p>
                   )}
                 </div>
