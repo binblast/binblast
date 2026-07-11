@@ -47,6 +47,21 @@ function RegisterForm() {
     subscriptionId: string | null;
     customerEmail: string | null;
   } | null>(null);
+  const [onboardingData, setOnboardingData] = useState<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    preferredServiceDate?: string;
+    preferredDayOfWeek?: string;
+    preferredTimeWindow?: string;
+    notes?: string;
+  } | null>(null);
 
   // If referral code is present in URL without session_id, redirect to pricing page to choose plan
   // User must pay first before registering (unless it's a partner signup)
@@ -166,6 +181,14 @@ function RegisterForm() {
           customerEmail: data.customerEmail,
         });
 
+        if (data.onboardingData) {
+          setOnboardingData(data.onboardingData);
+          if (data.onboardingData.firstName) setFirstName(data.onboardingData.firstName);
+          if (data.onboardingData.lastName) setLastName(data.onboardingData.lastName);
+          if (data.onboardingData.email) setEmail(data.onboardingData.email);
+          if (data.onboardingData.phone) setPhone(data.onboardingData.phone);
+        }
+
         // Pre-fill email from Stripe session if available (always use Stripe email if present)
         if (data.customerEmail) {
           setEmail(data.customerEmail);
@@ -202,6 +225,16 @@ function RegisterForm() {
       return;
     }
 
+    const accountEmail = (onboardingData?.email || email).trim();
+    const accountFirstName = onboardingData?.firstName || firstName;
+    const accountLastName = onboardingData?.lastName || lastName;
+    const accountPhone = onboardingData?.phone || phone;
+
+    if (!accountEmail) {
+      setError("Email is required.");
+      return;
+    }
+
     setLoading(true);
 
     // Normalize referral code at the start so it's available throughout the function
@@ -215,13 +248,13 @@ function RegisterForm() {
       // Try to create Firebase user, but if account exists, try to sign in instead
       let userCredential;
       try {
-        userCredential = await createUserWithEmailAndPassword(email, password);
+        userCredential = await createUserWithEmailAndPassword(accountEmail, password);
       } catch (createErr: any) {
         // If account already exists, try to sign in
         if (createErr.code === "auth/email-already-in-use" || createErr.code === "auth/email-already-exists") {
           console.log("[Register] Account already exists, attempting to sign in...");
           try {
-            userCredential = await signInWithEmailAndPassword(email, password);
+            userCredential = await signInWithEmailAndPassword(accountEmail, password);
             // If sign in successful, continue with the flow
           } catch (signInErr: any) {
             // If sign in fails (wrong password), show error
@@ -241,7 +274,7 @@ function RegisterForm() {
       
       // Update profile with display name
       await updateProfile(userCredential.user, {
-        displayName: `${firstName} ${lastName}`,
+        displayName: `${accountFirstName} ${accountLastName}`,
       });
 
       // Save user data to Firestore
@@ -278,7 +311,7 @@ function RegisterForm() {
         try {
           const partnersByEmailQuery = query(
             collection(db, "partners"),
-            where("email", "==", email)
+            where("email", "==", accountEmail)
           );
           partnersByEmailSnapshot = await getDocs(partnersByEmailQuery);
         } catch (partnerEmailQueryErr: any) {
@@ -294,7 +327,7 @@ function RegisterForm() {
         try {
           const applicationsByEmailQuery = query(
             collection(db, "partnerApplications"),
-            where("email", "==", email),
+            where("email", "==", accountEmail),
             where("userId", "==", null)
           );
           applicationsByEmailSnapshot = await getDocs(applicationsByEmailQuery);
@@ -363,7 +396,7 @@ function RegisterForm() {
 
             // Determine user role based on email
             // Check for operator email (case-insensitive)
-            const userEmailLower = email.toLowerCase();
+            const userEmailLower = accountEmail.toLowerCase();
             let userRole = "customer"; // Default role
             if (userEmailLower === "keyjboone@gmail.com") {
               userRole = "operator";
@@ -376,23 +409,23 @@ function RegisterForm() {
             const existingData = existingUserDoc.exists() ? existingUserDoc.data() : null;
 
             // Fetch onboarding data if available (from checkout session)
-            let onboardingData: any = null;
-            if (sessionId && db) {
+            let registrationOnboardingData: any = onboardingData;
+            if (!registrationOnboardingData && sessionId && db) {
               try {
                 const onboardingQuery = query(
                   collection(db, "onboardingData"),
-                  where("email", "==", email.toLowerCase()),
+                  where("email", "==", accountEmail.toLowerCase()),
                   where("sessionId", "==", sessionId)
                 );
                 const onboardingSnapshot = await getDocs(onboardingQuery);
                 if (!onboardingSnapshot.empty) {
                   const onboardingDoc = onboardingSnapshot.docs[0].data();
-                  onboardingData = onboardingDoc.onboardingData;
+                  registrationOnboardingData = onboardingDoc.onboardingData;
                   console.log("[Register] Found onboarding data:", {
-                    hasPreferredServiceDate: !!onboardingData?.preferredServiceDate,
-                    preferredServiceDate: onboardingData?.preferredServiceDate,
-                    preferredDayOfWeek: onboardingData?.preferredDayOfWeek,
-                    fullData: onboardingData,
+                    hasPreferredServiceDate: !!registrationOnboardingData?.preferredServiceDate,
+                    preferredServiceDate: registrationOnboardingData?.preferredServiceDate,
+                    preferredDayOfWeek: registrationOnboardingData?.preferredDayOfWeek,
+                    fullData: registrationOnboardingData,
                   });
                   
                   // Mark onboarding data as used (cleanup)
@@ -409,9 +442,9 @@ function RegisterForm() {
             }
 
             // Use onboarding data if available, otherwise use form data
-            const finalFirstName = onboardingData?.firstName || firstName;
-            const finalLastName = onboardingData?.lastName || lastName;
-            const finalPhone = onboardingData?.phone || phone || null;
+            const finalFirstName = registrationOnboardingData?.firstName || accountFirstName;
+            const finalLastName = registrationOnboardingData?.lastName || accountLastName;
+            const finalPhone = registrationOnboardingData?.phone || accountPhone || null;
 
             await setDoc(userDocRef, {
               firstName: finalFirstName,
@@ -427,13 +460,13 @@ function RegisterForm() {
               referralCount: 0, // Initialize referral count
               role: userRole, // Set role based on email check (customer, operator, etc.)
               // Add address from onboarding data if available
-              ...(onboardingData ? {
-                addressLine1: onboardingData.addressLine1 || null,
-                addressLine2: onboardingData.addressLine2 || null,
-                city: onboardingData.city || null,
-                state: onboardingData.state || null,
-                zipCode: onboardingData.zipCode || null,
-                preferredDayOfWeek: onboardingData.preferredDayOfWeek || null, // Store preferred day for monthly cleanings
+              ...(registrationOnboardingData ? {
+                addressLine1: registrationOnboardingData.addressLine1 || null,
+                addressLine2: registrationOnboardingData.addressLine2 || null,
+                city: registrationOnboardingData.city || null,
+                state: registrationOnboardingData.state || null,
+                zipCode: registrationOnboardingData.zipCode || null,
+                preferredDayOfWeek: registrationOnboardingData.preferredDayOfWeek || null,
               } : {}),
               // If partner signup, mark as partner account
               ...(isPartnerSignup ? { partnerAccountCreated: true } : {}),
@@ -446,45 +479,42 @@ function RegisterForm() {
 
             // Store onboarding data in user document for confirmation popup on dashboard
             // Don't create scheduled cleaning yet - wait for customer confirmation
-            if (onboardingData && onboardingData.preferredServiceDate && db) {
+            if (registrationOnboardingData && registrationOnboardingData.preferredServiceDate && db) {
               try {
-                // Validate that we have all required fields
-                if (!onboardingData.addressLine1 || !onboardingData.city || !onboardingData.state || !onboardingData.zipCode) {
-                  console.warn("[Register] Missing required address fields in onboarding data:", onboardingData);
+                if (!registrationOnboardingData.addressLine1 || !registrationOnboardingData.city || !registrationOnboardingData.state || !registrationOnboardingData.zipCode) {
+                  console.warn("[Register] Missing required address fields in onboarding data:", registrationOnboardingData);
                 }
                 
-                // Store onboarding data in user document so dashboard can show confirmation popup
                 await updateDoc(userDocRef, {
                   pendingCleaningConfirmation: true,
                   pendingCleaningData: {
-                    preferredServiceDate: onboardingData.preferredServiceDate,
-                    preferredDayOfWeek: onboardingData.preferredDayOfWeek || null,
-                    preferredTimeWindow: onboardingData.preferredTimeWindow || "Morning",
-                    addressLine1: onboardingData.addressLine1,
-                    addressLine2: onboardingData.addressLine2 || null,
-                    city: onboardingData.city,
-                    state: onboardingData.state,
-                    zipCode: onboardingData.zipCode,
-                    notes: onboardingData.notes || null,
+                    preferredServiceDate: registrationOnboardingData.preferredServiceDate,
+                    preferredDayOfWeek: registrationOnboardingData.preferredDayOfWeek || null,
+                    preferredTimeWindow: registrationOnboardingData.preferredTimeWindow || "Morning",
+                    addressLine1: registrationOnboardingData.addressLine1,
+                    addressLine2: registrationOnboardingData.addressLine2 || null,
+                    city: registrationOnboardingData.city,
+                    state: registrationOnboardingData.state,
+                    zipCode: registrationOnboardingData.zipCode,
+                    notes: registrationOnboardingData.notes || null,
                   },
                   updatedAt: serverTimestamp(),
                 });
                 
                 console.log("[Register] Stored pending cleaning data for confirmation:", {
                   userId: userCredential.user.uid,
-                  preferredServiceDate: onboardingData.preferredServiceDate,
-                  preferredDayOfWeek: onboardingData.preferredDayOfWeek,
-                  addressLine1: onboardingData.addressLine1,
+                  preferredServiceDate: registrationOnboardingData.preferredServiceDate,
+                  preferredDayOfWeek: registrationOnboardingData.preferredDayOfWeek,
+                  addressLine1: registrationOnboardingData.addressLine1,
                 });
               } catch (cleaningErr) {
                 console.error("[Register] Error storing pending cleaning data:", cleaningErr);
-                // Don't fail registration if storing pending data fails
               }
             } else {
               console.warn("[Register] No pending cleaning data stored - missing onboardingData or preferredServiceDate:", {
-                hasOnboardingData: !!onboardingData,
-                hasPreferredServiceDate: !!onboardingData?.preferredServiceDate,
-                onboardingData: onboardingData,
+                hasOnboardingData: !!registrationOnboardingData,
+                hasPreferredServiceDate: !!registrationOnboardingData?.preferredServiceDate,
+                onboardingData: registrationOnboardingData,
               });
             }
             
@@ -499,43 +529,42 @@ function RegisterForm() {
                 const { notifyCustomerWelcome } = await import("@/lib/email-utils");
                 const { PLAN_CONFIGS } = await import("@/lib/stripe-config");
                 
-                const planIdForEmail = selectedPlanId || onboardingData?.planId;
+                const planIdForEmail = selectedPlanId || registrationOnboardingData?.planId;
                 const planName = planIdForEmail && planIdForEmail in PLAN_CONFIGS 
                   ? PLAN_CONFIGS[planIdForEmail as keyof typeof PLAN_CONFIGS].name 
                   : "Your Plan";
                 
                 // Send welcome email - if they have preferredServiceDate, ask them to confirm
                 // Otherwise, send a general welcome email
-                if (onboardingData?.preferredServiceDate) {
+                if (registrationOnboardingData?.preferredServiceDate) {
                   // Send confirmation email asking them to confirm cleaning date
                   notifyCustomerWelcome({
-                    email: email.toLowerCase(),
-                    firstName: onboardingData.firstName || firstName,
-                    lastName: onboardingData.lastName || lastName,
+                    email: accountEmail.toLowerCase(),
+                    firstName: registrationOnboardingData.firstName || accountFirstName,
+                    lastName: registrationOnboardingData.lastName || accountLastName,
                     planName: planName,
-                    addressLine1: onboardingData.addressLine1,
-                    addressLine2: onboardingData.addressLine2,
-                    city: onboardingData.city,
-                    state: onboardingData.state,
-                    zipCode: onboardingData.zipCode,
-                    preferredServiceDate: onboardingData.preferredServiceDate,
-                    preferredDayOfWeek: onboardingData.preferredDayOfWeek,
-                    preferredTimeWindow: onboardingData.preferredTimeWindow || "Morning",
+                    addressLine1: registrationOnboardingData.addressLine1,
+                    addressLine2: registrationOnboardingData.addressLine2,
+                    city: registrationOnboardingData.city,
+                    state: registrationOnboardingData.state,
+                    zipCode: registrationOnboardingData.zipCode,
+                    preferredServiceDate: registrationOnboardingData.preferredServiceDate,
+                    preferredDayOfWeek: registrationOnboardingData.preferredDayOfWeek,
+                    preferredTimeWindow: registrationOnboardingData.preferredTimeWindow || "Morning",
                   }).catch((emailErr) => {
                     console.error("[Register] Failed to send welcome email:", emailErr);
                   });
                 } else {
-                  // Send general welcome email without cleaning date confirmation
                   notifyCustomerWelcome({
-                    email: email.toLowerCase(),
-                    firstName: onboardingData?.firstName || firstName,
-                    lastName: onboardingData?.lastName || lastName,
+                    email: accountEmail.toLowerCase(),
+                    firstName: registrationOnboardingData?.firstName || accountFirstName,
+                    lastName: registrationOnboardingData?.lastName || accountLastName,
                     planName: planName,
-                    addressLine1: onboardingData?.addressLine1,
-                    addressLine2: onboardingData?.addressLine2,
-                    city: onboardingData?.city,
-                    state: onboardingData?.state,
-                    zipCode: onboardingData?.zipCode,
+                    addressLine1: registrationOnboardingData?.addressLine1,
+                    addressLine2: registrationOnboardingData?.addressLine2,
+                    city: registrationOnboardingData?.city,
+                    state: registrationOnboardingData?.state,
+                    zipCode: registrationOnboardingData?.zipCode,
                     preferredServiceDate: undefined,
                     preferredDayOfWeek: undefined,
                     preferredTimeWindow: undefined,
@@ -562,8 +591,8 @@ function RegisterForm() {
               console.log("[Register] Welcome email not sent:", {
                 isPartnerSignup,
                 welcomeEmailSent,
-                hasOnboardingData: !!onboardingData,
-                hasPreferredServiceDate: !!onboardingData?.preferredServiceDate,
+                hasOnboardingData: !!registrationOnboardingData,
+                hasPreferredServiceDate: !!registrationOnboardingData?.preferredServiceDate,
                 hasDb: !!db,
                 hasUser: !!userCredential.user,
               });
@@ -590,7 +619,7 @@ function RegisterForm() {
               body: JSON.stringify({
                 referralCode: normalizedReferralCode,
                 newUserId: userCredential.user.uid,
-                newUserEmail: email,
+                newUserEmail: accountEmail,
               }),
             });
 
@@ -717,6 +746,8 @@ function RegisterForm() {
     }
   }
 
+  const hasPrefilledOnboarding = Boolean(sessionId && onboardingData && !isPartnerSignup);
+
   return (
     <>
       <Navbar />
@@ -724,7 +755,13 @@ function RegisterForm() {
         <div className="container">
           <div style={{ maxWidth: "600px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
-              {isPartnerSignup ? "Complete Your Partner Account Setup" : (sessionId ? "Complete Your Registration" : "Create Your Account")}
+              {isPartnerSignup
+                ? "Complete Your Partner Account Setup"
+                : hasPrefilledOnboarding
+                ? "Create Your Login"
+                : sessionId
+                ? "Complete Your Registration"
+                : "Create Your Account"}
             </h1>
             
             {isPartnerSignup && (
@@ -762,7 +799,7 @@ function RegisterForm() {
             )}
             {!isPartnerSignup && sessionId && (
               <p style={{ textAlign: "center", color: "#16a34a", marginBottom: "1rem", fontSize: "0.875rem" }}>
-                Payment successful! Please complete your registration below.
+                Payment successful! {onboardingData ? "Just set a password to access your account." : "Please complete your registration below."}
               </p>
             )}
 
@@ -834,6 +871,35 @@ function RegisterForm() {
                 border: "1px solid #e5e7eb"
               }}>
                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  {hasPrefilledOnboarding && onboardingData && (
+                    <div style={{
+                      padding: "1.25rem 1.5rem",
+                      background: "#f9fafb",
+                      borderRadius: "12px",
+                      border: "1px solid #e5e7eb",
+                    }}>
+                      <p style={{ margin: "0 0 0.75rem", fontSize: "0.8rem", fontWeight: "700", color: "#6b7280", textTransform: "uppercase" }}>
+                        Your Information (from checkout)
+                      </p>
+                      <p style={{ margin: "0 0 0.25rem", fontWeight: "600", color: "var(--text-dark)" }}>
+                        {onboardingData.firstName} {onboardingData.lastName}
+                      </p>
+                      <p style={{ margin: "0 0 0.25rem", color: "#6b7280", fontSize: "0.9rem" }}>{onboardingData.email}</p>
+                      {onboardingData.phone && (
+                        <p style={{ margin: "0 0 0.25rem", color: "#6b7280", fontSize: "0.9rem" }}>{onboardingData.phone}</p>
+                      )}
+                      {onboardingData.addressLine1 && (
+                        <p style={{ margin: "0.5rem 0 0", color: "#6b7280", fontSize: "0.875rem" }}>
+                          {onboardingData.addressLine1}
+                          {onboardingData.addressLine2 ? `, ${onboardingData.addressLine2}` : ""}
+                          <br />
+                          {onboardingData.city}, {onboardingData.state} {onboardingData.zipCode}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {!hasPrefilledOnboarding && (
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                     <div>
                       <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
@@ -878,7 +944,9 @@ function RegisterForm() {
                       />
                     </div>
                   </div>
+                  )}
 
+                  {!hasPrefilledOnboarding && (
                   <div>
                     <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
                       Email
@@ -901,7 +969,9 @@ function RegisterForm() {
                       onBlur={(e) => e.currentTarget.style.borderColor = "#e5e7eb"}
                     />
                   </div>
+                  )}
 
+                  {!hasPrefilledOnboarding && (
                   <div>
                     <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
                       Phone <span style={{ color: "var(--text-light)", fontWeight: "400" }}>(optional)</span>
@@ -923,10 +993,15 @@ function RegisterForm() {
                       onBlur={(e) => e.currentTarget.style.borderColor = "#e5e7eb"}
                     />
                   </div>
+                  )}
+
+                  {hasPrefilledOnboarding && (
+                    <input type="hidden" value={firstName} readOnly />
+                  )}
 
                   <div>
                     <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                      Password
+                      {hasPrefilledOnboarding ? "Create Password" : "Password"}
                     </label>
                     <input
                       type="password"
@@ -995,7 +1070,11 @@ function RegisterForm() {
                       opacity: loading ? 0.6 : 1
                     }}
                   >
-                    {loading ? "Creating Account..." : "Create Account"}
+                    {loading
+                      ? "Creating Account..."
+                      : hasPrefilledOnboarding
+                      ? "Create Account & Go to Dashboard"
+                      : "Create Account"}
                   </button>
 
                   <p style={{ textAlign: "center", fontSize: "0.875rem", color: "var(--text-light)", marginTop: "1rem" }}>

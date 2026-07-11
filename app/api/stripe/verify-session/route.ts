@@ -53,9 +53,18 @@ export async function GET(req: NextRequest) {
       : session.subscription?.id || null;
 
     const planId = session.metadata?.planId || null;
+
+    let onboardingData = null;
+    if (session.metadata?.hasOnboardingData === "true" && session.metadata?.onboardingData) {
+      try {
+        onboardingData = JSON.parse(session.metadata.onboardingData);
+      } catch (parseError) {
+        console.error("[Verify Session] Error parsing onboarding data:", parseError);
+      }
+    }
     
     // Extract customer email from checkout session
-    const customerEmail = session.customer_details?.email || null;
+    const customerEmail = session.customer_details?.email || onboardingData?.email || null;
 
     return NextResponse.json({
       success: true,
@@ -66,6 +75,7 @@ export async function GET(req: NextRequest) {
       planId,
       paymentStatus: session.payment_status,
       mode: session.mode,
+      onboardingData,
     });
   } catch (err: any) {
     console.error("Stripe session verification error:", err);

@@ -29,8 +29,23 @@ export function SubscriptionManager({
   const [error, setError] = useState<string | null>(null);
   const [selectedNewPlan, setSelectedNewPlan] = useState<PlanId | null>(null);
   const [showChangeModal, setShowChangeModal] = useState(false);
+  const [modalStep, setModalStep] = useState<"select" | "confirm" | "success">("select");
+  const [successDetails, setSuccessDetails] = useState<{
+    title: string;
+    message: string;
+    cleaningCreditsRollover?: number;
+  } | null>(null);
   const [cleaningsUsed, setCleaningsUsed] = useState<number>(0);
   const [billingPeriodStart, setBillingPeriodStart] = useState<Date | null>(null);
+
+  const closeModal = () => {
+    if (loading) return;
+    setShowChangeModal(false);
+    setSelectedNewPlan(null);
+    setError(null);
+    setModalStep("select");
+    setSuccessDetails(null);
+  };
 
   // Safety checks - don't render if required props are missing or invalid
   if (!userId || !currentPlanId || !PLAN_CONFIGS[currentPlanId]) {
@@ -83,29 +98,27 @@ export function SubscriptionManager({
         throw new Error(data.error || "Failed to change subscription");
       }
 
-      // Show success message with cleaning credits info
-      let message = `Subscription changed successfully! `;
-      
-      if (data.proration.isUpgrade) {
-        const amountOwed = typeof data.proration.proratedAmountOwed === 'number' 
+      const amountOwed = typeof data.proration.proratedAmountOwed === 'number' 
           ? (data.proration.proratedAmountOwed >= 100 ? data.proration.proratedAmountOwed / 100 : data.proration.proratedAmountOwed)
           : parseFloat(data.proration.proratedAmountOwed) || 0;
-        message += `You owe $${amountOwed.toFixed(2)} for the upgrade.`;
-      } else {
-        const credit = typeof data.proration.proratedCredit === 'number'
+      const credit = typeof data.proration.proratedCredit === 'number'
           ? (data.proration.proratedCredit >= 100 ? data.proration.proratedCredit / 100 : data.proration.proratedCredit)
           : parseFloat(data.proration.proratedCredit) || 0;
-        message += `You received a credit of $${credit.toFixed(2)} for the remaining days.`;
-      }
-      
-      if (data.cleaningCredits?.rollover > 0) {
-        message += `\n\n${data.cleaningCredits.rollover} unused cleaning${data.cleaningCredits.rollover > 1 ? 's' : ''} ${data.cleaningCredits.rollover > 1 ? 'have' : 'has'} been rolled over to your new plan!`;
-      }
-      
-      alert(message);
 
-      setShowChangeModal(false);
-      setSelectedNewPlan(null);
+      const newPlan = PLAN_CONFIGS[newPlanId];
+      let message = "Your subscription has been updated.";
+      if (data.proration.isUpgrade && amountOwed > 0) {
+        message = `Your plan is now ${newPlan.name}. A prorated charge of $${amountOwed.toFixed(2)} has been applied for the upgrade.`;
+      } else if (credit > 0) {
+        message = `Your plan is now ${newPlan.name}. You received a $${credit.toFixed(2)} credit for the remaining days on your previous plan.`;
+      }
+
+      setSuccessDetails({
+        title: "Plan Updated Successfully",
+        message,
+        cleaningCreditsRollover: data.cleaningCredits?.rollover || 0,
+      });
+      setModalStep("success");
 
       if (onPlanChanged) {
         onPlanChanged();
@@ -227,11 +240,16 @@ export function SubscriptionManager({
 
   console.log("[SubscriptionManager] Rendering component for plan:", currentPlanId);
 
+  const selectedPlanConfig = selectedNewPlan ? PLAN_CONFIGS[selectedNewPlan] : null;
+  const selectedMonthlyPrice = selectedNewPlan ? getMonthlyPriceForPlan(selectedNewPlan) : 0;
+  const confirmProration = selectedNewPlan ? calculateProrationPreview(selectedNewPlan) : null;
+
   return (
     <>
       <button
         onClick={() => {
           console.log("[SubscriptionManager] Change Plan button clicked");
+          setModalStep("select");
           setShowChangeModal(true);
         }}
         className="btn btn-primary"
@@ -260,7 +278,7 @@ export function SubscriptionManager({
             zIndex: 1000,
             padding: "1rem",
           }}
-          onClick={() => !loading && setShowChangeModal(false)}
+          onClick={closeModal}
         >
           <div
             style={{
@@ -274,6 +292,100 @@ export function SubscriptionManager({
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            {modalStep === "success" && successDetails ? (
+              <>
+                <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+                  <div style={{
+                    width: "64px",
+                    height: "64px",
+                    borderRadius: "50%",
+                    background: "#ecfdf5",
+                    color: "#16a34a",
+                    fontSize: "2rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: "0 auto 1rem",
+                  }}>
+                    ✓
+                  </div>
+                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "0.75rem", color: "var(--text-dark)" }}>
+                    {successDetails.title}
+                  </h2>
+                  <p style={{ margin: 0, color: "#6b7280", lineHeight: 1.6 }}>
+                    {successDetails.message}
+                  </p>
+                  {(successDetails.cleaningCreditsRollover || 0) > 0 && (
+                    <p style={{ margin: "1rem 0 0", color: "#16a34a", fontWeight: "600" }}>
+                      {successDetails.cleaningCreditsRollover} unused cleaning
+                      {(successDetails.cleaningCreditsRollover || 0) > 1 ? "s have" : " has"} been rolled over to your new plan.
+                    </p>
+                  )}
+                </div>
+                <button onClick={closeModal} className="btn btn-primary" style={{ width: "100%" }}>
+                  Done
+                </button>
+              </>
+            ) : modalStep === "confirm" && selectedNewPlan && selectedPlanConfig ? (
+              <>
+                <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                  Confirm Your Plan Change
+                </h2>
+                <p style={{ fontSize: "0.95rem", color: "#6b7280", marginBottom: "1.5rem" }}>
+                  Review your current plan and new plan costs before confirming.
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
+                  <div style={{ padding: "1.25rem", background: "#f9fafb", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+                    <p style={{ margin: "0 0 0.5rem", fontSize: "0.75rem", fontWeight: "700", color: "#6b7280", textTransform: "uppercase" }}>Current Plan</p>
+                    <p style={{ margin: "0 0 0.25rem", fontWeight: "700", color: "var(--text-dark)" }}>{currentPlan.name}</p>
+                    <p style={{ margin: 0, fontSize: "1.25rem", fontWeight: "700", color: "#374151" }}>
+                      ${currentMonthlyPrice.toFixed(2)}<span style={{ fontSize: "0.875rem", fontWeight: "500" }}>/month</span>
+                    </p>
+                  </div>
+                  <div style={{ padding: "1.25rem", background: "#ecfdf5", borderRadius: "12px", border: "2px solid #16a34a" }}>
+                    <p style={{ margin: "0 0 0.5rem", fontSize: "0.75rem", fontWeight: "700", color: "#047857", textTransform: "uppercase" }}>New Plan</p>
+                    <p style={{ margin: "0 0 0.25rem", fontWeight: "700", color: "var(--text-dark)" }}>{selectedPlanConfig.name}</p>
+                    <p style={{ margin: 0, fontSize: "1.25rem", fontWeight: "700", color: "#16a34a" }}>
+                      ${selectedMonthlyPrice.toFixed(2)}<span style={{ fontSize: "0.875rem", fontWeight: "500" }}>/month</span>
+                    </p>
+                  </div>
+                </div>
+                {confirmProration && (
+                  <div style={{
+                    padding: "1rem 1.25rem",
+                    background: confirmProration.isUpgrade ? "#fffbeb" : "#eff6ff",
+                    borderRadius: "12px",
+                    border: `1px solid ${confirmProration.isUpgrade ? "#fde68a" : "#bfdbfe"}`,
+                    marginBottom: "1.5rem",
+                  }}>
+                    <p style={{ margin: 0, fontSize: "0.95rem", color: confirmProration.isUpgrade ? "#92400e" : "#1e40af", fontWeight: "600" }}>
+                      {confirmProration.isUpgrade
+                        ? `Today's prorated upgrade charge: $${confirmProration.proratedAmountOwed.toFixed(2)}`
+                        : `Account credit for remaining days: $${confirmProration.proratedCredit.toFixed(2)}`}
+                    </p>
+                    {confirmProration.cleaningCreditsRollover > 0 && (
+                      <p style={{ margin: "0.5rem 0 0", fontSize: "0.875rem", color: "#16a34a", fontWeight: "500" }}>
+                        {confirmProration.cleaningCreditsRollover} unused cleaning{confirmProration.cleaningCreditsRollover > 1 ? "s" : ""} will roll over
+                      </p>
+                    )}
+                  </div>
+                )}
+                {error && (
+                  <div style={{ padding: "0.75rem 1rem", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", color: "#dc2626", fontSize: "0.875rem", marginBottom: "1rem" }}>
+                    {error}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+                  <button onClick={() => { setModalStep("select"); setError(null); }} disabled={loading} style={{ padding: "0.75rem 1.5rem", borderRadius: "8px", border: "1px solid #e5e7eb", background: "#ffffff", cursor: loading ? "not-allowed" : "pointer", color: "var(--text-dark)" }}>
+                    Back
+                  </button>
+                  <button onClick={() => handlePlanChange(selectedNewPlan)} disabled={loading} className="btn btn-primary" style={{ opacity: loading ? 0.6 : 1, cursor: loading ? "not-allowed" : "pointer" }}>
+                    {loading ? "Processing..." : confirmProration?.isUpgrade ? "Confirm Upgrade" : "Confirm Change"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
             <h2
               style={{
                 fontSize: "1.5rem",
@@ -393,11 +505,7 @@ export function SubscriptionManager({
 
             <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
               <button
-                onClick={() => {
-                  setShowChangeModal(false);
-                  setSelectedNewPlan(null);
-                  setError(null);
-                }}
+                onClick={closeModal}
                 disabled={loading}
                 style={{
                   padding: "0.75rem 1.5rem",
@@ -411,7 +519,12 @@ export function SubscriptionManager({
                 Cancel
               </button>
               <button
-                onClick={() => selectedNewPlan && handlePlanChange(selectedNewPlan)}
+                onClick={() => {
+                  if (selectedNewPlan) {
+                    setModalStep("confirm");
+                    setError(null);
+                  }
+                }}
                 disabled={loading || !selectedNewPlan}
                 className="btn btn-primary"
                 style={{
@@ -419,9 +532,11 @@ export function SubscriptionManager({
                   cursor: loading || !selectedNewPlan ? "not-allowed" : "pointer",
                 }}
               >
-                {loading ? "Processing..." : "Confirm Change"}
+                Review Change
               </button>
             </div>
+              </>
+            )}
           </div>
         </div>
       )}
