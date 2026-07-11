@@ -7,6 +7,7 @@ export interface PortalInfo {
   id: UserPortalType;
   name: string;
   path: string;
+  subtitle: string;
   description: string;
 }
 
@@ -15,25 +16,29 @@ export const PORTAL_INFO: Record<UserPortalType, PortalInfo> = {
     id: "customer",
     name: "Customer Portal",
     path: "/customer",
-    description: "Homeowner accounts — manage cleanings, payments, and rewards.",
+    subtitle: "For customers",
+    description: "For customers",
   },
   partner: {
     id: "partner",
     name: "Partner Portal",
     path: "/partners",
-    description: "Partner accounts — track referrals, commissions, and performance.",
+    subtitle: "For partners",
+    description: "For partners",
   },
   employee: {
     id: "employee",
     name: "Employee Portal",
     path: "/employee",
-    description: "Employee accounts — view routes, schedules, and assigned jobs.",
+    subtitle: "For team members",
+    description: "For team members",
   },
   operator: {
     id: "operator",
     name: "Blast Command",
     path: "/operator",
-    description: "Operator & admin accounts — business operations dashboard.",
+    subtitle: "For operations",
+    description: "For operations",
   },
 };
 

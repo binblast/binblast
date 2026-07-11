@@ -26,7 +26,7 @@ function LoginForm() {
         <div className="container">
           <div style={{ maxWidth: "720px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
-              Choose Your Portal
+              Sign In
             </h1>
             <p style={{
               textAlign: "center",
@@ -35,7 +35,7 @@ function LoginForm() {
               lineHeight: 1.6,
               fontSize: "1rem",
             }}>
-              Each account type has its own sign-in page. Please select the portal that matches your account.
+              Choose your account type to continue.
             </p>
 
             {passwordReset && (
@@ -49,7 +49,7 @@ function LoginForm() {
                 marginBottom: "1.5rem",
                 lineHeight: 1.5,
               }}>
-                Your password has been reset successfully. Choose your account portal below to sign in with your new password.
+                Your password has been reset. Sign in below with your new password.
               </div>
             )}
 
@@ -103,7 +103,7 @@ function LoginForm() {
                         color: "#6b7280",
                         lineHeight: 1.5,
                       }}>
-                        {portal.description}
+                        {portal.subtitle}
                       </div>
                     </Link>
                   </div>
@@ -118,9 +118,7 @@ function LoginForm() {
               marginTop: "2rem",
               lineHeight: 1.6,
             }}>
-              Not sure which portal to use? Customers choose <strong>Customer Portal</strong>.
-              Business partners choose <strong>Partner Portal</strong>.
-              Staff choose <strong>Employee Portal</strong> or <strong>Blast Command</strong>.
+              Pick the option that matches your account.
             </p>
           </div>
         </div>

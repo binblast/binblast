@@ -135,8 +135,7 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
         lineHeight: 1.5,
         textAlign: "left",
       }}>
-        <strong>Portal-only sign-in:</strong> This page is only for <strong>{portalName}</strong> accounts.
-        Other account types must use their own portal from the <strong>Sign In</strong> menu.
+        Sign in with your {portalName} account.
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>

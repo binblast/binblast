@@ -46,7 +46,7 @@ export function PortalLoginShell({
                 fontSize: "0.95rem",
               }}
             >
-              Sign in to your account. Use the portal that matches your account type.
+              Sign in to continue.
             </p>
 
             <PortalLoginForm

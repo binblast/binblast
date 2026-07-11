@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useFirebase } from "@/lib/firebase-context";
+import { PORTAL_INFO } from "@/lib/user-portal";
 
 type PortalIconType = "customer" | "partner" | "employee" | "command";
 
@@ -183,38 +184,34 @@ export function Navbar() {
   const portalMenuItems: PortalMenuItem[] = [
     {
       id: "customer",
-      title: isLoggedIn && isStandardCustomer ? "My Account" : "Customer Portal",
-      subtitle: isLoggedIn && isStandardCustomer
-        ? "Manage cleanings, payments, rewards, and referrals."
-        : "Homeowner sign-in. Manage cleanings, payments, and rewards.",
-      href: isLoggedIn && isStandardCustomer ? accountUrl : "/customer",
+      title: isLoggedIn && isStandardCustomer ? "My Account" : PORTAL_INFO.customer.name,
+      subtitle: isLoggedIn && isStandardCustomer ? "Your account" : PORTAL_INFO.customer.subtitle,
+      href: isLoggedIn && isStandardCustomer ? accountUrl : PORTAL_INFO.customer.path,
       icon: "customer",
     },
     {
       id: "partner",
       title: isLoggedIn && !isStandardCustomer && !isEmployee && !isOperator && accountUrl !== "/dashboard"
         ? "Partner Dashboard"
-        : "Partner Portal",
-      subtitle: "Track referrals, commissions, and partner performance.",
+        : PORTAL_INFO.partner.name,
+      subtitle: PORTAL_INFO.partner.subtitle,
       href: isLoggedIn && !isStandardCustomer && !isEmployee && !isOperator && accountUrl !== "/dashboard"
         ? accountUrl
-        : "/partners",
+        : PORTAL_INFO.partner.path,
       icon: "partner",
     },
     {
       id: "employee",
-      title: isLoggedIn && isEmployee ? "Employee Dashboard" : "Employee Portal",
-      subtitle: "View routes, schedules, and assigned jobs.",
-      href: isLoggedIn && isEmployee ? "/employee/dashboard" : "/employee",
+      title: isLoggedIn && isEmployee ? "Employee Dashboard" : PORTAL_INFO.employee.name,
+      subtitle: PORTAL_INFO.employee.subtitle,
+      href: isLoggedIn && isEmployee ? "/employee/dashboard" : PORTAL_INFO.employee.path,
       icon: "employee",
     },
     {
       id: "command",
-      title: isLoggedIn && isOperator ? "Operator Dashboard" : "Blast Command",
-      subtitle: isLoggedIn && isOperator
-        ? "Admin dashboard and business operations."
-        : "Operator & admin sign-in. Manage business operations.",
-      href: isLoggedIn && isOperator ? "/dashboard" : "/operator",
+      title: isLoggedIn && isOperator ? "Operator Dashboard" : PORTAL_INFO.operator.name,
+      subtitle: PORTAL_INFO.operator.subtitle,
+      href: isLoggedIn && isOperator ? "/dashboard" : PORTAL_INFO.operator.path,
       icon: "command",
       showDividerBefore: true,
     },
