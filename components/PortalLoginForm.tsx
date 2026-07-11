@@ -4,9 +4,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  PORTAL_INFO,
+  portalMatchesExpected,
+  resolveUserPortal,
+  type PortalInfo,
+} from "@/lib/user-portal";
 
 interface PortalLoginFormProps {
-  expectedRole?: "employee" | "partner" | "customer" | "operator" | "admin";
+  expectedRole: "employee" | "partner" | "customer" | "operator" | "admin";
   redirectPath?: string;
   portalName: string;
 }
@@ -16,109 +22,81 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [correctPortal, setCorrectPortal] = useState<PortalInfo | null>(null);
   const router = useRouter();
+
+  const currentPortal = PORTAL_INFO[
+    expectedRole === "operator" || expectedRole === "admin" ? "operator" : expectedRole
+  ];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setCorrectPortal(null);
 
     try {
-      const { signInWithEmailAndPassword, getAuthInstance, getDbInstance } = await import("@/lib/firebase");
-      
-      // Sign in with Firebase
-      const userCredential = await signInWithEmailAndPassword(email, password);
-      
-      // Get the authenticated user
+      const { signInWithEmailAndPassword, getAuthInstance, getDbInstance, signOut } = await import("@/lib/firebase");
+
+      await signInWithEmailAndPassword(email, password);
+
       const auth = await getAuthInstance();
       const user = auth?.currentUser;
-      
+
       if (user) {
-        // Check if user is an accepted partner who needs to sign up for partner account
         try {
           const db = await getDbInstance();
           if (db) {
             const { doc, getDoc } = await import("firebase/firestore");
             const userDocRef = doc(db, "users", user.uid);
             const userDoc = await getDoc(userDocRef);
-            
+
             if (userDoc.exists()) {
               const userData = userDoc.data();
-              
-              // Check if partner is accepted but hasn't created partner account yet
+
               if (userData.partnerAccepted === true && userData.partnerAccountCreated !== true) {
                 router.push("/register?partner=true");
                 return;
               }
 
-              const userRole = userData.role;
-              const userEmail = user.email || "";
-              const ADMIN_EMAIL = "binblastcompany@gmail.com";
-              
-              // Check if user is operator/admin
-              const isOperator = userRole === "operator" || userRole === "admin" || userEmail === ADMIN_EMAIL;
-              
-              // Check if user is a partner
-              const { getPartner, getDashboardUrl } = await import("@/lib/partner-auth");
-              const partner = await getPartner(user.uid, userEmail);
-              const dashboardUrl = await getDashboardUrl(user.uid);
-              const isPartner = dashboardUrl !== "/dashboard" || partner !== null;
+              const userPortal = await resolveUserPortal(user.uid, user.email);
 
-              // Check if user has the expected role for this portal
-              if (expectedRole) {
-                let roleMatches = false;
-                
-                if (expectedRole === "employee" && userRole === "employee") {
-                  roleMatches = true;
-                } else if (expectedRole === "partner" && isPartner) {
-                  roleMatches = true;
-                } else if (expectedRole === "customer" && !isPartner && userRole !== "employee" && !isOperator) {
-                  roleMatches = true;
-                } else if ((expectedRole === "operator" || expectedRole === "admin") && isOperator) {
-                  roleMatches = true;
-                }
-
-                if (!roleMatches) {
-                  // Redirect to correct portal based on role
-                  if (userRole === "employee") {
-                    router.push("/employee");
-                    return;
-                  } else if (isOperator) {
-                    router.push("/operator");
-                    return;
-                  } else if (isPartner) {
-                    router.push("/partners");
-                    return;
-                  } else {
-                    router.push("/customer");
-                    return;
-                  }
-                }
+              if (!portalMatchesExpected(userPortal, expectedRole)) {
+                await signOut();
+                const portal = PORTAL_INFO[userPortal];
+                setCorrectPortal(portal);
+                setError(
+                  `This email is registered as a ${portal.name} account. You cannot sign in here. Please use the ${portal.name} instead.`
+                );
+                setLoading(false);
+                return;
               }
 
-              // Redirect based on role
-              if (userRole === "employee") {
+              if (userPortal === "employee") {
                 router.push(redirectPath || "/employee/dashboard");
                 return;
-              } else if (isOperator) {
+              }
+
+              if (userPortal === "operator") {
                 router.push(redirectPath || "/dashboard");
                 return;
-              } else {
-                router.push(redirectPath || dashboardUrl);
-                return;
               }
+
+              const { getDashboardUrl } = await import("@/lib/partner-auth");
+              const dashboardUrl = await getDashboardUrl(user.uid);
+              router.push(redirectPath || dashboardUrl);
+              return;
             }
           }
         } catch (err) {
           console.error("[PortalLoginForm] Error checking user role:", err);
         }
 
-        // Fallback redirect
         router.push(redirectPath || "/dashboard");
       }
     } catch (err: any) {
       console.error("[PortalLoginForm] Login error:", err);
-      
+
       if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
         setError("Invalid email or password. Please check your credentials and try again.");
       } else if (err.code === "auth/invalid-email") {
@@ -146,13 +124,28 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
       maxWidth: "500px",
       margin: "0 auto"
     }}>
+      <div style={{
+        padding: "0.875rem 1rem",
+        background: "#f0fdf4",
+        border: "1px solid #bbf7d0",
+        borderRadius: "10px",
+        marginBottom: "1.25rem",
+        fontSize: "0.875rem",
+        color: "#166534",
+        lineHeight: 1.5,
+        textAlign: "left",
+      }}>
+        <strong>Portal-only sign-in:</strong> This page is only for <strong>{portalName}</strong> accounts.
+        Other account types must use their own portal from the <strong>Sign In</strong> menu.
+      </div>
+
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         <div>
-          <label style={{ 
-            display: "block", 
-            fontSize: "0.9rem", 
-            fontWeight: "500", 
-            marginBottom: "0.5rem", 
+          <label style={{
+            display: "block",
+            fontSize: "0.9rem",
+            fontWeight: "500",
+            marginBottom: "0.5rem",
             color: "var(--text-dark)",
             textAlign: "left"
           }}>
@@ -179,28 +172,28 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
         </div>
 
         <div>
-          <div style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "space-between", 
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             marginBottom: "0.5rem",
             width: "100%"
           }}>
-            <label style={{ 
-              display: "block", 
-              fontSize: "0.9rem", 
-              fontWeight: "500", 
+            <label style={{
+              display: "block",
+              fontSize: "0.9rem",
+              fontWeight: "500",
               color: "var(--text-dark)",
               textAlign: "left",
               margin: 0
             }}>
               Password
             </label>
-            <Link 
-              href="/forgot-password" 
-              style={{ 
-                fontSize: "0.875rem", 
-                color: "var(--primary-color)", 
+            <Link
+              href="/forgot-password"
+              style={{
+                fontSize: "0.875rem",
+                color: "var(--primary-color)",
                 fontWeight: "500",
                 textDecoration: "none",
                 flexShrink: 0,
@@ -238,14 +231,31 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
 
         {error && (
           <div style={{
-            padding: "0.75rem 1rem",
+            padding: "0.875rem 1rem",
             background: "#fef2f2",
             border: "1px solid #fecaca",
             borderRadius: "8px",
             color: "#dc2626",
-            fontSize: "0.875rem"
+            fontSize: "0.875rem",
+            lineHeight: 1.5,
           }}>
             {error}
+            {correctPortal && (
+              <div style={{ marginTop: "0.75rem" }}>
+                <Link
+                  href={correctPortal.path}
+                  className="btn btn-primary"
+                  style={{
+                    display: "inline-block",
+                    fontSize: "0.875rem",
+                    padding: "0.5rem 1rem",
+                    textDecoration: "none",
+                  }}
+                >
+                  Go to {correctPortal.name}
+                </Link>
+              </div>
+            )}
           </div>
         )}
 
@@ -260,17 +270,18 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
             opacity: loading ? 0.6 : 1
           }}
         >
-          {loading ? "Logging in..." : "Log in"}
+          {loading ? "Logging in..." : `Log in to ${currentPortal.name}`}
         </button>
 
-        <p style={{ textAlign: "center", fontSize: "0.875rem", color: "var(--text-light)", marginTop: "1rem" }}>
-          Don&apos;t have an account?{" "}
-          <Link href="/register" style={{ color: "var(--primary-color)", fontWeight: "600", textDecoration: "none" }}>
-            Sign up
-          </Link>
-        </p>
+        {expectedRole === "customer" && (
+          <p style={{ textAlign: "center", fontSize: "0.875rem", color: "var(--text-light)", marginTop: "1rem" }}>
+            Don&apos;t have an account?{" "}
+            <Link href="/register" style={{ color: "var(--primary-color)", fontWeight: "600", textDecoration: "none" }}>
+              Sign up
+            </Link>
+          </p>
+        )}
       </form>
     </div>
   );
 }
-
