@@ -2,6 +2,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  parseCleaningDate,
+  formatCleaningDateForStorage,
+  buildCompletionUpdateData,
+  scheduleNextCleaningIfNeeded,
+} from "@/lib/cleaning-schedule";
 
 interface CleaningScheduleBoardProps {
   userId: string;
@@ -118,19 +124,51 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
     setFilteredCleanings(filtered);
   }, [cleanings, filterOperator, filterPartner, filterCity, filterDate, filterStatus]);
 
-  const handleUpdateCleaning = async (cleaning: Cleaning, updates: Partial<Cleaning>) => {
+  const handleUpdateCleaning = async (
+    cleaning: Cleaning,
+    updates: Partial<Cleaning> & { scheduledDate?: string | Date }
+  ) => {
     try {
       const { getDbInstance } = await import("@/lib/firebase");
       const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
       const firestore = await safeImportFirestore();
-      const { doc, updateDoc } = firestore;
+      const { doc, updateDoc, serverTimestamp } = firestore;
 
       const db = await getDbInstance();
       if (!db) return;
 
-      await updateDoc(doc(db, "scheduledCleanings", cleaning.id), updates);
-      
-      setCleanings(cleanings.map((c) => (c.id === cleaning.id ? { ...c, ...updates } : c)));
+      const finalUpdates: Record<string, unknown> = { ...updates };
+
+      if (typeof updates.status === "string") {
+        Object.assign(finalUpdates, buildCompletionUpdateData(updates.status));
+        if (updates.status === "completed") {
+          finalUpdates.completedAt = serverTimestamp();
+        }
+      }
+
+      if (updates.scheduledDate !== undefined) {
+        if (typeof updates.scheduledDate === "string") {
+          finalUpdates.scheduledDate = updates.scheduledDate;
+        } else {
+          finalUpdates.scheduledDate = formatCleaningDateForStorage(
+            parseCleaningDate(updates.scheduledDate)
+          );
+        }
+      }
+
+      await updateDoc(doc(db, "scheduledCleanings", cleaning.id), finalUpdates);
+
+      if (updates.status === "completed") {
+        await scheduleNextCleaningIfNeeded(db, {
+          ...cleaning,
+          ...finalUpdates,
+          id: cleaning.id,
+        });
+      }
+
+      setCleanings(
+        cleanings.map((c) => (c.id === cleaning.id ? { ...c, ...finalUpdates } : c))
+      );
       setShowEditModal(false);
       setSelectedCleaning(null);
     } catch (err: any) {
@@ -141,7 +179,7 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
 
   // Group cleanings by date
   const groupedCleanings = filteredCleanings.reduce((acc, cleaning) => {
-    const date = cleaning.scheduledDate?.toDate?.() || new Date(cleaning.scheduledDate);
+    const date = parseCleaningDate(cleaning.scheduledDate);
     const dateKey = date.toLocaleDateString();
     if (!acc[dateKey]) {
       acc[dateKey] = [];
@@ -266,7 +304,7 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
             </div>
             <div style={{ padding: "1rem" }}>
               {dateCleanings.map((cleaning) => {
-                const cleaningDate = cleaning.scheduledDate?.toDate?.() || new Date(cleaning.scheduledDate);
+                const cleaningDate = parseCleaningDate(cleaning.scheduledDate);
                 return (
                   <div
                     key={cleaning.id}
@@ -360,15 +398,17 @@ function EditCleaningModal({
 }: {
   cleaning: Cleaning;
   onClose: () => void;
-  onSave: (updates: Partial<Cleaning>) => void;
+  onSave: (updates: Partial<Cleaning> & { scheduledDate?: string }) => void;
 }) {
+  const originalScheduledDate = formatCleaningDateForStorage(
+    parseCleaningDate(cleaning.scheduledDate)
+  );
+
   const [formData, setFormData] = useState({
     status: cleaning.status,
     operator: cleaning.operator || "",
     notes: cleaning.notes || "",
-    scheduledDate: cleaning.scheduledDate?.toDate?.() ? 
-      new Date(cleaning.scheduledDate.toDate()).toISOString().split("T")[0] : 
-      new Date(cleaning.scheduledDate).toISOString().split("T")[0],
+    scheduledDate: originalScheduledDate,
   });
 
   return (
@@ -483,13 +523,13 @@ function EditCleaningModal({
           </button>
           <button
             onClick={() => {
-              const updates: any = {
+              const updates: Partial<Cleaning> & { scheduledDate?: string } = {
                 status: formData.status,
                 operator: formData.operator,
                 notes: formData.notes,
               };
-              if (formData.scheduledDate) {
-                updates.scheduledDate = new Date(formData.scheduledDate);
+              if (formData.scheduledDate && formData.scheduledDate !== originalScheduledDate) {
+                updates.scheduledDate = formData.scheduledDate;
               }
               onSave(updates);
             }}

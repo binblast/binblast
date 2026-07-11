@@ -28,6 +28,11 @@ import { AdminAIChat } from "@/components/AdminDashboard/AdminAIChat";
 import { KPICard } from "@/components/AdminDashboard/KPICard";
 import { CustomQuotesManagement } from "@/components/AdminDashboard/CustomQuotesManagement";
 import { MessagingCenter } from "@/components/AdminDashboard/MessagingCenter";
+import {
+  parseCleaningDate,
+  isCleaningCompleted,
+  isCleaningCancelled,
+} from "@/lib/cleaning-schedule";
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
@@ -1208,68 +1213,52 @@ function DashboardPageContent() {
     });
   }, [roleDetermined, isAdmin, allCustomers, customerFilter.search, customerFilter.plan, customerFilter.source]);
 
-  // Get next cleaning
+  const getCleaningDate = useCallback(
+    (cleaning: any): Date => parseCleaningDate(cleaning?.scheduledDate),
+    []
+  );
+
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
   const getNextCleaning = () => {
-    const now = new Date();
     const upcoming = scheduledCleanings
-      .filter(c => {
-        const date = new Date(c.scheduledDate);
-        return date >= now && c.status !== "cancelled";
+      .filter((c) => {
+        const date = parseCleaningDate(c.scheduledDate);
+        date.setHours(0, 0, 0, 0);
+        return date >= now && !isCleaningCancelled(c);
       })
-      .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())[0];
+      .sort(
+        (a, b) =>
+          parseCleaningDate(a.scheduledDate).getTime() -
+          parseCleaningDate(b.scheduledDate).getTime()
+      )[0];
     return upcoming;
   };
 
   const nextCleaning = getNextCleaning();
-  
-  const filteredUpcoming = scheduledCleanings.filter(c => {
-    const date = new Date(c.scheduledDate);
-    // Exclude completed jobs from upcoming (check both status and jobStatus)
-    const isCompleted = c.status === "completed" || (c as any).jobStatus === "completed";
-    return date >= new Date() && c.status !== "cancelled" && !isCompleted;
-  });
-  const upcomingCleanings = filteredUpcoming.sort((a, b) => {
-    return new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime();
-  });
 
-  const filteredPast = scheduledCleanings.filter(c => {
-    const date = new Date(c.scheduledDate);
-    // Check both status and jobStatus fields for compatibility
-    const isCompleted = c.status === "completed" || (c as any).jobStatus === "completed";
-    return date < new Date() || isCompleted || c.status === "cancelled";
+  const filteredUpcoming = scheduledCleanings.filter((c) => {
+    const date = parseCleaningDate(c.scheduledDate);
+    date.setHours(0, 0, 0, 0);
+    return date >= now && !isCleaningCancelled(c) && !isCleaningCompleted(c);
   });
-  const pastCleanings = filteredPast.sort((a, b) => {
-    return new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime();
-  });
+  const upcomingCleanings = filteredUpcoming.sort(
+    (a, b) =>
+      parseCleaningDate(a.scheduledDate).getTime() -
+      parseCleaningDate(b.scheduledDate).getTime()
+  );
 
-  // Helper function to safely convert scheduledDate to Date object
-  const getCleaningDate = useCallback((cleaning: any): Date => {
-    if (!cleaning || !cleaning.scheduledDate) return new Date();
-    // If it's already a Date object, return it
-    if (cleaning.scheduledDate instanceof Date) {
-      // Check if it's a valid date
-      if (isNaN(cleaning.scheduledDate.getTime())) return new Date();
-      return cleaning.scheduledDate;
-    }
-    // If it has toDate method (Firestore timestamp), use it
-    if (typeof cleaning.scheduledDate.toDate === 'function') {
-      try {
-        const date = cleaning.scheduledDate.toDate();
-        if (isNaN(date.getTime())) return new Date();
-        return date;
-      } catch (e) {
-        return new Date();
-      }
-    }
-    // Otherwise, try to create a Date from it
-    try {
-      const date = new Date(cleaning.scheduledDate);
-      if (isNaN(date.getTime())) return new Date();
-      return date;
-    } catch (e) {
-      return new Date();
-    }
-  }, []);
+  const filteredPast = scheduledCleanings.filter((c) => {
+    const date = parseCleaningDate(c.scheduledDate);
+    date.setHours(0, 0, 0, 0);
+    return date < now || isCleaningCompleted(c) || isCleaningCancelled(c);
+  });
+  const pastCleanings = filteredPast.sort(
+    (a, b) =>
+      parseCleaningDate(b.scheduledDate).getTime() -
+      parseCleaningDate(a.scheduledDate).getTime()
+  );
 
   // Compute subscription manager visibility (must be before early returns)
   const validPlans = ["one-time", "twice-month", "bi-monthly", "quarterly"];

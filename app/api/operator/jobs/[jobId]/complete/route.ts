@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule";
 
 export async function POST(
   req: NextRequest,
@@ -41,6 +42,8 @@ export async function POST(
       );
     }
 
+    const jobData = jobDoc.data();
+
     // Verify operator has permission (check if user is operator or admin)
     const { getAuthInstance } = await import("@/lib/firebase");
     const auth = await getAuthInstance();
@@ -66,6 +69,23 @@ export async function POST(
     }
 
     await updateDoc(jobRef, updateData);
+
+    await scheduleNextCleaningIfNeeded(db, {
+      id: jobId,
+      userId: jobData.userId,
+      userEmail: jobData.userEmail,
+      addressLine1: jobData.addressLine1,
+      addressLine2: jobData.addressLine2,
+      city: jobData.city,
+      state: jobData.state,
+      zipCode: jobData.zipCode,
+      trashDay: jobData.trashDay,
+      scheduledTime: jobData.scheduledTime,
+      notes: jobData.notes,
+      scheduledDate: jobData.scheduledDate,
+      status: "completed",
+      jobStatus: "completed",
+    });
 
     return NextResponse.json(
       { message: "Job completed successfully" },

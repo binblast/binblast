@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getJobPhotos } from "@/lib/job-photo-upload";
+import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule";
 
 export async function POST(
   req: NextRequest,
@@ -130,6 +131,23 @@ export async function POST(
     }
 
     await updateDoc(jobRef, updateData);
+
+    await scheduleNextCleaningIfNeeded(db, {
+      id: jobId,
+      userId: jobData.userId,
+      userEmail: jobData.userEmail,
+      addressLine1: jobData.addressLine1,
+      addressLine2: jobData.addressLine2,
+      city: jobData.city,
+      state: jobData.state,
+      zipCode: jobData.zipCode,
+      trashDay: jobData.trashDay,
+      scheduledTime: jobData.scheduledTime,
+      notes: jobData.notes,
+      scheduledDate: jobData.scheduledDate,
+      status: "completed",
+      jobStatus: "completed",
+    });
 
     return NextResponse.json(
       { message: "Job completed successfully" },
