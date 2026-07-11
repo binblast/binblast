@@ -164,6 +164,7 @@ export function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [accountUrl, setAccountUrl] = useState("/dashboard");
   const [isEmployee, setIsEmployee] = useState(false);
+  const [isOperator, setIsOperator] = useState(false);
   const [isStandardCustomer, setIsStandardCustomer] = useState(false);
   const [loading, setLoading] = useState(true);
   const signInRef = useRef<HTMLLIElement>(null);
@@ -183,33 +184,51 @@ export function Navbar() {
     {
       id: "customer",
       title: isLoggedIn && isStandardCustomer ? "My Account" : "Customer Portal",
-      subtitle: "Manage cleanings, payments, rewards, and referrals.",
+      subtitle: isLoggedIn && isStandardCustomer
+        ? "Manage cleanings, payments, rewards, and referrals."
+        : "Homeowner sign-in. Manage cleanings, payments, and rewards.",
       href: isLoggedIn && isStandardCustomer ? accountUrl : "/customer",
       icon: "customer",
     },
     {
       id: "partner",
-      title: "Partner Portal",
+      title: isLoggedIn && !isStandardCustomer && !isEmployee && !isOperator && accountUrl !== "/dashboard"
+        ? "Partner Dashboard"
+        : "Partner Portal",
       subtitle: "Track referrals, commissions, and partner performance.",
-      href: "/partners",
+      href: isLoggedIn && !isStandardCustomer && !isEmployee && !isOperator && accountUrl !== "/dashboard"
+        ? accountUrl
+        : "/partners",
       icon: "partner",
     },
     {
       id: "employee",
-      title: "Employee Portal",
+      title: isLoggedIn && isEmployee ? "Employee Dashboard" : "Employee Portal",
       subtitle: "View routes, schedules, and assigned jobs.",
-      href: "/employee",
+      href: isLoggedIn && isEmployee ? "/employee/dashboard" : "/employee",
       icon: "employee",
     },
     {
       id: "command",
-      title: "Blast Command",
-      subtitle: "Admin dashboard and business operations.",
-      href: "/operator",
+      title: isLoggedIn && isOperator ? "Operator Dashboard" : "Blast Command",
+      subtitle: isLoggedIn && isOperator
+        ? "Admin dashboard and business operations."
+        : "Operator & admin sign-in. Manage business operations.",
+      href: isLoggedIn && isOperator ? "/dashboard" : "/operator",
       icon: "command",
       showDividerBefore: true,
     },
   ];
+
+  const dashboardNavLabel = isOperator
+    ? "Blast Command"
+    : isEmployee
+    ? "My Dashboard"
+    : isLoggedIn && accountUrl !== "/dashboard"
+    ? "Partner Dashboard"
+    : isStandardCustomer
+    ? "My Account"
+    : null;
 
   const handlePortalNavigate = () => {
     closeSignIn();
@@ -237,6 +256,7 @@ export function Navbar() {
 
         if (!db) {
           setIsEmployee(false);
+          setIsOperator(false);
           setIsStandardCustomer(false);
           setAccountUrl("/dashboard");
           return;
@@ -251,25 +271,28 @@ export function Navbar() {
           const role = userData.role;
           const userEmail = user.email || "";
           const ADMIN_EMAIL = "binblastcompany@gmail.com";
-          const isOperator = role === "operator" || role === "admin" || userEmail === ADMIN_EMAIL;
+          const isOperatorRole = role === "operator" || role === "admin" || userEmail === ADMIN_EMAIL;
           const isEmployeeRole = role === "employee";
 
           setIsEmployee(isEmployeeRole);
+          setIsOperator(isOperatorRole);
 
           const { getDashboardUrl } = await import("@/lib/partner-auth");
           const dashboardUrl = await getDashboardUrl(user.uid);
           setAccountUrl(isEmployeeRole ? "/employee/dashboard" : dashboardUrl);
 
           const isPartner = dashboardUrl !== "/dashboard" && !isEmployeeRole;
-          setIsStandardCustomer(!isEmployeeRole && !isPartner && !isOperator);
+          setIsStandardCustomer(!isEmployeeRole && !isPartner && !isOperatorRole);
         } else {
           setIsEmployee(false);
+          setIsOperator(false);
           setIsStandardCustomer(true);
           setAccountUrl("/dashboard");
         }
       } catch (err) {
         console.error("[Navbar] Error getting dashboard URL:", err);
         setIsEmployee(false);
+        setIsOperator(false);
         setIsStandardCustomer(false);
         setAccountUrl("/dashboard");
       }
@@ -291,6 +314,7 @@ export function Navbar() {
           } else if (mounted) {
             setIsLoggedIn(false);
             setIsEmployee(false);
+            setIsOperator(false);
             setIsStandardCustomer(false);
             setAccountUrl("/dashboard");
             setLoading(false);
@@ -305,6 +329,7 @@ export function Navbar() {
                 await updateUserNavigation(user);
               } else {
                 setIsEmployee(false);
+                setIsOperator(false);
                 setIsStandardCustomer(false);
                 setAccountUrl("/dashboard");
               }
@@ -608,6 +633,11 @@ export function Navbar() {
               </div>
             )}
           </li>
+          {!loading && isLoggedIn && dashboardNavLabel && (
+            <li>
+              <Link href={accountUrl}>{dashboardNavLabel}</Link>
+            </li>
+          )}
           {!loading && isLoggedIn && (
             <li>
               <button
