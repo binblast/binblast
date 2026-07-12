@@ -1,8 +1,9 @@
 // components/OperatorDashboard/EmployeeDetail/RouteMap.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { buildStopAddress, hasStopCoordinates } from "@/lib/stop-coordinates";
 
 // Import Leaflet CSS - Next.js will handle this
 if (typeof window !== "undefined") {
@@ -37,30 +38,92 @@ interface RouteMapProps {
   refreshKey?: number;
 }
 
+async function geocodeStopAddress(stop: Stop): Promise<Stop> {
+  if (hasStopCoordinates(stop)) {
+    return stop;
+  }
+
+  const address = buildStopAddress(stop);
+  if (!address) {
+    return stop;
+  }
+
+  try {
+    const response = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
+    if (!response.ok) {
+      return stop;
+    }
+
+    const data = await response.json();
+    if (typeof data.latitude !== "number" || typeof data.longitude !== "number") {
+      return stop;
+    }
+
+    return {
+      ...stop,
+      latitude: data.latitude,
+      longitude: data.longitude,
+    };
+  } catch (error) {
+    console.error("Error geocoding stop for map:", error);
+    return stop;
+  }
+}
+
 export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }: RouteMapProps) {
   const [mapReady, setMapReady] = useState(false);
+  const [resolvedStops, setResolvedStops] = useState<Stop[]>(stops);
   const [optimizedStops, setOptimizedStops] = useState<Stop[]>(stops);
   const [optimizing, setOptimizing] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
   const [showRouteLines, setShowRouteLines] = useState(true);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([33.749, -84.388]);
+  const [mapZoom, setMapZoom] = useState(11);
   const [message, setMessage] = useState<{ type: "success" | "error" | null; text: string }>({ type: null, text: "" });
 
   useEffect(() => {
-    // Map is ready when component mounts
     setMapReady(true);
   }, []);
 
   useEffect(() => {
-    setOptimizedStops(stops);
+    let cancelled = false;
+
+    async function resolveStopCoordinates() {
+      if (stops.length === 0) {
+        setResolvedStops([]);
+        setOptimizedStops([]);
+        return;
+      }
+
+      setGeocoding(true);
+      const enrichedStops: Stop[] = [];
+
+      for (const stop of stops) {
+        if (cancelled) return;
+        enrichedStops.push(await geocodeStopAddress(stop));
+      }
+
+      if (!cancelled) {
+        setResolvedStops(enrichedStops);
+        setOptimizedStops(enrichedStops);
+        setGeocoding(false);
+      }
+    }
+
+    resolveStopCoordinates();
+
+    return () => {
+      cancelled = true;
+    };
   }, [stops, refreshKey]);
 
   const handleOptimizeRoute = async () => {
     setOptimizing(true);
     setMessage({ type: null, text: "" });
-    
+
     try {
-      // Filter stops that have coordinates for optimization
-      const stopsWithCoords = stops.filter(s => s.latitude && s.longitude);
-      
+      const stopsWithCoords = resolvedStops.filter((stop) => hasStopCoordinates(stop));
+
       if (stopsWithCoords.length === 0) {
         setMessage({ type: "error", text: "No stops with coordinates available for optimization" });
         setOptimizing(false);
@@ -78,18 +141,17 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
 
       if (response.ok) {
         const data = await response.json();
-        setOptimizedStops(data.optimizedStops || stops);
+        setOptimizedStops(data.optimizedStops || resolvedStops);
         setMessage({
           type: "success",
           text: `Route optimized! ${data.totalStops} stops ordered by closest distance${employeeLocation ? " from employee location" : ""}`,
         });
-        // Clear message after 5 seconds
         setTimeout(() => setMessage({ type: null, text: "" }), 5000);
       } else {
         const errorData = await response.json().catch(() => ({}));
-        setMessage({ 
-          type: "error", 
-          text: errorData.error || "Failed to optimize route" 
+        setMessage({
+          type: "error",
+          text: errorData.error || "Failed to optimize route",
         });
       }
     } catch (error) {
@@ -100,40 +162,62 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
     }
   };
 
-  // Calculate center point
-  const getMapCenter = (): [number, number] => {
-    const stopsToUse = optimizedStops.length > 0 ? optimizedStops : stops;
-    
-    if (stopsToUse.length === 0) {
-      // Default to Atlanta area
-      return [33.749, -84.388];
+  const stopsWithCoords = useMemo(
+    () => optimizedStops.filter((stop) => hasStopCoordinates(stop)),
+    [optimizedStops]
+  );
+
+  useEffect(() => {
+    const positions: Array<{ latitude: number; longitude: number }> = stopsWithCoords.map((stop) => ({
+      latitude: stop.latitude!,
+      longitude: stop.longitude!,
+    }));
+
+    if (employeeLocation) {
+      positions.push(employeeLocation);
     }
 
-    const stopsWithCoords = stopsToUse.filter(s => s.latitude && s.longitude);
-    if (stopsWithCoords.length === 0) {
-      return [33.749, -84.388];
+    if (positions.length === 0) {
+      setMapCenter(employeeLocation ? [employeeLocation.latitude, employeeLocation.longitude] : [33.749, -84.388]);
+      setMapZoom(employeeLocation ? 13 : 11);
+      return;
     }
 
-    const avgLat = stopsWithCoords.reduce((sum, s) => sum + (s.latitude || 0), 0) / stopsWithCoords.length;
-    const avgLon = stopsWithCoords.reduce((sum, s) => sum + (s.longitude || 0), 0) / stopsWithCoords.length;
-    return [avgLat, avgLon];
-  };
+    if (positions.length === 1) {
+      setMapCenter([positions[0].latitude, positions[0].longitude]);
+      setMapZoom(14);
+      return;
+    }
 
-  // Get route polyline coordinates
+    const lats = positions.map((point) => point.latitude);
+    const lons = positions.map((point) => point.longitude);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLon = Math.min(...lons);
+    const maxLon = Math.max(...lons);
+
+    setMapCenter([(minLat + maxLat) / 2, (minLon + maxLon) / 2]);
+
+    const latSpan = maxLat - minLat;
+    const lonSpan = maxLon - minLon;
+    const span = Math.max(latSpan, lonSpan);
+
+    if (span > 1.5) setMapZoom(8);
+    else if (span > 0.75) setMapZoom(9);
+    else if (span > 0.35) setMapZoom(10);
+    else if (span > 0.15) setMapZoom(11);
+    else if (span > 0.08) setMapZoom(12);
+    else setMapZoom(13);
+  }, [stopsWithCoords, employeeLocation]);
+
   const getRoutePolyline = (): [number, number][] => {
-    return optimizedStops
-      .filter(s => s.latitude && s.longitude)
-      .map(s => [s.latitude!, s.longitude!] as [number, number]);
+    return stopsWithCoords.map(
+      (stop) => [stop.latitude!, stop.longitude!] as [number, number]
+    );
   };
 
-  // Format address for display
   const formatAddress = (stop: Stop): string => {
-    const parts: string[] = [];
-    if (stop.addressLine1) parts.push(stop.addressLine1);
-    if (stop.city) parts.push(stop.city);
-    if (stop.state) parts.push(stop.state);
-    if (stop.zipCode) parts.push(stop.zipCode);
-    return parts.join(", ") || "Address not available";
+    return buildStopAddress(stop) || "Address not available";
   };
 
   if (!mapReady) {
@@ -168,7 +252,7 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
             Route Map
           </h3>
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            {optimizedStops.length > 0 && optimizedStops.some(s => s.latitude && s.longitude) && (
+            {stopsWithCoords.length > 0 && (
               <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem", color: "#6b7280", cursor: "pointer" }}>
                 <input
                   type="checkbox"
@@ -181,24 +265,18 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
             )}
             <button
               onClick={handleOptimizeRoute}
-              disabled={optimizing || stops.length === 0 || stops.filter(s => s.latitude && s.longitude).length === 0}
+              disabled={optimizing || geocoding || stopsWithCoords.length === 0}
               style={{
                 padding: "0.5rem 1rem",
-                background: (optimizing || stops.length === 0 || stops.filter(s => s.latitude && s.longitude).length === 0) ? "#9ca3af" : "#3b82f6",
+                background: optimizing || geocoding || stopsWithCoords.length === 0 ? "#9ca3af" : "#3b82f6",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "6px",
                 fontSize: "0.875rem",
                 fontWeight: "600",
-                cursor: (optimizing || stops.length === 0 || stops.filter(s => s.latitude && s.longitude).length === 0) ? "not-allowed" : "pointer",
+                cursor: optimizing || geocoding || stopsWithCoords.length === 0 ? "not-allowed" : "pointer",
                 transition: "opacity 0.2s",
               }}
-              onMouseEnter={(e) => {
-                if (!(optimizing || stops.length === 0 || stops.filter(s => s.latitude && s.longitude).length === 0)) {
-                  e.currentTarget.style.opacity = "0.9";
-                }
-              }}
-              onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
             >
               {optimizing ? "Optimizing..." : "Optimize Route"}
             </button>
@@ -221,16 +299,15 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
       <div style={{ height: "500px", borderRadius: "8px", overflow: "hidden", border: "1px solid #e5e7eb", position: "relative" }}>
         {typeof window !== "undefined" && MapContainer && TileLayer && Marker && Popup ? (
           <MapContainer
-            center={getMapCenter()}
-            zoom={11}
+            center={mapCenter}
+            zoom={mapZoom}
             style={{ height: "100%", width: "100%" }}
           >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
-            
-            {/* Route Polyline */}
+
             {showRouteLines && Polyline && getRoutePolyline().length > 1 && (
               <Polyline
                 positions={getRoutePolyline()}
@@ -239,8 +316,7 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
                 opacity={0.7}
               />
             )}
-            
-            {/* Employee Location */}
+
             {employeeLocation && (
               <Marker position={[employeeLocation.latitude, employeeLocation.longitude]}>
                 <Popup>
@@ -251,38 +327,35 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
               </Marker>
             )}
 
-            {/* Stop Markers */}
-            {optimizedStops
-              .filter(s => s.latitude && s.longitude)
-              .map((stop, index) => (
-                <Marker key={stop.id} position={[stop.latitude!, stop.longitude!]}>
-                  <Popup>
-                    <div style={{ minWidth: "200px" }}>
-                      <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: "0.5rem", color: "#111827" }}>
-                        Stop {index + 1}
-                      </div>
-                      {stop.customerName && (
-                        <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
-                          <strong>Customer:</strong> {stop.customerName}
-                        </div>
-                      )}
-                      <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
-                        <strong>Address:</strong> {formatAddress(stop)}
-                      </div>
-                      {stop.scheduledTime && (
-                        <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
-                          <strong>Time:</strong> {stop.scheduledTime}
-                        </div>
-                      )}
-                      {stop.county && (
-                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.5rem" }}>
-                          {stop.county}
-                        </div>
-                      )}
+            {stopsWithCoords.map((stop, index) => (
+              <Marker key={stop.id} position={[stop.latitude!, stop.longitude!]}>
+                <Popup>
+                  <div style={{ minWidth: "200px" }}>
+                    <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: "0.5rem", color: "#111827" }}>
+                      Stop {index + 1}
                     </div>
-                  </Popup>
-                </Marker>
-              ))}
+                    {stop.customerName && (
+                      <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
+                        <strong>Customer:</strong> {stop.customerName}
+                      </div>
+                    )}
+                    <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
+                      <strong>Address:</strong> {formatAddress(stop)}
+                    </div>
+                    {stop.scheduledTime && (
+                      <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
+                        <strong>Time:</strong> {stop.scheduledTime}
+                      </div>
+                    )}
+                    {stop.county && (
+                      <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.5rem" }}>
+                        {stop.county}
+                      </div>
+                    )}
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
           </MapContainer>
         ) : (
           <div style={{
@@ -302,13 +375,24 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
           No stops to display on map
         </div>
       )}
-      
-      {stops.length > 0 && stops.filter(s => s.latitude && s.longitude).length === 0 && (
+
+      {stops.length > 0 && geocoding && (
         <div style={{ textAlign: "center", padding: "1rem", color: "#6b7280", fontSize: "0.875rem" }}>
-          Geocoding addresses... Pins will appear once coordinates are available.
+          Pinpointing {stops.length} stop address{stops.length === 1 ? "" : "es"} on the map...
+        </div>
+      )}
+
+      {stops.length > 0 && !geocoding && stopsWithCoords.length === 0 && (
+        <div style={{ textAlign: "center", padding: "1rem", color: "#6b7280", fontSize: "0.875rem" }}>
+          Could not pinpoint these addresses on the map. Check that each stop has a full street address.
+        </div>
+      )}
+
+      {stopsWithCoords.length > 0 && (
+        <div style={{ textAlign: "center", padding: "0.75rem", color: "#166534", fontSize: "0.8125rem", fontWeight: "600" }}>
+          {stopsWithCoords.length} stop{stopsWithCoords.length === 1 ? "" : "s"} pinned on the route map
         </div>
       )}
     </div>
   );
 }
-

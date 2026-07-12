@@ -10,6 +10,9 @@ import {
   normalizeDayName,
 } from "@/lib/day-assignment";
 import { loadEmployeeScheduleForDate } from "@/lib/employee-schedule";
+import {
+  enrichStopCoordinates,
+} from "@/lib/stop-coordinates";
 
 function getDateString(date: Date): string {
   return date.toISOString().split('T')[0];
@@ -49,40 +52,86 @@ export async function GET(
     }
 
     const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs, orderBy, doc, updateDoc } = firestore;
+    const { collection, query, where, getDocs, orderBy, doc, updateDoc, getDoc } = firestore;
 
     const today = getTodayDateString();
     const next7Days = getNext7Days();
 
     const cleaningsRef = collection(db, "scheduledCleanings");
 
-    // Helper function to extract coordinates from Firestore data
-    const extractCoordinates = (data: any): { latitude?: number; longitude?: number } => {
-      // Check if coordinates exist as direct properties
-      if (data.latitude && data.longitude) {
-        return { latitude: data.latitude, longitude: data.longitude };
-      }
-      
-      // Check if coordinates exist as GeoPoint
-      if (data.location && typeof data.location.latitude === 'number' && typeof data.location.longitude === 'number') {
-        return { latitude: data.location.latitude, longitude: data.location.longitude };
-      }
-      
-      return {};
+    const loadUserCoordinates = async (stops: Array<Record<string, unknown>>) => {
+      const userCoordsById = new Map<string, { latitude: number; longitude: number }>();
+      const userIds = [
+        ...new Set(
+          stops
+            .map((stop) => String(stop.userId || ""))
+            .filter((userId) => userId.length > 0)
+        ),
+      ];
+
+      await Promise.all(
+        userIds.map(async (userId) => {
+          try {
+            const userSnap = await getDoc(doc(db, "users", userId));
+            if (!userSnap.exists()) return;
+
+            const userData = userSnap.data();
+            if (typeof userData.latitude === "number" && typeof userData.longitude === "number") {
+              userCoordsById.set(userId, {
+                latitude: userData.latitude,
+                longitude: userData.longitude,
+              });
+            }
+          } catch (error) {
+            console.warn(`[Stops] Could not load user coordinates for ${userId}:`, error);
+          }
+        })
+      );
+
+      return userCoordsById;
     };
 
-    // Helper function to build address string
-    const buildAddressString = (stop: any): string => {
-      const parts: string[] = [];
-      if (stop.addressLine1) parts.push(stop.addressLine1);
-      if (stop.city) parts.push(stop.city);
-      if (stop.state) parts.push(stop.state);
-      if (stop.zipCode) parts.push(stop.zipCode);
-      return parts.join(", ");
-    };
+    const processStops = async (stops: Array<Record<string, unknown>>) => {
+      try {
+        const userCoordsById = await loadUserCoordinates(stops);
+        const processedStops: Array<Record<string, unknown>> = [];
 
-    // Geocoding is disabled to prevent API timeouts
-    // Coordinates should be added via separate geocoding process
+        for (const stop of stops) {
+          try {
+            const userId = String(stop.userId || "");
+            const enriched = await enrichStopCoordinates(
+              stop as Parameters<typeof enrichStopCoordinates>[0],
+              {
+                geocodeIfMissing: true,
+                userCoords: userId ? userCoordsById.get(userId) || null : null,
+                onGeocoded: stop.id
+                  ? async (coords) => {
+                      try {
+                        await updateDoc(doc(db, "scheduledCleanings", String(stop.id)), {
+                          latitude: coords.latitude,
+                          longitude: coords.longitude,
+                        });
+                      } catch (persistError) {
+                        console.warn(`[Stops] Could not persist coordinates for ${stop.id}:`, persistError);
+                      }
+                    }
+                  : undefined,
+              }
+            );
+
+            processedStops.push(enriched as Record<string, unknown>);
+          } catch (error) {
+            console.error("Error processing stop:", error);
+            processedStops.push(stop);
+          }
+        }
+
+        return processedStops;
+      } catch (error) {
+        console.error("Error in processStops:", error);
+        return stops;
+      }
+    };
 
     // Get today's stops - simplified to avoid index requirement
     // Query without orderBy, then sort in memory
@@ -121,66 +170,14 @@ export async function GET(
         return compareCleaningPriority(a, b);
       });
 
-    // Process stops to add coordinates (non-blocking - don't wait for geocoding)
-    // Skip geocoding if it causes issues - just return stops with existing coordinates
-    const processStops = async (stops: any[]): Promise<any[]> => {
-      try {
-        const processedStops = await Promise.allSettled(
-          stops.map(async (stop) => {
-            try {
-              const coords = extractCoordinates(stop);
-              
-              // If coordinates exist, return stop with coordinates
-              if (coords.latitude && coords.longitude) {
-                return {
-                  ...stop,
-                  latitude: coords.latitude,
-                  longitude: coords.longitude,
-                };
-              }
-
-              // Skip geocoding for now to prevent API timeouts
-              // Geocoding can be done asynchronously via a separate process
-              // Return stop without coordinates
-              return stop;
-            } catch (error) {
-              console.error("Error processing stop:", error);
-              // Return original stop on error
-              return stop;
-            }
-          })
-        );
-
-        // Extract successful results, fallback to original stop on failure
-        return processedStops.map((result, index) => {
-          if (result.status === 'fulfilled') {
-            return result.value;
-          } else {
-            console.error("Failed to process stop:", result.reason);
-            return stops[index]; // Return original stop
-          }
-        });
-      } catch (error) {
-        console.error("Error in processStops:", error);
-        // If processing fails entirely, just return original stops
-        return stops;
-      }
-    };
-
-    // Process both today's and upcoming stops
-    // Use Promise.allSettled to ensure we return even if some geocoding fails
-    const [processedTodayStops, processedUpcomingStops] = await Promise.allSettled([
+    // Process both today's and upcoming stops with coordinate enrichment
+    const [processedTodayStops, processedUpcomingStops] = await Promise.all([
       processStops(todayStops),
       processStops(upcomingStops),
     ]);
 
-    // Extract results, fallback to original arrays on failure
-    const finalTodayStops = processedTodayStops.status === 'fulfilled' 
-      ? processedTodayStops.value 
-      : todayStops;
-    const finalUpcomingStops = processedUpcomingStops.status === 'fulfilled'
-      ? processedUpcomingStops.value
-      : upcomingStops;
+    const finalTodayStops = processedTodayStops;
+    const finalUpcomingStops = processedUpcomingStops;
 
     return NextResponse.json({
       todayStops: finalTodayStops,
