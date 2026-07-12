@@ -2,6 +2,27 @@ import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export type StaffRole = "employee" | "operator" | "admin" | "owner";
 
+interface FirestoreDocument {
+  id: string;
+  data: () => Record<string, unknown>;
+  exists?: boolean;
+}
+
+type TeamMessage = Record<string, unknown> & {
+  id: string;
+  employeeId?: string;
+  senderId?: string;
+  from?: string;
+  read?: boolean;
+  message?: string;
+  createdAt?: { toMillis?: () => number; toDate?: () => Date };
+  employeeName?: string;
+  employeeEmail?: string;
+  senderName?: string;
+  senderEmail?: string;
+  recipientRole?: string;
+};
+
 export interface StaffContact {
   id: string;
   type: StaffRole;
@@ -32,13 +53,16 @@ export type TeamConversation = StaffContact | PartnerConversation;
 
 const STAFF_ROLES: StaffRole[] = ["employee", "operator", "admin", "owner"];
 
-function getDisplayName(data: Record<string, any>): string {
-  const name = `${data.firstName || ""} ${data.lastName || ""}`.trim();
-  return name || data.email || "Team Member";
+function getDisplayName(data: Record<string, unknown>): string {
+  const firstName = typeof data.firstName === "string" ? data.firstName : "";
+  const lastName = typeof data.lastName === "string" ? data.lastName : "";
+  const email = typeof data.email === "string" ? data.email : "";
+  const name = `${firstName} ${lastName}`.trim();
+  return name || email || "Team Member";
 }
 
 function getConversationPartnerId(
-  message: Record<string, any>,
+  message: TeamMessage,
   currentUserId: string,
   contactsById: Map<string, StaffContact>
 ): string | null {
@@ -78,9 +102,9 @@ export async function getStaffContacts(options?: {
   const staffContacts = new Map<string, StaffContact>();
 
   const usersSnapshot = await db.collection("users").get();
-  usersSnapshot.docs.forEach((doc) => {
+  usersSnapshot.docs.forEach((doc: FirestoreDocument) => {
     const data = doc.data();
-    const role = (data.role || "employee") as StaffRole;
+    const role = (typeof data.role === "string" ? data.role : "employee") as StaffRole;
     if (!visibleRoles.includes(role)) return;
     if (excludeUserId && doc.id === excludeUserId) return;
 
@@ -89,7 +113,7 @@ export async function getStaffContacts(options?: {
       type: role,
       employeeId: doc.id,
       employeeName: getDisplayName(data),
-      employeeEmail: data.email || "",
+      employeeEmail: typeof data.email === "string" ? data.email : "",
       unreadCount: 0,
       messageCount: 0,
       hasConversation: false,
@@ -97,18 +121,21 @@ export async function getStaffContacts(options?: {
   });
 
   const employeeMessagesSnapshot = await db.collection("employeeMessages").get();
-  employeeMessagesSnapshot.docs.forEach((doc) => {
+  employeeMessagesSnapshot.docs.forEach((doc: FirestoreDocument) => {
     const data = doc.data();
-    const recipientId = data.employeeId;
+    const recipientId = typeof data.employeeId === "string" ? data.employeeId : "";
     if (!recipientId) return;
 
     if (!staffContacts.has(recipientId)) {
       staffContacts.set(recipientId, {
         id: recipientId,
-        type: (data.recipientRole as StaffRole) || "employee",
+        type: (typeof data.recipientRole === "string" ? data.recipientRole : "employee") as StaffRole,
         employeeId: recipientId,
-        employeeName: data.employeeName || data.employeeEmail || "Team Member",
-        employeeEmail: data.employeeEmail || "",
+        employeeName:
+          (typeof data.employeeName === "string" ? data.employeeName : "") ||
+          (typeof data.employeeEmail === "string" ? data.employeeEmail : "") ||
+          "Team Member",
+        employeeEmail: typeof data.employeeEmail === "string" ? data.employeeEmail : "",
         unreadCount: 0,
         messageCount: 0,
         hasConversation: false,
@@ -122,14 +149,17 @@ export async function getStaffContacts(options?: {
       contact.unreadCount += 1;
     }
 
+    const createdAt = data.createdAt as TeamMessage["createdAt"];
     if (
       !contact.lastMessageTime ||
-      (data.createdAt?.toMillis?.() || 0) > (contact.lastMessageTime?.toMillis?.() || 0)
+      (createdAt?.toMillis?.() || 0) > (contact.lastMessageTime?.toMillis?.() || 0)
     ) {
-      contact.lastMessage = data.message;
-      contact.lastMessageTime = data.createdAt || null;
-      contact.employeeName = data.employeeName || contact.employeeName;
-      contact.employeeEmail = data.employeeEmail || contact.employeeEmail;
+      contact.lastMessage = typeof data.message === "string" ? data.message : "";
+      contact.lastMessageTime = createdAt || null;
+      contact.employeeName =
+        (typeof data.employeeName === "string" ? data.employeeName : "") || contact.employeeName;
+      contact.employeeEmail =
+        (typeof data.employeeEmail === "string" ? data.employeeEmail : "") || contact.employeeEmail;
     }
   });
 
@@ -139,9 +169,9 @@ export async function getStaffContacts(options?: {
     const partnerConversations = new Map<string, PartnerConversation>();
     const partnerMessagesSnapshot = await db.collection("partnerMessages").get();
 
-    partnerMessagesSnapshot.docs.forEach((doc) => {
+    partnerMessagesSnapshot.docs.forEach((doc: FirestoreDocument) => {
       const data = doc.data();
-      const partnerId = data.partnerId;
+      const partnerId = typeof data.partnerId === "string" ? data.partnerId : "";
       if (!partnerId) return;
 
       if (!partnerConversations.has(partnerId)) {
@@ -159,12 +189,13 @@ export async function getStaffContacts(options?: {
       conv.messageCount += 1;
       if (!data.read) conv.unreadCount += 1;
 
+      const createdAt = data.createdAt as TeamMessage["createdAt"];
       if (
         !conv.lastMessageTime ||
-        (data.createdAt?.toMillis?.() || 0) > (conv.lastMessageTime?.toMillis?.() || 0)
+        (createdAt?.toMillis?.() || 0) > (conv.lastMessageTime?.toMillis?.() || 0)
       ) {
-        conv.lastMessage = data.message;
-        conv.lastMessageTime = data.createdAt || null;
+        conv.lastMessage = typeof data.message === "string" ? data.message : "";
+        conv.lastMessageTime = createdAt || null;
       }
     });
 
@@ -176,8 +207,11 @@ export async function getStaffContacts(options?: {
           const partnerData = partnerDoc.data();
           const conv = partnerConversations.get(partnerId);
           if (conv && partnerData) {
-            conv.partnerName = partnerData.businessName || partnerData.ownerName || "";
-            conv.partnerEmail = partnerData.email || "";
+            conv.partnerName =
+              (typeof partnerData.businessName === "string" ? partnerData.businessName : "") ||
+              (typeof partnerData.ownerName === "string" ? partnerData.ownerName : "") ||
+              "";
+            conv.partnerEmail = typeof partnerData.email === "string" ? partnerData.email : "";
           }
         }
       } catch (error) {
@@ -200,12 +234,12 @@ export async function getEmployeeMessagingData(employeeId: string) {
     db.collection("users").get(),
   ]);
 
-  const messages = new Map<string, FirebaseFirestore.DocumentData & { id: string }>();
+  const messages = new Map<string, TeamMessage>();
 
-  sentSnapshot.docs.forEach((doc) => {
+  sentSnapshot.docs.forEach((doc: FirestoreDocument) => {
     messages.set(doc.id, { id: doc.id, ...doc.data() });
   });
-  receivedSnapshot.docs.forEach((doc) => {
+  receivedSnapshot.docs.forEach((doc: FirestoreDocument) => {
     messages.set(doc.id, { id: doc.id, ...doc.data() });
   });
 
@@ -216,9 +250,9 @@ export async function getEmployeeMessagingData(employeeId: string) {
   });
 
   const contacts: StaffContact[] = usersSnapshot.docs
-    .map((doc) => {
+    .map((doc: FirestoreDocument) => {
       const data = doc.data();
-      const role = (data.role || "") as StaffRole;
+      const role = (typeof data.role === "string" ? data.role : "") as StaffRole;
       if (!["operator", "admin", "owner"].includes(role) || doc.id === employeeId) {
         return null;
       }
@@ -251,8 +285,14 @@ export async function getEmployeeMessagingData(employeeId: string) {
         id: contactId,
         type: "operator",
         employeeId: contactId,
-        employeeName: message.senderName || message.employeeName || "Team Member",
-        employeeEmail: message.senderEmail || message.employeeEmail || "",
+        employeeName:
+          (typeof message.senderName === "string" ? message.senderName : "") ||
+          (typeof message.employeeName === "string" ? message.employeeName : "") ||
+          "Team Member",
+        employeeEmail:
+          (typeof message.senderEmail === "string" ? message.senderEmail : "") ||
+          (typeof message.employeeEmail === "string" ? message.employeeEmail : "") ||
+          "",
         unreadCount: 0,
         messageCount: 0,
         hasConversation: true,
@@ -272,7 +312,7 @@ export async function getEmployeeMessagingData(employeeId: string) {
       !conversation.lastMessageTime ||
       (message.createdAt?.toMillis?.() || 0) > (conversation.lastMessageTime?.toMillis?.() || 0)
     ) {
-      conversation.lastMessage = message.message;
+      conversation.lastMessage = typeof message.message === "string" ? message.message : "";
       conversation.lastMessageTime = message.createdAt || null;
     }
   });
