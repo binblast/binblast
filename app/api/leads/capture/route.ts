@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateSiteLeadCapture } from "@/lib/site-leads";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -26,17 +27,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    const { getDbInstance } = await import("@/lib/firebase");
-    const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json({ error: "Database not available" }, { status: 500 });
-    }
-
-    const firestore = await safeImportFirestore();
-    const { collection, addDoc, serverTimestamp } = firestore;
-
-    const leadDoc = await addDoc(collection(db, "siteLeads"), {
+    const db = await getAdminFirestore();
+    const admin = await import("firebase-admin");
+    const leadRef = await db.collection("siteLeads").add({
       name: payload.name,
       email: payload.email,
       phone: payload.phone,
@@ -51,11 +44,11 @@ export async function POST(req: NextRequest) {
       pageReferrer: payload.pageReferrer || null,
       source: "site_lead_capture_modal",
       status: "new",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    return NextResponse.json({ success: true, leadId: leadDoc.id });
+    return NextResponse.json({ success: true, leadId: leadRef.id });
   } catch (error: unknown) {
     console.error("[Site Lead Capture] Error:", error);
     const message = error instanceof Error ? error.message : "Failed to save lead";
