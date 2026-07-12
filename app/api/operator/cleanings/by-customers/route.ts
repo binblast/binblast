@@ -8,6 +8,15 @@ import {
 } from "@/lib/day-assignment";
 import { loadEmployeeScheduleForDate } from "@/lib/employee-schedule";
 
+interface CustomerCleaningRecord {
+  id: string;
+  status?: string;
+  jobStatus?: string;
+  scheduledDate?: string;
+  trashDay?: string;
+  assignedEmployeeId?: string | null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -41,9 +50,9 @@ export async function POST(req: NextRequest) {
       const cleanings = snapshot.docs
         .map((doc) => ({
           id: doc.id,
-          ...doc.data(),
+          ...(doc.data() as Omit<CustomerCleaningRecord, "id">),
         }))
-        .filter((c: any) => {
+        .filter((c) => {
           return (
             c.status === "upcoming" &&
             c.scheduledDate &&
@@ -65,7 +74,7 @@ export async function POST(req: NextRequest) {
         employeeWorkingDays = getEmployeeWorkingDayNames(schedule);
       }
 
-      cleanings.sort((a: any, b: any) => {
+      cleanings.sort((a, b) => {
         if (employeeId) {
           const scoreDiff =
             scoreCleaningForEmployee(b, employeeWorkingDays) -
