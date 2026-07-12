@@ -17,6 +17,7 @@ interface Job {
   state: string;
   zipCode: string;
   binCount?: number;
+  binsCount?: number;
   planType?: string;
   notes?: string;
   jobStatus?: "pending" | "in_progress" | "completed";
@@ -61,9 +62,7 @@ export function JobDetailModal({
   onStepComplete,
 }: JobDetailModalProps) {
   const [employeeNotes, setEmployeeNotes] = useState("");
-  const [binCount, setBinCount] = useState<number | undefined>(
-    job?.binCount || undefined
-  );
+  const assignedBinCount = job?.binCount ?? job?.binsCount ?? 1;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [insidePhoto, setInsidePhoto] = useState<string | null>(null);
@@ -84,7 +83,6 @@ export function JobDetailModal({
   // Reset state when job changes or modal closes
   React.useEffect(() => {
     if (isOpen && job) {
-      setBinCount(job.binCount || undefined);
       setEmployeeNotes("");
       setInsidePhoto(null);
       setInsidePhotoFile(null);
@@ -167,11 +165,12 @@ export function JobDetailModal({
     setError(null);
     try {
       await onStartJob(job.id);
-      // Emit step completion event for workflow auto-advancement
       if (onStepComplete) {
-        onStepComplete('startJob');
+        onStepComplete("startJob");
       }
-      onClose();
+      setTimeout(() => {
+        photoSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 150);
     } catch (err: any) {
       setError(err.message || "Failed to start job");
     } finally {
@@ -250,8 +249,7 @@ export function JobDetailModal({
       // Use storage URLs from uploaded photos
       await onCompleteJob(job.id, {
         employeeNotes: employeeNotes.trim() || undefined,
-        binCount,
-        completionPhotoUrl: insidePhoto + "|" + outsidePhoto, // For backward compatibility
+        completionPhotoUrl: insidePhoto + "|" + outsidePhoto,
         insidePhotoUrl: insidePhoto,
         outsidePhotoUrl: outsidePhoto,
         stickerStatus,
@@ -383,7 +381,7 @@ export function JobDetailModal({
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
             <div>
               <strong style={{ color: "#6b7280" }}>Bins:</strong>{" "}
-              {binCount || "N/A"}
+              {assignedBinCount}
             </div>
             <div>
               <strong style={{ color: "#6b7280" }}>Type:</strong>{" "}
@@ -610,38 +608,6 @@ export function JobDetailModal({
                     color: "#111827",
                   }}
                 >
-                  Number of Bins
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={binCount || ""}
-                  onChange={(e) =>
-                    setBinCount(
-                      e.target.value ? parseInt(e.target.value, 10) : undefined
-                    )
-                  }
-                  style={{
-                    width: "100%",
-                    minHeight: "44px",
-                    padding: "0.75rem",
-                    border: "2px solid #e5e7eb",
-                    borderRadius: "8px",
-                    fontSize: "0.875rem",
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: "1rem" }}>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
-                    marginBottom: "0.5rem",
-                    color: "#111827",
-                  }}
-                >
                   Job Notes (optional)
                 </label>
                 <textarea
@@ -664,41 +630,21 @@ export function JobDetailModal({
           </>
         )}
 
-        {/* Simple form for pending jobs */}
+        {/* Pending job instructions */}
         {!isCompleted && canStart && (
-          <>
-            <div style={{ marginBottom: "1rem" }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.875rem",
-                  fontWeight: "600",
-                  marginBottom: "0.5rem",
-                  color: "#111827",
-                }}
-              >
-                Number of Bins
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={binCount || ""}
-                onChange={(e) =>
-                  setBinCount(
-                    e.target.value ? parseInt(e.target.value, 10) : undefined
-                  )
-                }
-                style={{
-                  width: "100%",
-                  minHeight: "44px",
-                  padding: "0.75rem",
-                  border: "2px solid #e5e7eb",
-                  borderRadius: "8px",
-                  fontSize: "0.875rem",
-                }}
-              />
-            </div>
-          </>
+          <div
+            style={{
+              marginBottom: "1rem",
+              padding: "0.75rem",
+              background: "#eff6ff",
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              color: "#1d4ed8",
+              lineHeight: 1.5,
+            }}
+          >
+            Go to this address, then press <strong>Start Job</strong> when you arrive. Bin count is set by the customer&apos;s plan ({assignedBinCount} bin{assignedBinCount === 1 ? "" : "s"}).
+          </div>
         )}
 
         {/* Display uploaded photo if completed */}

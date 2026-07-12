@@ -449,6 +449,11 @@ export default function EmployeeDashboardPage() {
     if (!employee) return;
 
     try {
+      setSelectedJob((prev) =>
+        prev?.id === jobId ? { ...prev, jobStatus: "in_progress" } : prev
+      );
+      setWorkflowStep("photos");
+
       const response = await fetch(`/api/employee/jobs/${jobId}/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -463,7 +468,14 @@ export default function EmployeeDashboardPage() {
       }
 
       await loadJobs();
+      setSelectedJob((prev) => {
+        if (!prev || prev.id !== jobId) return prev;
+        return { ...prev, jobStatus: "in_progress" };
+      });
     } catch (error: any) {
+      setSelectedJob((prev) =>
+        prev?.id === jobId ? { ...prev, jobStatus: "pending" } : prev
+      );
       throw error;
     }
   };
@@ -805,7 +817,7 @@ export default function EmployeeDashboardPage() {
               />
 
               {/* Today's Route - Primary Focus */}
-              <div style={{ marginBottom: "1.5rem" }}>
+              <div id="employee-route-list" style={{ marginBottom: "1.5rem" }}>
                 <div
                   style={{
                     display: "flex",

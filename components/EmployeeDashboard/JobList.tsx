@@ -211,7 +211,6 @@ export function JobList({ jobs, upcomingJobs = [], onJobClick, isClockedIn, onSt
   const inProgressCount = jobs.filter((j) => j.jobStatus === "in_progress").length;
   const completedCount = jobs.filter((j) => j.jobStatus === "completed").length;
   
-  // Find next pending job
   const nextJob = jobs.find((j) => j.jobStatus === "pending" || !j.jobStatus);
   const currentStopIndex = jobs.findIndex((j) => j.jobStatus === "pending" || !j.jobStatus);
   const currentStopNumber = currentStopIndex >= 0 ? currentStopIndex + 1 : completedCount + 1;
@@ -453,6 +452,7 @@ export function JobList({ jobs, upcomingJobs = [], onJobClick, isClockedIn, onSt
           job.addressLine2 ? `, ${job.addressLine2}` : ""
         }, ${job.city}, ${job.state} ${job.zipCode}`;
         const binsToClean = job.binCount || job.binsCount || 1;
+        const isNextStop = nextJob?.id === job.id;
 
         return (
           <div
@@ -460,7 +460,7 @@ export function JobList({ jobs, upcomingJobs = [], onJobClick, isClockedIn, onSt
             className="job-card"
             onClick={() => onJobClick(job)}
             style={{
-              background: "#ffffff",
+              background: isNextStop ? "#f0fdf4" : "#ffffff",
               borderRadius: "12px",
               padding: "clamp(1rem, 4vw, 1.25rem)",
               boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
@@ -491,12 +491,12 @@ export function JobList({ jobs, upcomingJobs = [], onJobClick, isClockedIn, onSt
                 fontSize: "0.75rem",
                 fontWeight: "700",
                 textTransform: "uppercase",
-                background: statusColors.bg,
-                color: statusColors.text,
+                background: isNextStop ? "#16a34a" : statusColors.bg,
+                color: isNextStop ? "#ffffff" : statusColors.text,
                 letterSpacing: "0.5px",
               }}
             >
-              {job.jobStatus || "pending"}
+              {isNextStop ? "Next Stop" : job.jobStatus || "pending"}
             </span>
 
             <div className="job-header" style={{ marginBottom: "0.75rem", paddingRight: "4rem" }}>

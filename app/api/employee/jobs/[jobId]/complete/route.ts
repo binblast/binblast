@@ -118,9 +118,7 @@ export async function POST(
       updateData.employeeNotes = employeeNotes;
     }
 
-    if (binCount !== undefined && binCount !== null) {
-      updateData.binCount = parseInt(binCount.toString(), 10);
-    }
+    updateData.binCount = jobData.binCount ?? jobData.binsCount ?? 1;
 
     if (stickerStatus) {
       updateData.stickerStatus = stickerStatus;

@@ -82,15 +82,7 @@ export function InteractiveWorkflow({
 
   const jobListRef = useRef<HTMLDivElement>(null);
 
-  // Auto-select first pending job if no active job selected
-  useEffect(() => {
-    if (isClockedIn && jobs.length > 0 && !activeJob) {
-      const firstPendingJob = jobs.find(j => j.jobStatus === 'pending' || !j.jobStatus);
-      if (firstPendingJob) {
-        onJobClick(firstPendingJob);
-      }
-    }
-  }, [isClockedIn, jobs, activeJob, onJobClick]);
+  // Employees choose their first stop from the route list after clocking in.
 
   const handleStepClick = (stepId: string, jobId?: string) => {
     if (onWorkflowStepClick) {
@@ -106,20 +98,15 @@ export function InteractiveWorkflow({
         break;
 
       case 'viewJobs':
-        // Scroll to job list
-        if (jobListRef.current) {
-          jobListRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        // Highlight first pending job
-        const firstPendingJob = jobs.find(j => j.jobStatus === 'pending' || !j.jobStatus);
-        if (firstPendingJob) {
-          setTimeout(() => onJobClick(firstPendingJob), 300);
-        }
+        document.getElementById("employee-route-list")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
         break;
 
       case 'startJob':
-        if (jobId && activeJob && activeJob.jobStatus === 'pending') {
-          onStartJob(jobId);
+        if (activeJob) {
+          onJobClick(activeJob);
         }
         break;
 
@@ -409,8 +396,8 @@ export function InteractiveWorkflow({
         {renderStep(
           'viewJobs',
           2,
-          'View Jobs',
-          'See your assigned jobs',
+          'Go to First Stop',
+          'Open your route and navigate to the first customer',
           workflowState.shiftSteps.viewJobs,
           workflowState.currentStep?.id === 'viewJobs' ? workflowState.currentStep.lockedReason : undefined,
           false
