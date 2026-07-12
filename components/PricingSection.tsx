@@ -241,58 +241,10 @@ export function PricingSection() {
     console.log("[PricingSection] Onboarding completed:", data);
     setOnboardingData(data);
     setShowOnboardingWizard(false);
-    
-    // If user is not logged in, proceed directly to checkout with onboarding data
-    // The checkout will create the account after payment
-    if (!userId && selectedPlanId) {
-      try {
-        setLoadingPlanId(selectedPlanId);
-        const response = await fetch("/api/stripe/checkout", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ 
-            planId: selectedPlanId,
-            onboardingData: data,
-            referralCode: referralCodeFromUrl || undefined,
-            partnerCode: partnerCodeFromUrl || undefined,
-          }),
-        });
-
-        const responseData = await response.json();
-
-        if (!response.ok) {
-          throw new Error(responseData.error || "Failed to create checkout session");
-        }
-
-        // Redirect to Stripe Checkout
-        setSelectedPlanId(null);
-        setOnboardingData(null);
-        if (responseData.url) {
-          window.location.href = responseData.url;
-        } else {
-          throw new Error("No checkout URL returned");
-        }
-      } catch (error: any) {
-        console.error("Error creating checkout session:", error);
-        alert(error.message || "Failed to start checkout. Please try again.");
-        setLoadingPlanId(null);
-      }
-    } else {
-      // User is logged in, show confirmation modal
-      // The confirmation modal will handle checkout with onboarding data
-    }
   };
 
   const handleConfirmCheckout = async (applyCredit: boolean, referralCode?: string) => {
     if (!selectedPlanId) return;
-
-    // If onboarding data exists but user is not logged in, they need to complete onboarding first
-    if (onboardingData && !userId) {
-      setShowOnboardingWizard(true);
-      return;
-    }
 
     setLoadingPlanId(selectedPlanId);
     setLoadingCredit(true);
@@ -356,7 +308,7 @@ export function PricingSection() {
           onComplete={handleOnboardingComplete}
         />
       )}
-      {selectedPlanId && selectedPlanId !== "commercial" && !showOnboardingWizard && (
+      {selectedPlanId && selectedPlanId !== "commercial" && !showOnboardingWizard && (userId || onboardingData) && (
         <PlanConfirmationModal
           planId={selectedPlanId}
           isOpen={true}

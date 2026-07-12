@@ -57,7 +57,9 @@ export async function POST(req: NextRequest) {
       successUrlParams.push(`ref=${encodeURIComponent(referralCode)}`);
     }
     const successUrl = `${origin}/register?${successUrlParams.join('&')}`;
-    const cancelUrl = referralCode ? `${origin}/register?ref=${encodeURIComponent(referralCode)}` : `${origin}/#pricing`;
+    const cancelUrl = referralCode
+      ? `${origin}/?ref=${encodeURIComponent(referralCode)}#pricing`
+      : `${origin}/#pricing`;
 
     // Create Stripe Checkout Session
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -117,7 +119,7 @@ export async function POST(req: NextRequest) {
         }
 
         referralCodeDiscount = REFERRAL_DISCOUNT_AMOUNT;
-        referralCodeToProcess = normalizedCode;
+        referralCodeToProcess = validation.matchedCode || normalizedCode;
         console.log("[Checkout] Valid referral code provided:", referralCodeToProcess);
       } catch (referralError) {
         console.error("[Checkout] Error validating referral code:", referralError);
