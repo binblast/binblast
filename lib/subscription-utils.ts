@@ -1,6 +1,6 @@
 // lib/subscription-utils.ts
 
-import { PLAN_CONFIGS, PlanId } from "./stripe-config";
+import { PLAN_CONFIGS, PlanConfig, PlanId } from "./stripe-config";
 
 /**
  * Calculate prorated amount for subscription change
@@ -55,8 +55,11 @@ export function calculateProration(
  * Get monthly price for a plan
  * For "Monthly Clean" ($35/month), returns $35
  */
-export function getMonthlyPriceForPlan(planId: PlanId): number {
-  const plan = PLAN_CONFIGS[planId];
+export function getMonthlyPriceForPlan(
+  planId: PlanId,
+  planConfigs: Record<PlanId, PlanConfig> = PLAN_CONFIGS
+): number {
+  const plan = planConfigs[planId];
   
   if (!plan) return 0;
   

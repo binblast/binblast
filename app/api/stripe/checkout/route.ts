@@ -1,7 +1,8 @@
 // app/api/stripe/checkout/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { PLAN_CONFIGS, PlanId, isCustomQuote } from "@/lib/stripe-config";
+import { PlanId, isCustomQuote } from "@/lib/stripe-config";
+import { getPlatformPlanConfigs } from "@/lib/platform-pricing";
 import { stripe } from "@/lib/stripe";
 import { getReferralCouponId } from "@/lib/stripe-coupons";
 import type Stripe from "stripe";
@@ -21,7 +22,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const plan = PLAN_CONFIGS[planId as PlanId];
+    const planConfigs = await getPlatformPlanConfigs();
+    const plan = planConfigs[planId as PlanId];
     if (!plan) {
       return NextResponse.json(
         { error: "Invalid plan ID" },

@@ -1,7 +1,8 @@
 // app/api/stripe/change-subscription/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
+import { PlanId } from "@/lib/stripe-config";
+import { getPlatformPlanConfigs } from "@/lib/platform-pricing";
 import { stripe } from "@/lib/stripe";
 import { getMonthlyPriceForPlan, calculateCleaningRollover } from "@/lib/subscription-utils";
 import type Stripe from "stripe";
@@ -24,7 +25,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const newPlan = PLAN_CONFIGS[newPlanId as PlanId];
+    const planConfigs = await getPlatformPlanConfigs();
+    const newPlan = planConfigs[newPlanId as PlanId];
     if (!newPlan) {
       return NextResponse.json(
         { error: "Invalid plan ID" },
@@ -58,7 +60,7 @@ export async function POST(req: NextRequest) {
     // Handle one-time to subscription conversion
     if (!actualSubscriptionId && currentPlanId === "one-time" && stripeCustomerId) {
       // Create a new subscription from one-time payment
-      const newMonthlyPrice = getMonthlyPriceForPlan(newPlanId as PlanId);
+      const newMonthlyPrice = getMonthlyPriceForPlan(newPlanId as PlanId, planConfigs);
       
       // Create price for new plan
       let newPriceId: string;
@@ -186,8 +188,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Use Stripe's invoice preview to get the actual prorated amount
-    const currentMonthlyPrice = getMonthlyPriceForPlan(finalCurrentPlanId);
-    const newMonthlyPrice = getMonthlyPriceForPlan(newPlanId as PlanId);
+    const currentMonthlyPrice = getMonthlyPriceForPlan(finalCurrentPlanId, planConfigs);
+    const newMonthlyPrice = getMonthlyPriceForPlan(newPlanId as PlanId, planConfigs);
     const isUpgrade = newMonthlyPrice > currentMonthlyPrice;
     
     let actualProratedAmount = 0;
@@ -315,7 +317,7 @@ export async function POST(req: NextRequest) {
               currency: "usd",
               product_data: {
                 name: `Upgrade to ${newPlan.name}`,
-                description: `Prorated charge for upgrading from ${PLAN_CONFIGS[finalCurrentPlanId]?.name || finalCurrentPlanId} to ${newPlan.name}`,
+                description: `Prorated charge for upgrading from ${planConfigs[finalCurrentPlanId]?.name || finalCurrentPlanId} to ${newPlan.name}`,
               },
               unit_amount: actualProratedAmount,
             },

@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect } from "react";
 import { PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
+import { usePlatformPricing } from "@/hooks/usePlatformPricing";
 import { getMonthlyPriceForPlan, canChangePlan, calculateCleaningRollover } from "@/lib/subscription-utils";
 
 interface SubscriptionManagerProps {
@@ -25,6 +26,7 @@ export function SubscriptionManager({
   billingPeriodEnd,
   onPlanChanged,
 }: SubscriptionManagerProps) {
+  const { plans: platformPlans } = usePlatformPricing();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedNewPlan, setSelectedNewPlan] = useState<PlanId | null>(null);
@@ -48,24 +50,24 @@ export function SubscriptionManager({
   };
 
   // Safety checks - don't render if required props are missing or invalid
-  if (!userId || !currentPlanId || !PLAN_CONFIGS[currentPlanId]) {
+  if (!userId || !currentPlanId || !(platformPlans[currentPlanId] || PLAN_CONFIGS[currentPlanId])) {
     console.warn("[SubscriptionManager] Missing required props:", { userId: !!userId, currentPlanId });
     return null;
   }
 
-  const currentPlan = PLAN_CONFIGS[currentPlanId];
+  const currentPlan = platformPlans[currentPlanId] || PLAN_CONFIGS[currentPlanId];
   if (!currentPlan) {
     console.warn("[SubscriptionManager] Plan not found:", currentPlanId);
     return null;
   }
 
-  const currentMonthlyPrice = getMonthlyPriceForPlan(currentPlanId);
+  const currentMonthlyPrice = getMonthlyPriceForPlan(currentPlanId, platformPlans);
   if (isNaN(currentMonthlyPrice) || currentMonthlyPrice <= 0) {
     console.warn("[SubscriptionManager] Invalid monthly price:", currentMonthlyPrice);
     return null;
   }
 
-  const availablePlans = Object.values(PLAN_CONFIGS).filter(
+  const availablePlans = Object.values(platformPlans).filter(
     (plan) => plan && canChangePlan(plan.id) && plan.id !== currentPlanId
   );
 
@@ -105,7 +107,7 @@ export function SubscriptionManager({
           ? (data.proration.proratedCredit >= 100 ? data.proration.proratedCredit / 100 : data.proration.proratedCredit)
           : parseFloat(data.proration.proratedCredit) || 0;
 
-      const newPlan = PLAN_CONFIGS[newPlanId];
+      const newPlan = platformPlans[newPlanId] || PLAN_CONFIGS[newPlanId];
       let message = "Your subscription has been updated.";
       if (data.proration.isUpgrade && amountOwed > 0) {
         message = `Your plan is now ${newPlan.name}. A prorated charge of $${amountOwed.toFixed(2)} has been applied for the upgrade.`;
@@ -194,7 +196,7 @@ export function SubscriptionManager({
   const calculateProrationPreview = (newPlanId: PlanId) => {
     if (!billingPeriodEnd || !billingPeriodStart) return null;
 
-    const newMonthlyPrice = getMonthlyPriceForPlan(newPlanId);
+    const newMonthlyPrice = getMonthlyPriceForPlan(newPlanId, platformPlans);
     const now = new Date();
     const daysRemaining = Math.max(
       0,
@@ -240,8 +242,8 @@ export function SubscriptionManager({
 
   console.log("[SubscriptionManager] Rendering component for plan:", currentPlanId);
 
-  const selectedPlanConfig = selectedNewPlan ? PLAN_CONFIGS[selectedNewPlan] : null;
-  const selectedMonthlyPrice = selectedNewPlan ? getMonthlyPriceForPlan(selectedNewPlan) : 0;
+  const selectedPlanConfig = selectedNewPlan ? (platformPlans[selectedNewPlan] || PLAN_CONFIGS[selectedNewPlan]) : null;
+  const selectedMonthlyPrice = selectedNewPlan ? getMonthlyPriceForPlan(selectedNewPlan, platformPlans) : 0;
   const confirmProration = selectedNewPlan ? calculateProrationPreview(selectedNewPlan) : null;
 
   return (
@@ -427,7 +429,7 @@ export function SubscriptionManager({
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {availablePlans.map((plan) => {
-                  const newMonthlyPrice = getMonthlyPriceForPlan(plan.id);
+                  const newMonthlyPrice = getMonthlyPriceForPlan(plan.id, platformPlans);
                   const proration = calculateProrationPreview(plan.id);
                   const isSelected = selectedNewPlan === plan.id;
 

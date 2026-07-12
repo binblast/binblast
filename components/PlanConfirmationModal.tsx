@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
+import { usePlatformPricing } from "@/hooks/usePlatformPricing";
 
 interface PlanConfirmationModalProps {
   planId: PlanId;
@@ -34,9 +35,11 @@ export function PlanConfirmationModal({
   const [validatingCode, setValidatingCode] = useState(false);
   const [referralError, setReferralError] = useState<string | null>(null);
 
-  console.log("[PlanConfirmationModal] Render:", { planId, isOpen, planExists: !!PLAN_CONFIGS[planId] });
+  const { plans: platformPlans } = usePlatformPricing();
 
-  const plan = PLAN_CONFIGS[planId];
+  console.log("[PlanConfirmationModal] Render:", { planId, isOpen, planExists: !!platformPlans[planId] });
+
+  const plan = platformPlans[planId] || PLAN_CONFIGS[planId];
   if (!plan) {
     console.warn("[PlanConfirmationModal] Plan not found in PLAN_CONFIGS:", planId);
     return null;

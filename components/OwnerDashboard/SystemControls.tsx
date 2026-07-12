@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { TeamAccountManagement } from "@/components/OwnerDashboard/TeamAccountManagement";
+import { SubscriptionPricingSettings } from "@/components/OwnerDashboard/SubscriptionPricingSettings";
 
 interface SystemControlsProps {
   userId: string;
@@ -76,49 +77,7 @@ export function SystemControls({ userId, onNavigateTab }: SystemControlsProps) {
       }}>
         {activeTab === "team-logins" && <TeamAccountManagement initialPanel={teamLoginPanel} />}
 
-        {activeTab === "pricing" && (
-          <div>
-            <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "1rem" }}>
-              Subscription Pricing
-            </h3>
-            <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
-              Manage subscription plan pricing. Changes will apply to new subscriptions.
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {[
-                { plan: "Monthly Clean", price: 25 },
-                { plan: "Twice Monthly", price: 45 },
-                { plan: "Bi-Monthly", price: 20 },
-                { plan: "Quarterly", price: 15 },
-                { plan: "Commercial", price: 100 },
-              ].map((item) => (
-                <div key={item.plan} style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "1rem",
-                  background: "#f9fafb",
-                  borderRadius: "8px"
-                }}>
-                  <div style={{ fontWeight: "600" }}>{item.plan}</div>
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                    <span style={{ color: "#6b7280" }}>{"$" + item.price}</span>
-                    <button style={{
-                      padding: "0.25rem 0.75rem",
-                      background: "#f3f4f6",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "6px",
-                      fontSize: "0.75rem",
-                      cursor: "pointer"
-                    }}>
-                      Edit
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {activeTab === "pricing" && <SubscriptionPricingSettings />}
 
         {activeTab === "partner" && (
           <div>

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { PlanConfirmationModal } from "./PlanConfirmationModal";
 import { CustomQuoteWizard } from "./CustomQuoteWizard";
 import { CustomerOnboardingWizard } from "./CustomerOnboardingWizard";
+import { usePlatformPricing } from "@/hooks/usePlatformPricing";
 import { useFirebase } from "@/lib/firebase-context";
 
 
@@ -119,6 +120,20 @@ export function PricingSection() {
   const partnerCodeFromUrl = searchParams.get("partner") || "";
 
   const { isReady: firebaseReady } = useFirebase();
+  const { plans: platformPlans } = usePlatformPricing();
+
+  const mainPlans = PLANS.map((plan) => ({
+    ...plan,
+    price:
+      plan.id === "commercial"
+        ? plan.price
+        : platformPlans[plan.id]?.price ?? plan.price,
+  }));
+
+  const additionalPlans = ADDITIONAL_PLANS.map((plan) => ({
+    ...plan,
+    price: platformPlans[plan.id]?.price ?? plan.price,
+  }));
 
   // Get current user ID from Firebase Auth - only when Firebase is ready
   useEffect(() => {
@@ -376,7 +391,7 @@ export function PricingSection() {
 
         <div className="pricing-grid">
 
-          {PLANS.map((plan) => (
+          {mainPlans.map((plan) => (
 
             <button
 
@@ -477,7 +492,7 @@ export function PricingSection() {
         {/* Additional Plans (Collapsible) */}
         {showMoreServices && (
           <div className="pricing-grid" style={{ marginTop: "2.5rem" }}>
-            {ADDITIONAL_PLANS.map((plan) => (
+            {additionalPlans.map((plan) => (
               <button
                 key={plan.id}
                 onClick={() => handlePlanClick(plan.id)}

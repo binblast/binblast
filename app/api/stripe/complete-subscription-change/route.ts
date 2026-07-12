@@ -2,7 +2,8 @@
 // This endpoint completes the subscription change after payment is confirmed
 
 import { NextRequest, NextResponse } from "next/server";
-import { PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
+import { PlanId } from "@/lib/stripe-config";
+import { getPlatformPlanConfigs } from "@/lib/platform-pricing";
 import { stripe } from "@/lib/stripe";
 import { calculateCleaningRollover } from "@/lib/subscription-utils";
 import type Stripe from "stripe";
@@ -46,7 +47,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const newPlan = PLAN_CONFIGS[newPlanId as PlanId];
+    const planConfigs = await getPlatformPlanConfigs();
+    const newPlan = planConfigs[newPlanId as PlanId];
     if (!newPlan) {
       return NextResponse.json(
         { error: "Invalid plan ID" },
