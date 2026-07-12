@@ -22,17 +22,25 @@ import { CommercialAccounts } from "@/components/OwnerDashboard/CommercialAccoun
 import { PartnerProgramManagement } from "@/components/OwnerDashboard/PartnerProgramManagement";
 import { FinancialAnalytics } from "@/components/OwnerDashboard/FinancialAnalytics";
 import { SystemControls } from "@/components/OwnerDashboard/SystemControls";
-import { EmployeeStatus } from "@/components/OperatorDashboard/EmployeeStatus";
 import { RevenueTrendSummary, CustomerGrowthSummary, WeeklyCleaningsSummary, PlanDistributionSummary, RevenueByPlanSummary } from "@/components/AdminDashboard/ChartSummaries";
 import { AdminAIChat } from "@/components/AdminDashboard/AdminAIChat";
 import { KPICard } from "@/components/AdminDashboard/KPICard";
-import { CustomQuotesManagement } from "@/components/AdminDashboard/CustomQuotesManagement";
 import { MessagingCenter } from "@/components/AdminDashboard/MessagingCenter";
 import {
   parseCleaningDate,
   isCleaningCompleted,
   isCleaningCancelled,
 } from "@/lib/cleaning-schedule";
+
+const EmployeeStatus = dynamic(
+  () => import("@/components/OperatorDashboard/EmployeeStatus").then((mod) => mod.EmployeeStatus),
+  { loading: () => <p style={{ color: "#6b7280", padding: "1rem 0" }}>Loading employees...</p> }
+);
+
+const CustomQuotesManagement = dynamic(
+  () => import("@/components/AdminDashboard/CustomQuotesManagement").then((mod) => mod.CustomQuotesManagement),
+  { loading: () => <p style={{ color: "#6b7280", padding: "1rem 0" }}>Loading quotes...</p> }
+);
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
@@ -228,6 +236,21 @@ function DashboardPageContent() {
   const [extraBinQuantity, setExtraBinQuantity] = useState(1);
   const [extraBinLoading, setExtraBinLoading] = useState(false);
   const [operatorLoading, setOperatorLoading] = useState(false);
+  const [operatorOverviewBreakdown, setOperatorOverviewBreakdown] = useState({
+    directActive: 0,
+    directPaused: 0,
+    directInactive: 0,
+    commercialActive: 0,
+    totalBins: 0,
+    commercialUpcomingServices: 0,
+  });
+  const [operatorCleaningCounts, setOperatorCleaningCounts] = useState({
+    today: 0,
+    tomorrow: 0,
+    thisWeek: 0,
+  });
+  const operatorScopesLoadedRef = useRef<Set<string>>(new Set());
+  const [operatorLoadedScopes, setOperatorLoadedScopes] = useState<string[]>([]);
   const [operatorCustomerSearch, setOperatorCustomerSearch] = useState("");
   const [operatorCustomerFilter, setOperatorCustomerFilter] = useState<{ plan?: string; status?: string }>({});
   const [operatorDateFilter, setOperatorDateFilter] = useState<string>("");
@@ -401,6 +424,7 @@ function DashboardPageContent() {
           setUserId(firebaseUser.uid);
 
           try {
+            let skipPersonalCleanings = firebaseUser.email === ADMIN_EMAIL;
             const userDocRef = doc(db, "users", firebaseUser.uid);
             const userDoc = await getDoc(userDocRef);
 
@@ -455,6 +479,7 @@ function DashboardPageContent() {
               const newIsAdmin = (userRole === "admin") || (userData.email === ADMIN_EMAIL);
               const newIsOwner = (userRole === "owner") || (userData.email === ADMIN_EMAIL);
               const newIsOperator = userRole === "operator";
+              skipPersonalCleanings = newIsOperator || newIsAdmin || newIsOwner;
               
               // Only update state if values actually changed
               setIsAdmin((prev) => {
@@ -524,6 +549,7 @@ function DashboardPageContent() {
               });
               setIsOwner(false);
               const defaultIsAdmin = userEmail === ADMIN_EMAIL;
+              skipPersonalCleanings = defaultIsAdmin;
               setIsAdmin((prev) => {
                 if (prev !== defaultIsAdmin) {
                   return defaultIsAdmin;
@@ -534,8 +560,13 @@ function DashboardPageContent() {
               setRoleDetermined(true);
             }
 
-            // Load scheduled cleanings
-            try {
+            // Load scheduled cleanings (customers only — operators/admins load their own data)
+            if (skipPersonalCleanings) {
+              if (mounted) {
+                setCleaningsLoading(false);
+              }
+            } else {
+              try {
               // Ensure db is still available before importing firestore
               if (!db) {
                 const dbInstance = await getDbInstance();
@@ -570,6 +601,7 @@ function DashboardPageContent() {
               if (mounted) {
                 setCleaningsLoading(false);
               }
+            }
             }
           } catch (err: any) {
             console.error("[Dashboard] Error loading user data:", err);
@@ -980,11 +1012,18 @@ function DashboardPageContent() {
     };
   }, [isAdmin, isOperator, userId]);
 
-  // Load operator data
+  // Load operator dashboard data via API (overview first, other tabs lazy-loaded)
+  const fetchOperatorScope = useCallback(async (scope: "overview" | "customers" | "schedule") => {
+    const response = await fetch(`/api/operator/dashboard?scope=${scope}`);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || `Failed to load operator ${scope} data`);
+    }
+    return response.json();
+  }, []);
+
   useEffect(() => {
-    // Early return if not operator or no userId
     if (!isOperator || !userId) {
-      // Only reset operator data if it was previously loaded (to prevent unnecessary state updates)
       if (!isOperator && operatorDataLoadedRef.current) {
         setOperatorDirectCustomers([]);
         setOperatorCommercialCustomers([]);
@@ -998,193 +1037,113 @@ function DashboardPageContent() {
         });
         operatorDataLoadingRef.current = false;
         operatorDataLoadedRef.current = null;
+        operatorScopesLoadedRef.current = new Set();
+        setOperatorLoadedScopes([]);
       }
       return;
     }
-    
-    // CRITICAL: Prevent re-loading if data is already loaded for this userId
-    // This prevents infinite loops when component re-renders
-    if (operatorDataLoadedRef.current === userId) {
-      console.log("[Operator] Data already loaded for userId:", userId);
+
+    if (operatorDataLoadedRef.current === userId && operatorScopesLoadedRef.current.has("overview")) {
       return;
     }
-    
-    // Prevent multiple simultaneous loads
+
     if (operatorDataLoadingRef.current) {
-      console.log("[Operator] Data load already in progress, skipping...");
       return;
     }
-    
+
     let mounted = true;
-    
-    async function loadOperatorData() {
+
+    async function loadOperatorOverview() {
       operatorDataLoadingRef.current = true;
       setOperatorLoading(true);
       try {
-        const { getDbInstance } = await import("@/lib/firebase");
-        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-        const firestore = await safeImportFirestore();
-        const { collection, query, getDocs, where, orderBy } = firestore;
+        const data = await fetchOperatorScope("overview");
+        if (!mounted) return;
 
-        const db = await getDbInstance();
-        if (!db) return;
-
-        // Load all users (direct customers only - exclude partner customers)
-        const usersSnapshot = await getDocs(collection(db, "users"));
-        const directCustomers: any[] = [];
-        const commercialCustomers: any[] = [];
-        const partnerCustomerEmails = new Set<string>();
-
-        // Load partner bookings to identify partner customers
-        try {
-          const partnerBookingsSnapshot = await getDocs(collection(db, "partnerBookings"));
-          partnerBookingsSnapshot.forEach((doc) => {
-            const data = doc.data();
-            if (data.customerEmail) {
-              partnerCustomerEmails.add(data.customerEmail.toLowerCase());
-            }
-          });
-        } catch (err) {
-          console.warn("[Operator] Could not load partner bookings:", err);
+        setOperatorStats(data.stats);
+        setOperatorOverviewBreakdown(data.breakdown);
+        setOperatorCleaningCounts(data.cleaningCounts);
+        if (typeof data.newQuotesCount === "number") {
+          setNewQuotesCount(data.newQuotesCount);
         }
-
-        usersSnapshot.forEach((doc) => {
-          const data = doc.data();
-          const email = (data.email || "").toLowerCase();
-          
-          // Only include direct customers (not partner customers)
-          if (!partnerCustomerEmails.has(email)) {
-            const customer = {
-              id: doc.id,
-              firstName: data.firstName || "",
-              lastName: data.lastName || "",
-              email: data.email || "",
-              phone: data.phone || "",
-              addressLine1: data.addressLine1 || "",
-              city: data.city || "",
-              state: data.state || "",
-              zipCode: data.zipCode || "",
-              selectedPlan: data.selectedPlan || "",
-              subscriptionStatus: data.subscriptionStatus || "none",
-              paymentStatus: data.paymentStatus || "pending",
-              loyaltyRanking: data.loyaltyRanking || "Getting Started",
-              internalNotes: data.internalNotes || "",
-              servicePaused: data.servicePaused || false,
-            };
-
-            if (data.selectedPlan === "commercial" || data.selectedPlan?.includes("commercial") || data.selectedPlan?.includes("HOA")) {
-              commercialCustomers.push({
-                ...customer,
-                businessName: data.businessName || `${data.firstName} ${data.lastName}`,
-                contactPerson: `${data.firstName} ${data.lastName}`,
-                binsCount: data.binsCount || 1,
-                frequency: data.selectedPlan || "monthly",
-                specialInstructions: data.specialInstructions || "",
-              });
-            } else {
-              directCustomers.push(customer);
-            }
-          }
-        });
-
-        // Load all scheduled cleanings
-        const cleaningsSnapshot = await getDocs(query(
-          collection(db, "scheduledCleanings"),
-          orderBy("scheduledDate", "asc")
-        ));
-        const allCleanings: any[] = [];
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const sevenDaysFromNow = new Date();
-        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-        sevenDaysFromNow.setHours(23, 59, 59, 999);
-        const weekStart = new Date();
-        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-        weekStart.setHours(0, 0, 0, 0);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 7);
-
-        let upcomingCount = 0;
-        let completedThisWeek = 0;
-
-        cleaningsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          const cleaningDate = data.scheduledDate?.toDate?.() || new Date(data.scheduledDate);
-          
-          const cleaning = {
-            id: doc.id,
-            userId: data.userId || "",
-            customerName: data.userName || "",
-            customerEmail: data.userEmail || "",
-            addressLine1: data.addressLine1 || "",
-            addressLine2: data.addressLine2 || "",
-            city: data.city || "",
-            state: data.state || "",
-            zipCode: data.zipCode || "",
-            scheduledDate: cleaningDate,
-            scheduledTime: data.scheduledTime || "TBD",
-            planType: data.planType || "",
-            status: data.status || "scheduled",
-            notes: data.notes || "",
-            internalNotes: data.internalNotes || "",
-            completedAt: data.completedAt || null,
-            isCommercial: data.planType === "commercial" || data.planType?.includes("commercial"),
-          };
-
-          allCleanings.push(cleaning);
-
-          // Count upcoming cleanings (today + next 7 days)
-          if (cleaningDate >= today && cleaningDate <= sevenDaysFromNow && cleaning.status !== "cancelled") {
-            upcomingCount++;
-          }
-
-          // Count completed this week (check both status and jobStatus)
-          const isCompleted = cleaning.status === "completed" || (cleaning as any).jobStatus === "completed";
-          if (isCompleted && cleaning.completedAt) {
-            const completedDate = cleaning.completedAt?.toDate?.() || new Date(cleaning.completedAt);
-            if (completedDate >= weekStart && completedDate < weekEnd) {
-              completedThisWeek++;
-            }
-          }
-        });
-
-        // Load internal issues/notes (could be stored in a separate collection or as part of customer data)
-        // For now, count customers with internal notes as "open issues"
-        const openIssues = directCustomers.filter(c => c.internalNotes && c.internalNotes.trim().length > 0).length +
-                          commercialCustomers.filter(c => c.specialInstructions && c.specialInstructions.trim().length > 0).length;
-
-        if (mounted) {
-          setOperatorDirectCustomers(directCustomers);
-          setOperatorCommercialCustomers(commercialCustomers);
-          setOperatorAllCleanings(allCleanings);
-          setOperatorStats({
-            totalDirectCustomers: directCustomers.length,
-            totalCommercialCustomers: commercialCustomers.length,
-            upcomingCleanings: upcomingCount,
-            cleaningsCompletedThisWeek: completedThisWeek,
-            openIssues,
-          });
-          setOperatorLoading(false);
-          operatorDataLoadingRef.current = false;
-          operatorDataLoadedRef.current = userId; // Mark as loaded for this userId
-        }
+        operatorScopesLoadedRef.current.add("overview");
+        setOperatorLoadedScopes(Array.from(operatorScopesLoadedRef.current));
+        operatorDataLoadedRef.current = userId;
       } catch (err: any) {
-        console.error("[Dashboard] Error loading operator data:", err);
+        console.error("[Dashboard] Error loading operator overview:", err);
+      } finally {
         if (mounted) {
           setOperatorLoading(false);
           operatorDataLoadingRef.current = false;
-          // Don't set loaded flag on error, so it can retry
         }
       }
     }
 
-    loadOperatorData();
-    return () => { 
+    loadOperatorOverview();
+    return () => {
       mounted = false;
-      // Don't reset loading ref in cleanup - let it complete
-      // Only reset if userId changes or isOperator becomes false
     };
-  }, [isOperator, userId]);
+  }, [isOperator, userId, fetchOperatorScope]);
+
+  useEffect(() => {
+    if (!isOperator || !userId || !roleDetermined) return;
+
+    const scope =
+      operatorActiveTab === "customers"
+        ? "customers"
+        : operatorActiveTab === "schedule"
+          ? "schedule"
+          : null;
+
+    if (!scope || operatorScopesLoadedRef.current.has(scope)) return;
+    const tabScope = scope;
+
+    let mounted = true;
+    let loadingScope = false;
+
+    async function loadOperatorTabData() {
+      if (loadingScope) return;
+      loadingScope = true;
+      setOperatorLoading(true);
+      try {
+        const data = await fetchOperatorScope(tabScope);
+        if (!mounted) return;
+
+        if (tabScope === "customers") {
+          setOperatorDirectCustomers(data.directCustomers || []);
+          setOperatorCommercialCustomers(data.commercialCustomers || []);
+          if (data.stats) setOperatorStats(data.stats);
+          if (Array.isArray(data.cleanings)) {
+            setOperatorAllCleanings((prev) => {
+              const merged = new Map(prev.map((c: { id: string }) => [c.id, c]));
+              data.cleanings.forEach((cleaning: { id: string }) => merged.set(cleaning.id, cleaning));
+              return Array.from(merged.values());
+            });
+          }
+        } else if (tabScope === "schedule") {
+          if (Array.isArray(data.cleanings)) {
+            setOperatorAllCleanings(data.cleanings);
+          }
+          if (data.stats) setOperatorStats(data.stats);
+        }
+
+        operatorScopesLoadedRef.current.add(tabScope);
+        setOperatorLoadedScopes(Array.from(operatorScopesLoadedRef.current));
+      } catch (err: any) {
+        console.error(`[Dashboard] Error loading operator ${tabScope} data:`, err);
+      } finally {
+        if (mounted) {
+          setOperatorLoading(false);
+          loadingScope = false;
+        }
+      }
+    }
+
+    loadOperatorTabData();
+    return () => {
+      mounted = false;
+    };
+  }, [isOperator, userId, roleDetermined, operatorActiveTab, fetchOperatorScope]);
 
   // Helper functions
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
@@ -1530,26 +1489,20 @@ function DashboardPageContent() {
                 </div>
               )}
 
-              {operatorLoading ? (
-                <div style={{ textAlign: "center", padding: "3rem 0" }}>
-                  <p style={{ color: "#6b7280" }}>Loading operator dashboard...</p>
-                </div>
-              ) : (
-                <>
-                  {/* Sticky Tab Navigation */}
-                  <div className="tab-navigation" style={{
-                    position: "sticky",
-                    top: "80px",
-                    background: "#ffffff",
-                    borderRadius: "12px",
-                    padding: "0.5rem",
-                    marginBottom: "1.5rem",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                    border: "1px solid #e5e7eb",
-                    zIndex: 100,
-                    display: "flex",
-                    gap: "0.5rem"
-                  }}>
+              {/* Sticky Tab Navigation */}
+              <div className="tab-navigation" style={{
+                position: "sticky",
+                top: "80px",
+                background: "#ffffff",
+                borderRadius: "12px",
+                padding: "0.5rem",
+                marginBottom: "1.5rem",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb",
+                zIndex: 100,
+                display: "flex",
+                gap: "0.5rem"
+              }}>
                     <button
                       onClick={() => setOperatorActiveTab("overview")}
                       style={{
@@ -1632,8 +1585,16 @@ function DashboardPageContent() {
                     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                     border: "1px solid #e5e7eb"
                   }}>
+                    {operatorLoading &&
+                      ((operatorActiveTab === "overview" && !operatorLoadedScopes.includes("overview")) ||
+                        (operatorActiveTab === "customers" && !operatorLoadedScopes.includes("customers")) ||
+                        (operatorActiveTab === "schedule" && !operatorLoadedScopes.includes("schedule"))) && (
+                      <div style={{ textAlign: "center", padding: "2rem 0", color: "#6b7280" }}>
+                        Loading {operatorActiveTab} data...
+                      </div>
+                    )}
                     {/* TAB: Overview */}
-                    {operatorActiveTab === "overview" && (
+                    {operatorActiveTab === "overview" && operatorLoadedScopes.includes("overview") && (
                       <div>
                         <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
                       Operations Overview
@@ -1662,19 +1623,25 @@ function DashboardPageContent() {
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span>Active:</span>
                             <span style={{ fontWeight: "600", color: "#16a34a" }}>
-                              {operatorDirectCustomers.filter(c => c.subscriptionStatus === "active" && !c.servicePaused).length}
+                              {operatorDirectCustomers.length > 0
+                                ? operatorDirectCustomers.filter(c => c.subscriptionStatus === "active" && !c.servicePaused).length
+                                : operatorOverviewBreakdown.directActive}
                             </span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span>Paused:</span>
                             <span style={{ fontWeight: "600", color: "#f59e0b" }}>
-                              {operatorDirectCustomers.filter(c => c.servicePaused).length}
+                              {operatorDirectCustomers.length > 0
+                                ? operatorDirectCustomers.filter(c => c.servicePaused).length
+                                : operatorOverviewBreakdown.directPaused}
                             </span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span>Inactive:</span>
                             <span style={{ fontWeight: "600", color: "#ef4444" }}>
-                              {operatorDirectCustomers.filter(c => c.subscriptionStatus !== "active" && !c.servicePaused).length}
+                              {operatorDirectCustomers.length > 0
+                                ? operatorDirectCustomers.filter(c => c.subscriptionStatus !== "active" && !c.servicePaused).length
+                                : operatorOverviewBreakdown.directInactive}
                             </span>
                           </div>
                         </div>
@@ -1717,19 +1684,24 @@ function DashboardPageContent() {
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span>Active Accounts:</span>
                             <span style={{ fontWeight: "600", color: "#16a34a" }}>
-                              {operatorCommercialCustomers.filter(c => c.subscriptionStatus === "active" && !c.servicePaused).length}
+                              {operatorCommercialCustomers.length > 0
+                                ? operatorCommercialCustomers.filter(c => c.subscriptionStatus === "active" && !c.servicePaused).length
+                                : operatorOverviewBreakdown.commercialActive}
                             </span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span>Total Bins:</span>
                             <span style={{ fontWeight: "600", color: "#111827" }}>
-                              {operatorCommercialCustomers.reduce((sum, c) => sum + (c.binsCount || 1), 0)}
+                              {operatorCommercialCustomers.length > 0
+                                ? operatorCommercialCustomers.reduce((sum, c) => sum + (c.binsCount || 1), 0)
+                                : operatorOverviewBreakdown.totalBins}
                             </span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span>Upcoming Services:</span>
                             <span style={{ fontWeight: "600", color: "#2563eb" }}>
-                              {(() => {
+                              {operatorCommercialCustomers.length > 0
+                                ? (() => {
                                 const today = new Date();
                                 const next7Days = new Date();
                                 next7Days.setDate(next7Days.getDate() + 7);
@@ -1740,7 +1712,8 @@ function DashboardPageContent() {
                                          c.status !== "completed" &&
                                          operatorCommercialCustomers.some(ac => ac.email === c.customerEmail);
                                 }).length;
-                              })()}
+                              })()
+                                : operatorOverviewBreakdown.commercialUpcomingServices}
                             </span>
                           </div>
                         </div>
@@ -1786,7 +1759,8 @@ function DashboardPageContent() {
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span>Today:</span>
                             <span style={{ fontWeight: "600", color: "#dc2626" }}>
-                              {(() => {
+                              {operatorAllCleanings.length > 0
+                                ? (() => {
                                 const today = new Date();
                                 today.setHours(0, 0, 0, 0);
                                 const tomorrow = new Date(today);
@@ -1797,13 +1771,15 @@ function DashboardPageContent() {
                                          c.status !== "cancelled" && 
                                          c.status !== "completed";
                                 }).length;
-                              })()}
+                              })()
+                                : operatorCleaningCounts.today}
                             </span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span>Tomorrow:</span>
                             <span style={{ fontWeight: "600", color: "#f59e0b" }}>
-                              {(() => {
+                              {operatorAllCleanings.length > 0
+                                ? (() => {
                                 const tomorrow = new Date();
                                 tomorrow.setDate(tomorrow.getDate() + 1);
                                 tomorrow.setHours(0, 0, 0, 0);
@@ -1815,13 +1791,14 @@ function DashboardPageContent() {
                                          c.status !== "cancelled" && 
                                          c.status !== "completed";
                                 }).length;
-                              })()}
+                              })()
+                                : operatorCleaningCounts.tomorrow}
                             </span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span>This Week:</span>
                             <span style={{ fontWeight: "600", color: "#2563eb" }}>
-                              {operatorStats.upcomingCleanings}
+                              {operatorCleaningCounts.thisWeek || operatorStats.upcomingCleanings}
                             </span>
                           </div>
                         </div>
@@ -1989,7 +1966,7 @@ function DashboardPageContent() {
                     )}
 
                     {/* TAB: Customers */}
-                    {operatorActiveTab === "customers" && (
+                    {operatorActiveTab === "customers" && operatorLoadedScopes.includes("customers") && (
                       <div>
                         {/* Custom Quotes Management for Operators */}
                         <CustomQuotesManagement />
@@ -2224,7 +2201,7 @@ function DashboardPageContent() {
                     )}
 
                     {/* TAB: Schedule */}
-                    {operatorActiveTab === "schedule" && (
+                    {operatorActiveTab === "schedule" && operatorLoadedScopes.includes("schedule") && (
                       <div>
                         <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
                       Schedule & Route Board
@@ -2622,8 +2599,6 @@ function DashboardPageContent() {
                       </>
                     )}
                   </div>
-                </>
-              )}
             </div>
           </div>
         </main>

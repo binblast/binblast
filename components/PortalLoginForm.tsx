@@ -59,6 +59,24 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
                 return;
               }
 
+              if (expectedRole === "operator") {
+                const userRole = userData.role;
+                const isOperatorAccount =
+                  userRole === "operator" ||
+                  userRole === "admin" ||
+                  user.email === "binblastcompany@gmail.com";
+
+                if (!isOperatorAccount) {
+                  await signOut();
+                  setError("This email is not registered for Blast Command. Please use the correct portal.");
+                  setLoading(false);
+                  return;
+                }
+
+                router.push(redirectPath || "/dashboard");
+                return;
+              }
+
               const userPortal = await resolveUserPortal(user.uid, user.email);
 
               if (!portalMatchesExpected(userPortal, expectedRole)) {
