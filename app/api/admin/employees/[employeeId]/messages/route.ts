@@ -16,16 +16,31 @@ export async function GET(
     // Use Admin SDK for server-side operations
     const db = await getAdminFirestore();
 
-    const messagesSnapshot = await db
-      .collection("employeeMessages")
-      .where("employeeId", "==", employeeId)
-      .orderBy("createdAt", "desc")
-      .get();
+    // Query without orderBy to avoid composite index requirement.
+    // Load both messages to and from this team member.
+    const [receivedSnapshot, sentSnapshot] = await Promise.all([
+      db.collection("employeeMessages").where("employeeId", "==", employeeId).get(),
+      db.collection("employeeMessages").where("senderId", "==", employeeId).get(),
+    ]);
 
-    const messages = messagesSnapshot.docs.map((doc: any) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const messageMap = new Map<string, Record<string, unknown>>();
+
+    receivedSnapshot.docs.forEach((doc: { id: string; data: () => Record<string, unknown> }) => {
+      messageMap.set(doc.id, { id: doc.id, ...doc.data() });
+    });
+    sentSnapshot.docs.forEach((doc: { id: string; data: () => Record<string, unknown> }) => {
+      messageMap.set(doc.id, { id: doc.id, ...doc.data() });
+    });
+
+    const messages = Array.from(messageMap.values()).sort((a, b) => {
+      const aTime =
+        (a.createdAt as { toMillis?: () => number })?.toMillis?.() ||
+        ((a.createdAt as { _seconds?: number })?._seconds || 0) * 1000;
+      const bTime =
+        (b.createdAt as { toMillis?: () => number })?.toMillis?.() ||
+        ((b.createdAt as { _seconds?: number })?._seconds || 0) * 1000;
+      return bTime - aTime;
+    });
 
     return NextResponse.json({
       success: true,
