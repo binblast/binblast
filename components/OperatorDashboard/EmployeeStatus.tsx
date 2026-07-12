@@ -7,6 +7,7 @@ import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { formatTime, getTodayDateString } from "@/lib/employee-utils";
 import { OpenFlagsPanel } from "@/components/OperatorDashboard/OpenFlagsPanel";
+import { ManagerClockControls } from "@/components/OperatorDashboard/ManagerClockControls";
 
 interface EmployeeStatus {
   id: string;
@@ -38,12 +39,33 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
   const [editingServiceAreas, setEditingServiceAreas] = useState<string[]>([]);
   const [newServiceArea, setNewServiceArea] = useState<string>("");
   const [savingServiceArea, setSavingServiceArea] = useState<string | null>(null);
+  const [managerEmail, setManagerEmail] = useState<string | undefined>();
+  const [managerRole, setManagerRole] = useState<string | undefined>();
 
   useEffect(() => {
     loadEmployeeStatus();
     // Set up real-time listener
     setupListener();
-  }, []);
+    loadManagerInfo();
+  }, [userId]);
+
+  async function loadManagerInfo() {
+    if (!userId) return;
+    try {
+      const db = await getDbInstance();
+      if (!db) return;
+      const firestore = await safeImportFirestore();
+      const { doc, getDoc } = firestore;
+      const userDoc = await getDoc(doc(db, "users", userId));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setManagerEmail(data.email || undefined);
+        setManagerRole(data.role || undefined);
+      }
+    } catch (error) {
+      console.error("Error loading manager info:", error);
+    }
+  }
 
   const loadEmployeeStatus = async () => {
     try {
@@ -386,6 +408,17 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
                     </span>
                   </div>
                 </div>
+
+                <ManagerClockControls
+                  employeeId={employee.id}
+                  employeeName={employee.name}
+                  isClockedIn={isClockedIn}
+                  managerId={userId}
+                  managerEmail={managerEmail}
+                  managerRole={managerRole}
+                  onUpdated={loadEmployeeStatus}
+                  compact
+                />
 
                 {/* Service Area Section */}
                 <div

@@ -1,8 +1,6 @@
 // app/api/employee/clock-out/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { getActiveClockIn, calculateHoursWorked } from "@/lib/employee-utils";
+import { clockOutEmployee } from "@/lib/clock-in-service";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,46 +14,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Find active clock-in record
-    const activeClockIn = await getActiveClockIn(employeeId);
-    if (!activeClockIn) {
-      return NextResponse.json(
-        { message: "No active clock-in found" },
-        { status: 400 }
-      );
-    }
-
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { message: "Database not available" },
-        { status: 500 }
-      );
-    }
-
-    const firestore = await safeImportFirestore();
-    const { doc, updateDoc, serverTimestamp } = firestore;
-
-    // Update clock-in record with clock-out time
-    const clockInRef = doc(db, "clockIns", activeClockIn.id);
-    const clockOutTime = serverTimestamp();
-    
-    await updateDoc(clockInRef, {
-      clockOutTime,
-      isActive: false,
-    });
-
-    // Calculate hours worked
-    const hoursWorked = calculateHoursWorked(
-      activeClockIn.clockInTime,
-      clockOutTime
-    );
+    const result = await clockOutEmployee({ employeeId });
 
     return NextResponse.json(
       {
-        message: "Clock-out successful",
-        clockOutTime,
-        hoursWorked: Math.round(hoursWorked * 100) / 100, // Round to 2 decimal places
+        message: result.message,
+        hoursWorked: result.hoursWorked,
       },
       { status: 200 }
     );

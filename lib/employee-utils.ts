@@ -74,6 +74,11 @@ export function getTodayDateString(): string {
  */
 export async function getEmployeeClockInStatus(employeeId: string): Promise<ClockInRecord | null> {
   try {
+    const activeClockIn = await getActiveClockIn(employeeId);
+    if (activeClockIn) {
+      return activeClockIn;
+    }
+
     const db = await getDbInstance();
     if (!db) return null;
 
@@ -91,11 +96,18 @@ export async function getEmployeeClockInStatus(employeeId: string): Promise<Cloc
     const snapshot = await getDocs(q);
     if (snapshot.empty) return null;
 
-    const doc = snapshot.docs[0];
-    return {
+    const records = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    } as ClockInRecord;
+    })) as ClockInRecord[];
+
+    records.sort((a, b) => {
+      const aTime = a.clockInTime?.toDate?.() || new Date(a.clockInTime || 0);
+      const bTime = b.clockInTime?.toDate?.() || new Date(b.clockInTime || 0);
+      return bTime.getTime() - aTime.getTime();
+    });
+
+    return records[0] || null;
   } catch (error) {
     console.error("Error getting clock-in status:", error);
     return null;

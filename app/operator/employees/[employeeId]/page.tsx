@@ -53,6 +53,7 @@ export default function EmployeeDetailPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [managerId, setManagerId] = useState<string | undefined>();
   const [activeTab, setActiveTab] = useState<string>(searchParams.get("tab") || "overview");
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showFlagModal, setShowFlagModal] = useState(false);
@@ -104,6 +105,7 @@ export default function EmployeeDetailPage() {
         }
 
         setUserRole(role);
+        setManagerId(auth.currentUser.uid);
       } else {
         router.push("/login?redirect=/operator/employees/" + employeeId);
       }
@@ -475,7 +477,7 @@ export default function EmployeeDetailPage() {
             <div>
               {activeTab === "overview" && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2rem" }}>
-                  <CurrentShiftCard employeeId={employeeId} refreshKey={refreshKey} />
+                  <CurrentShiftCard employeeId={employeeId} refreshKey={refreshKey} managerId={managerId} />
                   <div className="mobile-stack-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
                     <RouteMap
                       employeeId={employeeId}

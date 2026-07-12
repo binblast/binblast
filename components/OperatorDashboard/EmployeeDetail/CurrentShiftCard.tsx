@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 import { MarkStopCompleteModal } from "./MarkStopCompleteModal";
 import { AddNoteModal } from "./AddNoteModal";
 import { ViewProofModal } from "./ViewProofModal";
+import { ManagerClockControls } from "@/components/OperatorDashboard/ManagerClockControls";
+import { getDbInstance } from "@/lib/firebase";
+import { safeImportFirestore } from "@/lib/firebase-module-loader";
 
 interface ShiftStatus {
   shiftStatus: "not_started" | "clocked_in" | "completed";
@@ -33,12 +36,16 @@ interface EarningsData {
 interface CurrentShiftCardProps {
   employeeId: string;
   refreshKey?: number;
+  managerId?: string;
 }
 
-export function CurrentShiftCard({ employeeId, refreshKey = 0 }: CurrentShiftCardProps) {
+export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: CurrentShiftCardProps) {
   const [shiftStatus, setShiftStatus] = useState<ShiftStatus | null>(null);
   const [earnings, setEarnings] = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [managerEmail, setManagerEmail] = useState<string | undefined>();
+  const [managerRole, setManagerRole] = useState<string | undefined>();
+  const [employeeName, setEmployeeName] = useState("Employee");
   const [showMarkCompleteModal, setShowMarkCompleteModal] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [showViewProofModal, setShowViewProofModal] = useState(false);
@@ -46,13 +53,41 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0 }: CurrentShiftCar
   useEffect(() => {
     loadShiftStatus();
     loadEarnings();
+    loadManagerInfo();
     // Refresh every 30 seconds
     const interval = setInterval(() => {
       loadShiftStatus();
       loadEarnings();
     }, 30000);
     return () => clearInterval(interval);
-  }, [employeeId, refreshKey]);
+  }, [employeeId, refreshKey, managerId]);
+
+  async function loadManagerInfo() {
+    try {
+      const response = await fetch("/api/operator/employee-status");
+      if (response.ok) {
+        const data = await response.json();
+        const employee = (data.employees || []).find((item: { id: string }) => item.id === employeeId);
+        if (employee?.name) {
+          setEmployeeName(employee.name);
+        }
+      }
+
+      if (!managerId) return;
+      const db = await getDbInstance();
+      if (!db) return;
+      const firestore = await safeImportFirestore();
+      const { doc, getDoc } = firestore;
+      const userDoc = await getDoc(doc(db, "users", managerId));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setManagerEmail(data.email || undefined);
+        setManagerRole(data.role || undefined);
+      }
+    } catch (error) {
+      console.error("Error loading manager info:", error);
+    }
+  }
 
   const loadShiftStatus = async () => {
     try {
@@ -344,6 +379,16 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0 }: CurrentShiftCar
           </div>
         </div>
       </div>
+
+      <ManagerClockControls
+        employeeId={employeeId}
+        employeeName={employeeName}
+        isClockedIn={displayStatus.shiftStatus === "clocked_in"}
+        managerId={managerId}
+        managerEmail={managerEmail}
+        managerRole={managerRole}
+        onUpdated={handleRefresh}
+      />
 
       {/* Action Buttons */}
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>

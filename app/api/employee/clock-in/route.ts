@@ -1,9 +1,6 @@
 // app/api/employee/clock-in/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { getTodayDateString, getActiveClockIn, getEmployeeData } from "@/lib/employee-utils";
-import { assignJobsToEmployeeOnClockIn } from "@/lib/job-assignment";
+import { clockInEmployee } from "@/lib/clock-in-service";
 import { checkCertificationStatus } from "@/lib/training-certification";
 
 export async function POST(req: NextRequest) {
@@ -18,7 +15,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check certification status
     const certification = await checkCertificationStatus(employeeId);
     if (!certification.canClockIn) {
       if (certification.status === "expired") {
@@ -44,62 +40,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Allow clock-in at any time - close any existing active clock-in first
-    const today = getTodayDateString();
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { message: "Database not available" },
-        { status: 500 }
-      );
-    }
-
-    const firestore = await safeImportFirestore();
-    const { collection, addDoc, serverTimestamp, doc, updateDoc } = firestore;
-
-    // Close any existing active clock-in
-    const activeClockIn = await getActiveClockIn(employeeId);
-    if (activeClockIn) {
-      try {
-        const clockInsRef = collection(db, "clockIns");
-        const activeClockInDoc = doc(db, "clockIns", activeClockIn.id);
-        await updateDoc(activeClockInDoc, {
-          clockOutTime: serverTimestamp(),
-          isActive: false,
-        });
-      } catch (error) {
-        console.error("Error closing existing clock-in:", error);
-        // Continue with new clock-in even if closing previous one fails
-      }
-    }
-
-    // Create new clock-in record
-    const clockInsRef = collection(db, "clockIns");
-    const clockInData = {
+    const result = await clockInEmployee({
       employeeId,
       employeeEmail,
-      clockInTime: serverTimestamp(),
-      clockOutTime: null,
-      date: today,
-      isActive: true,
-    };
-
-    const clockInDoc = await addDoc(clockInsRef, clockInData);
-
-    // Auto-assign jobs to this employee
-    try {
-      await assignJobsToEmployeeOnClockIn(employeeId);
-    } catch (assignError) {
-      console.error("Error assigning jobs on clock-in:", assignError);
-      // Don't fail the clock-in if job assignment fails
-    }
+    });
 
     return NextResponse.json(
       {
-        message: "Clock-in successful",
-        clockInId: clockInDoc.id,
-        clockInTime: clockInData.clockInTime,
-        date: today,
+        message: result.message,
+        clockInId: result.clockInId,
+        date: result.date,
       },
       { status: 200 }
     );
