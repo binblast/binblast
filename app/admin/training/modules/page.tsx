@@ -4,6 +4,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { PDFUploader } from "@/components/Admin/PDFUploader";
 import { useRouter } from "next/navigation";
 
@@ -76,6 +77,25 @@ export default function AdminTrainingModulesPage() {
 
   return (
     <div style={{ padding: "2rem" }}>
+      <Link
+        href="/dashboard"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "0.375rem",
+          marginBottom: "1.25rem",
+          padding: "0.5rem 0.875rem",
+          background: "#ffffff",
+          border: "1px solid #e5e7eb",
+          borderRadius: "8px",
+          fontSize: "0.875rem",
+          fontWeight: "600",
+          color: "#374151",
+          textDecoration: "none",
+        }}
+      >
+        ← Back to Command Center
+      </Link>
       <div style={{ marginBottom: "2rem" }}>
         <h1 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "0.5rem" }}>
           Training Modules Management

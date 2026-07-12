@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { EmployeeContactList } from "@/components/AdminDashboard/EmployeeContactList";
 import { HireEmployeeForm } from "@/components/AdminDashboard/HireEmployeeForm";
@@ -109,6 +110,25 @@ export default function AdminEmployeesPage() {
       <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "#f9fafb" }}>
         <div className="container">
           <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+            <Link
+              href="/dashboard"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.375rem",
+                marginBottom: "1.25rem",
+                padding: "0.5rem 0.875rem",
+                background: "#ffffff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                color: "#374151",
+                textDecoration: "none",
+              }}
+            >
+              ← Back to Command Center
+            </Link>
             {/* Header */}
             <div style={{ marginBottom: "2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>

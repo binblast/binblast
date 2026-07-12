@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { MessagingCenter } from "@/components/AdminDashboard/MessagingCenter";
 import { canAccessBusinessCommandCenter } from "@/lib/owner-auth";
 import dynamic from "next/dynamic";
@@ -84,6 +85,25 @@ export default function MessagesPage() {
     <div style={{ minHeight: "100vh", background: "#f9fafb" }}>
       <Navbar />
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
+        <Link
+          href="/dashboard"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.375rem",
+            marginBottom: "1.25rem",
+            padding: "0.5rem 0.875rem",
+            background: "#ffffff",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            color: "#374151",
+            textDecoration: "none",
+          }}
+        >
+          ← Back to Command Center
+        </Link>
         <h1 style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "1.5rem", color: "#111827" }}>
           Messaging Center
         </h1>

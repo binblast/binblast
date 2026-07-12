@@ -1,5 +1,50 @@
 /* Site-wide mobile optimizations for Bin Blast Co. */
 
+/* Scrollable tab bars — all screen sizes */
+.tab-navigation {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.tab-navigation::-webkit-scrollbar {
+  height: 6px;
+}
+
+.tab-navigation::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+
+.tab-navigation button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.owner-command-center {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.owner-tab-bar {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.owner-tab-bar .tab-navigation {
+  min-width: 0;
+}
+
 :root {
   --page-padding-y: clamp(1.25rem, 4vw, 4rem);
   --page-padding-x: clamp(1rem, 4vw, 2rem);

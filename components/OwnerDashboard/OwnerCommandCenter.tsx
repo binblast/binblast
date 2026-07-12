@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BusinessOverview } from "@/components/OwnerDashboard/BusinessOverview";
 import { CustomerManagement } from "@/components/OwnerDashboard/CustomerManagement";
 import { CleaningScheduleBoard } from "@/components/OwnerDashboard/CleaningScheduleBoard";
@@ -103,13 +103,43 @@ interface OwnerCommandCenterProps {
   newPartnerApplicationsCount?: number;
 }
 
+function BackToHubButton({ onClick, label = "Command Hub" }: { onClick: () => void; label?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "0.375rem",
+        padding: "0.5rem 0.875rem",
+        marginBottom: "1.25rem",
+        background: "#f9fafb",
+        border: "1px solid #e5e7eb",
+        borderRadius: "8px",
+        fontSize: "0.875rem",
+        fontWeight: "600",
+        color: "#374151",
+        cursor: "pointer",
+        minHeight: "44px",
+      }}
+    >
+      ← Back to {label}
+    </button>
+  );
+}
+
 export function OwnerCommandCenter({
   userId,
   userName,
   newQuotesCount = 0,
   newPartnerApplicationsCount = 0,
 }: OwnerCommandCenterProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<OwnerTab>("hub");
+
+  const goToHub = () => setActiveTab("hub");
+  const showBackButton = activeTab !== "hub";
 
   const cardStyle = {
     display: "block" as const,
@@ -126,7 +156,7 @@ export function OwnerCommandCenter({
   };
 
   return (
-    <div>
+    <div className="owner-command-center">
       {/* Header */}
       <div style={{ marginBottom: "1.5rem" }}>
         <h1
@@ -201,45 +231,46 @@ export function OwnerCommandCenter({
       )}
 
       {/* Tab navigation */}
-      <div
-        className="tab-navigation"
-        style={{
-          position: "sticky",
-          top: "80px",
-          background: "#ffffff",
-          borderRadius: "12px",
-          padding: "0.5rem",
-          marginBottom: "1.5rem",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-          border: "1px solid #e5e7eb",
-          zIndex: 100,
-          display: "flex",
-          gap: "0.5rem",
-        }}
-      >
-        {NAV_TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            style={{
-              flex: tab === "hub" ? "0 0 auto" : "1",
-              minWidth: tab === "hub" ? "120px" : "100px",
-              padding: "0.75rem 1rem",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "0.875rem",
-              fontWeight: "600",
-              cursor: "pointer",
-              background: activeTab === tab ? "#16a34a" : "transparent",
-              color: activeTab === tab ? "#ffffff" : "#6b7280",
-              transition: "all 0.2s",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {TAB_LABELS[tab]}
-          </button>
-        ))}
+      <div className="owner-tab-bar" style={{ marginBottom: "1.5rem" }}>
+        <div
+          className="tab-navigation"
+          style={{
+            position: "sticky",
+            top: "80px",
+            background: "#ffffff",
+            borderRadius: "12px",
+            padding: "0.5rem",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+            border: "1px solid #e5e7eb",
+            zIndex: 100,
+            display: "flex",
+            gap: "0.5rem",
+          }}
+        >
+          {NAV_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              style={{
+                flex: "0 0 auto",
+                minWidth: "max-content",
+                padding: "0.75rem 1rem",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                cursor: "pointer",
+                background: activeTab === tab ? "#16a34a" : "transparent",
+                color: activeTab === tab ? "#ffffff" : "#6b7280",
+                transition: "all 0.2s",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {TAB_LABELS[tab]}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}
@@ -253,6 +284,10 @@ export function OwnerCommandCenter({
           minHeight: "400px",
         }}
       >
+        {showBackButton && (
+          <BackToHubButton onClick={goToHub} />
+        )}
+
         {activeTab === "hub" && (
           <div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
@@ -292,14 +327,15 @@ export function OwnerCommandCenter({
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
               {[
-                { href: "/admin/employees", label: "Hire & Manage Employees" },
-                { href: "/admin/training/modules", label: "Training Module Admin" },
-                { href: "/admin/messages", label: "Full Messaging Center" },
-                { href: "/admin/partners", label: "Partner Admin Panel" },
+                { tab: "employees" as OwnerTab, label: "Hire & Manage Employees" },
+                { tab: "training" as OwnerTab, label: "Training Module Admin" },
+                { tab: "messages" as OwnerTab, label: "Full Messaging Center" },
+                { tab: "partners" as OwnerTab, label: "Partner Admin Panel" },
               ].map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
+                <button
+                  key={link.tab}
+                  type="button"
+                  onClick={() => setActiveTab(link.tab)}
                   style={{
                     padding: "0.875rem 1rem",
                     border: "1px solid #e5e7eb",
@@ -307,14 +343,35 @@ export function OwnerCommandCenter({
                     fontSize: "0.875rem",
                     fontWeight: "600",
                     color: "#374151",
-                    textDecoration: "none",
                     background: "#f9fafb",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    minHeight: "44px",
                   }}
                 >
                   {link.label} →
-                </Link>
+                </button>
               ))}
             </div>
+
+            <p style={{ marginTop: "1.25rem", fontSize: "0.8125rem", color: "#9ca3af" }}>
+              Need the full admin panel?{" "}
+              <button
+                type="button"
+                onClick={() => router.push("/admin/employees")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#16a34a",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  padding: 0,
+                  fontSize: "0.8125rem",
+                }}
+              >
+                Open admin tools →
+              </button>
+            </p>
           </div>
         )}
 
@@ -325,9 +382,13 @@ export function OwnerCommandCenter({
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", marginBottom: "1.5rem" }}>
               <h2 style={{ fontSize: "1.5rem", fontWeight: "600", margin: 0, color: "var(--text-dark)" }}>Employee Management</h2>
-              <Link href="/admin/employees" style={{ padding: "0.625rem 1rem", background: "#16a34a", color: "#fff", borderRadius: "8px", fontSize: "0.875rem", fontWeight: "600", textDecoration: "none" }}>
-                Hire & Admin Employees →
-              </Link>
+              <button
+                type="button"
+                onClick={() => router.push("/admin/employees")}
+                style={{ padding: "0.625rem 1rem", background: "#16a34a", color: "#fff", borderRadius: "8px", fontSize: "0.875rem", fontWeight: "600", border: "none", cursor: "pointer" }}
+              >
+                Open Full Admin Panel →
+              </button>
             </div>
             <EmployeeStatus userId={userId} />
           </div>
@@ -351,7 +412,20 @@ export function OwnerCommandCenter({
         )}
         {activeTab === "financials" && <FinancialAnalytics userId={userId} />}
         {activeTab === "messages" && <MessagingCenter userId={userId} />}
-        {activeTab === "training" && <OwnerTrainingOverview />}
+        {activeTab === "training" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+              <button
+                type="button"
+                onClick={() => router.push("/admin/training/modules")}
+                style={{ padding: "0.5rem 0.875rem", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "0.8125rem", fontWeight: "600", background: "#f9fafb", cursor: "pointer" }}
+              >
+                Manage Modules →
+              </button>
+            </div>
+            <OwnerTrainingOverview />
+          </div>
+        )}
         {activeTab === "photos" && <OwnerPhotosOverview />}
         {activeTab === "settings" && <SystemControls userId={userId} />}
       </div>
