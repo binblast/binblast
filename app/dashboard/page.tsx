@@ -256,7 +256,7 @@ function DashboardPageContent() {
   const [operatorDateFilter, setOperatorDateFilter] = useState<string>("");
   const [operatorCityFilter, setOperatorCityFilter] = useState<string>("");
   const [operatorTypeFilter, setOperatorTypeFilter] = useState<string>("");
-  const [operatorActiveTab, setOperatorActiveTab] = useState<"overview" | "employees" | "customers" | "schedule">("overview");
+  const [operatorActiveTab, setOperatorActiveTab] = useState<"overview" | "employees" | "customers" | "schedule" | "messages">("overview");
   const [adminActiveTab, setAdminActiveTab] = useState<"overview" | "customers" | "operations" | "financial" | "partners" | "analytics" | "employees" | "messages">("overview");
   const [newQuotesCount, setNewQuotesCount] = useState(0);
   const [showQuotesNotification, setShowQuotesNotification] = useState(true);
@@ -1575,6 +1575,24 @@ function DashboardPageContent() {
                     >
                       Schedule
                     </button>
+                    <button
+                      onClick={() => setOperatorActiveTab("messages")}
+                      style={{
+                        flex: "1",
+                        minWidth: "120px",
+                        padding: "0.75rem 1.5rem",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "0.95rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        background: operatorActiveTab === "messages" ? "#16a34a" : "transparent",
+                        color: operatorActiveTab === "messages" ? "#ffffff" : "#6b7280",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      Messages
+                    </button>
                   </div>
 
                   {/* Unified Card Container */}
@@ -1962,6 +1980,16 @@ function DashboardPageContent() {
                     {operatorActiveTab === "employees" && (
                       <div>
                         <EmployeeStatus userId={userId} />
+                      </div>
+                    )}
+
+                    {/* TAB: Messages */}
+                    {operatorActiveTab === "messages" && (
+                      <div>
+                        <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
+                          Team Messages
+                        </h2>
+                        <MessagingCenter userId={userId} mode="staff" />
                       </div>
                     )}
 

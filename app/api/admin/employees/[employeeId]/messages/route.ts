@@ -82,10 +82,11 @@ export async function POST(
       employeeId,
       employeeEmail: employeeData.email || "",
       employeeName: `${employeeData.firstName || ""} ${employeeData.lastName || ""}`.trim(),
+      recipientRole: employeeData.role || "employee",
       message: message.trim(),
       subject: subject || (type === "praise" ? "Great work!" : type === "warning" ? "Important Notice" : "Message from Admin"),
       type: type || "request",
-      from: "admin", // TODO: Get actual admin user ID
+      from: employeeData.role === "operator" ? "operator" : "admin",
       read: false,
       priority: type === "warning" ? "high" : "normal",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),

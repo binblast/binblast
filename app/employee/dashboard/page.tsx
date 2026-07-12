@@ -16,6 +16,7 @@ import { ToastContainer, Toast } from "@/components/EmployeeDashboard/Toast";
 import { TrainingSection } from "@/components/EmployeeDashboard/TrainingSection";
 import { EquipmentChecklist } from "@/components/EmployeeDashboard/EquipmentChecklist";
 import { InteractiveWorkflow } from "@/components/EmployeeDashboard/InteractiveWorkflow";
+import { MessagingCenter } from "@/components/AdminDashboard/MessagingCenter";
 import {
   getEmployeeData,
   ClockInRecord,
@@ -53,7 +54,7 @@ interface Job {
   stickerStatus?: "existing" | "placed" | "none";
 }
 
-type DashboardTab = "home" | "training" | "equipment";
+type DashboardTab = "home" | "training" | "equipment" | "messages";
 
 export default function EmployeeDashboardPage() {
   const router = useRouter();
@@ -720,6 +721,28 @@ export default function EmployeeDashboardPage() {
             >
               Equipment
             </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveTab("messages");
+              }}
+              type="button"
+              style={{
+                padding: "0.75rem 1.5rem",
+                border: "none",
+                background: "transparent",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                color: activeTab === "messages" ? "#16a34a" : "#6b7280",
+                cursor: "pointer",
+                borderBottom: activeTab === "messages" ? "2px solid #16a34a" : "2px solid transparent",
+                marginBottom: "-2px",
+                transition: "all 0.2s",
+              }}
+            >
+              Messages
+            </button>
           </div>
 
           {/* Tab Content */}
@@ -839,6 +862,22 @@ export default function EmployeeDashboardPage() {
               employeeId={employee.id}
               isClockedIn={isClockedIn}
             />
+          )}
+
+          {activeTab === "messages" && employee && (
+            <div>
+              <h2
+                style={{
+                  fontSize: "clamp(1.25rem, 5vw, 1.5rem)",
+                  fontWeight: "700",
+                  color: "#111827",
+                  marginBottom: "1rem",
+                }}
+              >
+                Team Messages
+              </h2>
+              <MessagingCenter userId={employee.id} mode="employee" />
+            </div>
           )}
         </div>
       </main>
