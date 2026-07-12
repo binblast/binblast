@@ -181,6 +181,17 @@ export function Navbar() {
     setIsSignInOpen(false);
   }, []);
 
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.classList.add("nav-menu-open");
+    } else {
+      document.body.classList.remove("nav-menu-open");
+    }
+    return () => {
+      document.body.classList.remove("nav-menu-open");
+    };
+  }, [isMenuOpen]);
+
   const portalMenuItems: PortalMenuItem[] = [
     {
       id: "customer",

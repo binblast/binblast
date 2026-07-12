@@ -1356,7 +1356,7 @@ function DashboardPageContent() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+        <main className="page-main" style={{ background: "var(--bg-white)" }}>
           <div className="container">
             <div style={{ textAlign: "center", padding: "3rem 0" }}>
               <p style={{ color: "var(--text-light)" }}>Loading your dashboard...</p>
@@ -1371,7 +1371,7 @@ function DashboardPageContent() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+        <main className="page-main" style={{ background: "var(--bg-white)" }}>
           <div className="container">
             <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center", padding: "3rem 0" }}>
               <h1 className="section-title" style={{ marginBottom: "1rem" }}>Error</h1>
@@ -1406,9 +1406,9 @@ function DashboardPageContent() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "3rem 0", background: "#f9fafb" }}>
+        <main className="page-main dashboard-shell" style={{ background: "#f9fafb" }}>
           <div className="container">
-            <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+            <div className="dashboard-shell" style={{ maxWidth: "1400px", margin: "0 auto" }}>
               
               {/* Operator Header */}
               <div style={{ marginBottom: "2rem" }}>
@@ -1431,7 +1431,7 @@ function DashboardPageContent() {
 
               {/* New Quotes Notification Banner for Operators */}
               {newQuotesCount > 0 && showQuotesNotification && (
-                <div style={{
+                <div className="mobile-banner" style={{
                   marginBottom: "1.5rem",
                   padding: "1rem 1.25rem",
                   background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
@@ -1471,7 +1471,7 @@ function DashboardPageContent() {
                       </div>
                     </div>
                   </div>
-                  <div style={{
+                  <div className="mobile-banner-actions" style={{
                     display: "flex",
                     gap: "0.5rem",
                     alignItems: "center"
@@ -1537,7 +1537,7 @@ function DashboardPageContent() {
               ) : (
                 <>
                   {/* Sticky Tab Navigation */}
-                  <div style={{
+                  <div className="tab-navigation" style={{
                     position: "sticky",
                     top: "80px",
                     background: "#ffffff",
@@ -1548,8 +1548,7 @@ function DashboardPageContent() {
                     border: "1px solid #e5e7eb",
                     zIndex: 100,
                     display: "flex",
-                    gap: "0.5rem",
-                    flexWrap: "wrap"
+                    gap: "0.5rem"
                   }}>
                     <button
                       onClick={() => setOperatorActiveTab("overview")}
@@ -2635,13 +2634,11 @@ function DashboardPageContent() {
   return (
     <>
       <Navbar />
-      <main style={{ 
-        minHeight: "calc(100vh - 80px)", 
-        padding: "clamp(1.5rem, 4vw, 3rem) 0", 
+      <main className="page-main dashboard-shell" style={{ 
         background: "#f9fafb" 
       }}>
         <div className="container">
-          <div style={{ 
+          <div className="dashboard-shell" style={{ 
             maxWidth: "1200px", 
             margin: "0 auto",
             padding: "0 clamp(1rem, 4vw, 2rem)"
@@ -2678,7 +2675,7 @@ function DashboardPageContent() {
                 <>
                   {/* New Partner Applications Notification Banner */}
                   {(isAdmin || isOperator) && newPartnerApplicationsCount > 0 && showPartnerApplicationsNotification && (
-                    <div style={{
+                    <div className="mobile-banner" style={{
                       marginBottom: "1.5rem",
                       padding: "1rem 1.25rem",
                       background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
@@ -2718,7 +2715,7 @@ function DashboardPageContent() {
                           </div>
                         </div>
                       </div>
-                      <div style={{
+                      <div className="mobile-banner-actions" style={{
                         display: "flex",
                         gap: "0.5rem",
                         alignItems: "center"
@@ -2779,7 +2776,7 @@ function DashboardPageContent() {
 
                   {/* New Quotes Notification Banner */}
                   {(isAdmin || isOperator) && newQuotesCount > 0 && showQuotesNotification && (
-                    <div style={{
+                    <div className="mobile-banner" style={{
                       marginBottom: "1.5rem",
                       padding: "1rem 1.25rem",
                       background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
@@ -2819,7 +2816,7 @@ function DashboardPageContent() {
                           </div>
                         </div>
                       </div>
-                      <div style={{
+                      <div className="mobile-banner-actions" style={{
                         display: "flex",
                         gap: "0.5rem",
                         alignItems: "center"
@@ -3993,7 +3990,7 @@ function DashboardPageContent() {
                             {/* Charts Section */}
                             <div style={{
                               display: "grid",
-                              gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+                              gridTemplateColumns: "repeat(auto-fit, minmax(min(400px, 100%), 1fr))",
                               gap: "1.5rem",
                               marginBottom: "2rem"
                             }}>
@@ -5061,7 +5058,7 @@ export default function DashboardPage() {
     <Suspense fallback={
       <>
         <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+        <main className="page-main" style={{ background: "var(--bg-white)" }}>
           <div className="container">
             <div style={{ textAlign: "center", padding: "3rem 0" }}>
               <p style={{ color: "var(--text-light)" }}>Loading your dashboard...</p>

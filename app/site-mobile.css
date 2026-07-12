@@ -1,0 +1,243 @@
+/* Site-wide mobile optimizations for Bin Blast Co. */
+
+:root {
+  --page-padding-y: clamp(1.25rem, 4vw, 4rem);
+  --page-padding-x: clamp(1rem, 4vw, 2rem);
+  --touch-min: 44px;
+}
+
+/* Shared page shell */
+.page-main {
+  min-height: calc(100vh - 80px);
+  min-height: calc(100dvh - 80px);
+  padding: var(--page-padding-y) 0;
+}
+
+.dashboard-shell {
+  width: 100%;
+}
+
+body.nav-menu-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Fluid padding for pages not yet using page-main */
+  main {
+    padding-top: var(--page-padding-y) !important;
+    padding-bottom: var(--page-padding-y) !important;
+    min-height: calc(100dvh - 80px);
+  }
+
+  /* Force single-column grids with large min widths on small screens */
+  [style*="minmax(400px"],
+  [style*="minmax(300px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .container {
+    padding-left: var(--page-padding-x) !important;
+    padding-right: var(--page-padding-x) !important;
+  }
+
+  /* Scrollable tab bars */
+  .tab-navigation {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    gap: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .tab-navigation::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-navigation button {
+    flex: 0 0 auto !important;
+    min-width: max(100px, fit-content) !important;
+    white-space: nowrap !important;
+    min-height: var(--touch-min) !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  /* Dashboard cards & sections */
+  .dashboard-shell .dashboard-card,
+  .dashboard-shell [style*="borderRadius: \"20px\""] {
+    padding: clamp(1rem, 4vw, 1.5rem) !important;
+    border-radius: 16px !important;
+  }
+
+  .dashboard-shell h1 {
+    font-size: clamp(1.5rem, 6vw, 2.5rem) !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Stack side-by-side grids on mobile */
+  .mobile-stack-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Notification / alert banners */
+  .mobile-banner {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  .mobile-banner > div:last-child,
+  .mobile-banner-actions {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .mobile-banner button,
+  .mobile-banner a {
+    width: 100% !important;
+    min-height: var(--touch-min) !important;
+    justify-content: center !important;
+  }
+
+  /* Tables */
+  .table-responsive {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -0.5rem;
+    padding: 0 0.5rem;
+  }
+
+  .table-responsive table {
+    min-width: 560px;
+  }
+
+  .dashboard-shell table {
+    font-size: 0.875rem;
+  }
+
+  .dashboard-shell th,
+  .dashboard-shell td {
+    padding: 0.625rem 0.5rem !important;
+  }
+
+  /* Filter toolbars */
+  .mobile-filter-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .mobile-filter-row input,
+  .mobile-filter-row select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Touch-friendly controls site-wide */
+  button,
+  .btn,
+  a.btn,
+  select,
+  input[type="submit"],
+  input[type="button"] {
+    min-height: var(--touch-min);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="date"],
+  input[type="time"],
+  input[type="number"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important;
+    min-height: var(--touch-min);
+    box-sizing: border-box;
+  }
+
+  /* Employee detail header actions */
+  .employee-detail-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+  }
+
+  .employee-detail-actions button {
+    width: 100% !important;
+    min-height: var(--touch-min) !important;
+    font-size: 0.8125rem !important;
+    padding: 0.625rem 0.75rem !important;
+  }
+
+  .mobile-stack-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .mobile-stack-header .employee-detail-actions {
+    margin-top: 0.25rem;
+  }
+
+  /* Partner dashboard */
+  .partners-dashboard-shell h1 {
+    font-size: clamp(1.5rem, 6vw, 2.25rem) !important;
+  }
+
+  .partners-dashboard-shell > div:first-child {
+    padding-top: clamp(2rem, 6vw, 4rem) !important;
+    padding-bottom: clamp(2rem, 6vw, 4rem) !important;
+  }
+
+  .partners-dashboard-shell .partners-hero-subtitle {
+    font-size: clamp(0.95rem, 3.5vw, 1.25rem) !important;
+  }
+
+  /* Portal / auth pages */
+  .portal-login-shell .section-title {
+    font-size: clamp(1.5rem, 5vw, 2.25rem) !important;
+  }
+
+  /* Modals - bottom sheet feel on phones */
+  .mobile-modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .mobile-modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 92vh !important;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .tab-navigation button {
+    min-width: 88px !important;
+    padding: 0.625rem 0.75rem !important;
+    font-size: 0.8125rem !important;
+  }
+
+  .employee-detail-actions {
+    grid-template-columns: 1fr !important;
+  }
+}

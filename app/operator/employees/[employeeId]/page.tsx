@@ -240,7 +240,7 @@ export default function EmployeeDetailPage() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "3rem 0", background: "#f9fafb" }}>
+        <main className="page-main" style={{ background: "#f9fafb" }}>
           <div style={{ textAlign: "center", color: "#6b7280" }}>Loading...</div>
         </main>
       </>
@@ -251,7 +251,7 @@ export default function EmployeeDetailPage() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "3rem 0", background: "#f9fafb" }}>
+        <main className="page-main" style={{ background: "#f9fafb" }}>
           <div style={{ textAlign: "center", color: "#dc2626" }}>Employee not found</div>
         </main>
       </>
@@ -261,9 +261,9 @@ export default function EmployeeDetailPage() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: "calc(100vh - 80px)", padding: "2rem 0", background: "#f9fafb" }}>
+      <main className="page-main dashboard-shell" style={{ background: "#f9fafb" }}>
         <div className="container">
-          <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 1rem" }}>
+          <div className="dashboard-shell" style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 1rem" }}>
             {/* Header Section */}
             <div style={{ marginBottom: "2rem" }}>
               <button
@@ -282,7 +282,7 @@ export default function EmployeeDetailPage() {
                 ← Back
               </button>
               
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "1rem" }}>
+              <div className="mobile-stack-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "1rem", flexWrap: "wrap", gap: "1rem" }}>
                 <div>
                   <h1 style={{ fontSize: "2rem", fontWeight: "700", color: "#111827", marginBottom: "0.5rem" }}>
                     {employee.firstName} {employee.lastName}
@@ -304,7 +304,7 @@ export default function EmployeeDetailPage() {
                     </span>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                <div className="employee-detail-actions" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   <button
                     onClick={() => handleRefresh()}
                     disabled={refreshing}
@@ -432,7 +432,7 @@ export default function EmployeeDetailPage() {
             </div>
 
             {/* Tab Navigation */}
-            <div style={{
+            <div className="tab-navigation" style={{
               display: "flex",
               gap: "0.5rem",
               marginBottom: "2rem",
@@ -474,7 +474,7 @@ export default function EmployeeDetailPage() {
               {activeTab === "overview" && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2rem" }}>
                   <CurrentShiftCard employeeId={employeeId} refreshKey={refreshKey} />
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
+                  <div className="mobile-stack-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
                     <RouteMap
                       employeeId={employeeId}
                       stops={stops}
@@ -487,7 +487,7 @@ export default function EmployeeDetailPage() {
               )}
 
               {activeTab === "assignment" && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
+                <div className="mobile-stack-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
                   <ZonesCountiesPanel employeeId={employeeId} />
                   <CustomerAssignmentModule employeeId={employeeId} onAssign={handleRefresh} />
                 </div>

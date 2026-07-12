@@ -28,7 +28,7 @@ export function PortalLoginShell({
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "#f9fafb" }}>
+      <main className="page-main portal-login-shell" style={{ background: "#f9fafb" }}>
         <div className="container">
           <div style={{ maxWidth: "560px", margin: "0 auto" }}>
             <h1
@@ -83,7 +83,7 @@ export function PortalWrongRoleMessage({ title, message }: PortalWrongRoleMessag
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+      <main className="page-main portal-login-shell" style={{ background: "var(--bg-white)" }}>
         <div className="container">
           <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
             <h1 className="section-title" style={{ marginBottom: "1rem" }}>
@@ -120,7 +120,7 @@ export function PortalLoadingShell() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+      <main className="page-main portal-login-shell" style={{ background: "var(--bg-white)" }}>
         <div className="container">
           <div style={{ textAlign: "center" }}>Loading...</div>
         </div>

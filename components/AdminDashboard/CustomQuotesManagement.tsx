@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { CreateOfferModal } from "./CreateOfferModal";
 import { ContactCustomerModal } from "@/components/OperatorDashboard/ContactCustomerModal";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface CustomQuote {
   id: string;
@@ -27,6 +28,7 @@ interface CustomQuote {
 }
 
 export function CustomQuotesManagement() {
+  const isMobile = useIsMobile();
   const [quotes, setQuotes] = useState<CustomQuote[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -189,19 +191,26 @@ export function CustomQuotesManagement() {
         }}>
           Custom Quote Requests
         </h3>
-        <div style={{
-          display: "flex",
-          gap: "0.5rem",
-          flexWrap: "wrap"
-        }}>
+        <div
+          className={isMobile ? "mobile-filter-row tab-navigation" : undefined}
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            flexWrap: isMobile ? "nowrap" : "wrap",
+            overflowX: isMobile ? "auto" : "visible",
+            WebkitOverflowScrolling: "touch",
+            paddingBottom: isMobile ? "0.25rem" : 0,
+            width: isMobile ? "100%" : "auto",
+          }}
+        >
           {["all", "pending", "pending_review", "contacted", "quoted", "converted"].map((status) => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
               style={{
-                padding: "0.5rem 1rem",
+                padding: isMobile ? "0.625rem 0.875rem" : "0.5rem 1rem",
                 background: filterStatus === status
-                  ? status === "pending_review" 
+                  ? status === "pending_review"
                     ? "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)"
                     : "linear-gradient(135deg, #16a34a 0%, #15803d 100%)"
                   : "#f9fafb",
@@ -212,7 +221,10 @@ export function CustomQuotesManagement() {
                 color: filterStatus === status ? "#ffffff" : "#6b7280",
                 cursor: "pointer",
                 textTransform: status === "pending_review" ? "none" : "capitalize",
-                transition: "all 0.2s ease"
+                transition: "all 0.2s ease",
+                flexShrink: 0,
+                minHeight: "44px",
+                whiteSpace: "nowrap",
               }}
             >
               {status === "pending_review" ? "Requires Review" : status}
@@ -256,20 +268,25 @@ export function CustomQuotesManagement() {
                 e.currentTarget.style.borderColor = "#e5e7eb";
               }}
             >
-              <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                flexWrap: "wrap",
-                gap: "1rem"
-              }}>
-                <div style={{ flex: 1, minWidth: "200px" }}>
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.75rem",
-                    marginBottom: "0.5rem"
-                  }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: isMobile ? "column" : "row",
+                  justifyContent: "space-between",
+                  alignItems: isMobile ? "stretch" : "flex-start",
+                  gap: "1rem",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: isMobile ? 0 : "200px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: isMobile ? "flex-start" : "center",
+                      flexDirection: isMobile ? "column" : "row",
+                      gap: "0.5rem",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
                     <div style={{
                       fontSize: "clamp(1rem, 3vw, 1.125rem)",
                       fontWeight: "700",
@@ -288,31 +305,41 @@ export function CustomQuotesManagement() {
                       {getStatusLabel(quote.status)}
                     </span>
                     {quote.requiresManualReview && (
-                      <span style={{
-                        padding: "0.25rem 0.75rem",
-                        borderRadius: "6px",
-                        fontSize: "0.75rem",
-                        fontWeight: "600",
-                        background: "#fee2e2",
-                        color: "#dc2626",
-                        marginLeft: "0.5rem"
-                      }}>
+                      <span
+                        style={{
+                          padding: "0.25rem 0.75rem",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: "600",
+                          background: "#fee2e2",
+                          color: "#dc2626",
+                        }}
+                      >
                         Review Required
                       </span>
                     )}
                   </div>
-                  <div style={{
-                    fontSize: "0.875rem",
-                    color: "#6b7280",
-                    marginBottom: "0.25rem"
-                  }}>
-                    {quote.email} • {quote.phone}
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "#6b7280",
+                      marginBottom: "0.25rem",
+                      lineHeight: 1.5,
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    <div>{quote.email}</div>
+                    <div>{quote.phone}</div>
                   </div>
-                  <div style={{
-                    fontSize: "0.875rem",
-                    color: "#6b7280",
-                    marginBottom: "0.5rem"
-                  }}>
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "#6b7280",
+                      marginBottom: "0.5rem",
+                      lineHeight: 1.5,
+                      wordBreak: "break-word",
+                    }}
+                  >
                     {getPropertyTypeLabel(quote.propertyType)} • {quote.address}
                   </div>
                   {quote.estimatedPriceLow && quote.estimatedPriceHigh ? (
@@ -349,11 +376,54 @@ export function CustomQuotesManagement() {
                     Submitted: {formatDate(quote.submittedAt)}
                   </div>
                 </div>
-                <div style={{
-                  display: "flex",
-                  gap: "0.5rem",
-                  flexWrap: "wrap"
-                }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr 1fr" : "auto auto",
+                    gap: "0.5rem",
+                    width: isMobile ? "100%" : "auto",
+                  }}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setContactModal({ mode: "email", quote });
+                    }}
+                    style={{
+                      padding: "0.75rem 1rem",
+                      background: "#2563eb",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "0.9375rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      minHeight: "48px",
+                      gridColumn: isMobile ? "span 1" : "auto",
+                    }}
+                  >
+                    Email
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setContactModal({ mode: "call", quote });
+                    }}
+                    style={{
+                      padding: "0.75rem 1rem",
+                      background: "#16a34a",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "0.9375rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      minHeight: "48px",
+                      gridColumn: isMobile ? "span 1" : "auto",
+                    }}
+                  >
+                    Call
+                  </button>
                   {(quote.status === "pending" || quote.status === "pending_review") && (
                     <button
                       onClick={(e) => {
@@ -362,7 +432,7 @@ export function CustomQuotesManagement() {
                         setShowCreateOfferModal(true);
                       }}
                       style={{
-                        padding: "0.5rem 1rem",
+                        padding: "0.75rem 1rem",
                         background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
                         border: "none",
                         borderRadius: "8px",
@@ -370,17 +440,9 @@ export function CustomQuotesManagement() {
                         fontWeight: "600",
                         color: "#ffffff",
                         cursor: "pointer",
-                        minHeight: "36px",
+                        minHeight: "48px",
+                        gridColumn: isMobile ? "1 / -1" : "auto",
                         boxShadow: "0 2px 4px rgba(22, 163, 74, 0.3)",
-                        transition: "all 0.2s ease"
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "translateY(-1px)";
-                        e.currentTarget.style.boxShadow = "0 4px 8px rgba(22, 163, 74, 0.4)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "0 2px 4px rgba(22, 163, 74, 0.3)";
                       }}
                     >
                       Create Offer
@@ -392,14 +454,16 @@ export function CustomQuotesManagement() {
                       onChange={(e) => updateQuoteStatus(quote.id, e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                       style={{
-                        padding: "0.5rem 0.75rem",
+                        padding: "0.75rem",
                         border: "2px solid #e5e7eb",
                         borderRadius: "8px",
-                        fontSize: "0.875rem",
+                        fontSize: "16px",
                         fontWeight: "600",
                         cursor: "pointer",
                         background: "#ffffff",
-                        minHeight: "36px"
+                        minHeight: "48px",
+                        gridColumn: isMobile ? "1 / -1" : "auto",
+                        width: isMobile ? "100%" : "auto",
                       }}
                     >
                       <option value="pending">Pending</option>
@@ -408,44 +472,6 @@ export function CustomQuotesManagement() {
                       <option value="converted">Converted</option>
                     </select>
                   )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setContactModal({ mode: "email", quote });
-                    }}
-                    style={{
-                      padding: "0.5rem 1rem",
-                      background: "#2563eb",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "8px",
-                      fontSize: "0.875rem",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      minHeight: "36px",
-                    }}
-                  >
-                    Email
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setContactModal({ mode: "call", quote });
-                    }}
-                    style={{
-                      padding: "0.5rem 1rem",
-                      background: "#16a34a",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "8px",
-                      fontSize: "0.875rem",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      minHeight: "36px",
-                    }}
-                  >
-                    Call
-                  </button>
                 </div>
               </div>
 
@@ -535,12 +561,14 @@ export function CustomQuotesManagement() {
                     </div>
                   )}
 
-                  <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-                    gap: "1rem",
-                    marginBottom: "1rem"
-                  }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(250px, 1fr))",
+                      gap: "1rem",
+                      marginBottom: "1rem",
+                    }}
+                  >
                     {quote.propertyType === "residential" && (
                       <>
                         <div>

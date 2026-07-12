@@ -960,7 +960,7 @@ export default function PartnerDashboardPage() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+        <main className="page-main partners-dashboard-shell" style={{ background: "var(--bg-white)" }}>
           <div className="container">
             <div style={{ textAlign: "center" }}>Loading...</div>
           </div>
@@ -976,7 +976,7 @@ export default function PartnerDashboardPage() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: "calc(100vh - 80px)", background: "linear-gradient(to bottom right, #f9fafb, #eff6ff, #f9fafb)" }}>
+      <main className="page-main partners-dashboard-shell" style={{ background: "linear-gradient(to bottom right, #f9fafb, #eff6ff, #f9fafb)" }}>
         {/* Hero Section */}
         <div style={{
           position: "relative",
@@ -996,7 +996,7 @@ export default function PartnerDashboardPage() {
               <h1 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: "700", marginBottom: "1rem", letterSpacing: "-0.02em" }}>
                 Welcome Back, {partnerData.businessName}
               </h1>
-              <p style={{ fontSize: "1.25rem", color: "#bfdbfe", marginBottom: "1.5rem" }}>
+              <p className="partners-hero-subtitle" style={{ fontSize: "1.25rem", color: "#bfdbfe", marginBottom: "1.5rem" }}>
                 Here's how your Bin Blast Co. partnership is performing.
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
@@ -1214,7 +1214,7 @@ export default function PartnerDashboardPage() {
             {/* Booking Link & Partner Signup Link Cards */}
             <div style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(400px, 100%), 1fr))",
               gap: "1.5rem",
               marginBottom: "2rem"
             }}>

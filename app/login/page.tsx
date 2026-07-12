@@ -22,7 +22,7 @@ function LoginForm() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+      <main className="page-main portal-login-shell" style={{ background: "var(--bg-white)" }}>
         <div className="container">
           <div style={{ maxWidth: "720px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>

@@ -133,11 +133,18 @@ html, body {
 .nav-toggle {
     display: none;
     flex-direction: column;
-    gap: 4px;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0.5rem;
+    padding: 0.625rem;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 8px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .nav-toggle span {

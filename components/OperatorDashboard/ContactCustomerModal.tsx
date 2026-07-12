@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface ContactCustomerModalProps {
   isOpen: boolean;
@@ -32,10 +33,10 @@ function getTelHref(phone: string): string {
   return `tel:${digits}`;
 }
 
-function isMobileDevice(): boolean {
-  if (typeof window === "undefined") return false;
-  return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|Mobile/i.test(navigator.userAgent);
-}
+const touchButton = {
+  minHeight: "48px",
+  WebkitTapHighlightColor: "transparent",
+} as const;
 
 export function ContactCustomerModal({
   isOpen,
@@ -47,13 +48,23 @@ export function ContactCustomerModal({
   quoteId,
   onEmailSent,
 }: ContactCustomerModalProps) {
+  const isMobile = useIsMobile();
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && mode === "email") {
@@ -67,9 +78,6 @@ export function ContactCustomerModal({
     if (isOpen && mode === "call") {
       setCopied(false);
       setError(null);
-    }
-    if (isOpen) {
-      setIsMobile(isMobileDevice());
     }
   }, [isOpen, mode, customerName]);
 
@@ -138,59 +146,100 @@ export function ContactCustomerModal({
 
   return (
     <div
+      className={isMobile ? "mobile-modal-overlay" : undefined}
       style={{
         position: "fixed",
         inset: 0,
         background: "rgba(0, 0, 0, 0.5)",
         display: "flex",
-        alignItems: "center",
+        alignItems: isMobile ? "flex-end" : "center",
         justifyContent: "center",
         zIndex: 1000,
-        padding: "1rem",
+        padding: isMobile ? 0 : "1rem",
       }}
       onClick={onClose}
     >
       <div
+        className={isMobile ? "mobile-modal-content" : undefined}
         style={{
           background: "#ffffff",
-          borderRadius: "12px",
-          padding: "2rem",
-          maxWidth: mode === "email" ? "600px" : "440px",
+          borderRadius: isMobile ? "16px 16px 0 0" : "12px",
+          padding: isMobile ? "1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom))" : "2rem",
+          maxWidth: isMobile ? "100%" : mode === "email" ? "600px" : "440px",
           width: "100%",
-          maxHeight: "90vh",
+          maxHeight: isMobile ? "92vh" : "90vh",
           overflowY: "auto",
           boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {isMobile && (
+          <div
+            style={{
+              width: "40px",
+              height: "4px",
+              background: "#d1d5db",
+              borderRadius: "999px",
+              margin: "0 auto 1rem",
+            }}
+          />
+        )}
+
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1.5rem",
+            alignItems: "flex-start",
+            marginBottom: "1rem",
+            gap: "0.75rem",
           }}
         >
-          <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#111827", margin: 0 }}>
+          <h2
+            style={{
+              fontSize: isMobile ? "1.25rem" : "1.5rem",
+              fontWeight: "600",
+              color: "#111827",
+              margin: 0,
+            }}
+          >
             {mode === "email" ? "Email Customer" : "Call Customer"}
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             style={{
-              background: "transparent",
+              background: "#f3f4f6",
               border: "none",
-              fontSize: "1.5rem",
+              fontSize: "1.25rem",
               color: "#6b7280",
               cursor: "pointer",
+              width: "40px",
+              height: "40px",
+              borderRadius: "999px",
+              flexShrink: 0,
+              ...touchButton,
             }}
           >
             ×
           </button>
         </div>
 
-        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "1.25rem" }}>
-          <strong style={{ color: "#111827" }}>{customerName}</strong>
-          {mode === "email" ? ` · ${customerEmail}` : ` · ${formattedPhone || "No phone on file"}`}
+        <div
+          style={{
+            fontSize: "0.875rem",
+            color: "#6b7280",
+            marginBottom: "1.25rem",
+            lineHeight: 1.5,
+          }}
+        >
+          <div style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
+            {customerName}
+          </div>
+          {mode === "email" ? (
+            <div style={{ wordBreak: "break-all" }}>{customerEmail}</div>
+          ) : (
+            <div>{formattedPhone || "No phone on file"}</div>
+          )}
         </div>
 
         {mode === "email" ? (
@@ -214,10 +263,11 @@ export function ContactCustomerModal({
                 disabled={sending || success}
                 style={{
                   width: "100%",
-                  padding: "0.75rem",
+                  padding: "0.875rem",
                   border: "1px solid #e5e7eb",
-                  borderRadius: "6px",
-                  fontSize: "0.875rem",
+                  borderRadius: "8px",
+                  fontSize: "16px",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
@@ -237,16 +287,18 @@ export function ContactCustomerModal({
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                rows={8}
+                rows={isMobile ? 6 : 8}
                 disabled={sending || success}
                 style={{
                   width: "100%",
-                  padding: "0.75rem",
+                  padding: "0.875rem",
                   border: "1px solid #e5e7eb",
-                  borderRadius: "6px",
-                  fontSize: "0.875rem",
+                  borderRadius: "8px",
+                  fontSize: "16px",
                   resize: "vertical",
                   fontFamily: "inherit",
+                  boxSizing: "border-box",
+                  minHeight: isMobile ? "140px" : undefined,
                 }}
               />
             </div>
@@ -257,7 +309,7 @@ export function ContactCustomerModal({
                   padding: "0.75rem",
                   background: "#fee2e2",
                   color: "#991b1b",
-                  borderRadius: "6px",
+                  borderRadius: "8px",
                   fontSize: "0.875rem",
                   marginBottom: "1rem",
                 }}
@@ -272,7 +324,7 @@ export function ContactCustomerModal({
                   padding: "0.75rem",
                   background: "#d1fae5",
                   color: "#065f46",
-                  borderRadius: "6px",
+                  borderRadius: "8px",
                   fontSize: "0.875rem",
                   marginBottom: "1rem",
                 }}
@@ -281,17 +333,27 @@ export function ContactCustomerModal({
               </div>
             )}
 
-            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: isMobile ? "column-reverse" : "row",
+                gap: "0.75rem",
+                justifyContent: isMobile ? "stretch" : "flex-end",
+              }}
+            >
               <a
                 href={`mailto:${customerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`}
                 style={{
-                  padding: "0.75rem 1rem",
+                  padding: "0.875rem 1rem",
                   background: "#f3f4f6",
                   color: "#374151",
-                  borderRadius: "6px",
-                  fontSize: "0.875rem",
+                  borderRadius: "8px",
+                  fontSize: "1rem",
                   fontWeight: "600",
                   textDecoration: "none",
+                  textAlign: "center",
+                  display: "block",
+                  ...touchButton,
                 }}
               >
                 Open in Mail App
@@ -300,18 +362,20 @@ export function ContactCustomerModal({
                 onClick={handleSendEmail}
                 disabled={sending || success || !subject.trim() || !message.trim()}
                 style={{
-                  padding: "0.75rem 1.5rem",
+                  padding: "0.875rem 1rem",
                   background:
                     sending || success || !subject.trim() || !message.trim() ? "#9ca3af" : "#2563eb",
                   color: "#ffffff",
                   border: "none",
-                  borderRadius: "6px",
-                  fontSize: "0.875rem",
+                  borderRadius: "8px",
+                  fontSize: "1rem",
                   fontWeight: "600",
                   cursor:
                     sending || success || !subject.trim() || !message.trim()
                       ? "not-allowed"
                       : "pointer",
+                  width: isMobile ? "100%" : "auto",
+                  ...touchButton,
                 }}
               >
                 {sending ? "Sending..." : success ? "Sent!" : "Send Email"}
@@ -336,7 +400,7 @@ export function ContactCustomerModal({
               <>
                 <div
                   style={{
-                    padding: "1.5rem",
+                    padding: isMobile ? "1.25rem 1rem" : "1.5rem",
                     background: "#f0fdf4",
                     border: "2px solid #86efac",
                     borderRadius: "12px",
@@ -347,22 +411,32 @@ export function ContactCustomerModal({
                   <div style={{ fontSize: "0.875rem", color: "#065f46", marginBottom: "0.5rem" }}>
                     Customer Phone Number
                   </div>
-                  <div
+                  <a
+                    href={telHref}
                     style={{
-                      fontSize: "1.75rem",
+                      display: "block",
+                      fontSize: isMobile ? "2rem" : "1.75rem",
                       fontWeight: "700",
                       color: "#111827",
                       letterSpacing: "0.02em",
+                      textDecoration: "none",
                     }}
                   >
                     {formattedPhone}
-                  </div>
+                  </a>
                 </div>
 
-                <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "1.25rem", lineHeight: 1.5 }}>
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "#6b7280",
+                    marginBottom: "1.25rem",
+                    lineHeight: 1.5,
+                  }}
+                >
                   {isMobile
-                    ? "Tap Call Now to dial from this phone."
-                    : "On a computer, copy the number and call from your phone. If your computer is linked to your phone (FaceTime, iPhone, etc.), Call Now may open your calling app."}
+                    ? "Tap the number or Call Now to dial from this phone."
+                    : "On a computer, copy the number and call from your phone. If your computer is linked to your phone, Call Now may open your calling app."}
                 </p>
 
                 {error && (
@@ -371,7 +445,7 @@ export function ContactCustomerModal({
                       padding: "0.75rem",
                       background: "#fee2e2",
                       color: "#991b1b",
-                      borderRadius: "6px",
+                      borderRadius: "8px",
                       fontSize: "0.875rem",
                       marginBottom: "1rem",
                     }}
@@ -385,35 +459,40 @@ export function ContactCustomerModal({
                     <a
                       href={telHref}
                       style={{
-                        display: "block",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         padding: "1rem",
                         background: "#16a34a",
                         color: "#ffffff",
-                        borderRadius: "8px",
-                        fontSize: "1rem",
+                        borderRadius: "12px",
+                        fontSize: "1.125rem",
                         fontWeight: "700",
-                        textAlign: "center",
                         textDecoration: "none",
+                        ...touchButton,
                       }}
                     >
                       {isMobile ? `Call ${formattedPhone}` : "Call Now"}
                     </a>
                   )}
-                  <button
-                    onClick={handleCopyPhone}
-                    style={{
-                      padding: "0.875rem 1rem",
-                      background: copied ? "#d1fae5" : "#ffffff",
-                      color: copied ? "#065f46" : "#374151",
-                      border: `2px solid ${copied ? "#86efac" : "#e5e7eb"}`,
-                      borderRadius: "8px",
-                      fontSize: "0.875rem",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {copied ? "Number Copied!" : "Copy Phone Number"}
-                  </button>
+                  {!isMobile && (
+                    <button
+                      onClick={handleCopyPhone}
+                      style={{
+                        padding: "0.875rem 1rem",
+                        background: copied ? "#d1fae5" : "#ffffff",
+                        color: copied ? "#065f46" : "#374151",
+                        border: `2px solid ${copied ? "#86efac" : "#e5e7eb"}`,
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        ...touchButton,
+                      }}
+                    >
+                      {copied ? "Number Copied!" : "Copy Phone Number"}
+                    </button>
+                  )}
                 </div>
               </>
             )}

@@ -4,6 +4,8 @@
 
 /* Import old static site styles */
 @import '../styles.css';
+@import './employee-dashboard-mobile.css';
+@import './site-mobile.css';
 
 /* Ensure full screen coverage */
 html {
