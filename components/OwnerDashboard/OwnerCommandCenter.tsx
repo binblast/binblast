@@ -493,7 +493,12 @@ export function OwnerCommandCenter({
           </div>
         )}
         {activeTab === "photos" && <OwnerPhotosOverview />}
-        {activeTab === "settings" && <SystemControls userId={userId} />}
+        {activeTab === "settings" && (
+          <SystemControls
+            userId={userId}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+          />
+        )}
       </div>
     </div>
   );

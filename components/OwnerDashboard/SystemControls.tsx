@@ -6,10 +6,19 @@ import { TeamAccountManagement } from "@/components/OwnerDashboard/TeamAccountMa
 
 interface SystemControlsProps {
   userId: string;
+  onNavigateTab?: (tab: "live-ops" | "partners" | "employees") => void;
 }
 
-export function SystemControls({ userId }: SystemControlsProps) {
+type TeamLoginPanel = "create" | "help";
+
+export function SystemControls({ userId, onNavigateTab }: SystemControlsProps) {
   const [activeTab, setActiveTab] = useState<string>("team-logins");
+  const [teamLoginPanel, setTeamLoginPanel] = useState<TeamLoginPanel>("create");
+
+  function openTeamLogins(panel: TeamLoginPanel) {
+    setTeamLoginPanel(panel);
+    setActiveTab("team-logins");
+  }
 
   return (
     <div style={{ marginBottom: "3rem" }}>
@@ -18,12 +27,16 @@ export function SystemControls({ userId }: SystemControlsProps) {
       </h2>
 
       {/* Tabs */}
-      <div style={{
-        display: "flex",
-        gap: "0.5rem",
-        marginBottom: "1.5rem",
-        borderBottom: "1px solid #e5e7eb"
-      }}>
+      <div
+        className="tab-navigation"
+        style={{
+          display: "flex",
+          gap: "0.5rem",
+          marginBottom: "1.5rem",
+          borderBottom: "1px solid #e5e7eb",
+          paddingBottom: "0.25rem",
+        }}
+      >
         {[
           { id: "team-logins", label: "Team Logins" },
           { id: "pricing", label: "Subscription Pricing" },
@@ -35,6 +48,7 @@ export function SystemControls({ userId }: SystemControlsProps) {
         ].map((tab) => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => setActiveTab(tab.id)}
             style={{
               padding: "0.75rem 1rem",
@@ -60,7 +74,7 @@ export function SystemControls({ userId }: SystemControlsProps) {
         boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
         border: "1px solid #e5e7eb"
       }}>
-        {activeTab === "team-logins" && <TeamAccountManagement />}
+        {activeTab === "team-logins" && <TeamAccountManagement initialPanel={teamLoginPanel} />}
 
         {activeTab === "pricing" && (
           <div>
@@ -240,30 +254,79 @@ export function SystemControls({ userId }: SystemControlsProps) {
             <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "1rem" }}>
               Access Permissions
             </h3>
-            <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
-              Manage operator and partner access permissions.
+            <p style={{ color: "#6b7280", marginBottom: "1.25rem" }}>
+              Manage who can log in and what each role can access across the platform.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div style={{
-                padding: "1rem",
-                background: "#f9fafb",
-                borderRadius: "8px"
-              }}>
-                <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>Operator Access</div>
-                <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                  Operators can view and manage assigned cleaning jobs
+              {[
+                {
+                  title: "Employee & Operator Logins",
+                  description: "Create accounts, recover forgotten emails, and send password reset links.",
+                  actions: [
+                    { label: "Create Account", onClick: () => openTeamLogins("create") },
+                    { label: "Login Help", onClick: () => openTeamLogins("help") },
+                  ],
+                },
+                {
+                  title: "Operator Access",
+                  description: "Operators can view and manage assigned cleaning jobs, schedules, and team messages.",
+                  actions: [
+                    { label: "Open Live Ops", onClick: () => onNavigateTab?.("live-ops") },
+                  ],
+                },
+                {
+                  title: "Employee Access",
+                  description: "Employees can clock in, complete jobs, view training, and message the team.",
+                  actions: [
+                    { label: "Open Employees", onClick: () => onNavigateTab?.("employees") },
+                  ],
+                },
+                {
+                  title: "Partner Access",
+                  description: "Partners can view their customers, earnings, and manage their team portal.",
+                  actions: [
+                    { label: "Manage Partners", onClick: () => onNavigateTab?.("partners") },
+                  ],
+                },
+              ].map((section) => (
+                <div
+                  key={section.title}
+                  style={{
+                    padding: "1rem",
+                    background: "#f9fafb",
+                    borderRadius: "8px",
+                    border: "1px solid #e5e7eb",
+                  }}
+                >
+                  <div style={{ fontWeight: "600", marginBottom: "0.5rem", color: "#111827" }}>
+                    {section.title}
+                  </div>
+                  <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.875rem" }}>
+                    {section.description}
+                  </div>
+                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                    {section.actions.map((action) => (
+                      <button
+                        key={action.label}
+                        type="button"
+                        onClick={action.onClick}
+                        style={{
+                          padding: "0.5rem 0.875rem",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "8px",
+                          background: "#ffffff",
+                          color: "#111827",
+                          fontSize: "0.8125rem",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div style={{
-                padding: "1rem",
-                background: "#f9fafb",
-                borderRadius: "8px"
-              }}>
-                <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>Partner Access</div>
-                <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                  Partners can view their customers and earnings
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         )}

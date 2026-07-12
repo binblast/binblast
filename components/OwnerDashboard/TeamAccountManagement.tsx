@@ -27,8 +27,12 @@ interface CreateAccountResult {
   };
 }
 
-export function TeamAccountManagement() {
-  const [panel, setPanel] = useState<Panel>("create");
+interface TeamAccountManagementProps {
+  initialPanel?: Panel;
+}
+
+export function TeamAccountManagement({ initialPanel = "create" }: TeamAccountManagementProps) {
+  const [panel, setPanel] = useState<Panel>(initialPanel);
   const [accounts, setAccounts] = useState<TeamAccount[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,6 +52,10 @@ export function TeamAccountManagement() {
     payRatePerJob: "10",
     password: "",
   });
+
+  useEffect(() => {
+    setPanel(initialPanel);
+  }, [initialPanel]);
 
   useEffect(() => {
     if (panel === "help") {
