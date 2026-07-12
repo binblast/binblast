@@ -25,6 +25,7 @@ import {
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getAuthInstance } from "@/lib/firebase";
+import { isActiveCleaningStatus } from "@/lib/cleaning-status";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
   ssr: false,
@@ -247,9 +248,11 @@ export default function EmployeeDashboardPage() {
 
         const activeJobs = allJobs.filter((job) => {
           const status = (job as Job & { status?: string }).status;
-          const isCancelled = status === "cancelled" || job.jobStatus === "cancelled";
-          const isCompleted = status === "completed" || job.jobStatus === "completed";
-          return job.scheduledDate && job.scheduledDate >= today && !isCancelled && !isCompleted;
+          return (
+            job.scheduledDate &&
+            job.scheduledDate >= today &&
+            isActiveCleaningStatus(status, job.jobStatus)
+          );
         });
 
         activeJobs.sort((a, b) => {
