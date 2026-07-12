@@ -1,26 +1,38 @@
 // app/api/admin/employees/[employeeId]/messages/route.ts
-// Get and send messages to/from an employee
+// Get and send messages between staff members
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminFirestore } from "@/lib/firebase-admin";
+import {
+  getThreadMessages,
+  markThreadMessagesAsRead,
+  sortMessagesChronologically,
+} from "@/lib/team-messaging";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { employeeId: string } }
 ) {
   try {
-    const employeeId = params.employeeId;
-
-    // Use Admin SDK for server-side operations
+    const contactId = params.employeeId;
+    const viewerUserId = req.nextUrl.searchParams.get("viewerUserId");
     const db = await getAdminFirestore();
 
-    // Query without orderBy to avoid composite index requirement.
-    // Load both messages to and from this team member.
+    if (viewerUserId) {
+      await markThreadMessagesAsRead(viewerUserId, contactId);
+      const messages = await getThreadMessages(viewerUserId, contactId);
+
+      return NextResponse.json({
+        success: true,
+        messages,
+      });
+    }
+
     const [receivedSnapshot, sentSnapshot] = await Promise.all([
-      db.collection("employeeMessages").where("employeeId", "==", employeeId).get(),
-      db.collection("employeeMessages").where("senderId", "==", employeeId).get(),
+      db.collection("employeeMessages").where("employeeId", "==", contactId).get(),
+      db.collection("employeeMessages").where("senderId", "==", contactId).get(),
     ]);
 
     const messageMap = new Map<string, Record<string, unknown>>();
@@ -32,15 +44,9 @@ export async function GET(
       messageMap.set(doc.id, { id: doc.id, ...doc.data() });
     });
 
-    const messages = Array.from(messageMap.values()).sort((a, b) => {
-      const aTime =
-        (a.createdAt as { toMillis?: () => number })?.toMillis?.() ||
-        ((a.createdAt as { _seconds?: number })?._seconds || 0) * 1000;
-      const bTime =
-        (b.createdAt as { toMillis?: () => number })?.toMillis?.() ||
-        ((b.createdAt as { _seconds?: number })?._seconds || 0) * 1000;
-      return bTime - aTime;
-    });
+    const messages = sortMessagesChronologically(
+      Array.from(messageMap.values()) as Array<Record<string, unknown> & { id: string }>
+    );
 
     return NextResponse.json({
       success: true,
@@ -48,17 +54,14 @@ export async function GET(
     });
   } catch (error: any) {
     console.error("[Get Employee Messages] Error:", error);
-    
-    // Provide helpful error message for missing credentials
+
     let errorMessage = error.message || "Failed to fetch messages";
     if (errorMessage.includes("Firebase Admin credentials not configured")) {
-      errorMessage = "Server configuration error: Firebase Admin credentials are missing. Please contact your administrator to configure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in Vercel environment variables.";
+      errorMessage =
+        "Server configuration error: Firebase Admin credentials are missing. Please contact your administrator to configure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in Vercel environment variables.";
     }
-    
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -67,41 +70,47 @@ export async function POST(
   { params }: { params: { employeeId: string } }
 ) {
   try {
-    const employeeId = params.employeeId;
+    const recipientId = params.employeeId;
     const body = await req.json();
-    const { message, type, subject } = body;
+    const { message, type, subject, senderId } = body;
 
     if (!message || !message.trim()) {
-      return NextResponse.json(
-        { error: "Message is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    // Use Admin SDK for server-side operations
     const admin = await import("firebase-admin");
     const db = await getAdminFirestore();
 
-    // Get employee data to include email
-    const employeeDoc = await db.collection("users").doc(employeeId).get();
-    if (!employeeDoc.exists) {
-      return NextResponse.json(
-        { error: "Employee not found" },
-        { status: 404 }
-      );
+    const [recipientDoc, senderDoc] = await Promise.all([
+      db.collection("users").doc(recipientId).get(),
+      senderId ? db.collection("users").doc(senderId).get() : Promise.resolve(null),
+    ]);
+
+    if (!recipientDoc.exists) {
+      return NextResponse.json({ error: "Recipient not found" }, { status: 404 });
     }
 
-    const employeeData = employeeDoc.data();
+    const recipientData = recipientDoc.data()!;
+    const senderData = senderDoc?.exists ? senderDoc.data()! : null;
+    const senderRole =
+      (typeof senderData?.role === "string" ? senderData.role : null) ||
+      (recipientData.role === "operator" ? "admin" : "admin");
 
     const messageData = {
-      employeeId,
-      employeeEmail: employeeData.email || "",
-      employeeName: `${employeeData.firstName || ""} ${employeeData.lastName || ""}`.trim(),
-      recipientRole: employeeData.role || "employee",
+      employeeId: recipientId,
+      employeeEmail: recipientData.email || "",
+      employeeName: `${recipientData.firstName || ""} ${recipientData.lastName || ""}`.trim(),
+      recipientRole: recipientData.role || "employee",
+      senderId: senderId || null,
+      senderName: senderData
+        ? `${senderData.firstName || ""} ${senderData.lastName || ""}`.trim()
+        : "Management",
+      senderEmail: senderData?.email || "",
+      senderRole,
       message: message.trim(),
-      subject: subject || (type === "praise" ? "Great work!" : type === "warning" ? "Important Notice" : "Message from Admin"),
-      type: type || "request",
-      from: employeeData.role === "operator" ? "operator" : "admin",
+      subject: subject?.trim() || undefined,
+      type: type || "general",
+      from: senderRole === "operator" ? "operator" : senderRole === "owner" ? "owner" : "admin",
       read: false,
       priority: type === "warning" ? "high" : "normal",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -115,16 +124,13 @@ export async function POST(
     });
   } catch (error: any) {
     console.error("[Send Employee Message] Error:", error);
-    
-    // Provide helpful error message for missing credentials
+
     let errorMessage = error.message || "Failed to send message";
     if (errorMessage.includes("Firebase Admin credentials not configured")) {
-      errorMessage = "Server configuration error: Firebase Admin credentials are missing. Please contact your administrator to configure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in Vercel environment variables.";
+      errorMessage =
+        "Server configuration error: Firebase Admin credentials are missing. Please contact your administrator to configure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in Vercel environment variables.";
     }
-    
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

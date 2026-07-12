@@ -33,6 +33,7 @@ interface Message {
   type?: MessageType;
   from: string;
   senderId?: string;
+  employeeId?: string;
   read: boolean;
   createdAt?: { toDate?: () => Date };
 }
@@ -103,7 +104,7 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
       const endpoint =
         mode === "employee"
           ? `/api/employee/messages?employeeId=${encodeURIComponent(userId)}`
-          : `/api/admin/messages/conversations?excludeUserId=${encodeURIComponent(userId)}`;
+          : `/api/admin/messages/conversations?viewerUserId=${encodeURIComponent(userId)}`;
 
       const response = await fetch(endpoint);
       const data = await response.json();
@@ -133,7 +134,8 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
       } else if (selectedConversation.type === "partner") {
         endpoint = `/api/admin/partners/${selectedConversation.partnerId}/messages`;
       } else {
-        endpoint = `/api/admin/employees/${selectedConversation.employeeId}/messages`;
+        const contactId = selectedConversation.employeeId || selectedConversation.id;
+        endpoint = `/api/admin/employees/${contactId}/messages?viewerUserId=${encodeURIComponent(userId)}&contactId=${encodeURIComponent(contactId)}`;
       }
 
       const response = await fetch(endpoint);
@@ -178,6 +180,7 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
           message: messageText.trim(),
           type: messageType,
           subject: subject.trim() || undefined,
+          senderId: userId,
         };
       }
 
@@ -409,52 +412,46 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                   {messages.map((msg) => {
+                    const recipientId = (msg as Message & { employeeId?: string }).employeeId;
                     const isMine =
-                      mode === "employee"
-                        ? msg.from === "employee" || msg.senderId === userId
-                        : msg.from === "admin" || msg.from === "operator";
+                      msg.senderId === userId ||
+                      (mode === "staff" &&
+                        !msg.senderId &&
+                        msg.from !== "employee" &&
+                        recipientId === (selectedConversation.employeeId || selectedConversation.id));
 
                     return (
                       <div
                         key={msg.id}
                         style={{
-                          padding: "1rem",
-                          background:
-                            msg.type === "praise"
-                              ? "#dcfce7"
-                              : msg.type === "warning"
-                                ? "#fee2e2"
-                                : "#e0e7ff",
-                          borderRadius: "8px",
-                          maxWidth: "80%",
-                          alignSelf: isMine ? "flex-end" : "flex-start",
+                          display: "flex",
+                          justifyContent: isMine ? "flex-end" : "flex-start",
                         }}
                       >
-                        {msg.subject && (
-                          <div style={{ fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-                            {msg.subject}
-                          </div>
-                        )}
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem", alignItems: "center", gap: "0.75rem" }}>
-                          <span
+                        <div
+                          style={{
+                            padding: "0.75rem 1rem",
+                            background: isMine ? "#16a34a" : "#f3f4f6",
+                            color: isMine ? "#ffffff" : "#111827",
+                            borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                            maxWidth: "75%",
+                            fontSize: "0.9375rem",
+                            lineHeight: 1.5,
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+                          }}
+                        >
+                          <div style={{ fontSize: "0.9375rem" }}>{msg.message}</div>
+                          <div
                             style={{
-                              fontSize: "0.75rem",
-                              fontWeight: "600",
-                              color:
-                                msg.type === "praise"
-                                  ? "#16a34a"
-                                  : msg.type === "warning"
-                                    ? "#dc2626"
-                                    : "#6366f1",
+                              fontSize: "0.6875rem",
+                              marginTop: "0.35rem",
+                              opacity: 0.75,
+                              textAlign: isMine ? "right" : "left",
                             }}
                           >
-                            {(msg.type || "message").toUpperCase()}
-                          </span>
-                          <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-                            {msg.createdAt?.toDate?.()?.toLocaleString() || "N/A"}
-                          </span>
+                            {msg.createdAt?.toDate?.()?.toLocaleString() || ""}
+                          </div>
                         </div>
-                        <div style={{ fontSize: "0.875rem" }}>{msg.message}</div>
                       </div>
                     );
                   })}

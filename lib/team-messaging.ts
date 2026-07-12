@@ -8,13 +8,15 @@ interface FirestoreDocument {
   exists?: boolean;
 }
 
-type TeamMessage = Record<string, unknown> & {
+export type TeamMessage = Record<string, unknown> & {
   id: string;
   employeeId?: string;
   senderId?: string;
   from?: string;
   read?: boolean;
   message?: string;
+  subject?: string;
+  type?: string;
   createdAt?: { toMillis?: () => number; toDate?: () => Date };
   employeeName?: string;
   employeeEmail?: string;
@@ -61,22 +63,42 @@ function getDisplayName(data: Record<string, unknown>): string {
   return name || email || "Team Member";
 }
 
-function getConversationPartnerId(
+export function getThreadContactId(
   message: TeamMessage,
-  currentUserId: string,
+  viewerUserId: string,
   contactsById: Map<string, StaffContact>
 ): string | null {
-  if (message.senderId === currentUserId) {
-    return message.employeeId || null;
+  const recipientId = typeof message.employeeId === "string" ? message.employeeId : "";
+  const senderId = typeof message.senderId === "string" ? message.senderId : "";
+
+  if (senderId === viewerUserId) {
+    return recipientId || null;
   }
 
-  if (message.employeeId === currentUserId) {
-    if (message.senderId) return message.senderId;
+  if (recipientId === viewerUserId) {
+    if (senderId) return senderId;
     const fallback = Array.from(contactsById.values()).find((contact) => contact.type === message.from);
     return fallback?.id || null;
   }
 
   return null;
+}
+
+export function isMessageInThread(
+  message: TeamMessage,
+  viewerUserId: string,
+  contactId: string,
+  contactsById: Map<string, StaffContact>
+): boolean {
+  return getThreadContactId(message, viewerUserId, contactsById) === contactId;
+}
+
+export function sortMessagesChronologically(messages: TeamMessage[]): TeamMessage[] {
+  return [...messages].sort((a, b) => {
+    const aTime = a.createdAt?.toMillis?.() || 0;
+    const bTime = b.createdAt?.toMillis?.() || 0;
+    return aTime - bTime;
+  });
 }
 
 function compareByRecentThenName(a: TeamConversation, b: TeamConversation) {
@@ -89,15 +111,39 @@ function compareByRecentThenName(a: TeamConversation, b: TeamConversation) {
   return aName.localeCompare(bName);
 }
 
+function applyMessageToContact(
+  contact: StaffContact,
+  message: TeamMessage,
+  viewerUserId: string
+) {
+  contact.hasConversation = true;
+  contact.messageCount += 1;
+
+  const recipientId = typeof message.employeeId === "string" ? message.employeeId : "";
+  const isIncoming = recipientId === viewerUserId;
+  if (isIncoming && !message.read) {
+    contact.unreadCount += 1;
+  }
+
+  const createdAt = message.createdAt;
+  if (
+    !contact.lastMessageTime ||
+    (createdAt?.toMillis?.() || 0) > (contact.lastMessageTime?.toMillis?.() || 0)
+  ) {
+    contact.lastMessage = typeof message.message === "string" ? message.message : "";
+    contact.lastMessageTime = createdAt || null;
+  }
+}
+
 export async function getStaffContacts(options?: {
   includePartners?: boolean;
   visibleRoles?: StaffRole[];
-  excludeUserId?: string;
+  viewerUserId?: string;
 }): Promise<TeamConversation[]> {
   const db = await getAdminFirestore();
   const includePartners = options?.includePartners ?? true;
   const visibleRoles = options?.visibleRoles ?? STAFF_ROLES;
-  const excludeUserId = options?.excludeUserId;
+  const viewerUserId = options?.viewerUserId;
 
   const staffContacts = new Map<string, StaffContact>();
 
@@ -107,7 +153,7 @@ export async function getStaffContacts(options?: {
     const data = doc.data();
     const role = (typeof data.role === "string" ? data.role : "employee") as StaffRole;
     if (!visibleRoles.includes(role)) return;
-    if (excludeUserId && doc.id === excludeUserId) return;
+    if (viewerUserId && doc.id === viewerUserId) return;
 
     staffContacts.set(doc.id, {
       id: doc.id,
@@ -121,48 +167,84 @@ export async function getStaffContacts(options?: {
     });
   });
 
-  const employeeMessagesSnapshot = await db.collection("employeeMessages").get();
-  employeeMessagesSnapshot.docs.forEach((doc: FirestoreDocument) => {
-    const data = doc.data();
-    const recipientId = typeof data.employeeId === "string" ? data.employeeId : "";
-    if (!recipientId) return;
+  const contactsById = new Map(staffContacts);
 
-    if (!staffContacts.has(recipientId)) {
-      staffContacts.set(recipientId, {
-        id: recipientId,
-        type: (typeof data.recipientRole === "string" ? data.recipientRole : "employee") as StaffRole,
-        employeeId: recipientId,
-        employeeName:
-          (typeof data.employeeName === "string" ? data.employeeName : "") ||
-          (typeof data.employeeEmail === "string" ? data.employeeEmail : "") ||
-          "Team Member",
-        employeeEmail: typeof data.employeeEmail === "string" ? data.employeeEmail : "",
-        unreadCount: 0,
-        messageCount: 0,
-        hasConversation: false,
-      });
-    }
+  if (viewerUserId) {
+    const [sentSnapshot, receivedSnapshot] = await Promise.all([
+      db.collection("employeeMessages").where("senderId", "==", viewerUserId).get(),
+      db.collection("employeeMessages").where("employeeId", "==", viewerUserId).get(),
+    ]);
 
-    const contact = staffContacts.get(recipientId)!;
-    contact.hasConversation = true;
-    contact.messageCount += 1;
-    if (!data.read && data.from !== "employee") {
-      contact.unreadCount += 1;
-    }
+    const threadMessages = new Map<string, TeamMessage>();
+    sentSnapshot.docs.forEach((doc: FirestoreDocument) => {
+      threadMessages.set(doc.id, { id: doc.id, ...doc.data() });
+    });
+    receivedSnapshot.docs.forEach((doc: FirestoreDocument) => {
+      threadMessages.set(doc.id, { id: doc.id, ...doc.data() });
+    });
 
-    const createdAt = data.createdAt as TeamMessage["createdAt"];
-    if (
-      !contact.lastMessageTime ||
-      (createdAt?.toMillis?.() || 0) > (contact.lastMessageTime?.toMillis?.() || 0)
-    ) {
-      contact.lastMessage = typeof data.message === "string" ? data.message : "";
-      contact.lastMessageTime = createdAt || null;
-      contact.employeeName =
-        (typeof data.employeeName === "string" ? data.employeeName : "") || contact.employeeName;
-      contact.employeeEmail =
-        (typeof data.employeeEmail === "string" ? data.employeeEmail : "") || contact.employeeEmail;
-    }
-  });
+    threadMessages.forEach((message) => {
+      const contactId = getThreadContactId(message, viewerUserId, contactsById);
+      if (!contactId || contactId === viewerUserId) return;
+
+      if (!staffContacts.has(contactId)) {
+        staffContacts.set(contactId, {
+          id: contactId,
+          type: "employee",
+          employeeId: contactId,
+          employeeName:
+            (typeof message.senderName === "string" ? message.senderName : "") ||
+            (typeof message.employeeName === "string" ? message.employeeName : "") ||
+            "Team Member",
+          employeeEmail:
+            (typeof message.senderEmail === "string" ? message.senderEmail : "") ||
+            (typeof message.employeeEmail === "string" ? message.employeeEmail : "") ||
+            "",
+          unreadCount: 0,
+          messageCount: 0,
+          hasConversation: true,
+        });
+      }
+
+      applyMessageToContact(staffContacts.get(contactId)!, message, viewerUserId);
+    });
+  } else {
+    const employeeMessagesSnapshot = await db.collection("employeeMessages").get();
+    employeeMessagesSnapshot.docs.forEach((doc: FirestoreDocument) => {
+      const data = doc.data();
+      const recipientId = typeof data.employeeId === "string" ? data.employeeId : "";
+      if (!recipientId) return;
+
+      if (!staffContacts.has(recipientId)) {
+        staffContacts.set(recipientId, {
+          id: recipientId,
+          type: (typeof data.recipientRole === "string" ? data.recipientRole : "employee") as StaffRole,
+          employeeId: recipientId,
+          employeeName:
+            (typeof data.employeeName === "string" ? data.employeeName : "") ||
+            (typeof data.employeeEmail === "string" ? data.employeeEmail : "") ||
+            "Team Member",
+          employeeEmail: typeof data.employeeEmail === "string" ? data.employeeEmail : "",
+          unreadCount: 0,
+          messageCount: 0,
+          hasConversation: false,
+        });
+      }
+
+      const contact = staffContacts.get(recipientId)!;
+      contact.hasConversation = true;
+      contact.messageCount += 1;
+
+      const createdAt = data.createdAt as TeamMessage["createdAt"];
+      if (
+        !contact.lastMessageTime ||
+        (createdAt?.toMillis?.() || 0) > (contact.lastMessageTime?.toMillis?.() || 0)
+      ) {
+        contact.lastMessage = typeof data.message === "string" ? data.message : "";
+        contact.lastMessageTime = createdAt || null;
+      }
+    });
+  }
 
   const conversations: TeamConversation[] = Array.from(staffContacts.values());
 
@@ -188,7 +270,6 @@ export async function getStaffContacts(options?: {
 
       const conv = partnerConversations.get(partnerId)!;
       conv.messageCount += 1;
-      if (!data.read) conv.unreadCount += 1;
 
       const createdAt = data.createdAt as TeamMessage["createdAt"];
       if (
@@ -226,6 +307,78 @@ export async function getStaffContacts(options?: {
   return conversations.sort(compareByRecentThenName);
 }
 
+export async function getThreadMessages(viewerUserId: string, contactId: string) {
+  const db = await getAdminFirestore();
+
+  const usersSnapshot = await db.collection("users").get();
+  const contactsById = new Map<string, StaffContact>();
+  (usersSnapshot.docs as FirestoreDocument[]).forEach((doc) => {
+    const data = doc.data();
+    const role = (typeof data.role === "string" ? data.role : "employee") as StaffRole;
+    contactsById.set(doc.id, {
+      id: doc.id,
+      type: role,
+      employeeId: doc.id,
+      employeeName: getDisplayName(data),
+      employeeEmail: typeof data.email === "string" ? data.email : "",
+      unreadCount: 0,
+      messageCount: 0,
+      hasConversation: false,
+    });
+  });
+
+  const [sentSnapshot, receivedSnapshot] = await Promise.all([
+    db.collection("employeeMessages").where("senderId", "==", viewerUserId).get(),
+    db.collection("employeeMessages").where("employeeId", "==", viewerUserId).get(),
+  ]);
+
+  const messageMap = new Map<string, TeamMessage>();
+  sentSnapshot.docs.forEach((doc: FirestoreDocument) => {
+    messageMap.set(doc.id, { id: doc.id, ...doc.data() });
+  });
+  receivedSnapshot.docs.forEach((doc: FirestoreDocument) => {
+    messageMap.set(doc.id, { id: doc.id, ...doc.data() });
+  });
+
+  const threadMessages = Array.from(messageMap.values()).filter((message) =>
+    isMessageInThread(message, viewerUserId, contactId, contactsById)
+  );
+
+  return sortMessagesChronologically(threadMessages);
+}
+
+export async function markThreadMessagesAsRead(
+  viewerUserId: string,
+  contactId: string
+): Promise<void> {
+  const db = await getAdminFirestore();
+  const admin = await import("firebase-admin");
+
+  const receivedSnapshot = await db
+    .collection("employeeMessages")
+    .where("employeeId", "==", viewerUserId)
+    .get();
+
+  const batch = db.batch();
+  let hasUpdates = false;
+
+  receivedSnapshot.docs.forEach((doc: FirestoreDocument) => {
+    const data = doc.data();
+    const senderId = typeof data.senderId === "string" ? data.senderId : "";
+    if (senderId === contactId && !data.read) {
+      batch.update(db.collection("employeeMessages").doc(doc.id), {
+        read: true,
+        readAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      hasUpdates = true;
+    }
+  });
+
+  if (hasUpdates) {
+    await batch.commit();
+  }
+}
+
 export async function getEmployeeMessagingData(employeeId: string) {
   const db = await getAdminFirestore();
 
@@ -244,11 +397,7 @@ export async function getEmployeeMessagingData(employeeId: string) {
     messages.set(doc.id, { id: doc.id, ...doc.data() });
   });
 
-  const sortedMessages = Array.from(messages.values()).sort((a, b) => {
-    const aTime = a.createdAt?.toMillis?.() || 0;
-    const bTime = b.createdAt?.toMillis?.() || 0;
-    return bTime - aTime;
-  });
+  const sortedMessages = sortMessagesChronologically(Array.from(messages.values()));
 
   const userDocs = usersSnapshot.docs as FirestoreDocument[];
   const contacts: StaffContact[] = userDocs
@@ -278,7 +427,7 @@ export async function getEmployeeMessagingData(employeeId: string) {
   contacts.forEach((contact) => conversations.set(contact.id, { ...contact }));
 
   sortedMessages.forEach((message) => {
-    const contactId = getConversationPartnerId(message, employeeId, contactsById);
+    const contactId = getThreadContactId(message, employeeId, contactsById);
     if (!contactId || contactId === employeeId) return;
 
     if (!conversations.has(contactId)) {
@@ -301,22 +450,7 @@ export async function getEmployeeMessagingData(employeeId: string) {
       });
     }
 
-    const conversation = conversations.get(contactId)!;
-    conversation.hasConversation = true;
-    conversation.messageCount += 1;
-
-    const isIncoming = message.employeeId === employeeId && message.from !== "employee";
-    if (isIncoming && !message.read) {
-      conversation.unreadCount += 1;
-    }
-
-    if (
-      !conversation.lastMessageTime ||
-      (message.createdAt?.toMillis?.() || 0) > (conversation.lastMessageTime?.toMillis?.() || 0)
-    ) {
-      conversation.lastMessage = typeof message.message === "string" ? message.message : "";
-      conversation.lastMessageTime = message.createdAt || null;
-    }
+    applyMessageToContact(conversations.get(contactId)!, message, employeeId);
   });
 
   return {

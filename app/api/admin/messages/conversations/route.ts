@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const excludeUserId = req.nextUrl.searchParams.get("excludeUserId") || undefined;
-    const conversations = await getStaffContacts({ includePartners: true, excludeUserId });
+    const viewerUserId = req.nextUrl.searchParams.get("viewerUserId") || undefined;
+    const conversations = await getStaffContacts({ includePartners: true, viewerUserId });
 
     return NextResponse.json({
       success: true,

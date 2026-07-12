@@ -3,7 +3,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminFirestore } from "@/lib/firebase-admin";
-import { getEmployeeMessagingData } from "@/lib/team-messaging";
+import {
+  getEmployeeMessagingData,
+  markThreadMessagesAsRead,
+  sortMessagesChronologically,
+} from "@/lib/team-messaging";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +20,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "employeeId is required" }, { status: 400 });
     }
 
-    const db = await getAdminFirestore();
+    if (contactId) {
+      await markThreadMessagesAsRead(employeeId, contactId);
+    }
+
     const { contacts, messages } = await getEmployeeMessagingData(employeeId);
 
     if (contactId) {
@@ -34,7 +41,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: true,
         contacts,
-        messages: threadMessages,
+        messages: sortMessagesChronologically(threadMessages),
       });
     }
 
@@ -100,7 +107,7 @@ export async function POST(req: NextRequest) {
       senderEmail: employeeData.email || "",
       senderRole: employeeData.role || "employee",
       message: message.trim(),
-      subject: subject?.trim() || "Message from Employee",
+      subject: subject?.trim() || undefined,
       type: "general",
       from: "employee",
       read: false,
