@@ -13,9 +13,28 @@ const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navba
   loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
 });
 
+import { canAccessAdminPages } from "@/lib/owner-auth";
+
 const ALLOWED_ADMIN_EMAILS = [
   "binblastcompany@gmail.com",
 ];
+
+async function userCanAccessAdmin(email: string | null, uid: string): Promise<boolean> {
+  if (canAccessAdminPages(email)) return true;
+  try {
+    const { getDbInstance } = await import("@/lib/firebase");
+    const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+    const db = await getDbInstance();
+    if (!db) return false;
+    const firestore = await safeImportFirestore();
+    const { doc, getDoc } = firestore;
+    const userDoc = await getDoc(doc(db, "users", uid));
+    if (!userDoc.exists()) return false;
+    return canAccessAdminPages(email, userDoc.data().role);
+  } catch {
+    return false;
+  }
+}
 
 export default function AdminEmployeesPage() {
   const router = useRouter();
@@ -33,19 +52,21 @@ export default function AdminEmployeesPage() {
         if (auth?.currentUser) {
           const email = auth.currentUser.email;
           setUserEmail(email || null);
-          
-          if (!email || !ALLOWED_ADMIN_EMAILS.includes(email)) {
+
+          const allowed = await userCanAccessAdmin(email, auth.currentUser.uid);
+          if (!allowed) {
             router.push("/login");
             return;
           }
-          
+
           setLoading(false);
         }
-        
-        const unsubscribe = await onAuthStateChanged((user) => {
+
+        const unsubscribe = await onAuthStateChanged(async (user) => {
           if (user?.email) {
             setUserEmail(user.email);
-            if (!ALLOWED_ADMIN_EMAILS.includes(user.email)) {
+            const allowed = await userCanAccessAdmin(user.email, user.uid);
+            if (!allowed) {
               router.push("/login");
               return;
             }

@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessagingCenter } from "@/components/AdminDashboard/MessagingCenter";
+import { canAccessBusinessCommandCenter } from "@/lib/owner-auth";
 import dynamic from "next/dynamic";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), { ssr: false });
@@ -51,7 +52,7 @@ export default function MessagesPage() {
             const userData = userDoc.data();
             const role = userData.role;
             
-            if (role !== "admin" && role !== "operator" && user.email !== "binblastcompany@gmail.com") {
+            if (!canAccessBusinessCommandCenter(user.email, role)) {
               router.push("/dashboard");
               return;
             }

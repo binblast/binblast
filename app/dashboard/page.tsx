@@ -16,13 +16,6 @@ import { AdminPartnerApplications } from "@/components/AdminPartnerApplications"
 import { AdminPartnerManagement } from "@/components/AdminPartnerManagement";
 import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
-import { BusinessOverview } from "@/components/OwnerDashboard/BusinessOverview";
-import { CustomerManagement } from "@/components/OwnerDashboard/CustomerManagement";
-import { CleaningScheduleBoard } from "@/components/OwnerDashboard/CleaningScheduleBoard";
-import { CommercialAccounts } from "@/components/OwnerDashboard/CommercialAccounts";
-import { PartnerProgramManagement } from "@/components/OwnerDashboard/PartnerProgramManagement";
-import { FinancialAnalytics } from "@/components/OwnerDashboard/FinancialAnalytics";
-import { SystemControls } from "@/components/OwnerDashboard/SystemControls";
 import { RevenueTrendSummary, CustomerGrowthSummary, WeeklyCleaningsSummary, PlanDistributionSummary, RevenueByPlanSummary } from "@/components/AdminDashboard/ChartSummaries";
 import { AdminAIChat } from "@/components/AdminDashboard/AdminAIChat";
 import { KPICard } from "@/components/AdminDashboard/KPICard";
@@ -32,6 +25,11 @@ import {
   isCleaningCompleted,
   isCleaningCancelled,
 } from "@/lib/cleaning-schedule";
+
+const OwnerCommandCenter = dynamic(
+  () => import("@/components/OwnerDashboard/OwnerCommandCenter").then((m) => m.OwnerCommandCenter),
+  { loading: () => <p style={{ color: "#6b7280", padding: "2rem 0", textAlign: "center" }}>Loading command center...</p> }
+);
 
 const EmployeeStatus = dynamic(
   () => import("@/components/OperatorDashboard/EmployeeStatus").then((mod) => mod.EmployeeStatus),
@@ -651,9 +649,9 @@ function DashboardPageContent() {
     }
   }, [user, showCleaningConfirmation]);
 
-  // Load admin data
+  // Load admin/owner data
   useEffect(() => {
-    if (!isAdmin || !userId) {
+    if ((!isAdmin && !isOwner) || !userId) {
       return;
     }
     
@@ -895,7 +893,7 @@ function DashboardPageContent() {
 
     // Set up auto-refresh every 30 seconds
     const refreshInterval = setInterval(() => {
-      if (mounted && isAdmin && userId) {
+      if (mounted && (isAdmin || isOwner) && userId) {
         loadAdminData();
       }
     }, 30000);
@@ -909,7 +907,7 @@ function DashboardPageContent() {
     let unsubscribeAdminNotifications: (() => void) | undefined;
 
     async function setupRealtimeListeners() {
-      if ((!isAdmin && !isOperator) || !userId || !mounted) return;
+      if ((!isAdmin && !isOperator && !isOwner) || !userId || !mounted) return;
 
       try {
         const { getDbInstance } = await import("@/lib/firebase");
@@ -1012,7 +1010,7 @@ function DashboardPageContent() {
       if (unsubscribePartnerApplications) unsubscribePartnerApplications();
       if (unsubscribeAdminNotifications) unsubscribeAdminNotifications();
     };
-  }, [isAdmin, isOperator, userId]);
+  }, [isAdmin, isOperator, isOwner, userId]);
 
   // Load operator dashboard data via API (overview first, other tabs lazy-loaded)
   const fetchOperatorScope = useCallback(async (scope: "overview" | "customers" | "schedule") => {
@@ -2608,6 +2606,28 @@ function DashboardPageContent() {
     );
   }
 
+  // Owner Command Center — unified access to everything
+  if (isOwner && userId && roleDetermined) {
+    return (
+      <>
+        <Navbar />
+        <main className="page-main dashboard-shell" style={{ background: "#f9fafb" }}>
+          <div className="container">
+            <div className="dashboard-shell" style={{ maxWidth: "1400px", margin: "0 auto" }}>
+              <OwnerCommandCenter
+                userId={userId}
+                userName={user?.firstName || "Owner"}
+                newQuotesCount={newQuotesCount}
+                newPartnerApplicationsCount={newPartnerApplicationsCount}
+              />
+            </div>
+          </div>
+        </main>
+        <AdminAIChat adminStats={adminStats} chartData={chartData} />
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -4193,18 +4213,6 @@ function DashboardPageContent() {
                 </>
               )}
 
-              {/* Owner Dashboard - Complete Business Control Center */}
-              {isOwner && userId && (
-                <div style={{ marginBottom: "3rem" }}>
-                  <BusinessOverview userId={userId} />
-                  <CustomerManagement userId={userId} />
-                  <CleaningScheduleBoard userId={userId} />
-                  <CommercialAccounts userId={userId} />
-                  <PartnerProgramManagement userId={userId} />
-                  <FinancialAnalytics userId={userId} />
-                  <SystemControls userId={userId} />
-                </div>
-              )}
             </div>
 
             {/* Cleaning Date Confirmation Modal */}

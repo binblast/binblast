@@ -16,6 +16,7 @@ import { FlagIssueModal } from "@/components/OperatorDashboard/EmployeeDetail/Fl
 import { TrainingStatus } from "@/components/OperatorDashboard/EmployeeDetail/TrainingStatus";
 import { EmployeeIssuesPanel } from "@/components/OperatorDashboard/EmployeeDetail/EmployeeIssuesPanel";
 import { EmployeeTaxDocuments } from "@/components/OperatorDashboard/EmployeeDetail/EmployeeTaxDocuments";
+import { canAccessBusinessCommandCenter } from "@/lib/owner-auth";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
   ssr: false,
@@ -95,8 +96,9 @@ export default function EmployeeDetailPage() {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         const role = userData.role;
+        const email = auth.currentUser.email;
 
-        if (role !== "operator" && role !== "admin") {
+        if (!canAccessBusinessCommandCenter(email, role)) {
           router.push("/dashboard");
           return;
         }
