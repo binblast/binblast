@@ -52,22 +52,28 @@ export async function POST(req: NextRequest) {
       Boolean(referredData.stripeSubscriptionId) ||
       Boolean(referredData.stripeCustomerId);
 
-    const processResult =
-      referredData.referredBy
-        ? {
-            success: true,
-            referralId: undefined,
-            referrerId: referredData.referredBy,
-            alreadyProcessed: true,
-          }
-        : await processReferralSignup({
-            referralCode,
-            newUserId: referredUserId,
-            newUserEmail: referredEmail,
-          });
+    let processResult: Awaited<ReturnType<typeof processReferralSignup>>;
+
+    if (referredData.referredBy) {
+      processResult = {
+        success: true,
+        referralId: undefined,
+        referrerId: referredData.referredBy,
+        alreadyProcessed: true,
+      };
+    } else {
+      processResult = await processReferralSignup({
+        referralCode,
+        newUserId: referredUserId,
+        newUserEmail: referredEmail,
+      });
+    }
 
     if (!processResult.success) {
-      return NextResponse.json({ error: processResult.error || "Failed to link referral" }, { status: 400 });
+      return NextResponse.json(
+        { error: processResult.error || "Failed to link referral" },
+        { status: 400 }
+      );
     }
 
     let awardResult = { awarded: false, creditsAwarded: 0 };
