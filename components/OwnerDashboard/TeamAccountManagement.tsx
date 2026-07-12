@@ -114,6 +114,9 @@ export function TeamAccountManagement({ initialPanel = "create" }: TeamAccountMa
       }
 
       setCreateResult(data.account);
+      if (data.message) {
+        setActionMessage(data.message);
+      }
       setFormData({
         role: formData.role,
         firstName: "",
@@ -306,7 +309,10 @@ export function TeamAccountManagement({ initialPanel = "create" }: TeamAccountMa
 
           {createResult && (
             <div style={{ padding: "1rem", background: "#ecfdf5", border: "1px solid #bbf7d0", borderRadius: "8px", color: "#166534" }}>
-              <div style={{ fontWeight: "700", marginBottom: "0.5rem" }}>Account created</div>
+              <div style={{ fontWeight: "700", marginBottom: "0.5rem" }}>Account ready</div>
+              {actionMessage && (
+                <div style={{ marginBottom: "0.5rem", fontSize: "0.875rem" }}>{actionMessage}</div>
+              )}
               <div><strong>Name:</strong> {createResult.firstName} {createResult.lastName}</div>
               <div><strong>Role:</strong> {createResult.role}</div>
               <div><strong>Login email:</strong> {createResult.email}</div>
