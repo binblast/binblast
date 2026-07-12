@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
           landingPage: asString(data.landingPage),
           pageReferrer: asString(data.pageReferrer),
           status: asString(data.status) || "new",
+          notes: asString(data.notes),
           source: asString(data.source),
           createdAt: serializeTimestamp(data.createdAt),
         };
