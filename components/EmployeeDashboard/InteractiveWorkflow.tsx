@@ -105,7 +105,9 @@ export function InteractiveWorkflow({
         break;
 
       case 'startJob':
-        if (activeJob) {
+        if (activeJob && (activeJob.jobStatus === "pending" || !activeJob.jobStatus)) {
+          onStartJob(activeJob.id);
+        } else if (activeJob) {
           onJobClick(activeJob);
         }
         break;

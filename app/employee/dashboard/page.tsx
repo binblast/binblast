@@ -469,14 +469,36 @@ export default function EmployeeDashboardPage() {
 
       await loadJobs();
       setSelectedJob((prev) => {
-        if (!prev || prev.id !== jobId) return prev;
+        if (!prev || prev.id !== jobId) {
+          const refreshed = jobs.find((job) => job.id === jobId);
+          return refreshed ? { ...refreshed, jobStatus: "in_progress" } : prev;
+        }
         return { ...prev, jobStatus: "in_progress" };
       });
+      setIsModalOpen(true);
     } catch (error: any) {
       setSelectedJob((prev) =>
         prev?.id === jobId ? { ...prev, jobStatus: "pending" } : prev
       );
       throw error;
+    }
+  };
+
+  const handleSelectJob = (job: Job) => {
+    setSelectedJob(job);
+    if (job.jobStatus === "in_progress" || job.jobStatus === "completed") {
+      setIsModalOpen(true);
+    } else {
+      setIsModalOpen(false);
+    }
+  };
+
+  const handleStartJobFromCard = async (job: Job) => {
+    try {
+      setSelectedJob(job);
+      await handleStartJob(job.id);
+    } catch (error: any) {
+      addToast(`Failed to start job: ${error.message}`, "error");
     }
   };
 
@@ -530,14 +552,7 @@ export default function EmployeeDashboardPage() {
   };
 
   const handleStartNextJob = async (job: Job) => {
-    if (!employee) return;
-    try {
-      await handleStartJob(job.id);
-      setSelectedJob(job);
-      setIsModalOpen(true);
-    } catch (error: any) {
-      addToast(`Failed to start job: ${error.message}`, "error");
-    }
+    await handleStartJobFromCard(job);
   };
 
   const handleFlagJob = async (jobId: string, flag: string) => {
@@ -789,10 +804,7 @@ export default function EmployeeDashboardPage() {
                 jobs={jobs}
                 activeJob={selectedJob}
                 onClockIn={handleClockIn}
-                onJobClick={(job) => {
-                  setSelectedJob(job);
-                  setIsModalOpen(true);
-                }}
+                onJobClick={handleSelectJob}
                 onStartJob={handleStartJob}
                 onCompleteJob={handleCompleteJob}
                 employeeId={employee.id}
@@ -878,10 +890,9 @@ export default function EmployeeDashboardPage() {
                 <JobList
                   jobs={jobs}
                   upcomingJobs={upcomingJobs}
-                  onJobClick={(job) => {
-                    setSelectedJob(job);
-                    setIsModalOpen(true);
-                  }}
+                  selectedJobId={selectedJob?.id || null}
+                  onJobClick={handleSelectJob}
+                  onStartJob={handleStartJobFromCard}
                   isClockedIn={isClockedIn}
                   onStartNextJob={handleStartNextJob}
                 />
@@ -944,8 +955,8 @@ export default function EmployeeDashboardPage() {
             if (nextJob) {
               setTimeout(() => {
                 setSelectedJob(nextJob);
-                setWorkflowStep('start');
-                setIsModalOpen(true);
+                setWorkflowStep(undefined);
+                setIsModalOpen(false);
               }, 500);
             } else {
               setIsModalOpen(false);

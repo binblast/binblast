@@ -30,12 +30,22 @@ interface Job {
 interface JobListProps {
   jobs: Job[];
   upcomingJobs?: Job[];
+  selectedJobId?: string | null;
   onJobClick: (job: Job) => void;
+  onStartJob?: (job: Job) => Promise<void>;
   isClockedIn: boolean;
   onStartNextJob?: (job: Job) => void;
 }
 
-export function JobList({ jobs, upcomingJobs = [], onJobClick, isClockedIn, onStartNextJob }: JobListProps) {
+export function JobList({
+  jobs,
+  upcomingJobs = [],
+  selectedJobId = null,
+  onJobClick,
+  onStartJob,
+  isClockedIn,
+  onStartNextJob,
+}: JobListProps) {
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all");
 
   const formatJobDate = (date?: string) => {
@@ -453,6 +463,8 @@ export function JobList({ jobs, upcomingJobs = [], onJobClick, isClockedIn, onSt
         }, ${job.city}, ${job.state} ${job.zipCode}`;
         const binsToClean = job.binCount || job.binsCount || 1;
         const isNextStop = nextJob?.id === job.id;
+        const isPending = job.jobStatus === "pending" || !job.jobStatus;
+        const isSelected = selectedJobId === job.id;
 
         return (
           <div
@@ -460,7 +472,7 @@ export function JobList({ jobs, upcomingJobs = [], onJobClick, isClockedIn, onSt
             className="job-card"
             onClick={() => onJobClick(job)}
             style={{
-              background: isNextStop ? "#f0fdf4" : "#ffffff",
+              background: isNextStop ? "#f0fdf4" : isSelected ? "#f8fafc" : "#ffffff",
               borderRadius: "12px",
               padding: "clamp(1rem, 4vw, 1.25rem)",
               boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
@@ -670,13 +682,73 @@ export function JobList({ jobs, upcomingJobs = [], onJobClick, isClockedIn, onSt
                 marginTop: "0.75rem",
                 paddingTop: "0.75rem",
                 borderTop: "1px solid #e5e7eb",
-                fontSize: "0.75rem",
-                color: "#9ca3af",
-                textAlign: "center",
-                fontWeight: "500",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.5rem",
               }}
             >
-              Tap to {job.jobStatus === "completed" ? "view details" : job.jobStatus === "in_progress" ? "complete" : "start"}
+              {isPending && onStartJob && (
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    await onStartJob(job);
+                  }}
+                  style={{
+                    width: "100%",
+                    minHeight: "44px",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "#2563eb",
+                    color: "#ffffff",
+                    fontSize: "0.875rem",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  Start Job
+                </button>
+              )}
+
+              {job.jobStatus === "in_progress" && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onJobClick(job);
+                  }}
+                  style={{
+                    width: "100%",
+                    minHeight: "44px",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "#16a34a",
+                    color: "#ffffff",
+                    fontSize: "0.875rem",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  Upload Photos & Complete
+                </button>
+              )}
+
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#9ca3af",
+                  textAlign: "center",
+                  fontWeight: "500",
+                }}
+              >
+                {isPending
+                  ? "Open maps above, then start when you arrive"
+                  : job.jobStatus === "completed"
+                    ? "Tap to view completed job"
+                    : "Tap address for directions"}
+              </div>
             </div>
           </div>
         );
