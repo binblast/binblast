@@ -502,6 +502,7 @@ function JobCard({
   onAssigned: () => void;
 }) {
   const status = normalizeJobStatus(job.status, job.jobStatus);
+  const isCancelled = status === "cancelled";
   const statusStyle = getStatusStyle(status);
   const readinessStyle = getReadinessStyle(job.readinessStatus);
 
