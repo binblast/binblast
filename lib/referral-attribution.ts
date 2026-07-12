@@ -1,8 +1,8 @@
+import { normalizeReferralCode } from "@/lib/referral-code-format";
+
 export const REFERRAL_CODE_STORAGE_KEY = "siteLeadReferralCode";
 
-export function normalizeReferralCode(code: string): string {
-  return code.trim().toUpperCase();
-}
+export { normalizeReferralCode };
 
 export function persistCapturedReferralCode(code: string): void {
   if (typeof window === "undefined") return;

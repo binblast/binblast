@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
       valid: true,
       discountAmount: REFERRAL_DISCOUNT_AMOUNT,
       referrerName: result.referrerName || "Friend",
+      matchedCode: result.matchedCode,
       message: `Referral code applied! You'll get $${REFERRAL_DISCOUNT_AMOUNT.toFixed(2)} off your first purchase.`,
     });
   } catch (err: unknown) {

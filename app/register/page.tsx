@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { getCapturedReferralCode } from "@/lib/site-leads";
 import { captureReferralCodeFromLocation, getReferralCodeFromLocation } from "@/lib/referral-attribution";
+import { generateReadableReferralCode } from "@/lib/referral-code-format";
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
@@ -397,9 +398,8 @@ function RegisterForm() {
               subscriptionStatus = "one_time_paid";
             }
 
-            // Generate unique referral code
-            const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
-            const generatedCode = userCredential.user.uid.substring(0, 8).toUpperCase() + randomChars;
+            // Generate a readable referral code without confusing 0/O or 1/I/L characters.
+            const generatedCode = generateReadableReferralCode(12);
 
             // Determine user role based on email
             // Check for operator email (case-insensitive)

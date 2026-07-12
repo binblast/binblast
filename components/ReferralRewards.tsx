@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useFirebase } from "@/lib/firebase-context";
+import { ReferralCodeDisplay } from "@/components/ReferralCodeDisplay";
 // Note: Firebase functions are imported dynamically inside useEffect to prevent build-time initialization errors
 
 interface ReferralRewardsProps {
@@ -226,21 +227,16 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
             alignItems: "center",
             flexWrap: "wrap"
           }}>
-            <code style={{
+            <div style={{
               padding: "0.75rem 1rem",
               background: "#ffffff",
               borderRadius: "8px",
               border: "1px solid #bae6fd",
-              fontSize: "1rem",
-              fontWeight: "700",
-              color: "#0369a1",
-              letterSpacing: "0.05em",
-              fontFamily: "monospace",
               flex: "1",
-              minWidth: "200px"
+              minWidth: "200px",
             }}>
-              {referralCode}
-            </code>
+              <ReferralCodeDisplay code={referralCode} size="lg" showLegend grouped />
+            </div>
           </div>
         </div>
 

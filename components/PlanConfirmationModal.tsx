@@ -6,6 +6,8 @@
 import React, { useState, useEffect } from "react";
 import { PLAN_CONFIGS, PlanId } from "@/lib/stripe-config";
 import { usePlatformPricing } from "@/hooks/usePlatformPricing";
+import { ReferralCodeDisplay } from "@/components/ReferralCodeDisplay";
+import { normalizeReferralCode } from "@/lib/referral-code-format";
 
 interface PlanConfirmationModalProps {
   planId: PlanId;
@@ -34,6 +36,7 @@ export function PlanConfirmationModal({
   const [referralDiscount, setReferralDiscount] = useState(0);
   const [validatingCode, setValidatingCode] = useState(false);
   const [referralError, setReferralError] = useState<string | null>(null);
+  const [appliedReferralCode, setAppliedReferralCode] = useState("");
 
   const { plans: platformPlans } = usePlatformPricing();
 
@@ -53,8 +56,9 @@ export function PlanConfirmationModal({
       
       // If there's a referral code from URL, populate and validate it automatically
       if (initialReferralCode && initialReferralCode.trim()) {
-        const normalizedCode = initialReferralCode.trim().toUpperCase();
+        const normalizedCode = normalizeReferralCode(initialReferralCode);
         setReferralCode(normalizedCode);
+        setAppliedReferralCode("");
         
         // Auto-validate the referral code
         (async () => {
@@ -73,13 +77,17 @@ export function PlanConfirmationModal({
             const data = await response.json();
 
             if (data.valid) {
+              const matchedCode = normalizeReferralCode(data.matchedCode || normalizedCode);
               setReferralCodeValid(true);
               setReferralDiscount(data.discountAmount || 10.00);
               setReferralError(null);
+              setAppliedReferralCode(matchedCode);
+              setReferralCode(matchedCode);
             } else {
               setReferralCodeValid(false);
               setReferralDiscount(0);
               setReferralError(data.error || "Invalid referral code");
+              setAppliedReferralCode("");
             }
           } catch (err: any) {
             setReferralCodeValid(false);
@@ -94,6 +102,7 @@ export function PlanConfirmationModal({
         setReferralCodeValid(null);
         setReferralDiscount(0);
         setReferralError(null);
+        setAppliedReferralCode("");
       }
     } else {
       setApplyCredit(false);
@@ -101,6 +110,7 @@ export function PlanConfirmationModal({
       setReferralCodeValid(null);
       setReferralDiscount(0);
       setReferralError(null);
+      setAppliedReferralCode("");
     }
   }, [isOpen, availableCredit, initialReferralCode]);
 
@@ -116,25 +126,31 @@ export function PlanConfirmationModal({
     setValidatingCode(true);
     setReferralError(null);
 
+    const normalizedCode = normalizeReferralCode(referralCode);
+
     try {
       const response = await fetch("/api/referral/validate-code", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ referralCode: referralCode.trim().toUpperCase() }),
+        body: JSON.stringify({ referralCode: normalizedCode }),
       });
 
       const data = await response.json();
 
       if (data.valid) {
+        const matchedCode = normalizeReferralCode(data.matchedCode || normalizedCode);
         setReferralCodeValid(true);
         setReferralDiscount(data.discountAmount || 10.00);
         setReferralError(null);
+        setAppliedReferralCode(matchedCode);
+        setReferralCode(matchedCode);
       } else {
         setReferralCodeValid(false);
         setReferralDiscount(0);
         setReferralError(data.error || "Invalid referral code");
+        setAppliedReferralCode("");
       }
     } catch (err: any) {
       setReferralCodeValid(false);
@@ -269,7 +285,7 @@ export function PlanConfirmationModal({
                   setReferralDiscount(0);
                   setReferralError(null);
                 }}
-                placeholder="Enter referral code"
+                placeholder="Enter referral code (dashes optional)"
                 style={{
                   flex: 1,
                   padding: "0.75rem",
@@ -305,16 +321,30 @@ export function PlanConfirmationModal({
                 {validatingCode ? "Checking..." : "Apply"}
               </button>
             </div>
-            {referralCodeValid === true && (
+            <p style={{ margin: "0.5rem 0 0", fontSize: "0.75rem", color: "#64748b" }}>
+              Numbers and letters look similar in some codes. Green = number, blue = letter when shown below.
+            </p>
+            {referralCodeValid === true && appliedReferralCode && (
               <div
                 style={{
-                  marginTop: "0.5rem",
-                  fontSize: "0.8125rem",
-                  color: "#16a34a",
-                  fontWeight: "600",
+                  marginTop: "0.75rem",
+                  padding: "0.75rem",
+                  background: "#ffffff",
+                  borderRadius: "8px",
+                  border: "1px solid #86efac",
                 }}
               >
-                ✓ Referral code applied! You'll get ${referralDiscount.toFixed(2)} off.
+                <div
+                  style={{
+                    fontSize: "0.8125rem",
+                    color: "#16a34a",
+                    fontWeight: "600",
+                    marginBottom: "0.35rem",
+                  }}
+                >
+                  ✓ Referral code applied! You'll get ${referralDiscount.toFixed(2)} off.
+                </div>
+                <ReferralCodeDisplay code={appliedReferralCode} size="md" showLegend grouped />
               </div>
             )}
             {referralError && (
@@ -574,9 +604,7 @@ export function PlanConfirmationModal({
           <button
             onClick={() => onConfirm(
               applyCredit,
-              (referralCodeValid || initialReferralCode)
-                ? (referralCode || initialReferralCode).trim().toUpperCase()
-                : undefined
+              referralCodeValid && appliedReferralCode ? appliedReferralCode : undefined
             )}
             disabled={loading}
             style={{

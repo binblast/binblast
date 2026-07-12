@@ -1,17 +1,41 @@
 import { getAdminFirestore } from "@/lib/firebase-admin";
+import {
+  generateReadableReferralCode,
+  getReferralCodeVariants,
+  normalizeReferralCode,
+} from "@/lib/referral-code-format";
 
 export const REFERRAL_DISCOUNT_AMOUNT = 10;
 
-export function normalizeReferralCode(code: string): string {
-  return code.trim().toUpperCase();
-}
+export { normalizeReferralCode, generateReadableReferralCode };
 
 export type ReferralValidationResult = {
   valid: boolean;
   referrerId?: string;
   referrerName?: string;
+  matchedCode?: string;
   error?: string;
 };
+
+async function findUserByReferralCode(code: string) {
+  const db = await getAdminFirestore();
+  const variants = getReferralCodeVariants(code);
+
+  for (let i = 0; i < variants.length; i += 10) {
+    const chunk = variants.slice(i, i + 10);
+    const snapshot = await db
+      .collection("users")
+      .where("referralCode", "in", chunk)
+      .limit(1)
+      .get();
+
+    if (!snapshot.empty) {
+      return snapshot.docs[0];
+    }
+  }
+
+  return null;
+}
 
 export async function validateReferralCode(
   referralCode: string
@@ -21,24 +45,23 @@ export async function validateReferralCode(
     return { valid: false, error: "Referral code is required" };
   }
 
-  const db = await getAdminFirestore();
-  const snapshot = await db
-    .collection("users")
-    .where("referralCode", "==", normalizedCode)
-    .limit(1)
-    .get();
+  const referrerDoc = await findUserByReferralCode(normalizedCode);
 
-  if (snapshot.empty) {
+  if (!referrerDoc) {
     return { valid: false, error: "Invalid referral code" };
   }
 
-  const referrerDoc = snapshot.docs[0];
   const referrerData = referrerDoc.data();
+  const matchedCode =
+    typeof referrerData.referralCode === "string"
+      ? normalizeReferralCode(referrerData.referralCode)
+      : normalizedCode;
 
   return {
     valid: true,
     referrerId: referrerDoc.id,
     referrerName: referrerData.firstName || "Friend",
+    matchedCode,
   };
 }
 
