@@ -3,6 +3,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useFirebase } from "@/lib/firebase-context";
+import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
+import { appendStandardPrepNote } from "@/lib/cleaning-readiness";
 
 interface ScheduledCleaning {
   id: string;
@@ -34,6 +36,7 @@ interface ScheduleCleaningFormProps {
     firstName?: string;
     lastName?: string;
     selectedPlan?: string;
+    binsCount?: number;
   } | null;
 }
 
@@ -101,6 +104,11 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
   const [addressLine2, setAddressLine2] = useState(existingCleaning?.addressLine2 || "");
   const [selectedTime, setSelectedTime] = useState(existingCleaning?.scheduledTime || "");
   const [notes, setNotes] = useState(existingCleaning?.notes || "");
+  const [binsCount, setBinsCount] = useState(
+    (existingCleaning as { binsCount?: number } | null | undefined)?.binsCount ||
+      userData?.binsCount ||
+      1
+  );
   const [isRescheduling, setIsRescheduling] = useState(!!existingCleaning);
 
   // Update form fields when existingCleaning prop changes (e.g., when pending data is available)
@@ -326,6 +334,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
           scheduledDate: scheduledDate,
           scheduledTime: selectedTime,
           notes: notes || null,
+          binsCount: Number(binsCount) || 1,
+          internalNotes: appendStandardPrepNote(null),
           updatedAt: serverTimestamp(),
         });
         
@@ -365,6 +375,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
             zipCode,
             preferredDayOfWeek: trashDay,
             planName,
+            binsCount: Number(binsCount) || 1,
           }).catch((emailErr) => {
             console.error("[ScheduleCleaningForm] Failed to send confirmation email:", emailErr);
           });
@@ -385,6 +396,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
           scheduledDate: scheduledDate,
           scheduledTime: selectedTime,
           notes: notes || null,
+          binsCount: Number(binsCount) || 1,
+          internalNotes: appendStandardPrepNote(null),
           status: "upcoming",
           createdAt: serverTimestamp(),
         };
@@ -428,6 +441,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
             zipCode,
             preferredDayOfWeek: trashDay,
             planName,
+            binsCount: Number(binsCount) || 1,
           }).catch((emailErr) => {
             console.error("[ScheduleCleaningForm] Failed to send confirmation email:", emailErr);
           });
@@ -534,6 +548,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
           <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
             {isRescheduling ? "Reschedule Your Cleaning" : "Schedule Your Bin Cleaning"}
           </h2>
+
+          <CleaningReadinessBanner variant="customer" />
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             {/* Preferred Cleaning Day Selection */}
@@ -693,12 +709,32 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
             {/* Notes */}
             <div>
               <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
+                Number of Trash Cans
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={binsCount}
+                onChange={(e) => setBinsCount(Math.max(1, Number(e.target.value) || 1))}
+                required
+                style={{
+                  width: "100%",
+                  padding: "0.75rem 1rem",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "0.95rem",
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
                 Special Instructions <span style={{ color: "var(--text-light)", fontWeight: "400" }}>(optional)</span>
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any special instructions for our team..."
+                placeholder="Gate codes, bin location, pets, or other access notes. Trash cans must be at the curb during your scheduled window."
                 rows={3}
                 style={{
                   width: "100%",

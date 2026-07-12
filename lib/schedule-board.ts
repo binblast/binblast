@@ -1,4 +1,9 @@
 import { parseCleaningDate, formatCleaningDateForStorage } from "@/lib/cleaning-schedule";
+import {
+  CleaningReadinessStatus,
+  CustomerPaymentInfo,
+  evaluateCleaningReadiness,
+} from "@/lib/cleaning-readiness";
 
 export const PLAN_LABELS: Record<string, string> = {
   "one-time": "Monthly Clean",
@@ -35,6 +40,13 @@ export interface ScheduleJob {
   assignedEmployeeName: string;
   completedAt: string | null;
   isCommercial: boolean;
+  paymentStatus: string;
+  subscriptionStatus: string;
+  servicePaused: boolean;
+  readinessStatus: CleaningReadinessStatus;
+  readinessMessage: string;
+  canService: boolean;
+  paymentReady: boolean;
 }
 
 export interface ScheduleStaffMember {
@@ -52,6 +64,38 @@ export interface ScheduleBoardStats {
   upcoming: number;
   unassigned: number;
   cancelled: number;
+  readyToday: number;
+  blockedToday: number;
+}
+
+export function attachReadinessToJob(
+  job: Omit<
+    ScheduleJob,
+    | "paymentStatus"
+    | "subscriptionStatus"
+    | "servicePaused"
+    | "readinessStatus"
+    | "readinessMessage"
+    | "canService"
+    | "paymentReady"
+  >,
+  customer: CustomerPaymentInfo
+): ScheduleJob {
+  const paymentStatus = customer.paymentStatus || "";
+  const subscriptionStatus = customer.subscriptionStatus || "";
+  const servicePaused = Boolean(customer.servicePaused);
+  const readiness = evaluateCleaningReadiness(job, customer);
+
+  return {
+    ...job,
+    paymentStatus,
+    subscriptionStatus,
+    servicePaused,
+    readinessStatus: readiness.status,
+    readinessMessage: readiness.message,
+    canService: readiness.canService,
+    paymentReady: readiness.paymentReady,
+  };
 }
 
 export function normalizeJobStatus(status?: string, jobStatus?: string): string {
@@ -110,5 +154,13 @@ export function buildScheduleStats(jobs: ScheduleJob[]): ScheduleBoardStats {
     }).length,
     unassigned: jobs.filter((job) => !job.assignedEmployeeId && normalizeJobStatus(job.status, job.jobStatus) !== "completed" && normalizeJobStatus(job.status, job.jobStatus) !== "cancelled").length,
     cancelled: jobs.filter((job) => normalizeJobStatus(job.status, job.jobStatus) === "cancelled").length,
+    readyToday: jobs.filter(
+      (job) => isToday(job.scheduledDate) && job.readinessStatus === "ready_today"
+    ).length,
+    blockedToday: jobs.filter(
+      (job) =>
+        isToday(job.scheduledDate) &&
+        (job.readinessStatus === "payment_required" || job.readinessStatus === "service_paused")
+    ).length,
   };
 }

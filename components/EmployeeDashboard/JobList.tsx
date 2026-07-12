@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 
 interface Job {
   id: string;
@@ -13,6 +14,9 @@ interface Job {
   state: string;
   zipCode: string;
   binCount?: number;
+  binsCount?: number;
+  scheduledTime?: string;
+  trashDay?: string;
   planType?: string;
   notes?: string;
   jobStatus?: "pending" | "in_progress" | "completed";
@@ -124,6 +128,8 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
 
   return (
     <div>
+      <CleaningReadinessBanner variant="staff" />
+
       {/* Route Board Header */}
       <div
         className="route-board-header"
@@ -356,6 +362,7 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
         const fullAddress = `${job.addressLine1}${
           job.addressLine2 ? `, ${job.addressLine2}` : ""
         }, ${job.city}, ${job.state} ${job.zipCode}`;
+        const binsToClean = job.binCount || job.binsCount || 1;
 
         return (
           <div
@@ -455,7 +462,36 @@ export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobLi
                   BINS
                 </div>
                 <div style={{ fontWeight: "700", color: "#111827", fontSize: "1rem" }}>
-                  {job.binCount || "?"}
+                  {binsToClean}
+                </div>
+              </div>
+              <div
+                style={{
+                  padding: "0.5rem",
+                  background: "#fff7ed",
+                  borderRadius: "6px",
+                  textAlign: "center",
+                  border: "1px solid #fed7aa",
+                }}
+              >
+                <div style={{ fontWeight: "600", color: "#9a3412", fontSize: "0.75rem" }}>
+                  WINDOW
+                </div>
+                <div style={{ fontWeight: "700", color: "#9a3412", fontSize: "0.75rem" }}>
+                  {job.scheduledTime || "TBD"}
+                </div>
+              </div>
+              <div
+                style={{
+                  padding: "0.5rem",
+                  background: "#f9fafb",
+                  borderRadius: "6px",
+                  textAlign: "center",
+                  gridColumn: "1 / -1",
+                }}
+              >
+                <div style={{ fontWeight: "600", color: "#c2410c", fontSize: "0.75rem" }}>
+                  CURB PLACEMENT REQUIRED
                 </div>
               </div>
               <div

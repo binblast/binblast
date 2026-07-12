@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 
 interface Stop {
   id: string;
@@ -14,6 +15,8 @@ interface Stop {
   county?: string;
   scheduledDate?: string;
   scheduledTime?: string;
+  binsCount?: number;
+  notes?: string;
   status?: string;
   jobStatus?: string;
 }
@@ -109,6 +112,8 @@ export function StopList({ employeeId, refreshKey = 0 }: StopListProps) {
         Stop List
       </h3>
 
+      <CleaningReadinessBanner variant="staff" />
+
       {/* Today's Stops */}
       <div style={{ marginBottom: "2rem" }}>
         <h4 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "1rem", color: "#374151" }}>
@@ -131,6 +136,12 @@ export function StopList({ employeeId, refreshKey = 0 }: StopListProps) {
                   </th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
                     County/City
+                  </th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
+                    Bins
+                  </th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
+                    Notes
                   </th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
                     Time Window
@@ -156,6 +167,15 @@ export function StopList({ employeeId, refreshKey = 0 }: StopListProps) {
                     </td>
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
                       {stop.county || stop.city || "N/A"}
+                    </td>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                      {stop.binsCount || 1}
+                    </td>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280", maxWidth: "180px" }}>
+                      {stop.notes || "—"}
+                      <div style={{ color: "#c2410c", fontWeight: "600", fontSize: "0.75rem", marginTop: "0.25rem" }}>
+                        Curb required
+                      </div>
                     </td>
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
                       {stop.scheduledTime || "TBD"}
@@ -221,6 +241,12 @@ export function StopList({ employeeId, refreshKey = 0 }: StopListProps) {
                     Date
                   </th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
+                    Bins
+                  </th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
+                    Notes
+                  </th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
                     Time
                   </th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
@@ -241,6 +267,12 @@ export function StopList({ employeeId, refreshKey = 0 }: StopListProps) {
                     </td>
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
                       {formatDate(stop.scheduledDate || "")}
+                    </td>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                      {stop.binsCount || 1}
+                    </td>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280", maxWidth: "180px" }}>
+                      {stop.notes || "—"}
                     </td>
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
                       {stop.scheduledTime || "TBD"}

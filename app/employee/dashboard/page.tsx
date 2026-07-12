@@ -41,6 +41,9 @@ interface Job {
   state: string;
   zipCode: string;
   binCount?: number;
+  binsCount?: number;
+  scheduledTime?: string;
+  trashDay?: string;
   planType?: string;
   notes?: string;
   jobStatus?: "pending" | "in_progress" | "completed";
@@ -252,7 +255,12 @@ export default function EmployeeDashboardPage() {
         });
         
         // Filter to only show today's jobs for the main display
-        const todayJobs = filteredJobs.filter((job: any) => job.scheduledDate === today);
+        const todayJobs = filteredJobs
+          .filter((job: any) => job.scheduledDate === today)
+          .map((job: any) => ({
+            ...job,
+            binCount: job.binCount ?? job.binsCount ?? 1,
+          }));
         setJobs(todayJobs);
         loadPayPreview(); // Refresh pay preview when jobs change
         loadDashboardData(); // Refresh dashboard data when jobs change

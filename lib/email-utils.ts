@@ -1,4 +1,4 @@
-// lib/email-utils.ts
+import { CURB_PLACEMENT_MESSAGE } from "@/lib/cleaning-readiness";
 // Helper functions for sending emails via EmailJS
 
 export interface EmailParams {
@@ -265,6 +265,7 @@ export async function notifyCleaningScheduled(customerData: {
   zipCode: string;
   preferredDayOfWeek?: string;
   planName?: string;
+  binsCount?: number;
 }): Promise<void> {
   // Hardcoded template ID for cleaning scheduled confirmation email
   const templateId = "template_ent7lyj";
@@ -302,6 +303,8 @@ export async function notifyCleaningScheduled(customerData: {
       zipCode: customerData.zipCode || "",
       preferredDayOfWeek: preferredDayDisplay, // Pre-formatted
       planName: customerData.planName || "Your Plan",
+      binsCount: String(customerData.binsCount || 1),
+      curbPlacementReminder: CURB_PLACEMENT_MESSAGE,
       dashboardLink: dashboardLink,
     });
   } catch (error: any) {

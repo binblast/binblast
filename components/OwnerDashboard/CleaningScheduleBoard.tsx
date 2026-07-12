@@ -11,12 +11,14 @@ import {
   isToday,
   normalizeJobStatus,
 } from "@/lib/schedule-board";
+import { getReadinessLabel, getReadinessStyle } from "@/lib/cleaning-readiness";
+import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 
 interface CleaningScheduleBoardProps {
   userId: string;
 }
 
-type QuickFilter = "all" | "today" | "week" | "unassigned" | "in-progress";
+type QuickFilter = "all" | "today" | "week" | "ready-today" | "unassigned" | "in-progress";
 type ViewMode = "board" | "list";
 
 const TIME_OPTIONS = [
@@ -84,6 +86,10 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
       result = result.filter((job) => isToday(job.scheduledDate));
     } else if (quickFilter === "week") {
       result = result.filter((job) => isThisWeek(job.scheduledDate));
+    } else if (quickFilter === "ready-today") {
+      result = result.filter(
+        (job) => isToday(job.scheduledDate) && job.readinessStatus === "ready_today"
+      );
     } else if (quickFilter === "unassigned") {
       result = result.filter(
         (job) =>
@@ -268,6 +274,8 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
           {[
             { label: "Total Jobs", value: stats.total, color: "#111827" },
             { label: "Today", value: stats.today, color: "#2563eb" },
+            { label: "Ready Today", value: stats.readyToday, color: "#16a34a" },
+            { label: "Blocked Today", value: stats.blockedToday, color: "#dc2626" },
             { label: "In Progress", value: stats.inProgress, color: "#7c3aed" },
             { label: "Upcoming", value: stats.upcoming, color: "#d97706" },
             { label: "Unassigned", value: stats.unassigned, color: "#dc2626" },
@@ -293,11 +301,20 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
         </div>
       )}
 
+      <CleaningReadinessBanner variant="staff" />
+
+      {stats && stats.blockedToday > 0 && (
+        <div style={{ marginBottom: "1rem", padding: "0.875rem 1rem", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", color: "#b91c1c", fontWeight: "600" }}>
+          {stats.blockedToday} trash can cleaning{stats.blockedToday === 1 ? "" : "s"} scheduled today cannot be serviced until payment or account issues are resolved.
+        </div>
+      )}
+
       <div style={{ background: "#ffffff", padding: "1.25rem", borderRadius: "12px", border: "1px solid #e5e7eb", marginBottom: "1rem" }}>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
           {[
             { id: "all" as QuickFilter, label: "All Jobs" },
             { id: "today" as QuickFilter, label: "Today" },
+            { id: "ready-today" as QuickFilter, label: "Ready Today" },
             { id: "week" as QuickFilter, label: "This Week" },
             { id: "unassigned" as QuickFilter, label: "Unassigned" },
             { id: "in-progress" as QuickFilter, label: "In Progress" },
@@ -456,9 +473,10 @@ function JobCard({
 }) {
   const status = normalizeJobStatus(job.status, job.jobStatus);
   const statusStyle = getStatusStyle(status);
+  const readinessStyle = getReadinessStyle(job.readinessStatus);
 
   return (
-    <div style={{ padding: "1rem", background: selected ? "#eff6ff" : "#f9fafb", borderRadius: "10px", border: `1px solid ${selected ? "#93c5fd" : "#e5e7eb"}`, display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "flex-start" }}>
+    <div style={{ padding: "1rem", background: selected ? "#eff6ff" : job.readinessStatus === "ready_today" ? "#f0fdf4" : "#f9fafb", borderRadius: "10px", border: `1px solid ${selected ? "#93c5fd" : job.readinessStatus === "ready_today" ? "#bbf7d0" : "#e5e7eb"}`, display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "flex-start" }}>
       <input type="checkbox" checked={selected} onChange={onToggleSelect} style={{ marginTop: "0.35rem" }} />
       <div style={{ flex: 1, minWidth: "240px" }}>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap", marginBottom: "0.35rem" }}>
@@ -483,8 +501,14 @@ function JobCard({
             {job.internalNotes && <>{job.notes ? " · " : ""}Internal: {job.internalNotes}</>}
           </div>
         )}
+        <div style={{ fontSize: "0.75rem", color: "#c2410c", fontWeight: "700", marginTop: "0.5rem" }}>
+          Curb placement required before service window
+        </div>
       </div>
       <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+        <span style={{ padding: "0.25rem 0.75rem", borderRadius: "999px", fontSize: "0.75rem", fontWeight: "700", background: readinessStyle.background, color: readinessStyle.color, border: `1px solid ${readinessStyle.border}` }}>
+          {getReadinessLabel(job.readinessStatus)}
+        </span>
         <span style={{ padding: "0.25rem 0.75rem", borderRadius: "999px", fontSize: "0.75rem", fontWeight: "700", ...statusStyle }}>
           {status}
         </span>

@@ -5,6 +5,7 @@ import {
   PLAN_LABELS,
   ScheduleJob,
   ScheduleStaffMember,
+  attachReadinessToJob,
   buildScheduleStats,
   serializeScheduleDate,
 } from "@/lib/schedule-board";
@@ -67,7 +68,7 @@ export async function GET(req: NextRequest) {
         const lastName = user ? asString(user.lastName) : "";
         const planType = asString(data.planType);
 
-        return {
+        const baseJob = {
           id: doc.id,
           userId: asString(data.userId),
           customerName:
@@ -91,7 +92,7 @@ export async function GET(req: NextRequest) {
           partner: asString(data.partner),
           planType,
           planLabel: PLAN_LABELS[planType] || planType || "N/A",
-          binsCount: asNumber(data.binsCount) || 1,
+          binsCount: asNumber(data.binsCount) || (user ? asNumber(user.binsCount) || 1 : 1),
           notes: asString(data.notes),
           internalNotes: asString(data.internalNotes),
           assignedEmployeeId: asString(data.assignedEmployeeId),
@@ -99,6 +100,12 @@ export async function GET(req: NextRequest) {
           completedAt: data.completedAt ? serializeScheduleDate(data.completedAt) : null,
           isCommercial: planType === "commercial",
         };
+
+        return attachReadinessToJob(baseJob, {
+          paymentStatus: user ? asString(user.paymentStatus) : "",
+          subscriptionStatus: user ? asString(user.subscriptionStatus) : "",
+          servicePaused: user ? Boolean(user.servicePaused) : false,
+        });
       })
       .sort((a, b) => {
         const dateCompare = a.scheduledDate.localeCompare(b.scheduledDate);

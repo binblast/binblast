@@ -75,9 +75,12 @@ export async function GET(req: NextRequest) {
     })) as Array<{ id: string; addressLine1?: string; scheduledDate?: string; [key: string]: any }>;
     
     // Filter to only show today's jobs
-    const jobs = allJobs.filter((job) => {
-      return job.scheduledDate === today;
-    });
+    const jobs = allJobs
+      .filter((job) => job.scheduledDate === today)
+      .map((job) => ({
+        ...job,
+        binCount: job.binCount ?? job.binsCount ?? 1,
+      }));
     
     // Sort by address on client side for route planning
     jobs.sort((a, b) => {

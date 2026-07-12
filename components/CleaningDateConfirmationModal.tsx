@@ -2,6 +2,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
+import { appendStandardPrepNote } from "@/lib/cleaning-readiness";
 
 interface PendingCleaningData {
   preferredServiceDate: string;
@@ -24,6 +26,7 @@ interface CleaningDateConfirmationModalProps {
     firstName?: string;
     lastName?: string;
     selectedPlan?: string;
+    binsCount?: number;
   };
   onConfirm: () => void;
   onCancel: () => void;
@@ -85,6 +88,8 @@ export function CleaningDateConfirmationModal({
         trashDay: preferredDayOfWeek,
         status: "upcoming",
         notes: pendingCleaningData.notes || null,
+        binsCount: userData.binsCount || 1,
+        internalNotes: appendStandardPrepNote(null),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -119,6 +124,7 @@ export function CleaningDateConfirmationModal({
           zipCode: pendingCleaningData.zipCode,
           preferredDayOfWeek: preferredDayOfWeek,
           planName,
+          binsCount: userData.binsCount || 1,
         }).catch((emailErr) => {
           console.error("[CleaningDateConfirmationModal] Failed to send confirmation email:", emailErr);
         });
@@ -207,6 +213,8 @@ export function CleaningDateConfirmationModal({
           <p style={{ margin: "0 0 20px 0", fontSize: "16px", color: "#374151", lineHeight: "1.6" }}>
             Great! We're ready to schedule your first cleaning. Please confirm the details below:
           </p>
+
+          <CleaningReadinessBanner variant="compact" />
 
           {/* Cleaning Details */}
           <div style={{

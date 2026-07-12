@@ -25,6 +25,12 @@ import {
   isCleaningCompleted,
   isCleaningCancelled,
 } from "@/lib/cleaning-schedule";
+import { CleaningReadinessBanner, CleaningJobPrepDetails } from "@/components/CleaningReadinessBanner";
+import {
+  evaluateCleaningReadiness,
+  getReadinessLabel,
+  getReadinessStyle,
+} from "@/lib/cleaning-readiness";
 
 const OwnerCommandCenter = dynamic(
   () => import("@/components/OwnerDashboard/OwnerCommandCenter").then((m) => m.OwnerCommandCenter),
@@ -110,6 +116,8 @@ interface UserData {
   stripeSubscriptionId?: string | null;
   subscriptionStatus?: string;
   paymentStatus?: string;
+  servicePaused?: boolean;
+  binsCount?: number;
   role?: string; // "admin" | "customer" | "partner"
   createdAt?: any;
   partnerAccepted?: boolean;
@@ -155,6 +163,7 @@ interface ScheduledCleaning {
   zipCode: string;
   trashDay: string;
   notes?: string;
+  binsCount?: number;
   status: "upcoming" | "completed" | "cancelled";
   createdAt: any;
 }
@@ -4254,6 +4263,7 @@ function DashboardPageContent() {
                   firstName: user.firstName,
                   lastName: user.lastName,
                   selectedPlan: user.selectedPlan,
+                  binsCount: user.binsCount || 1,
                 }}
                 onConfirm={() => {
                   setShowCleaningConfirmation(false);
@@ -4309,6 +4319,7 @@ function DashboardPageContent() {
                     firstName: user.firstName,
                     lastName: user.lastName,
                     selectedPlan: user.selectedPlan,
+                    binsCount: user.binsCount || 1,
                   }}
                   existingCleaning={(() => {
                     // If user has pending cleaning data, use that to pre-fill the form
@@ -4375,21 +4386,14 @@ function DashboardPageContent() {
                     return null;
                   })()}
                 />
+                <CleaningReadinessBanner variant="customer" />
                 <p style={{ 
                   fontSize: "0.875rem", 
                   color: "#6b7280", 
                   marginTop: "1rem",
                   fontStyle: "italic"
                 }}>
-                  We&apos;ll arrive on or shortly after your preferred cleaning day.
-                </p>
-                <p style={{ 
-                  fontSize: "0.875rem", 
-                  color: "#dc2626", 
-                  marginTop: "0.5rem",
-                  fontWeight: "500"
-                }}>
-                  Important: Please ensure your trash can is empty for faster, more effective cleaning.
+                  We&apos;ll arrive on or shortly after your preferred cleaning day during your scheduled time window.
                 </p>
               </div>
             </div>
@@ -4643,6 +4647,9 @@ function DashboardPageContent() {
               
                 {/* Upcoming */}
                 <div style={{ marginBottom: "2rem" }}>
+                  {!isAdmin && upcomingCleanings.length > 0 && (
+                    <CleaningReadinessBanner variant="compact" />
+                  )}
                   <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "var(--text-dark)", marginBottom: "1rem" }}>
                     {isAdmin ? "Today's Cleanings" : "Upcoming"}
                   </h3>
@@ -4680,8 +4687,24 @@ function DashboardPageContent() {
                         const cleaningDate = getCleaningDate(cleaning);
                         const customer = isAdmin ? allCustomers.find((c: any) => c.id === cleaning.userId) : null;
                         const isCompleted = cleaning.status === "completed" || (cleaning as any).jobStatus === "completed";
-                        // Allow editing at any time - no 12 hour restriction
                         const canEdit = !isAdmin && !isCompleted && cleaning.status !== "cancelled";
+                        const readiness = evaluateCleaningReadiness(
+                          {
+                            scheduledDate: cleaningDate.toISOString().split("T")[0],
+                            scheduledTime: cleaning.scheduledTime,
+                            status: cleaning.status,
+                            jobStatus: (cleaning as any).jobStatus,
+                            binsCount: cleaning.binsCount || user?.binsCount || 1,
+                            notes: cleaning.notes,
+                            trashDay: cleaning.trashDay,
+                          },
+                          {
+                            paymentStatus: customer?.paymentStatus || user?.paymentStatus,
+                            subscriptionStatus: customer?.subscriptionStatus || user?.subscriptionStatus,
+                            servicePaused: customer?.servicePaused || user?.servicePaused,
+                          }
+                        );
+                        const readinessStyle = getReadinessStyle(readiness.status);
                         
                         return (
                           <div
@@ -4718,6 +4741,14 @@ function DashboardPageContent() {
                                   {customer.selectedPlan ? (PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan) : "No plan"} • {customer.source === "partner" ? "Partner" : "Direct"}
                                 </div>
                               )}
+                              <CleaningJobPrepDetails
+                                binsCount={cleaning.binsCount || user?.binsCount || 1}
+                                scheduledTime={cleaning.scheduledTime}
+                                trashDay={cleaning.trashDay}
+                                notes={cleaning.notes}
+                                showInternalNotes={isAdmin}
+                                internalNotes={(cleaning as any).internalNotes}
+                              />
                             </div>
                             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: "flex-end" }}>
                               {canEdit && (
@@ -4752,11 +4783,12 @@ function DashboardPageContent() {
                             borderRadius: "999px",
                             fontSize: "0.75rem",
                             fontWeight: "600",
-                                background: "#3b82f620",
-                                color: "#3b82f6",
+                            background: readinessStyle.background,
+                            color: readinessStyle.color,
+                            border: `1px solid ${readinessStyle.border}`,
                             textTransform: "capitalize"
                           }}>
-                                {cleaning.status || "Scheduled"}
+                                {getReadinessLabel(readiness.status)}
                           </span>
                             </div>
                           </div>
