@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { CreateOfferModal } from "./CreateOfferModal";
+import { ContactCustomerModal } from "@/components/OperatorDashboard/ContactCustomerModal";
 
 interface CustomQuote {
   id: string;
@@ -32,6 +33,10 @@ export function CustomQuotesManagement() {
   const [selectedQuote, setSelectedQuote] = useState<CustomQuote | null>(null);
   const [showCreateOfferModal, setShowCreateOfferModal] = useState(false);
   const [quoteForOffer, setQuoteForOffer] = useState<CustomQuote | null>(null);
+  const [contactModal, setContactModal] = useState<{
+    mode: "email" | "call";
+    quote: CustomQuote;
+  } | null>(null);
 
   useEffect(() => {
     loadQuotes();
@@ -403,42 +408,44 @@ export function CustomQuotesManagement() {
                       <option value="converted">Converted</option>
                     </select>
                   )}
-                  <a
-                    href={`mailto:${quote.email}?subject=Custom Quote Request - ${quote.name}`}
-                    onClick={(e) => e.stopPropagation()}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setContactModal({ mode: "email", quote });
+                    }}
                     style={{
                       padding: "0.5rem 1rem",
                       background: "#2563eb",
                       color: "#ffffff",
+                      border: "none",
                       borderRadius: "8px",
                       fontSize: "0.875rem",
                       fontWeight: "600",
-                      textDecoration: "none",
-                      display: "inline-block",
+                      cursor: "pointer",
                       minHeight: "36px",
-                      lineHeight: "1.5"
                     }}
                   >
                     Email
-                  </a>
-                  <a
-                    href={`tel:${quote.phone}`}
-                    onClick={(e) => e.stopPropagation()}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setContactModal({ mode: "call", quote });
+                    }}
                     style={{
                       padding: "0.5rem 1rem",
                       background: "#16a34a",
                       color: "#ffffff",
+                      border: "none",
                       borderRadius: "8px",
                       fontSize: "0.875rem",
                       fontWeight: "600",
-                      textDecoration: "none",
-                      display: "inline-block",
+                      cursor: "pointer",
                       minHeight: "36px",
-                      lineHeight: "1.5"
                     }}
                   >
                     Call
-                  </a>
+                  </button>
                 </div>
               </div>
 
@@ -685,6 +692,19 @@ export function CustomQuotesManagement() {
             setShowCreateOfferModal(false);
             setQuoteForOffer(null);
           }}
+        />
+      )}
+
+      {contactModal && (
+        <ContactCustomerModal
+          isOpen={!!contactModal}
+          onClose={() => setContactModal(null)}
+          mode={contactModal.mode}
+          customerName={contactModal.quote.name}
+          customerEmail={contactModal.quote.email}
+          customerPhone={contactModal.quote.phone}
+          quoteId={contactModal.quote.id}
+          onEmailSent={loadQuotes}
         />
       )}
     </div>
