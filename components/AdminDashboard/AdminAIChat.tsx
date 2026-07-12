@@ -131,7 +131,6 @@ export function AdminAIChat({ adminStats, chartData }: AdminAIChatProps) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "1.5rem",
             zIndex: 1000,
             transition: "transform 0.2s, box-shadow 0.2s",
           }}
@@ -143,9 +142,28 @@ export function AdminAIChat({ adminStats, chartData }: AdminAIChatProps) {
             e.currentTarget.style.transform = "scale(1)";
             e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
           }}
-          title="Ask AI Assistant"
+          title="Support Chat"
+          aria-label="Open support chat"
         >
-          AI
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M20 2H4C2.9 2 2 2.9 2 4V16C2 17.1 2.9 18 4 18H6L10 22V18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"
+              fill="currentColor"
+            />
+            <path
+              d="M7 8H17M7 11.5H14M7 15H11"
+              stroke="#16a34a"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+            />
+          </svg>
         </button>
       )}
 
