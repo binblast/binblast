@@ -291,17 +291,7 @@ function DashboardPageContent() {
   // Handle Stripe Checkout callback
   useEffect(() => {
     const subscriptionChange = searchParams.get("subscription_change");
-    const extraBin = searchParams.get("extra_bin");
     const sessionId = searchParams.get("session_id");
-    const quantity = searchParams.get("quantity");
-
-    if (extraBin === "success" && quantity) {
-      console.log("[Dashboard] Extra bin checkout success detected.");
-      router.replace("/dashboard", undefined);
-      alert(`Successfully added ${quantity} extra bin${parseInt(quantity) > 1 ? 's' : ''}! Your payment has been processed.`);
-      window.location.reload();
-      return;
-    }
 
     if (subscriptionChange === "success" && sessionId) {
       console.log("[Dashboard] Stripe Checkout success detected. Completing subscription change...");
@@ -4459,6 +4449,18 @@ function DashboardPageContent() {
                   )}
 
                   <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid #e5e7eb" }}>
+                    <div style={{ fontSize: "0.9rem", color: "#6b7280", marginBottom: "1rem" }}>
+                      Your plan includes 1 bin per cleaning.
+                      {(user.binsCount || 1) > 1 ? (
+                        <span style={{ display: "block", marginTop: "0.35rem", color: "#166534", fontWeight: "600" }}>
+                          You currently have {user.binsCount} bins per cleaning ({(user.binsCount || 1) - 1} extra purchased).
+                        </span>
+                      ) : (
+                        <span style={{ display: "block", marginTop: "0.35rem" }}>
+                          Add extra bins for $10 per bin per cleaning visit.
+                        </span>
+                      )}
+                    </div>
                     <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
                     <button
                       onClick={() => scrollToSection(planSectionRef)}
@@ -5048,6 +5050,17 @@ function DashboardPageContent() {
                           </div>
                         </div>
                       )}
+                      <div>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "500" }}>Bins Per Cleaning</div>
+                        <div style={{ fontSize: "1rem", fontWeight: "500", color: "var(--text-dark)" }}>
+                          {user.binsCount || 1} bin{(user.binsCount || 1) > 1 ? "s" : ""}
+                        </div>
+                        {(user.binsCount || 1) > 1 && (
+                          <div style={{ fontSize: "0.875rem", color: "#166534", marginTop: "0.35rem" }}>
+                            Includes {(user.binsCount || 1) - 1} extra bin{(user.binsCount || 1) - 1 > 1 ? "s" : ""} purchased (+$10/bin per cleaning)
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <button
                       type="button"

@@ -53,6 +53,27 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+
+        // Extra bin purchases do not collect customer email in Checkout, so process them first.
+        if (
+          session.metadata?.type === "extra_bin" &&
+          session.payment_status === "paid" &&
+          session.metadata?.userId
+        ) {
+          try {
+            const { processExtraBinPurchase } = await import("@/lib/extra-bin-purchase");
+            const result = await processExtraBinPurchase(session);
+            console.log("[Webhook] Extra bin payment processed:", {
+              sessionId: session.id,
+              userId: session.metadata.userId,
+              quantity: result.quantity,
+              binsCount: result.binsCount,
+              alreadyProcessed: result.alreadyProcessed,
+            });
+          } catch (extraBinError) {
+            console.error("[Webhook] Error processing extra bin payment:", extraBinError);
+          }
+        }
         
         // Get customer email from session
         const customerEmail = session.customer_details?.email;
@@ -190,36 +211,6 @@ export async function POST(req: NextRequest) {
               }
             } catch (rolloverError) {
               console.error("[Webhook] Error applying cleaning credits rollover:", rolloverError);
-            }
-          }
-
-          // Handle extra bin payment
-          if (session.metadata?.type === 'extra_bin' && session.payment_status === 'paid' && userId) {
-            try {
-              const quantity = parseInt(session.metadata.quantity || '1');
-              const userDocRef = doc(db, "users", userId);
-              const userDoc = await getDoc(userDocRef);
-              
-              if (userDoc.exists()) {
-                const currentBinCount = userDoc.data().binsCount || 1;
-                const newBinCount = currentBinCount + quantity;
-                
-                await updateDoc(userDocRef, {
-                  binsCount: newBinCount,
-                  updatedAt: serverTimestamp(),
-                });
-                
-                console.log("[Webhook] Extra bin payment processed:", {
-                  userId,
-                  quantity,
-                  previousBinCount: currentBinCount,
-                  newBinCount,
-                });
-              } else {
-                console.warn("[Webhook] User document not found for extra bin payment:", userId);
-              }
-            } catch (extraBinError) {
-              console.error("[Webhook] Error processing extra bin payment:", extraBinError);
             }
           }
 

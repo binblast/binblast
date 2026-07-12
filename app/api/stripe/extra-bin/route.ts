@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     }
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
-    const successUrl = `${origin}/dashboard?extra_bin=success&quantity=${quantity}`;
+    const successUrl = `${origin}/dashboard/extra-bin/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${origin}/dashboard`;
 
     // Create Stripe Checkout Session for extra bins
