@@ -57,8 +57,6 @@ export async function POST(req: NextRequest) {
             c.status === "upcoming" &&
             c.scheduledDate &&
             c.scheduledDate >= today &&
-            c.status !== "completed" &&
-            c.status !== "cancelled" &&
             c.jobStatus !== "completed"
           );
         });
