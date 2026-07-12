@@ -5,6 +5,13 @@ import { PlanId, isCustomQuote } from "@/lib/stripe-config";
 import { getPlatformPlanConfigs } from "@/lib/platform-pricing";
 import { stripe } from "@/lib/stripe";
 import { getReferralCouponId } from "@/lib/stripe-coupons";
+import {
+  REFERRAL_DISCOUNT_AMOUNT,
+  getUnusedCreditsForUser,
+  hasUserUsedAnotherReferralCode,
+  normalizeReferralCode,
+  validateReferralCode,
+} from "@/lib/referral-service";
 import type Stripe from "stripe";
 
 export const dynamic = 'force-dynamic';
@@ -88,50 +95,30 @@ export async function POST(req: NextRequest) {
     let referralCodeToProcess: string | null = null;
     
     if (referralCode) {
-      // Validate referral code for both logged-in and non-logged-in users
       try {
-        const { getDbInstance } = await import("@/lib/firebase");
-        const { collection, query, where, getDocs, getDoc, doc } = await import("firebase/firestore");
-        
-        const db = await getDbInstance();
-        if (db) {
-          const normalizedCode = referralCode.trim().toUpperCase();
-          const usersQuery = query(
-            collection(db, "users"),
-            where("referralCode", "==", normalizedCode)
-          );
-          const usersSnapshot = await getDocs(usersQuery);
-          
-          if (!usersSnapshot.empty) {
-            // Check if logged-in user has already used a referral code
-            if (userId) {
-              const userDocRef = doc(db, "users", userId);
-              const userDoc = await getDoc(userDocRef);
-              
-              if (userDoc.exists()) {
-                const userData = userDoc.data();
-                // If user already has a referral code used, don't allow another one
-                if (userData.referredBy && userData.referredByCode !== normalizedCode) {
-                  console.warn("[Checkout] User already used a different referral code");
-                  return NextResponse.json(
-                    { error: "You have already used a referral code" },
-                    { status: 400 }
-                  );
-                }
-              }
-            }
-            
-            referralCodeDiscount = 10.00; // $10 discount
-            referralCodeToProcess = normalizedCode;
-            console.log("[Checkout] Valid referral code provided:", referralCodeToProcess);
-          } else {
-            console.warn("[Checkout] Invalid referral code:", referralCode);
+        const normalizedCode = normalizeReferralCode(referralCode);
+
+        if (userId) {
+          const alreadyUsedDifferentCode = await hasUserUsedAnotherReferralCode(userId, normalizedCode);
+          if (alreadyUsedDifferentCode) {
             return NextResponse.json(
-              { error: "Invalid referral code" },
+              { error: "You have already used a referral code" },
               { status: 400 }
             );
           }
         }
+
+        const validation = await validateReferralCode(normalizedCode);
+        if (!validation.valid) {
+          return NextResponse.json(
+            { error: validation.error || "Invalid referral code" },
+            { status: 400 }
+          );
+        }
+
+        referralCodeDiscount = REFERRAL_DISCOUNT_AMOUNT;
+        referralCodeToProcess = normalizedCode;
+        console.log("[Checkout] Valid referral code provided:", referralCodeToProcess);
       } catch (referralError) {
         console.error("[Checkout] Error validating referral code:", referralError);
         return NextResponse.json(
@@ -147,58 +134,28 @@ export async function POST(req: NextRequest) {
     
     if (userId && applyCredit === true) {
       try {
-        // Dynamically import Firebase to avoid build-time initialization
-        const { getDbInstance } = await import("@/lib/firebase");
-        const { collection, query, where, getDocs } = await import("firebase/firestore");
-        
-        const db = await getDbInstance();
-        if (db) {
-          // Get unused credits for this user
-          const creditsQuery = query(
-            collection(db, "credits"),
-            where("userId", "==", userId),
-            where("used", "==", false)
-          );
-          const creditsSnapshot = await getDocs(creditsQuery);
+        const { credits } = await getUnusedCreditsForUser(userId);
 
-          if (!creditsSnapshot.empty) {
-            const planPriceInCents = plan.price * 100;
-            const maxCreditToApply = Math.min(1000, planPriceInCents); // Max $10 off (1000 cents), capped at plan price
+        if (credits.length > 0) {
+          const planPriceInCents = plan.price * 100;
+          const maxCreditToApply = Math.min(1000, planPriceInCents);
 
-            // Sort credits by creation date (oldest first) in memory
-            const creditsArray = creditsSnapshot.docs.map(doc => {
-              const data = doc.data();
-              return {
-                id: doc.id,
-                amount: data.amount || 0,
-                createdAt: data.createdAt,
-              };
-            }).sort((a, b) => {
-              const aTime = a.createdAt?.toMillis?.() || (a.createdAt as any)?.seconds * 1000 || 0;
-              const bTime = b.createdAt?.toMillis?.() || (b.createdAt as any)?.seconds * 1000 || 0;
-              return aTime - bTime;
-            });
+          let remainingAmount = planPriceInCents;
 
-            let remainingAmount = planPriceInCents;
+          for (const creditData of credits) {
+            if (remainingAmount <= 0 || discountAmount >= maxCreditToApply) break;
 
-            // Apply credits up to $10 maximum, but never more than the plan price
-            for (const creditData of creditsArray) {
-              if (remainingAmount <= 0 || discountAmount >= maxCreditToApply) break;
+            const creditAmount = Math.min((creditData.amount || 0) * 100, remainingAmount);
 
-              const creditAmount = Math.min((creditData.amount || 0) * 100, remainingAmount); // Convert to cents
-
-              if (creditAmount > 0 && discountAmount + creditAmount <= maxCreditToApply) {
-                // Reserve credit (don't mark as used yet - will be marked when payment succeeds)
-                creditsToUse.push(creditData.id);
-                discountAmount += creditAmount;
-                remainingAmount -= creditAmount;
-              }
+            if (creditAmount > 0 && discountAmount + creditAmount <= maxCreditToApply) {
+              creditsToUse.push(creditData.id);
+              discountAmount += creditAmount;
+              remainingAmount -= creditAmount;
             }
           }
         }
       } catch (creditError) {
         console.error("[Checkout] Error checking credits:", creditError);
-        // Continue with checkout even if credit check fails
       }
     }
 

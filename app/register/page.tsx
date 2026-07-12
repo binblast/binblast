@@ -6,6 +6,7 @@ import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { getCapturedReferralCode, persistCapturedReferralCode } from "@/lib/site-leads";
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
@@ -26,7 +27,7 @@ function RegisterForm() {
   const selectedPlanId = searchParams.get("plan") || "";
   const sessionId = searchParams.get("session_id") || "";
   const initialEmail = searchParams.get("email") || "";
-  const referralCode = searchParams.get("ref") || "";
+  const referralCode = searchParams.get("ref") || getCapturedReferralCode() || "";
   const redirectParam = searchParams.get("redirect") || "";
   const isPartnerSignup = searchParams.get("partner") === "true";
   
@@ -62,6 +63,13 @@ function RegisterForm() {
     preferredTimeWindow?: string;
     notes?: string;
   } | null>(null);
+
+  useEffect(() => {
+    const refFromUrl = searchParams.get("ref");
+    if (refFromUrl) {
+      persistCapturedReferralCode(refFromUrl);
+    }
+  }, [searchParams]);
 
   // If referral code is present in URL without session_id, redirect to pricing page to choose plan
   // User must pay first before registering (unless it's a partner signup)
@@ -636,6 +644,22 @@ function RegisterForm() {
           }
         } else if (normalizedReferralCode && normalizedReferralCode.length > 0) {
           console.warn("[Register] Referral code provided but db or user not available:", { normalizedReferralCode, hasDb: !!db, hasUser: !!userCredential.user });
+        }
+
+        if (stripeData && userCredential.user) {
+          try {
+            const awardResponse = await fetch("/api/referral/award-credits", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: userCredential.user.uid }),
+            });
+            const awardData = await awardResponse.json();
+            if (awardResponse.ok && awardData.creditsAwarded > 0) {
+              console.log("[Register] Referral credits awarded after paid signup:", awardData);
+            }
+          } catch (awardError) {
+            console.error("[Register] Error awarding referral credits after paid signup:", awardError);
+          }
         }
         
         // Check if user is a partner before redirecting

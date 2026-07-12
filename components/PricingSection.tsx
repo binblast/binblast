@@ -8,6 +8,7 @@ import { CustomQuoteWizard } from "./CustomQuoteWizard";
 import { CustomerOnboardingWizard } from "./CustomerOnboardingWizard";
 import { usePlatformPricing } from "@/hooks/usePlatformPricing";
 import { useFirebase } from "@/lib/firebase-context";
+import { getCapturedReferralCode, persistCapturedReferralCode } from "@/lib/site-leads";
 
 
 
@@ -115,9 +116,16 @@ export function PricingSection() {
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const [onboardingData, setOnboardingData] = useState<any>(null);
   
-  // Get referral code and partner code from URL
-  const referralCodeFromUrl = searchParams.get("ref") || "";
+  // Get referral code and partner code from URL or welcome popup capture
+  const referralCodeFromUrl = searchParams.get("ref") || getCapturedReferralCode() || "";
   const partnerCodeFromUrl = searchParams.get("partner") || "";
+
+  useEffect(() => {
+    const refFromUrl = searchParams.get("ref");
+    if (refFromUrl) {
+      persistCapturedReferralCode(refFromUrl);
+    }
+  }, [searchParams]);
 
   const { isReady: firebaseReady } = useFirebase();
   const { plans: platformPlans } = usePlatformPricing();

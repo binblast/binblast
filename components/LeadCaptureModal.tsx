@@ -6,6 +6,7 @@ import {
   getSiteLeadAttribution,
   markSiteLeadCaptureDismissed,
   markSiteLeadCaptureSubmitted,
+  persistCapturedReferralCode,
   validateSiteLeadCapture,
 } from "@/lib/site-leads";
 
@@ -47,6 +48,7 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
 
   useEffect(() => {
     if (!isOpen || !attribution.referralCode) return;
+    persistCapturedReferralCode(attribution.referralCode);
     setReferredBy((current) => current || attribution.referralCode);
   }, [isOpen, attribution.referralCode]);
 
@@ -94,6 +96,9 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
       }
 
       markSiteLeadCaptureSubmitted();
+      if (attribution.referralCode) {
+        persistCapturedReferralCode(attribution.referralCode);
+      }
       onClose();
     } catch (submitError: unknown) {
       setError(submitError instanceof Error ? submitError.message : "Something went wrong");

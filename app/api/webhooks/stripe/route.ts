@@ -214,76 +214,38 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Process referral code from checkout session (for non-logged-in users who used a code)
-          if (session.metadata?.referralCode && session.payment_status === 'paid' && customerEmail) {
+          // Link referral from checkout metadata if registration did not already process it.
+          if (session.metadata?.referralCode && session.payment_status === "paid" && userId && customerEmail) {
             try {
-              // Find the referrer by referral code
-              const referrersQuery = query(
-                collection(db, "users"),
-                where("referralCode", "==", session.metadata.referralCode)
-              );
-              const referrersSnapshot = await getDocs(referrersQuery);
-              
-              if (!referrersSnapshot.empty && userId) {
-                const referrerDoc = referrersSnapshot.docs[0];
-                const referrerId = referrerDoc.id;
-                
-                // Prevent self-referral
-                if (referrerId !== userId) {
-                  // Check if referral already exists
-                  const existingReferralsQuery = query(
-                    collection(db, "referrals"),
-                    where("referredUserId", "==", userId),
-                    where("referralCode", "==", session.metadata.referralCode)
-                  );
-                  const existingReferrals = await getDocs(existingReferralsQuery);
-                  
-                  if (existingReferrals.empty) {
-                    // Create PENDING referral record
-                    const referralRef = doc(collection(db, "referrals"));
-                    await setDoc(referralRef, {
-                      referrerId,
-                      referredUserId: userId,
-                      referredUserEmail: customerEmail,
-                      referralCode: session.metadata.referralCode,
-                      status: "PENDING",
-                      createdAt: serverTimestamp(),
-                      updatedAt: serverTimestamp(),
-                    });
-                    
-                    // Update user document with referral info (only if user is not a partner)
-                    // Partners should NOT have user documents
-                    const partnersQuery = query(
-                      collection(db, "partners"),
-                      where("userId", "==", userId)
-                    );
-                    const partnersSnapshot = await getDocs(partnersQuery);
-                    
-                    if (partnersSnapshot.empty) {
-                      // User is not a partner - safe to update user document
-                    await updateDoc(doc(db, "users", userId), {
-                      referredBy: referrerId,
-                      referredByCode: session.metadata.referralCode,
-                      updatedAt: serverTimestamp(),
-                    });
-                    } else {
-                      console.log("[Webhook] User is a partner, skipping user document update:", userId);
-                    }
-                    
-                    console.log("[Webhook] Referral code processed from checkout:", {
-                      referralId: referralRef.id,
-                      referrerId,
-                      userId,
-                      referralCode: session.metadata.referralCode,
-                    });
-                  }
-                }
-              }
+              const { ensureReferralFromCheckout } = await import("@/lib/referral-service");
+              await ensureReferralFromCheckout({
+                referralCode: session.metadata.referralCode,
+                userId,
+                userEmail: customerEmail,
+              });
             } catch (referralCodeError) {
               console.error("[Webhook] Error processing referral code from checkout:", referralCodeError);
             }
           }
 
+          // Award referral credits after first paid purchase.
+          if (userId && session.payment_status === "paid") {
+            try {
+              const { awardReferralCreditsForUser } = await import("@/lib/referral-service");
+              const awardResult = await awardReferralCreditsForUser(userId);
+              if (awardResult.awarded) {
+                console.log("[Webhook] Referral credits awarded:", {
+                  referralId: awardResult.referralId,
+                  referredUserId: userId,
+                  referrerId: awardResult.referrerId,
+                  creditsAwarded: awardResult.creditsAwarded,
+                });
+              }
+            } catch (creditError) {
+              console.error("[Webhook] Error awarding referral credits:", creditError);
+            }
+          }
+          
           // Handle partner revenue share and create PartnerBooking record
           if (session.payment_status === 'paid' && session.metadata?.partnerId) {
             try {
@@ -469,114 +431,6 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Award referral credits if user was found and this is their first paid service
-          if (userId) {
-            try {
-              // Check if this is the user's first paid service
-              const userDoc = await getDoc(doc(db, "users", userId));
-              
-              if (userDoc.exists()) {
-                const userData = userDoc.data();
-                // Award credits if user has a referral and hasn't received credits yet
-                if (userData.referredBy && session.payment_status === 'paid') {
-                  // Find any PENDING referrals for this user
-                  const referralsQuery = query(
-                    collection(db, "referrals"),
-                    where("referredUserId", "==", userId),
-                    where("status", "==", "PENDING")
-                  );
-                  const referralsSnapshot = await getDocs(referralsQuery);
-
-                  if (!referralsSnapshot.empty) {
-                    const referralDoc = referralsSnapshot.docs[0];
-                    const referralData = referralDoc.data();
-                    const referrerId = referralData.referrerId;
-
-                    // Idempotency check: Only award credits if referral is still PENDING
-                    if (referralData.status === "PENDING") {
-                      // Check if credits were already created for this referral (idempotency)
-                      const existingCreditsQuery = query(
-                        collection(db, "credits"),
-                        where("referralId", "==", referralDoc.id),
-                        where("type", "==", "referral_reward")
-                      );
-                      const existingCreditsSnapshot = await getDocs(existingCreditsQuery);
-
-                      // Only award if credits don't already exist
-                      if (existingCreditsSnapshot.empty) {
-                        // Award $10 credit to the referred user
-                        const referredUserCreditRef = doc(collection(db, "credits"));
-                        await setDoc(referredUserCreditRef, {
-                          userId,
-                          amount: 10.00,
-                          currency: "USD",
-                          used: false,
-                          referralId: referralDoc.id,
-                          type: "referral_reward",
-                          createdAt: serverTimestamp(),
-                          expiresAt: null,
-                        });
-
-                        // Award $10 credit to the referrer (for one-time use)
-                        const referrerCreditRef = doc(collection(db, "credits"));
-                        await setDoc(referrerCreditRef, {
-                          userId: referrerId,
-                          amount: 10.00,
-                          currency: "USD",
-                          used: false,
-                          referralId: referralDoc.id,
-                          type: "referral_reward",
-                          createdAt: serverTimestamp(),
-                          expiresAt: null,
-                        });
-
-                        // Update referrer's completed referral count and track for billing period discount
-                        const referrerDocRef = doc(db, "users", referrerId);
-                        const referrerDoc = await getDoc(referrerDocRef);
-                        if (referrerDoc.exists()) {
-                          const referrerData = referrerDoc.data();
-                          const referrerStripeSubscriptionId = referrerData.stripeSubscriptionId;
-                          
-                          // Update referral count
-                          const currentCount = referrerData.referralCount || 0;
-                          await updateDoc(referrerDocRef, {
-                            referralCount: increment(1),
-                            updatedAt: serverTimestamp(),
-                          });
-                          
-                          console.log("[Webhook] Referral completed - discount will be applied on next invoice:", {
-                            referrerId,
-                            subscriptionId: referrerStripeSubscriptionId,
-                          });
-                        }
-
-                        // Mark referral as COMPLETED
-                        await updateDoc(doc(db, "referrals", referralDoc.id), {
-                          status: "COMPLETED",
-                          completedAt: serverTimestamp(),
-                          updatedAt: serverTimestamp(),
-                        });
-
-                        console.log("[Webhook] Referral credits awarded:", {
-                          referralId: referralDoc.id,
-                          referredUserId: userId,
-                          referrerId,
-                        });
-                      } else {
-                        console.log("[Webhook] Credits already awarded for referral (idempotent):", referralDoc.id);
-                      }
-                    } else {
-                      console.log("[Webhook] Referral already completed (idempotent):", referralDoc.id);
-                    }
-                  }
-                }
-              }
-            } catch (creditError) {
-              console.error("[Webhook] Error awarding credits:", creditError);
-              // Don't fail the webhook if credit awarding fails
-            }
-          }
-          
           console.log("Checkout session completed:", {
             customerEmail,
             customerId,
