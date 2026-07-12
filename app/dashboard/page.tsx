@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ScheduleCleaningForm } from "@/components/ScheduleCleaningForm";
 import { EditCleaningModal } from "@/components/EditCleaningModal";
+import { EditAccountModal } from "@/components/EditAccountModal";
 import { SubscriptionManagerWrapper } from "@/components/SubscriptionManagerWrapper";
 import { CleaningDateConfirmationModal } from "@/components/CleaningDateConfirmationModal";
 import { ReferralRewards } from "@/components/ReferralRewards";
@@ -174,6 +175,7 @@ function DashboardPageContent() {
   const [billingPeriodEnd, setBillingPeriodEnd] = useState<Date | undefined>();
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [accountInfoExpanded, setAccountInfoExpanded] = useState(false);
+  const [isEditAccountModalOpen, setIsEditAccountModalOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [isOperator, setIsOperator] = useState(false);
@@ -4980,6 +4982,8 @@ function DashboardPageContent() {
                       )}
                     </div>
                     <button
+                      type="button"
+                      onClick={() => setIsEditAccountModalOpen(true)}
                       style={{
                         marginTop: "1.5rem",
                         fontSize: "0.875rem",
@@ -4989,7 +4993,8 @@ function DashboardPageContent() {
                         borderRadius: "8px",
                         padding: "0.5rem 1rem",
                         cursor: "pointer",
-                        fontWeight: "500"
+                        fontWeight: "500",
+                        minHeight: "44px",
                       }}
                     >
                       Edit Account Info
@@ -5002,6 +5007,24 @@ function DashboardPageContent() {
         </div>
       </main>
       
+      {/* Edit Account Modal */}
+      {user && userId && (
+        <EditAccountModal
+          isOpen={isEditAccountModalOpen}
+          onClose={() => setIsEditAccountModalOpen(false)}
+          userId={userId}
+          initialData={{
+            firstName: user.firstName || "",
+            lastName: user.lastName || "",
+            email: user.email || "",
+            phone: user.phone,
+          }}
+          onUpdated={(data) => {
+            setUser((prev) => (prev ? { ...prev, ...data } : prev));
+          }}
+        />
+      )}
+
       {/* Edit Cleaning Modal */}
       {editingCleaning && (
         <EditCleaningModal
