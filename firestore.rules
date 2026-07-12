@@ -417,6 +417,14 @@ service cloud.firestore {
         allow delete: if false;
       }
     }
+
+    // Site lead capture - visitor intake from the public website modal
+    match /siteLeads/{leadId} {
+      allow read: if isAdmin() || request.auth == null;
+      allow list: if isAdmin() || request.auth == null;
+      allow create: if request.auth == null || isAuthenticated();
+      allow update, delete: if false;
+    }
     
     // Employee schedules collection - for weekly work schedules
     match /employeeSchedules/{scheduleId} {

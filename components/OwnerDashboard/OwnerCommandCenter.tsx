@@ -12,6 +12,7 @@ import { FinancialAnalytics } from "@/components/OwnerDashboard/FinancialAnalyti
 import { SystemControls } from "@/components/OwnerDashboard/SystemControls";
 import { OwnerTrainingOverview } from "@/components/OwnerDashboard/OwnerTrainingOverview";
 import { OwnerPhotosOverview } from "@/components/OwnerDashboard/OwnerPhotosOverview";
+import { SiteLeadsManagement } from "@/components/OwnerDashboard/SiteLeadsManagement";
 import { AdminPartnerApplications } from "@/components/AdminPartnerApplications";
 
 const EmployeeStatus = dynamic(
@@ -461,6 +462,7 @@ export function OwnerCommandCenter({
         )}
         {activeTab === "customers" && (
           <div>
+            <SiteLeadsManagement />
             <CustomQuotesManagement />
             <div style={{ marginTop: "2rem" }}>
               <CustomerManagement userId={userId} />

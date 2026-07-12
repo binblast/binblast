@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import dynamic from "next/dynamic";
 import "./globals.css";
 import { FirebaseGate } from "@/components/FirebaseGate";
 import { FirebaseErrorBoundary } from "@/components/FirebaseErrorBoundary";
@@ -6,6 +7,11 @@ import { FirebaseErrorBoundary } from "@/components/FirebaseErrorBoundary";
 // Static imports cause webpack to bundle firebase-client.ts into page chunks
 // Firebase will initialize automatically when firebase-client.ts is first dynamically imported
 // The FirebaseGate component will trigger initialization when needed
+
+const SiteLeadCaptureGate = dynamic(
+  () => import("@/components/SiteLeadCaptureGate").then((mod) => mod.SiteLeadCaptureGate),
+  { ssr: false }
+);
 
 export const metadata: Metadata = {
   title: "Bin Blast Co. - Professional Trash Bin Cleaning Service",
@@ -37,6 +43,7 @@ export default function RootLayout({
         <FirebaseErrorBoundary>
           <FirebaseGate>
             {children}
+            <SiteLeadCaptureGate />
           </FirebaseGate>
         </FirebaseErrorBoundary>
       </body>
