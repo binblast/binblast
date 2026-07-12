@@ -102,7 +102,8 @@ export async function getStaffContacts(options?: {
   const staffContacts = new Map<string, StaffContact>();
 
   const usersSnapshot = await db.collection("users").get();
-  usersSnapshot.docs.forEach((doc: FirestoreDocument) => {
+  const userDocs = usersSnapshot.docs as FirestoreDocument[];
+  userDocs.forEach((doc) => {
     const data = doc.data();
     const role = (typeof data.role === "string" ? data.role : "employee") as StaffRole;
     if (!visibleRoles.includes(role)) return;
@@ -249,8 +250,9 @@ export async function getEmployeeMessagingData(employeeId: string) {
     return bTime - aTime;
   });
 
-  const contacts: StaffContact[] = usersSnapshot.docs
-    .map((doc: FirestoreDocument) => {
+  const userDocs = usersSnapshot.docs as FirestoreDocument[];
+  const contacts: StaffContact[] = userDocs
+    .map((doc): StaffContact | null => {
       const data = doc.data();
       const role = (typeof data.role === "string" ? data.role : "") as StaffRole;
       if (!["operator", "admin", "owner"].includes(role) || doc.id === employeeId) {
@@ -262,7 +264,7 @@ export async function getEmployeeMessagingData(employeeId: string) {
         type: role,
         employeeId: doc.id,
         employeeName: getDisplayName(data),
-        employeeEmail: data.email || "",
+        employeeEmail: typeof data.email === "string" ? data.email : "",
         unreadCount: 0,
         messageCount: 0,
         hasConversation: false,
