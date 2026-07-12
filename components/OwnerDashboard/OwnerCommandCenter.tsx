@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { BusinessOverview } from "@/components/OwnerDashboard/BusinessOverview";
@@ -129,6 +129,20 @@ function BackToHubButton({ onClick, label = "Command Hub" }: { onClick: () => vo
   );
 }
 
+const PARTNER_APPS_SEEN_KEY = "ownerPartnerAppsSeenCount";
+const QUOTES_SEEN_KEY = "ownerQuotesSeenCount";
+
+function getStoredSeenCount(key: string): number {
+  if (typeof window === "undefined") return 0;
+  const value = localStorage.getItem(key);
+  const parsed = value ? parseInt(value, 10) : 0;
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function storeSeenCount(key: string, count: number) {
+  localStorage.setItem(key, String(count));
+}
+
 export function OwnerCommandCenter({
   userId,
   userName,
@@ -137,9 +151,55 @@ export function OwnerCommandCenter({
 }: OwnerCommandCenterProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<OwnerTab>("hub");
+  const [seenPartnerCount, setSeenPartnerCount] = useState(0);
+  const [seenQuotesCount, setSeenQuotesCount] = useState(0);
 
   const goToHub = () => setActiveTab("hub");
   const showBackButton = activeTab !== "hub";
+
+  useEffect(() => {
+    setSeenPartnerCount(getStoredSeenCount(PARTNER_APPS_SEEN_KEY));
+    setSeenQuotesCount(getStoredSeenCount(QUOTES_SEEN_KEY));
+  }, []);
+
+  useEffect(() => {
+    if (newPartnerApplicationsCount < seenPartnerCount) {
+      storeSeenCount(PARTNER_APPS_SEEN_KEY, newPartnerApplicationsCount);
+      setSeenPartnerCount(newPartnerApplicationsCount);
+    }
+  }, [newPartnerApplicationsCount, seenPartnerCount]);
+
+  useEffect(() => {
+    if (newQuotesCount < seenQuotesCount) {
+      storeSeenCount(QUOTES_SEEN_KEY, newQuotesCount);
+      setSeenQuotesCount(newQuotesCount);
+    }
+  }, [newQuotesCount, seenQuotesCount]);
+
+  const markPartnersReviewed = () => {
+    storeSeenCount(PARTNER_APPS_SEEN_KEY, newPartnerApplicationsCount);
+    setSeenPartnerCount(newPartnerApplicationsCount);
+  };
+
+  const markQuotesReviewed = () => {
+    storeSeenCount(QUOTES_SEEN_KEY, newQuotesCount);
+    setSeenQuotesCount(newQuotesCount);
+  };
+
+  const unseenPartnerCount = Math.max(0, newPartnerApplicationsCount - seenPartnerCount);
+  const unseenQuotesCount = Math.max(0, newQuotesCount - seenQuotesCount);
+
+  useEffect(() => {
+    if (activeTab === "partners") {
+      markPartnersReviewed();
+    }
+  }, [activeTab, newPartnerApplicationsCount]);
+
+  useEffect(() => {
+    if (activeTab === "customers") {
+      markQuotesReviewed();
+    }
+  }, [activeTab, newQuotesCount]);
 
   const cardStyle = {
     display: "block" as const,
@@ -179,12 +239,15 @@ export function OwnerCommandCenter({
       </div>
 
       {/* Alert banners */}
-      {(newQuotesCount > 0 || newPartnerApplicationsCount > 0) && (
+      {(unseenQuotesCount > 0 || unseenPartnerCount > 0) && (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
-          {newQuotesCount > 0 && (
+          {unseenQuotesCount > 0 && (
             <button
               type="button"
-              onClick={() => setActiveTab("customers")}
+              onClick={() => {
+                setActiveTab("customers");
+                markQuotesReviewed();
+              }}
               className="mobile-banner"
               style={{
                 padding: "1rem 1.25rem",
@@ -199,15 +262,18 @@ export function OwnerCommandCenter({
               }}
             >
               <span style={{ fontWeight: "700", color: "#92400e", fontSize: "0.875rem" }}>
-                🔔 {newQuotesCount} new custom quote request{newQuotesCount > 1 ? "s" : ""}
+                🔔 {unseenQuotesCount} new custom quote request{unseenQuotesCount > 1 ? "s" : ""}
               </span>
               <span style={{ fontSize: "0.8125rem", color: "#78350f", fontWeight: "600" }}>View →</span>
             </button>
           )}
-          {newPartnerApplicationsCount > 0 && (
+          {unseenPartnerCount > 0 && (
             <button
               type="button"
-              onClick={() => setActiveTab("partners")}
+              onClick={() => {
+                setActiveTab("partners");
+                markPartnersReviewed();
+              }}
               className="mobile-banner"
               style={{
                 padding: "1rem 1.25rem",
@@ -222,7 +288,7 @@ export function OwnerCommandCenter({
               }}
             >
               <span style={{ fontWeight: "700", color: "#1e40af", fontSize: "0.875rem" }}>
-                📋 {newPartnerApplicationsCount} new partner application{newPartnerApplicationsCount > 1 ? "s" : ""}
+                📋 {unseenPartnerCount} new partner application{unseenPartnerCount > 1 ? "s" : ""}
               </span>
               <span style={{ fontSize: "0.8125rem", color: "#1e3a8a", fontWeight: "600" }}>Review →</span>
             </button>
