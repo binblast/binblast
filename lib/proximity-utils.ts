@@ -209,3 +209,94 @@ export function calculateCentroid(
 
   return { latitude: avgLat, longitude: avgLon };
 }
+
+export interface StopWithCoordinates {
+  latitude?: number;
+  longitude?: number;
+  [key: string]: any;
+}
+
+/**
+ * Order stops using nearest-neighbor from a start point (employee location or first stop).
+ */
+export function optimizeStopOrder<T extends StopWithCoordinates>(
+  stops: T[],
+  startLat?: number | null,
+  startLon?: number | null
+): T[] {
+  const withCoords = stops.filter(
+    (s) =>
+      s.latitude !== undefined &&
+      s.longitude !== undefined &&
+      s.latitude !== null &&
+      s.longitude !== null
+  ) as Array<T & { latitude: number; longitude: number }>;
+  const withoutCoords = stops.filter((s) => !s.latitude || !s.longitude);
+
+  if (withCoords.length === 0) {
+    return [...withoutCoords];
+  }
+
+  const remaining = [...withCoords];
+  const ordered: Array<T & { latitude: number; longitude: number }> = [];
+
+  let currentLat: number;
+  let currentLon: number;
+
+  if (startLat != null && startLon != null) {
+    currentLat = startLat;
+    currentLon = startLon;
+  } else {
+    const centroid = calculateCentroid(
+      remaining.map((s) => ({ latitude: s.latitude, longitude: s.longitude }))
+    );
+    let nearestIdx = 0;
+    let nearestDist = Infinity;
+    remaining.forEach((stop, index) => {
+      const distance = haversineDistance(
+        centroid.latitude,
+        centroid.longitude,
+        stop.latitude,
+        stop.longitude
+      );
+      if (distance < nearestDist) {
+        nearestDist = distance;
+        nearestIdx = index;
+      }
+    });
+    const first = remaining.splice(nearestIdx, 1)[0];
+    ordered.push(first);
+    currentLat = first.latitude;
+    currentLon = first.longitude;
+  }
+
+  while (remaining.length > 0) {
+    let nearestIdx = 0;
+    let nearestDist = haversineDistance(
+      currentLat,
+      currentLon,
+      remaining[0].latitude,
+      remaining[0].longitude
+    );
+
+    for (let i = 1; i < remaining.length; i++) {
+      const distance = haversineDistance(
+        currentLat,
+        currentLon,
+        remaining[i].latitude,
+        remaining[i].longitude
+      );
+      if (distance < nearestDist) {
+        nearestDist = distance;
+        nearestIdx = i;
+      }
+    }
+
+    const next = remaining.splice(nearestIdx, 1)[0];
+    ordered.push(next);
+    currentLat = next.latitude;
+    currentLon = next.longitude;
+  }
+
+  return [...ordered, ...withoutCoords];
+}

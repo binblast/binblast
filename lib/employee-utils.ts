@@ -27,6 +27,9 @@ export interface TaxInfo {
   };
   signature?: string;
   signedDate?: any; // Firestore timestamp
+  w9DocumentUrl?: string;
+  w9UploadedAt?: any;
+  taxFormType?: "w9" | "w4";
 }
 
 export interface Employee {
@@ -40,7 +43,7 @@ export interface Employee {
   payRatePerJob?: number;
   partnerId?: string; // If set, this employee belongs to a partner
   taxInfo?: TaxInfo | null;
-  hiringStatus?: "pending_approval" | "approved" | "rejected" | "active";
+  hiringStatus?: "pending_approval" | "approved" | "rejected" | "active" | "terminated";
   hiredDate?: any;
   hiredBy?: string;
   createdAt?: any;
@@ -208,10 +211,12 @@ export async function getAllEmployees(): Promise<Employee[]> {
     const q = query(usersRef, where("role", "==", "employee"));
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Employee[];
+    return snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .filter((emp) => (emp as Employee).hiringStatus !== "terminated") as Employee[];
   } catch (error) {
     console.error("Error getting all employees:", error);
     return [];

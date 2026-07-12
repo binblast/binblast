@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { formatTime, getTodayDateString } from "@/lib/employee-utils";
+import { OpenFlagsPanel } from "@/components/OperatorDashboard/OpenFlagsPanel";
 
 interface EmployeeStatus {
   id: string;
@@ -20,6 +21,7 @@ interface EmployeeStatus {
   jobsAssigned: number;
   jobsCompleted: number;
   jobsRemaining: number;
+  openIssueCount?: number;
 }
 
 interface EmployeeStatusProps {
@@ -216,6 +218,8 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
         </select>
       </div>
 
+      <OpenFlagsPanel />
+
       {sortedEmployees.length === 0 ? (
         <div
           style={{
@@ -297,6 +301,24 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
                     >
                       {employee.email}
                     </div>
+                    {(employee.openIssueCount ?? 0) > 0 && (
+                      <div
+                        style={{
+                          marginTop: "0.5rem",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          padding: "0.2rem 0.5rem",
+                          background: "#fee2e2",
+                          color: "#991b1b",
+                          borderRadius: "4px",
+                          fontSize: "0.75rem",
+                          fontWeight: "600",
+                        }}
+                      >
+                        {employee.openIssueCount} open flag{employee.openIssueCount !== 1 ? "s" : ""}
+                      </div>
+                    )}
                   </div>
                   <span
                     style={{

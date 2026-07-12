@@ -19,9 +19,10 @@ interface Proof {
 interface ProofOfWorkSectionProps {
   employeeId: string;
   cleaningId?: string;
+  refreshKey?: number;
 }
 
-export function ProofOfWorkSection({ employeeId, cleaningId }: ProofOfWorkSectionProps) {
+export function ProofOfWorkSection({ employeeId, cleaningId, refreshKey = 0 }: ProofOfWorkSectionProps) {
   const [proof, setProof] = useState<Proof | null>(null);
   const [proofs, setProofs] = useState<Proof[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +33,7 @@ export function ProofOfWorkSection({ employeeId, cleaningId }: ProofOfWorkSectio
 
   useEffect(() => {
     loadProof();
-  }, [employeeId, cleaningId]);
+  }, [employeeId, cleaningId, refreshKey]);
 
   const loadProof = async () => {
     try {
@@ -127,9 +128,12 @@ export function ProofOfWorkSection({ employeeId, cleaningId }: ProofOfWorkSectio
       boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
       border: "1px solid #e5e7eb",
     }}>
-      <h3 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "#111827" }}>
-        Proof of Work
+      <h3 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "0.5rem", color: "#111827" }}>
+        Cleaning Photos
       </h3>
+      <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "1.5rem" }}>
+        Photos employees take at each job to confirm the bins were cleaned. Review these to verify quality.
+      </p>
 
       {/* Upload Section */}
       {cleaningId && (

@@ -34,9 +34,10 @@ interface RouteMapProps {
   employeeId: string;
   stops: Stop[];
   employeeLocation?: { latitude: number; longitude: number };
+  refreshKey?: number;
 }
 
-export function RouteMap({ employeeId, stops, employeeLocation }: RouteMapProps) {
+export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }: RouteMapProps) {
   const [mapReady, setMapReady] = useState(false);
   const [optimizedStops, setOptimizedStops] = useState<Stop[]>(stops);
   const [optimizing, setOptimizing] = useState(false);
@@ -50,7 +51,7 @@ export function RouteMap({ employeeId, stops, employeeLocation }: RouteMapProps)
 
   useEffect(() => {
     setOptimizedStops(stops);
-  }, [stops]);
+  }, [stops, refreshKey]);
 
   const handleOptimizeRoute = async () => {
     setOptimizing(true);
@@ -69,15 +70,18 @@ export function RouteMap({ employeeId, stops, employeeLocation }: RouteMapProps)
       const response = await fetch("/api/operator/route/optimize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stops: stopsWithCoords }),
+        body: JSON.stringify({
+          stops: stopsWithCoords,
+          startLocation: employeeLocation || null,
+        }),
       });
 
       if (response.ok) {
         const data = await response.json();
         setOptimizedStops(data.optimizedStops || stops);
-        setMessage({ 
-          type: "success", 
-          text: `Route optimized! ${data.counties} counties, ${data.totalStops} stops` 
+        setMessage({
+          type: "success",
+          text: `Route optimized! ${data.totalStops} stops ordered by closest distance${employeeLocation ? " from employee location" : ""}`,
         });
         // Clear message after 5 seconds
         setTimeout(() => setMessage({ type: null, text: "" }), 5000);

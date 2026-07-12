@@ -20,6 +20,17 @@ export async function GET(req: NextRequest) {
     const firestore = await safeImportFirestore();
     const { collection, query, where, getDocs } = firestore;
 
+    const issuesRef = collection(db, "employeeIssues");
+    const openIssuesQuery = query(issuesRef, where("status", "==", "open"));
+    const openIssuesSnap = await getDocs(openIssuesQuery);
+    const openIssuesByEmployee = new Map<string, number>();
+    openIssuesSnap.forEach((doc) => {
+      const employeeId = doc.data().employeeId;
+      if (employeeId) {
+        openIssuesByEmployee.set(employeeId, (openIssuesByEmployee.get(employeeId) || 0) + 1);
+      }
+    });
+
     const employeeStatuses = await Promise.all(
       employees.map(async (employee) => {
         // Get clock-in status
@@ -62,6 +73,7 @@ export async function GET(req: NextRequest) {
           jobsAssigned: assignedJobs,
           jobsCompleted: completedJobs,
           jobsRemaining: remainingJobs,
+          openIssueCount: openIssuesByEmployee.get(employee.id) || 0,
         };
       })
     );

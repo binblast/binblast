@@ -20,9 +20,10 @@ interface Stop {
 
 interface StopListProps {
   employeeId: string;
+  refreshKey?: number;
 }
 
-export function StopList({ employeeId }: StopListProps) {
+export function StopList({ employeeId, refreshKey = 0 }: StopListProps) {
   const [todayStops, setTodayStops] = useState<Stop[]>([]);
   const [upcomingStops, setUpcomingStops] = useState<Stop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +33,7 @@ export function StopList({ employeeId }: StopListProps) {
     // Refresh every 30 seconds
     const interval = setInterval(loadStops, 30000);
     return () => clearInterval(interval);
-  }, [employeeId]);
+  }, [employeeId, refreshKey]);
 
   const loadStops = async () => {
     try {

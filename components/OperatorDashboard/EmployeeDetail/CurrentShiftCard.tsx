@@ -32,9 +32,10 @@ interface EarningsData {
 
 interface CurrentShiftCardProps {
   employeeId: string;
+  refreshKey?: number;
 }
 
-export function CurrentShiftCard({ employeeId }: CurrentShiftCardProps) {
+export function CurrentShiftCard({ employeeId, refreshKey = 0 }: CurrentShiftCardProps) {
   const [shiftStatus, setShiftStatus] = useState<ShiftStatus | null>(null);
   const [earnings, setEarnings] = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +52,7 @@ export function CurrentShiftCard({ employeeId }: CurrentShiftCardProps) {
       loadEarnings();
     }, 30000);
     return () => clearInterval(interval);
-  }, [employeeId]);
+  }, [employeeId, refreshKey]);
 
   const loadShiftStatus = async () => {
     try {
@@ -398,7 +399,7 @@ export function CurrentShiftCard({ employeeId }: CurrentShiftCardProps) {
           onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
           onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
         >
-          View Proof
+          View Cleaning Photos
         </button>
       </div>
 

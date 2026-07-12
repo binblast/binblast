@@ -126,23 +126,30 @@ export function ViewProofModal({
         overflow: "auto",
         boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-          <h3 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#111827" }}>
-            View Proof of Work
-          </h3>
-          <button
-            onClick={onClose}
-            style={{
-              background: "transparent",
-              border: "none",
-              fontSize: "1.5rem",
-              cursor: "pointer",
-              color: "#6b7280",
-              padding: "0.25rem",
-            }}
-          >
-            ×
-          </button>
+        <div style={{ marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <h3 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
+                Cleaning Photos
+              </h3>
+              <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0 }}>
+                Before &amp; after photos submitted by the employee at each stop
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              style={{
+                background: "transparent",
+                border: "none",
+                fontSize: "1.5rem",
+                cursor: "pointer",
+                color: "#6b7280",
+                padding: "0.25rem",
+              }}
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         {error && (

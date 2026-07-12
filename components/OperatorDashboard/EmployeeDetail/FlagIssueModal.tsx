@@ -8,6 +8,7 @@ interface FlagIssueModalProps {
   onClose: () => void;
   employeeId: string;
   employeeName: string;
+  onSuccess?: () => void;
 }
 
 export function FlagIssueModal({
@@ -15,6 +16,7 @@ export function FlagIssueModal({
   onClose,
   employeeId,
   employeeName,
+  onSuccess,
 }: FlagIssueModalProps) {
   const [issueType, setIssueType] = useState<string>("");
   const [description, setDescription] = useState("");
@@ -60,6 +62,7 @@ export function FlagIssueModal({
       }
 
       setSuccess(true);
+      onSuccess?.();
       setTimeout(() => {
         setIssueType("");
         setDescription("");
@@ -67,7 +70,7 @@ export function FlagIssueModal({
         setRelatedJobId("");
         setSuccess(false);
         onClose();
-      }, 2000);
+      }, 1500);
     } catch (err: any) {
       setError(err.message || "Failed to flag issue");
     } finally {

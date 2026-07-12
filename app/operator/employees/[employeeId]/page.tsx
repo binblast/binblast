@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { CurrentShiftCard } from "@/components/OperatorDashboard/EmployeeDetail/CurrentShiftCard";
 import { ZonesCountiesPanel } from "@/components/OperatorDashboard/EmployeeDetail/ZonesCountiesPanel";
@@ -14,6 +14,8 @@ import { ProofOfWorkSection } from "@/components/OperatorDashboard/EmployeeDetai
 import { MessageEmployeeModal } from "@/components/OperatorDashboard/EmployeeDetail/MessageEmployeeModal";
 import { FlagIssueModal } from "@/components/OperatorDashboard/EmployeeDetail/FlagIssueModal";
 import { TrainingStatus } from "@/components/OperatorDashboard/EmployeeDetail/TrainingStatus";
+import { EmployeeIssuesPanel } from "@/components/OperatorDashboard/EmployeeDetail/EmployeeIssuesPanel";
+import { EmployeeTaxDocuments } from "@/components/OperatorDashboard/EmployeeDetail/EmployeeTaxDocuments";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
   ssr: false,
@@ -39,6 +41,7 @@ interface ShiftStatus {
 export default function EmployeeDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const employeeId = params?.employeeId as string;
 
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -46,10 +49,15 @@ export default function EmployeeDetailPage() {
   const [employeeLocation, setEmployeeLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [stops, setStops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("overview");
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get("tab") || "overview");
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showFlagModal, setShowFlagModal] = useState(false);
+  const [showTerminateModal, setShowTerminateModal] = useState(false);
+  const [terminating, setTerminating] = useState(false);
+  const [terminateReason, setTerminateReason] = useState("");
 
   useEffect(() => {
     checkAccess();
@@ -171,9 +179,42 @@ export default function EmployeeDetailPage() {
     }
   };
 
-  const handleRefresh = () => {
-    loadShiftStatus();
-    loadStops();
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        loadEmployeeData(),
+        loadShiftStatus(),
+        loadLocation(),
+        loadStops(),
+      ]);
+      setRefreshKey((k) => k + 1);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleTerminate = async () => {
+    setTerminating(true);
+    try {
+      const response = await fetch(`/api/operator/employees/${employeeId}/terminate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: terminateReason }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || "Failed to remove employee");
+        return;
+      }
+      router.push("/dashboard");
+    } catch (error) {
+      console.error("Error terminating employee:", error);
+      alert("Failed to remove employee. Please try again.");
+    } finally {
+      setTerminating(false);
+      setShowTerminateModal(false);
+    }
   };
 
   const formatTime = (timestamp: any): string => {
@@ -266,21 +307,23 @@ export default function EmployeeDetailPage() {
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   <button
                     onClick={() => handleRefresh()}
+                    disabled={refreshing}
+                    title="Reload shift status, stops, location, and all tab data"
                     style={{
                       padding: "0.5rem 1rem",
-                      background: "#3b82f6",
+                      background: refreshing ? "#9ca3af" : "#3b82f6",
                       color: "#ffffff",
                       border: "none",
                       borderRadius: "6px",
                       fontSize: "0.875rem",
                       fontWeight: "600",
-                      cursor: "pointer",
+                      cursor: refreshing ? "not-allowed" : "pointer",
                       transition: "opacity 0.2s",
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
+                    onMouseEnter={(e) => { if (!refreshing) e.currentTarget.style.opacity = "0.9"; }}
                     onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
                   >
-                    Refresh
+                    {refreshing ? "Refreshing..." : "Refresh"}
                   </button>
                   {employee?.phone && (
                     <button
@@ -341,6 +384,24 @@ export default function EmployeeDetailPage() {
                   >
                     Flag Issue
                   </button>
+                  <button
+                    onClick={() => setShowTerminateModal(true)}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      background: "#ffffff",
+                      color: "#991b1b",
+                      border: "1px solid #fca5a5",
+                      borderRadius: "6px",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      transition: "opacity 0.2s",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                  >
+                    Remove Employee
+                  </button>
                 </div>
               </div>
 
@@ -378,29 +439,32 @@ export default function EmployeeDetailPage() {
               borderBottom: "2px solid #e5e7eb",
               overflowX: "auto",
             }}>
-              {["overview", "assignment", "schedule", "stops", "training", "proof"].map((tab) => (
+              {[
+                { id: "overview", label: "Overview" },
+                { id: "assignment", label: "Assignment & Zones" },
+                { id: "schedule", label: "Schedule" },
+                { id: "stops", label: "Stops" },
+                { id: "training", label: "Training" },
+                { id: "photos", label: "Cleaning Photos" },
+                { id: "issues", label: "Flagged Issues" },
+                { id: "documents", label: "Tax & W-9" },
+              ].map((tab) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
                   style={{
                     padding: "0.75rem 1.5rem",
                     background: "transparent",
                     border: "none",
-                    borderBottom: activeTab === tab ? "2px solid #16a34a" : "2px solid transparent",
+                    borderBottom: activeTab === tab.id ? "2px solid #16a34a" : "2px solid transparent",
                     fontSize: "0.875rem",
-                    fontWeight: activeTab === tab ? "600" : "400",
-                    color: activeTab === tab ? "#16a34a" : "#6b7280",
+                    fontWeight: activeTab === tab.id ? "600" : "400",
+                    color: activeTab === tab.id ? "#16a34a" : "#6b7280",
                     cursor: "pointer",
-                    textTransform: "capitalize",
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {tab === "overview" ? "Overview" :
-                   tab === "assignment" ? "Assignment & Zones" :
-                   tab === "schedule" ? "Schedule" :
-                   tab === "stops" ? "Stops" :
-                   tab === "training" ? "Training" :
-                   "Proof of Work"}
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -409,10 +473,15 @@ export default function EmployeeDetailPage() {
             <div>
               {activeTab === "overview" && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2rem" }}>
-                  <CurrentShiftCard employeeId={employeeId} />
+                  <CurrentShiftCard employeeId={employeeId} refreshKey={refreshKey} />
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
-                    <RouteMap employeeId={employeeId} stops={stops} employeeLocation={employeeLocation || undefined} />
-                    <StopList employeeId={employeeId} />
+                    <RouteMap
+                      employeeId={employeeId}
+                      stops={stops}
+                      employeeLocation={employeeLocation || undefined}
+                      refreshKey={refreshKey}
+                    />
+                    <StopList employeeId={employeeId} refreshKey={refreshKey} />
                   </div>
                 </div>
               )}
@@ -429,15 +498,27 @@ export default function EmployeeDetailPage() {
               )}
 
               {activeTab === "stops" && (
-                <StopList employeeId={employeeId} />
+                <StopList employeeId={employeeId} refreshKey={refreshKey} />
               )}
 
               {activeTab === "training" && (
                 <TrainingStatus employeeId={employeeId} />
               )}
 
-              {activeTab === "proof" && (
-                <ProofOfWorkSection employeeId={employeeId} />
+              {activeTab === "photos" && (
+                <ProofOfWorkSection employeeId={employeeId} refreshKey={refreshKey} />
+              )}
+
+              {activeTab === "issues" && (
+                <EmployeeIssuesPanel
+                  employeeId={employeeId}
+                  refreshKey={refreshKey}
+                  onIssueResolved={handleRefresh}
+                />
+              )}
+
+              {activeTab === "documents" && (
+                <EmployeeTaxDocuments employeeId={employeeId} refreshKey={refreshKey} />
               )}
             </div>
           </div>
@@ -459,8 +540,99 @@ export default function EmployeeDetailPage() {
             onClose={() => setShowFlagModal(false)}
             employeeId={employeeId}
             employeeName={`${employee.firstName} ${employee.lastName}`}
+            onSuccess={() => {
+              handleRefresh();
+              setActiveTab("issues");
+            }}
           />
         </>
+      )}
+
+      {showTerminateModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "1rem",
+          }}
+          onClick={() => !terminating && setShowTerminateModal(false)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "12px",
+              padding: "2rem",
+              maxWidth: "480px",
+              width: "100%",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: "1.25rem", fontWeight: "700", color: "#111827", marginBottom: "0.75rem" }}>
+              Remove Employee from Roster?
+            </h3>
+            <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "1rem", lineHeight: 1.5 }}>
+              This will terminate {employee?.firstName} {employee?.lastName} and remove them from your active employee list.
+              Their future jobs will be unassigned. This action cannot be undone from the dashboard.
+            </p>
+            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem", color: "#374151" }}>
+              Reason (optional)
+            </label>
+            <textarea
+              value={terminateReason}
+              onChange={(e) => setTerminateReason(e.target.value)}
+              rows={3}
+              placeholder="e.g. Terminated, resigned, no longer available..."
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                border: "1px solid #e5e7eb",
+                borderRadius: "6px",
+                fontSize: "0.875rem",
+                marginBottom: "1.5rem",
+                resize: "vertical",
+              }}
+            />
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowTerminateModal(false)}
+                disabled={terminating}
+                style={{
+                  padding: "0.625rem 1.25rem",
+                  background: "#f3f4f6",
+                  color: "#374151",
+                  border: "none",
+                  borderRadius: "6px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: terminating ? "not-allowed" : "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleTerminate}
+                disabled={terminating}
+                style={{
+                  padding: "0.625rem 1.25rem",
+                  background: terminating ? "#9ca3af" : "#dc2626",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "6px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: terminating ? "not-allowed" : "pointer",
+                }}
+              >
+                {terminating ? "Removing..." : "Remove Employee"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
