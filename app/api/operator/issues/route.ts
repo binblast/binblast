@@ -12,21 +12,26 @@ export async function GET(req: NextRequest) {
     }
 
     const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs, orderBy } = firestore;
+    const { collection, query, where, getDocs } = firestore;
 
     const issuesQuery = query(
       collection(db, "employeeIssues"),
-      where("status", "==", status),
-      orderBy("createdAt", "desc")
+      where("status", "==", status)
     );
 
     const snapshot = await getDocs(issuesQuery);
-    const issues = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || null,
-      resolvedAt: doc.data().resolvedAt?.toDate?.()?.toISOString() || null,
-    }));
+    const issues = snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || null,
+        resolvedAt: doc.data().resolvedAt?.toDate?.()?.toISOString() || null,
+      }))
+      .sort((a, b) => {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bTime - aTime;
+      });
 
     return NextResponse.json({ issues });
   } catch (error: any) {

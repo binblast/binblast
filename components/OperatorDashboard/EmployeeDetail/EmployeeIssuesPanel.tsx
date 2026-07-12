@@ -34,6 +34,7 @@ export function EmployeeIssuesPanel({
 }: EmployeeIssuesPanelProps) {
   const [issues, setIssues] = useState<EmployeeIssue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "open" | "resolved">("open");
   const [resolvingId, setResolvingId] = useState<string | null>(null);
 
@@ -43,14 +44,20 @@ export function EmployeeIssuesPanel({
 
   const loadIssues = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await fetch(`/api/operator/employees/${employeeId}/issues`);
+      const data = await response.json().catch(() => ({}));
       if (response.ok) {
-        const data = await response.json();
         setIssues(data.issues || []);
+      } else {
+        setIssues([]);
+        setError(data.error || "Failed to load flagged issues");
       }
-    } catch (error) {
-      console.error("Error loading employee issues:", error);
+    } catch (err) {
+      console.error("Error loading employee issues:", err);
+      setIssues([]);
+      setError("Failed to load flagged issues. Please try refreshing.");
     } finally {
       setLoading(false);
     }
@@ -143,6 +150,21 @@ export function EmployeeIssuesPanel({
         </select>
       </div>
 
+      {error && (
+        <div
+          style={{
+            padding: "0.75rem 1rem",
+            background: "#fee2e2",
+            color: "#991b1b",
+            borderRadius: "6px",
+            marginBottom: "1rem",
+            fontSize: "0.875rem",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       {filteredIssues.length === 0 ? (
         <div
           style={{
@@ -154,7 +176,9 @@ export function EmployeeIssuesPanel({
           }}
         >
           {filter === "open"
-            ? "No open issues for this employee."
+            ? error
+              ? "Could not load issues."
+              : "No open issues for this employee."
             : "No issues found for this filter."}
         </div>
       ) : (

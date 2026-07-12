@@ -541,8 +541,9 @@ export default function EmployeeDetailPage() {
             employeeId={employeeId}
             employeeName={`${employee.firstName} ${employee.lastName}`}
             onSuccess={() => {
-              handleRefresh();
               setActiveTab("issues");
+              setRefreshKey((k) => k + 1);
+              handleRefresh();
             }}
           />
         </>
