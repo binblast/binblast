@@ -8,7 +8,12 @@ import { CustomQuoteWizard } from "./CustomQuoteWizard";
 import { CustomerOnboardingWizard } from "./CustomerOnboardingWizard";
 import { usePlatformPricing } from "@/hooks/usePlatformPricing";
 import { useFirebase } from "@/lib/firebase-context";
-import { getCapturedReferralCode, persistCapturedReferralCode } from "@/lib/site-leads";
+import { getCapturedReferralCode } from "@/lib/site-leads";
+import {
+  captureReferralCodeFromLocation,
+  getPartnerCodeFromLocation,
+  getReferralCodeFromLocation,
+} from "@/lib/referral-attribution";
 
 
 
@@ -115,16 +120,14 @@ export function PricingSection() {
   const [showQuoteWizard, setShowQuoteWizard] = useState(false);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const [onboardingData, setOnboardingData] = useState<any>(null);
-  
-  // Get referral code and partner code from URL or welcome popup capture
-  const referralCodeFromUrl = searchParams.get("ref") || getCapturedReferralCode() || "";
-  const partnerCodeFromUrl = searchParams.get("partner") || "";
+  const [referralCodeFromUrl, setReferralCodeFromUrl] = useState("");
+  const [partnerCodeFromUrl, setPartnerCodeFromUrl] = useState("");
 
   useEffect(() => {
-    const refFromUrl = searchParams.get("ref");
-    if (refFromUrl) {
-      persistCapturedReferralCode(refFromUrl);
-    }
+    const referralCode = captureReferralCodeFromLocation();
+    const partnerCode = getPartnerCodeFromLocation();
+    setReferralCodeFromUrl(referralCode || getCapturedReferralCode());
+    setPartnerCodeFromUrl(partnerCode);
   }, [searchParams]);
 
   const { isReady: firebaseReady } = useFirebase();

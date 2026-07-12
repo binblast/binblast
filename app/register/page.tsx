@@ -6,7 +6,8 @@ import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { getCapturedReferralCode, persistCapturedReferralCode } from "@/lib/site-leads";
+import { getCapturedReferralCode } from "@/lib/site-leads";
+import { captureReferralCodeFromLocation, getReferralCodeFromLocation } from "@/lib/referral-attribution";
 
 // CRITICAL: Dynamically import Navbar to prevent webpack from bundling firebase-context.tsx into page chunks
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
@@ -27,7 +28,8 @@ function RegisterForm() {
   const selectedPlanId = searchParams.get("plan") || "";
   const sessionId = searchParams.get("session_id") || "";
   const initialEmail = searchParams.get("email") || "";
-  const referralCode = searchParams.get("ref") || getCapturedReferralCode() || "";
+  const referralCode =
+    searchParams.get("ref") || getReferralCodeFromLocation() || getCapturedReferralCode() || "";
   const redirectParam = searchParams.get("redirect") || "";
   const isPartnerSignup = searchParams.get("partner") === "true";
   
@@ -65,10 +67,7 @@ function RegisterForm() {
   } | null>(null);
 
   useEffect(() => {
-    const refFromUrl = searchParams.get("ref");
-    if (refFromUrl) {
-      persistCapturedReferralCode(refFromUrl);
-    }
+    captureReferralCodeFromLocation();
   }, [searchParams]);
 
   // If referral code is present in URL without session_id, redirect to pricing page to choose plan
@@ -84,7 +83,7 @@ function RegisterForm() {
       
       // Redirect to pricing page with referral code so user can choose their plan
       console.log("[Register] Referral code detected, redirecting to pricing page to choose plan:", normalizedCode);
-      router.push(`/#pricing?ref=${normalizedCode}`);
+      router.push(`/?ref=${normalizedCode}#pricing`);
     }
   }, [referralCode, sessionId, redirectParam, isPartnerSignup, router]);
 
@@ -730,7 +729,7 @@ function RegisterForm() {
           // User hasn't paid yet - redirect to pricing page
           // Preserve referral code if present, so discount can be applied
           const redirectUrl = normalizedReferralCode 
-            ? `/#pricing?ref=${normalizedReferralCode}`
+            ? `/?ref=${normalizedReferralCode}#pricing`
             : "/#pricing";
           
           setTimeout(() => {

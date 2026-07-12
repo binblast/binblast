@@ -1,6 +1,17 @@
+import {
+  captureReferralCodeFromLocation,
+  getCapturedReferralCode,
+  getPartnerCodeFromLocation,
+  getReferralCodeFromLocation,
+  persistCapturedReferralCode,
+  REFERRAL_CODE_STORAGE_KEY,
+} from "@/lib/referral-attribution";
+
 export const SITE_LEAD_CAPTURE_DISMISSED_KEY = "siteLeadCaptureDismissed";
 export const SITE_LEAD_CAPTURE_SUBMITTED_KEY = "siteLeadCaptureSubmitted";
-export const SITE_LEAD_REFERRAL_CODE_KEY = "siteLeadReferralCode";
+export const SITE_LEAD_REFERRAL_CODE_KEY = REFERRAL_CODE_STORAGE_KEY;
+
+export { persistCapturedReferralCode, getCapturedReferralCode };
 
 export const HEARD_ABOUT_US_OPTIONS = [
   "Google Search",
@@ -75,18 +86,6 @@ export function markSiteLeadCaptureSubmitted(): void {
   localStorage.setItem(SITE_LEAD_CAPTURE_SUBMITTED_KEY, "true");
 }
 
-export function persistCapturedReferralCode(code: string): void {
-  if (typeof window === "undefined") return;
-  const normalized = code.trim().toUpperCase();
-  if (!normalized) return;
-  sessionStorage.setItem(SITE_LEAD_REFERRAL_CODE_KEY, normalized);
-}
-
-export function getCapturedReferralCode(): string {
-  if (typeof window === "undefined") return "";
-  return sessionStorage.getItem(SITE_LEAD_REFERRAL_CODE_KEY) || "";
-}
-
 export function getSiteLeadAttribution(search: string): SiteLeadAttribution {
   if (typeof window === "undefined") {
     return {
@@ -101,10 +100,11 @@ export function getSiteLeadAttribution(search: string): SiteLeadAttribution {
   }
 
   const params = new URLSearchParams(search);
-  const referralCode = params.get("ref") || getCapturedReferralCode() || "";
+  captureReferralCodeFromLocation();
+  const referralCode = params.get("ref") || getReferralCodeFromLocation() || getCapturedReferralCode() || "";
   return {
     referralCode,
-    partnerCode: params.get("partner") || "",
+    partnerCode: params.get("partner") || getPartnerCodeFromLocation() || "",
     utmSource: params.get("utm_source") || "",
     utmMedium: params.get("utm_medium") || "",
     utmCampaign: params.get("utm_campaign") || "",

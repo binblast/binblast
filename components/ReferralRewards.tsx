@@ -104,7 +104,7 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
   }, [firebaseReady, userId]);
 
   const referralUrl = typeof window !== "undefined" 
-    ? `${window.location.origin}/register?ref=${referralCode}`
+    ? `${window.location.origin}/?ref=${referralCode}#pricing`
     : "";
 
   const handleCopy = async () => {
@@ -318,8 +318,8 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
             margin: 0,
             lineHeight: "1.6"
           }}>
-            <strong>How it works:</strong> Share your referral link with friends. When they sign up using your link, 
-            both you and your friend will receive $10 off your next service!
+            <strong>How it works:</strong> Share your referral link with friends. When they sign up and pay using your link, 
+            both you and your friend get $10 off — $10 at checkout for them, then $10 credits for each of you after their first paid service.
           </p>
         </div>
       </div>

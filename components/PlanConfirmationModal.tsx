@@ -572,7 +572,12 @@ export function PlanConfirmationModal({
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(applyCredit, referralCodeValid ? referralCode.trim().toUpperCase() : undefined)}
+            onClick={() => onConfirm(
+              applyCredit,
+              (referralCodeValid || initialReferralCode)
+                ? (referralCode || initialReferralCode).trim().toUpperCase()
+                : undefined
+            )}
             disabled={loading}
             style={{
               flex: 1,
