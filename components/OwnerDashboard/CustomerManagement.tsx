@@ -29,6 +29,7 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTier, setFilterTier] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
@@ -40,81 +41,21 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
   useEffect(() => {
     async function loadCustomers() {
       try {
-        const { getDbInstance } = await import("@/lib/firebase");
-        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-        const firestore = await safeImportFirestore();
-        const { collection, query, getDocs, orderBy } = firestore;
+        setLoadError(null);
+        const response = await fetch("/api/admin/customers");
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load customers");
+        }
 
-        const db = await getDbInstance();
-        if (!db) return;
-
-        // Load all users
-        const usersSnapshot = await getDocs(query(collection(db, "users"), orderBy("createdAt", "desc")));
-        const allCustomers: Customer[] = [];
-
-        // Load partner bookings to identify source
-        const partnerBookingsSnapshot = await getDocs(collection(db, "partnerBookings"));
-        const partnerCustomerMap = new Map<string, string>();
-        partnerBookingsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.customerEmail && data.partnerName) {
-            partnerCustomerMap.set(data.customerEmail, data.partnerName);
-          }
-        });
-
-        // Load next scheduled cleanings
-        const cleaningsSnapshot = await getDocs(collection(db, "scheduledCleanings"));
-        const nextCleaningMap = new Map<string, any>();
-        cleaningsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.userId && data.status !== "cancelled" && data.status !== "completed") {
-            const cleaningDate = data.scheduledDate?.toDate?.() || new Date(data.scheduledDate);
-            const existing = nextCleaningMap.get(data.userId);
-            if (!existing || cleaningDate < existing) {
-              nextCleaningMap.set(data.userId, cleaningDate);
-            }
-          }
-        });
-
-        // Load referral counts
-        const referralsSnapshot = await getDocs(collection(db, "referrals"));
-        const referralCountMap = new Map<string, number>();
-        referralsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.referrerId) {
-            referralCountMap.set(data.referrerId, (referralCountMap.get(data.referrerId) || 0) + 1);
-          }
-        });
-
-        usersSnapshot.forEach((doc) => {
-          const data = doc.data();
-          const email = data.email || "";
-          const partnerName = partnerCustomerMap.get(email);
-          
-          allCustomers.push({
-            id: doc.id,
-            firstName: data.firstName || "",
-            lastName: data.lastName || "",
-            email: email,
-            phone: data.phone || "",
-            address: data.address || "",
-            selectedPlan: data.selectedPlan || "",
-            serviceTier: data.selectedPlan || "",
-            status: data.subscriptionStatus || "inactive",
-            loyaltyRanking: data.loyaltyLevel || "Getting Started",
-            referralUsageCount: referralCountMap.get(doc.id) || 0,
-            nextScheduledService: nextCleaningMap.get(doc.id),
-            totalRevenue: 0, // Would need to calculate from payments
-            source: partnerName ? "partner" : "direct",
-            partnerName: partnerName || undefined,
-          });
-        });
-
+        const allCustomers = (data.customers || []) as Customer[];
         setCustomers(allCustomers);
         setFilteredCustomers(allCustomers);
-        setLoading(false);
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to load customers";
         console.error("[CustomerManagement] Error loading customers:", err);
+        setLoadError(message);
+      } finally {
         setLoading(false);
       }
     }
@@ -264,6 +205,22 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
           </select>
         </div>
       </div>
+
+      {loadError && (
+        <div
+          style={{
+            marginBottom: "1rem",
+            padding: "0.875rem 1rem",
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: "8px",
+            color: "#b91c1c",
+            fontSize: "0.875rem",
+          }}
+        >
+          {loadError}
+        </div>
+      )}
 
       {/* Customer Table */}
       <div style={{
