@@ -34,8 +34,9 @@ function ExtraBinSuccessContent() {
     }
 
     let cancelled = false;
+    const activeSessionId = sessionId;
 
-    async function completePurchase() {
+    async function completePurchase(checkoutSessionId: string) {
       try {
         const { getAuth } = await import("firebase/auth");
         const { getFirebaseApp } = await import("@/lib/firebase");
@@ -44,12 +45,12 @@ function ExtraBinSuccessContent() {
         const user = auth.currentUser;
 
         if (!user) {
-          router.replace(`/login?redirect=${encodeURIComponent(`/dashboard/extra-bin/success?session_id=${sessionId}`)}`);
+          router.replace(`/login?redirect=${encodeURIComponent(`/dashboard/extra-bin/success?session_id=${checkoutSessionId}`)}`);
           return;
         }
 
         const token = await user.getIdToken();
-        const response = await fetch(`/api/stripe/extra-bin/complete?session_id=${encodeURIComponent(sessionId)}`, {
+        const response = await fetch(`/api/stripe/extra-bin/complete?session_id=${encodeURIComponent(checkoutSessionId)}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -80,7 +81,7 @@ function ExtraBinSuccessContent() {
       }
     }
 
-    completePurchase();
+    completePurchase(activeSessionId);
 
     return () => {
       cancelled = true;
