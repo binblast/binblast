@@ -2,11 +2,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import {
+  getEmployeeWorkingDayNames,
+  scoreCleaningForEmployee,
+} from "@/lib/day-assignment";
+import { loadEmployeeScheduleForDate } from "@/lib/employee-schedule";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { customerUserIds } = body;
+    const { customerUserIds, employeeId } = body;
 
     if (!customerUserIds || !Array.isArray(customerUserIds) || customerUserIds.length === 0) {
       return NextResponse.json(
@@ -27,48 +32,60 @@ export async function POST(req: NextRequest) {
     const { collection, query, where, getDocs } = firestore;
 
     const cleaningsRef = collection(db, "scheduledCleanings");
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
 
-    // Query cleanings for all customer user IDs
-    // Query only by userId to avoid index requirement, then filter in memory
     const cleaningPromises = customerUserIds.map(async (customerUserId: string) => {
-      const cleaningQuery = query(
-        cleaningsRef,
-        where("userId", "==", customerUserId)
-      );
-      
+      const cleaningQuery = query(cleaningsRef, where("userId", "==", customerUserId));
       const snapshot = await getDocs(cleaningQuery);
-      
-      // Filter and sort in memory to avoid index requirement
+
       const cleanings = snapshot.docs
-        .map(doc => ({
+        .map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }))
         .filter((c: any) => {
-          // Filter by status and date in memory
-          return c.status === "upcoming" && 
-                 c.scheduledDate && 
-                 c.scheduledDate >= today;
-        })
-        .sort((a: any, b: any) => {
-          // Sort by date, then prefer unassigned
-          const dateCompare = (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
-          if (dateCompare !== 0) return dateCompare;
-          // Prefer unassigned over assigned
-          if (!a.assignedEmployeeId && b.assignedEmployeeId) return -1;
-          if (a.assignedEmployeeId && !b.assignedEmployeeId) return 1;
-          return 0;
+          return (
+            c.status === "upcoming" &&
+            c.scheduledDate &&
+            c.scheduledDate >= today &&
+            c.status !== "completed" &&
+            c.status !== "cancelled" &&
+            c.jobStatus !== "completed"
+          );
         });
-      
-      // Return the first cleaning (prefer unassigned)
+
+      if (cleanings.length === 0) {
+        return null;
+      }
+
+      let employeeWorkingDays: string[] = [];
+      if (employeeId) {
+        const referenceDate = cleanings[0]?.scheduledDate || today;
+        const schedule = await loadEmployeeScheduleForDate(employeeId, referenceDate);
+        employeeWorkingDays = getEmployeeWorkingDayNames(schedule);
+      }
+
+      cleanings.sort((a: any, b: any) => {
+        if (employeeId) {
+          const scoreDiff =
+            scoreCleaningForEmployee(b, employeeWorkingDays) -
+            scoreCleaningForEmployee(a, employeeWorkingDays);
+          if (scoreDiff !== 0) return scoreDiff;
+        }
+
+        const dateCompare = (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
+        if (dateCompare !== 0) return dateCompare;
+
+        if (!a.assignedEmployeeId && b.assignedEmployeeId) return -1;
+        if (a.assignedEmployeeId && !b.assignedEmployeeId) return 1;
+        return 0;
+      });
+
       return cleanings[0] || null;
     });
 
     const cleaningDocs = await Promise.all(cleaningPromises);
-    
-    // Filter out null results
-    const validCleanings = cleaningDocs.filter(c => c !== null && c !== undefined);
+    const validCleanings = cleaningDocs.filter((c) => c !== null && c !== undefined);
 
     return NextResponse.json({
       cleanings: validCleanings,

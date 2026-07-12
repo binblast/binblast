@@ -3,6 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getTodayDateString } from "@/lib/employee-utils";
+import {
+  cleaningMatchesDayList,
+  compareCleaningPriority,
+  employeeWorksOnDayName,
+  normalizeDayName,
+} from "@/lib/day-assignment";
+import { loadEmployeeScheduleForDate } from "@/lib/employee-schedule";
 
 function getDateString(date: Date): string {
   return date.toISOString().split('T')[0];
@@ -91,11 +98,7 @@ export async function GET(
         ...doc.data(),
       }))
       // Sort manually by scheduledTime to avoid index requirement
-      .sort((a: any, b: any) => {
-        const timeA = a.scheduledTime || "";
-        const timeB = b.scheduledTime || "";
-        return timeA.localeCompare(timeB);
-      });
+      .sort((a: any, b: any) => compareCleaningPriority(a, b));
 
     // Get next 7 days stops - simplified to avoid index requirement
     // Query without orderBy, then sort in memory
@@ -113,12 +116,9 @@ export async function GET(
       }))
       // Sort manually by date then time to avoid index requirement
       .sort((a: any, b: any) => {
-        const dateA = a.scheduledDate || "";
-        const dateB = b.scheduledDate || "";
-        if (dateA !== dateB) return dateA.localeCompare(dateB);
-        const timeA = a.scheduledTime || "";
-        const timeB = b.scheduledTime || "";
-        return timeA.localeCompare(timeB);
+        const dateCompare = (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
+        if (dateCompare !== 0) return dateCompare;
+        return compareCleaningPriority(a, b);
       });
 
     // Process stops to add coordinates (non-blocking - don't wait for geocoding)
@@ -202,7 +202,14 @@ export async function POST(
   try {
     const employeeId = params.employeeId;
     const body = await req.json();
-    const { cleaningId, priority, recurring } = body;
+    const {
+      cleaningId,
+      priority,
+      recurring,
+      assignmentType,
+      recurringDays,
+      assignmentSource,
+    } = body;
 
     if (!employeeId || !cleaningId) {
       return NextResponse.json(
@@ -220,35 +227,26 @@ export async function POST(
     }
 
     const firestore = await safeImportFirestore();
-    const { doc, getDoc, updateDoc, serverTimestamp } = firestore;
+    const { doc, getDoc, updateDoc, collection, query, where, getDocs, serverTimestamp } =
+      firestore;
 
-    // Get employee name
     const employeeRef = doc(db, "users", employeeId);
     const employeeSnap = await getDoc(employeeRef);
     if (!employeeSnap.exists()) {
-      return NextResponse.json(
-        { error: "Employee not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Employee not found" }, { status: 404 });
     }
     const employeeData = employeeSnap.data();
     const employeeName = `${employeeData.firstName || ""} ${employeeData.lastName || ""}`.trim();
 
-    // Get cleaning document
     const cleaningRef = doc(db, "scheduledCleanings", cleaningId);
     const cleaningSnap = await getDoc(cleaningRef);
 
     if (!cleaningSnap.exists()) {
-      return NextResponse.json(
-        { error: "Cleaning not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Cleaning not found" }, { status: 404 });
     }
 
     const cleaningData = cleaningSnap.data();
 
-    // Validate assignment (check counties, drive time, etc.)
-    // This is a basic validation - can be enhanced
     if (cleaningData.assignedEmployeeId && cleaningData.assignedEmployeeId !== employeeId) {
       return NextResponse.json(
         { error: "Cleaning is already assigned to another employee" },
@@ -256,18 +254,90 @@ export async function POST(
       );
     }
 
-    // Update cleaning assignment
-    await updateDoc(cleaningRef, {
+    const schedule = await loadEmployeeScheduleForDate(
+      employeeId,
+      cleaningData.scheduledDate || getTodayDateString()
+    );
+    const scheduleWarnings: string[] = [];
+
+    if (
+      cleaningData.trashDay &&
+      !employeeWorksOnDayName(schedule, cleaningData.trashDay)
+    ) {
+      scheduleWarnings.push(
+        `Employee is not scheduled to work on ${normalizeDayName(cleaningData.trashDay)}`
+      );
+    }
+
+    const isRecurring = Boolean(recurring) || assignmentType === "recurring";
+    const targetDays = Array.isArray(recurringDays)
+      ? recurringDays.map((day: string) => normalizeDayName(day)).filter(Boolean)
+      : cleaningData.trashDay
+        ? [normalizeDayName(cleaningData.trashDay)]
+        : [];
+
+    const assignmentPayload = {
       assignedEmployeeId: employeeId,
       assignedEmployeeName: employeeName,
       jobStatus: "pending",
       priority: priority || "normal",
+      assignmentSource: assignmentSource || "manual",
       updatedAt: serverTimestamp(),
-    });
+    };
+
+    await updateDoc(cleaningRef, assignmentPayload);
+
+    let assignedCount = 1;
+    const assignedCleaningIds = [cleaningId];
+
+    if (isRecurring && cleaningData.userId) {
+      const today = getTodayDateString();
+      const userRef = doc(db, "users", cleaningData.userId);
+      const cleaningsRef = collection(db, "scheduledCleanings");
+      const customerCleaningsQuery = query(
+        cleaningsRef,
+        where("userId", "==", cleaningData.userId)
+      );
+      const customerCleaningsSnapshot = await getDocs(customerCleaningsQuery);
+
+      for (const customerCleaningDoc of customerCleaningsSnapshot.docs) {
+        if (customerCleaningDoc.id === cleaningId) continue;
+
+        const data = customerCleaningDoc.data();
+        if (data.status === "completed" || data.status === "cancelled" || data.jobStatus === "completed") {
+          continue;
+        }
+        if (!data.scheduledDate || data.scheduledDate < today) {
+          continue;
+        }
+        if (!cleaningMatchesDayList(data, targetDays)) {
+          continue;
+        }
+        if (data.assignedEmployeeId && data.assignedEmployeeId !== employeeId) {
+          continue;
+        }
+
+        await updateDoc(customerCleaningDoc.ref, assignmentPayload);
+        assignedCount += 1;
+        assignedCleaningIds.push(customerCleaningDoc.id);
+      }
+
+      await updateDoc(userRef, {
+        defaultAssignedEmployeeId: employeeId,
+        defaultAssignedEmployeeName: employeeName,
+        preferredAssignedDays: targetDays,
+        updatedAt: serverTimestamp(),
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      message: "Stop assigned successfully",
+      message: isRecurring
+        ? `Assigned ${assignedCount} recurring cleaning(s) to ${employeeName}`
+        : "Stop assigned successfully",
+      assignedCount,
+      assignedCleaningIds,
+      warnings: scheduleWarnings,
     });
   } catch (error: any) {
     console.error("Error assigning stop:", error);

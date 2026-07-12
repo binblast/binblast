@@ -13,6 +13,7 @@ import {
 } from "@/lib/schedule-board";
 import { getReadinessLabel, getReadinessStyle } from "@/lib/cleaning-readiness";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
+import { DAY_NAMES } from "@/lib/day-assignment";
 
 interface CleaningScheduleBoardProps {
   userId: string;
@@ -43,6 +44,7 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
   const [filterPartner, setFilterPartner] = useState("");
   const [filterCity, setFilterCity] = useState("");
   const [filterDate, setFilterDate] = useState("");
+  const [filterTrashDay, setFilterTrashDay] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("board");
@@ -145,6 +147,18 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
       result = result.filter((job) => job.scheduledDate === filterDate);
     }
 
+    if (filterTrashDay) {
+      result = result.filter((job) => job.trashDay === filterTrashDay);
+    }
+
+    result.sort((a, b) => {
+      const dayCompare = (a.trashDay || "").localeCompare(b.trashDay || "");
+      if (dayCompare !== 0) return dayCompare;
+      const dateCompare = a.scheduledDate.localeCompare(b.scheduledDate);
+      if (dateCompare !== 0) return dateCompare;
+      return a.scheduledTime.localeCompare(b.scheduledTime);
+    });
+
     return result;
   }, [
     jobs,
@@ -155,6 +169,7 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
     filterCity,
     filterStatus,
     filterDate,
+    filterTrashDay,
   ]);
 
   const groupedJobs = useMemo(() => {
@@ -358,6 +373,12 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
           <input type="text" placeholder="Filter by partner..." value={filterPartner} onChange={(e) => setFilterPartner(e.target.value)} style={inputStyle} />
           <input type="text" placeholder="Filter by city..." value={filterCity} onChange={(e) => setFilterCity(e.target.value)} style={inputStyle} />
           <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} style={inputStyle} />
+          <select value={filterTrashDay} onChange={(e) => setFilterTrashDay(e.target.value)} style={inputStyle}>
+            <option value="">All Cleaning Days</option>
+            {DAY_NAMES.map((day) => (
+              <option key={day} value={day}>{day}</option>
+            ))}
+          </select>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={inputStyle}>
             <option value="">All Statuses</option>
             <option value="upcoming">Upcoming</option>
@@ -490,6 +511,7 @@ function JobCard({
         </div>
         <div style={{ fontSize: "0.8125rem", color: "#6b7280", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
           <span><strong>Time:</strong> {job.scheduledTime}</span>
+          {job.trashDay && <span><strong>Cleaning Day:</strong> {job.trashDay}</span>}
           <span><strong>Plan:</strong> {job.planLabel}</span>
           <span><strong>Bins:</strong> {job.binsCount}</span>
           {job.assignedEmployeeName ? <span><strong>Assigned:</strong> {job.assignedEmployeeName}</span> : <span style={{ color: "#dc2626", fontWeight: "600" }}>Unassigned</span>}

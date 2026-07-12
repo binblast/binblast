@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { georgiaCounties } from "@/data/gaCounties";
+import { DAY_NAMES } from "@/lib/day-assignment";
 import { ViewToggle } from "./ViewToggle";
 import { CustomerMapView } from "./CustomerMapView";
 import { CustomerNearbyView } from "./CustomerNearbyView";
@@ -22,6 +23,9 @@ interface Customer {
   zipCode?: string;
   addressLine2?: string;
   state?: string;
+  preferredDayOfWeek?: string;
+  cleaningDay?: string;
+  nextCleaningDate?: string | null;
 }
 
 interface CustomerAssignmentModuleProps {
@@ -34,6 +38,9 @@ interface CustomerWithAssignment extends Customer {
   assignedToName?: string;
   assignmentSource?: string;
   matchesZone?: boolean;
+  preferredDayOfWeek?: string;
+  cleaningDay?: string;
+  nextCleaningDate?: string | null;
 }
 
 export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssignmentModuleProps) {
@@ -74,12 +81,14 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [operatorName, setOperatorName] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [employeeWorkingDays, setEmployeeWorkingDays] = useState<string[]>([]);
 
   useEffect(() => {
     loadEmployeeCoverage();
     loadWorkload();
     loadOperatorLocation();
     loadOperatorName();
+    loadEmployeeWorkingDays();
   }, [employeeId]);
 
   // Debounce search
@@ -91,6 +100,36 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
     }, 300);
     return () => clearTimeout(timer);
   }, [search, filterCounty, filterCity, filterPlan, filterStatus, filterServiceType, filterByZone, employeeZones, employeeCounties]);
+
+  const loadEmployeeWorkingDays = async () => {
+    try {
+      const weekStart = new Date();
+      const day = weekStart.getDay();
+      weekStart.setDate(weekStart.getDate() - day);
+      const weekStartDate = weekStart.toISOString().split("T")[0];
+      const response = await fetch(
+        `/api/operator/employees/${employeeId}/schedule?weekStartDate=${weekStartDate}`
+      );
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const schedule = data.schedule?.schedule;
+      const workingDays = Array.isArray(schedule)
+        ? schedule
+            .filter((day: { isWorking: boolean }) => day.isWorking)
+            .map((day: { dayOfWeek: number }) => DAY_NAMES[day.dayOfWeek])
+            .filter(Boolean)
+        : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+      setEmployeeWorkingDays(workingDays);
+      if (assignmentType === "recurring" && recurringDays.length === 0) {
+        setRecurringDays(workingDays);
+      }
+    } catch (error) {
+      console.error("Error loading employee working days:", error);
+      setEmployeeWorkingDays(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]);
+    }
+  };
 
   const loadOperatorLocation = async () => {
     try {
@@ -350,7 +389,8 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerUserIds: selectedCustomers,
+          customerUserIds: customersToAssign,
+          employeeId,
         }),
       });
 
@@ -394,6 +434,16 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
           body: JSON.stringify({
             cleaningId: cleaning.id,
             priority,
+            recurring: assignmentType === "recurring",
+            assignmentType,
+            recurringDays:
+              assignmentType === "recurring"
+                ? recurringDays.length > 0
+                  ? recurringDays
+                  : cleaning.trashDay
+                    ? [cleaning.trashDay]
+                    : []
+                : undefined,
             assignmentSource: "manual",
           }),
         });
@@ -402,12 +452,21 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || `Failed to assign cleaning ${cleaning.id}`);
         }
+
+        const result = await response.json();
+        if (result.warnings?.length) {
+          console.warn("[Assignment warnings]", result.warnings);
+        }
       }
       
       // Refresh workload after assignment
       loadWorkload();
 
-      alert(`Successfully assigned ${validCleanings.length} cleaning(s)`);
+      alert(
+        assignmentType === "recurring"
+          ? `Successfully assigned ${cleaningsToAssign.length} customer route(s) on selected cleaning days`
+          : `Successfully assigned ${cleaningsToAssign.length} cleaning(s)`
+      );
       setSelectedCustomers([]);
       if (onAssign) onAssign();
     } catch (error: any) {
@@ -669,7 +728,12 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
             <input
               type="radio"
               checked={assignmentType === "recurring"}
-              onChange={() => setAssignmentType("recurring")}
+              onChange={() => {
+                setAssignmentType("recurring");
+                if (recurringDays.length === 0) {
+                  setRecurringDays(employeeWorkingDays);
+                }
+              }}
             />
             <span style={{ fontSize: "0.875rem" }}>Recurring</span>
           </label>
@@ -683,12 +747,61 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
             border: "1px solid #e5e7eb",
             borderRadius: "6px",
             fontSize: "0.875rem",
+            marginBottom: "1rem",
           }}
         >
           <option value="normal">Normal Priority</option>
           <option value="priority">Priority</option>
           <option value="urgent">Urgent</option>
         </select>
+
+        <div style={{ marginBottom: "1rem", padding: "0.75rem", background: "#eff6ff", borderRadius: "8px", border: "1px solid #bfdbfe" }}>
+          <div style={{ fontSize: "0.8125rem", fontWeight: "600", color: "#1d4ed8", marginBottom: "0.35rem" }}>
+            Employee cleaning days
+          </div>
+          <div style={{ fontSize: "0.8125rem", color: "#1e3a8a" }}>
+            {employeeWorkingDays.length > 0 ? employeeWorkingDays.join(", ") : "Monday–Friday (default)"}
+          </div>
+        </div>
+
+        {assignmentType === "recurring" && (
+          <div style={{ marginBottom: "1rem" }}>
+            <div style={{ fontSize: "0.8125rem", fontWeight: "600", color: "#374151", marginBottom: "0.5rem" }}>
+              Assign recurring cleanings on these days
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              {DAY_NAMES.map((day) => (
+                <label
+                  key={day}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    padding: "0.35rem 0.65rem",
+                    borderRadius: "999px",
+                    border: "1px solid #e5e7eb",
+                    background: recurringDays.includes(day) ? "#ecfdf5" : "#ffffff",
+                    fontSize: "0.75rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={recurringDays.includes(day)}
+                    onChange={(e) => {
+                      setRecurringDays((current) =>
+                        e.target.checked
+                          ? [...current, day]
+                          : current.filter((value) => value !== day)
+                      );
+                    }}
+                  />
+                  {day.slice(0, 3)}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Customer Views */}
@@ -771,6 +884,12 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
                     </div>
                     <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
                       {customer.county || customer.city} — {customer.address} — {customer.plan}
+                      {customer.cleaningDay && (
+                        <span style={{ marginLeft: "0.5rem", color: "#1d4ed8", fontWeight: "600" }}>
+                          · Cleans on {customer.cleaningDay}
+                          {employeeWorkingDays.includes(customer.cleaningDay) ? " ✓" : " (day mismatch)"}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

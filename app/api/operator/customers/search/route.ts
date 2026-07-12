@@ -64,16 +64,31 @@ export async function GET(req: NextRequest) {
     // Get assignment status from scheduledCleanings
     const cleaningsRef = collection(db, "scheduledCleanings");
     const cleaningsSnapshot = await getDocs(cleaningsRef);
-    const assignmentMap = new Map<string, { employeeId: string; employeeName: string; assignmentSource?: string }>();
-    
+    const today = new Date().toISOString().split("T")[0];
+    const assignmentMap = new Map<
+      string,
+      { employeeId: string; employeeName: string; assignmentSource?: string; scheduledDate?: string; trashDay?: string }
+    >();
+
     cleaningsSnapshot.forEach((doc) => {
       const data = doc.data();
       const userId = data.userId;
-      if (userId && data.assignedEmployeeId) {
+      if (!userId || !data.assignedEmployeeId) return;
+      if (data.status === "completed" || data.status === "cancelled" || data.jobStatus === "completed") {
+        return;
+      }
+      if (!data.scheduledDate || data.scheduledDate < today) {
+        return;
+      }
+
+      const existing = assignmentMap.get(userId);
+      if (!existing || (data.scheduledDate || "") < (existing.scheduledDate || "9999-99-99")) {
         assignmentMap.set(userId, {
           employeeId: data.assignedEmployeeId,
           employeeName: data.assignedEmployeeName || "",
           assignmentSource: data.assignmentSource || "manual",
+          scheduledDate: data.scheduledDate,
+          trashDay: data.trashDay || "",
         });
       }
     });
@@ -163,8 +178,11 @@ export async function GET(req: NextRequest) {
         state: c.state || "",
         plan: c.selectedPlan || "",
         status: c.subscriptionStatus || "",
-        assignedTo: assignment?.employeeId || null,
-        assignedToName: assignment?.employeeName || null,
+        preferredDayOfWeek: c.preferredDayOfWeek || assignment?.trashDay || "",
+        nextCleaningDate: assignment?.scheduledDate || null,
+        cleaningDay: assignment?.trashDay || c.preferredDayOfWeek || "",
+        assignedTo: assignment?.employeeId || c.defaultAssignedEmployeeId || null,
+        assignedToName: assignment?.employeeName || c.defaultAssignedEmployeeName || null,
         assignmentSource: assignment?.assignmentSource || null,
         matchesZone: matchesZone,
         latitude: c.latitude || null,

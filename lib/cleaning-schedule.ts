@@ -189,6 +189,15 @@ export async function scheduleNextCleaningIfNeeded(
     notes: completedCleaning.notes || null,
     status: "upcoming",
     jobStatus: "pending",
+    assignedEmployeeId:
+      (completedCleaning as { assignedEmployeeId?: string }).assignedEmployeeId ||
+      (userData.defaultAssignedEmployeeId as string | undefined) ||
+      null,
+    assignedEmployeeName:
+      (completedCleaning as { assignedEmployeeName?: string }).assignedEmployeeName ||
+      (userData.defaultAssignedEmployeeName as string | undefined) ||
+      null,
+    assignmentSource: "recurring",
     createdAt: serverTimestamp(),
     autoScheduledFrom: completedCleaning.id || null,
   };

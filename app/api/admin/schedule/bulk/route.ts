@@ -29,11 +29,14 @@ export async function POST(req: NextRequest) {
     const admin = await import("firebase-admin");
     const batch = db.batch();
     const updated: string[] = [];
+    const userAssignments = new Map<string, { employeeId: string; employeeName: string }>();
 
     for (const jobId of jobIds) {
       const docRef = db.collection("scheduledCleanings").doc(jobId);
       const snapshot = await docRef.get();
       if (!snapshot.exists) continue;
+
+      const jobData = snapshot.data() || {};
 
       const updates: Record<string, unknown> = {
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -43,6 +46,15 @@ export async function POST(req: NextRequest) {
         updates.assignedEmployeeId = assignedEmployeeId;
         updates.assignedEmployeeName = assignedEmployeeName;
         updates.jobStatus = "pending";
+        updates.assignmentSource = "manual";
+
+        const userId = typeof jobData.userId === "string" ? jobData.userId : "";
+        if (userId) {
+          userAssignments.set(userId, {
+            employeeId: assignedEmployeeId,
+            employeeName: assignedEmployeeName,
+          });
+        }
       }
 
       if (action === "unassign") {
@@ -63,6 +75,18 @@ export async function POST(req: NextRequest) {
     }
 
     await batch.commit();
+
+    if (action === "assign" && userAssignments.size > 0) {
+      const userBatch = db.batch();
+      for (const [customerUserId, assignment] of userAssignments.entries()) {
+        userBatch.update(db.collection("users").doc(customerUserId), {
+          defaultAssignedEmployeeId: assignment.employeeId,
+          defaultAssignedEmployeeName: assignment.employeeName,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+      await userBatch.commit();
+    }
 
     await logAdminAction("bulk_schedule_update", userId || "owner", {
       action,
