@@ -21,6 +21,18 @@ function serializeDate(value: unknown): string | null {
   return null;
 }
 
+function splitName(fullName: string) {
+  const trimmed = fullName.trim();
+  const spaceIndex = trimmed.indexOf(" ");
+  if (spaceIndex === -1) {
+    return { firstName: trimmed, lastName: "" };
+  }
+  return {
+    firstName: trimmed.slice(0, spaceIndex),
+    lastName: trimmed.slice(spaceIndex + 1),
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { isAdmin } = await checkAdminAccess(req);
@@ -30,9 +42,10 @@ export async function GET(req: NextRequest) {
 
     const db = await getAdminFirestore();
 
-    const [usersSnapshot, partnerBookingsSnapshot, cleaningsSnapshot, referralsSnapshot] =
+    const [usersSnapshot, siteLeadsSnapshot, partnerBookingsSnapshot, cleaningsSnapshot, referralsSnapshot] =
       await Promise.all([
         db.collection("users").orderBy("createdAt", "desc").get(),
+        db.collection("siteLeads").get(),
         db.collection("partnerBookings").get(),
         db.collection("scheduledCleanings").get(),
         db.collection("referrals").get(),
@@ -80,6 +93,7 @@ export async function GET(req: NextRequest) {
 
         return {
           id: doc.id,
+          recordType: "customer" as const,
           firstName: asString(data.firstName),
           lastName: asString(data.lastName),
           email,
@@ -94,17 +108,70 @@ export async function GET(req: NextRequest) {
           totalRevenue: 0,
           source: partnerCustomerMap.has(email) ? "partner" : "direct",
           partnerName: partnerCustomerMap.get(email),
+          heardAboutUs: "",
+          referredBy: "",
+          referralCode: "",
+          capturedAt: serializeDate(data.createdAt),
           role,
         };
       })
       .filter((customer: { role: string }) => !STAFF_ROLES.has(customer.role))
       .map(({ role: _role, ...customer }: { role: string }) => customer);
 
+    const registeredEmails = new Set(
+      customers.map((customer: { email: string }) => customer.email.trim().toLowerCase()).filter(Boolean)
+    );
+
+    const prospects = siteLeadsSnapshot.docs
+      .map((doc: { id: string; data: () => Record<string, unknown> }) => {
+        const data = doc.data();
+        const email = asString(data.email).trim().toLowerCase();
+        if (!email || registeredEmails.has(email)) {
+          return null;
+        }
+
+        const { firstName, lastName } = splitName(asString(data.name));
+        const referralCode = asString(data.referralCode);
+        const partnerCode = asString(data.partnerCode);
+
+        return {
+          id: `lead_${doc.id}`,
+          recordType: "prospect" as const,
+          firstName,
+          lastName,
+          email,
+          phone: asString(data.phone),
+          address: "",
+          selectedPlan: "",
+          serviceTier: "",
+          status: "prospect",
+          loyaltyRanking: "Not enrolled",
+          referralUsageCount: 0,
+          nextScheduledService: null,
+          totalRevenue: 0,
+          source: "prospect" as const,
+          partnerName: partnerCode || undefined,
+          heardAboutUs: asString(data.heardAboutUs),
+          referredBy: asString(data.referredBy),
+          referralCode: referralCode || partnerCode,
+          capturedAt: serializeDate(data.createdAt),
+        };
+      })
+      .filter(Boolean);
+
+    const records = [...prospects, ...customers].sort((a, b) => {
+      const dateA = a?.capturedAt || "";
+      const dateB = b?.capturedAt || "";
+      return dateB.localeCompare(dateA);
+    });
+
     return NextResponse.json({
       success: true,
-      customers,
+      customers: records,
       stats: {
-        total: customers.length,
+        total: records.length,
+        customers: customers.length,
+        prospects: prospects.length,
         active: customers.filter((customer: { status: string }) => customer.status === "active").length,
       },
     });

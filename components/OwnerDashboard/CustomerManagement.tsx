@@ -9,6 +9,7 @@ interface CustomerManagementProps {
 
 interface Customer {
   id: string;
+  recordType?: "customer" | "prospect";
   firstName: string;
   lastName: string;
   email: string;
@@ -21,8 +22,12 @@ interface Customer {
   referralUsageCount?: number;
   nextScheduledService?: any;
   totalRevenue?: number;
-  source?: "direct" | "partner";
+  source?: "direct" | "partner" | "prospect";
   partnerName?: string;
+  heardAboutUs?: string;
+  referredBy?: string;
+  referralCode?: string;
+  capturedAt?: string | null;
 }
 
 export function CustomerManagement({ userId }: CustomerManagementProps) {
@@ -37,6 +42,9 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  const customerCount = customers.filter((customer) => customer.recordType !== "prospect").length;
+  const prospectCount = customers.filter((customer) => customer.recordType === "prospect").length;
 
   useEffect(() => {
     async function loadCustomers() {
@@ -74,7 +82,9 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
         (c) =>
           c.firstName.toLowerCase().includes(term) ||
           c.lastName.toLowerCase().includes(term) ||
-          c.email.toLowerCase().includes(term)
+          c.email.toLowerCase().includes(term) ||
+          (c.phone || "").toLowerCase().includes(term) ||
+          (c.referredBy || "").toLowerCase().includes(term)
       );
     }
 
@@ -94,6 +104,10 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
   }, [customers, searchTerm, filterTier, filterStatus, filterSource]);
 
   const handleEditCustomer = async (customer: Customer, updates: Partial<Customer>) => {
+    if (customer.recordType === "prospect") {
+      return;
+    }
+
     try {
       const { getDbInstance } = await import("@/lib/firebase");
       const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
@@ -130,7 +144,10 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
           Customer Management
         </h2>
         <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-          {filteredCustomers.length} of {customers.length} customers
+          {filteredCustomers.length} of {customers.length} records
+          {customers.length > 0 && (
+            <span> ({prospectCount} prospects, {customerCount} accounts)</span>
+          )}
         </div>
       </div>
 
@@ -188,6 +205,7 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
             <option value="paused">Paused</option>
             <option value="cancelled">Cancelled</option>
             <option value="inactive">Inactive</option>
+            <option value="prospect">Prospect</option>
           </select>
           <select
             value={filterSource}
@@ -200,6 +218,7 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
             }}
           >
             <option value="">All Sources</option>
+            <option value="prospect">Website Popup</option>
             <option value="direct">Direct</option>
             <option value="partner">Partner</option>
           </select>
@@ -248,20 +267,35 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
               {filteredCustomers.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
-                    No customers found
+                    No customers or prospects found
                   </td>
                 </tr>
               ) : (
-                filteredCustomers.map((customer) => (
+                filteredCustomers.map((customer) => {
+                  const isProspect = customer.recordType === "prospect" || customer.status === "prospect";
+                  const statusStyles =
+                    customer.status === "active"
+                      ? { background: "#dcfce7", color: "#16a34a" }
+                      : isProspect
+                        ? { background: "#dbeafe", color: "#1d4ed8" }
+                        : { background: "#fef3c7", color: "#d97706" };
+
+                  return (
                   <tr key={customer.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
                     <td style={{ padding: "1rem", fontSize: "0.875rem" }}>
-                      {customer.firstName} {customer.lastName}
+                      <div>{customer.firstName} {customer.lastName}</div>
+                      {isProspect && customer.capturedAt && (
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.2rem" }}>
+                          Captured {new Date(customer.capturedAt).toLocaleDateString()}
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: "1rem", fontSize: "0.875rem", color: "#6b7280" }}>
-                      {customer.email}
+                      <div>{customer.email}</div>
+                      {customer.phone && <div style={{ fontSize: "0.75rem" }}>{customer.phone}</div>}
                     </td>
                     <td style={{ padding: "1rem", fontSize: "0.875rem" }}>
-                      {customer.selectedPlan || "N/A"}
+                      {isProspect ? "Not signed up" : (customer.selectedPlan || "N/A")}
                     </td>
                     <td style={{ padding: "1rem" }}>
                       <span style={{
@@ -269,28 +303,41 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
                         borderRadius: "12px",
                         fontSize: "0.75rem",
                         fontWeight: "600",
-                        background: customer.status === "active" ? "#dcfce7" : "#fef3c7",
-                        color: customer.status === "active" ? "#16a34a" : "#d97706"
+                        ...statusStyles,
                       }}>
-                        {customer.status || "inactive"}
+                        {isProspect ? "Prospect" : (customer.status || "inactive")}
                       </span>
                     </td>
                     <td style={{ padding: "1rem", fontSize: "0.875rem" }}>
-                      {customer.loyaltyRanking || "Getting Started"}
+                      {isProspect ? "—" : (customer.loyaltyRanking || "Getting Started")}
                     </td>
                     <td style={{ padding: "1rem", fontSize: "0.875rem" }}>
-                      {customer.source === "partner" ? (
+                      {customer.source === "prospect" ? (
+                        <div style={{ color: "#1d4ed8" }}>
+                          <div>Website popup</div>
+                          {customer.heardAboutUs && <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>{customer.heardAboutUs}</div>}
+                          {customer.referredBy && <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Referred by: {customer.referredBy}</div>}
+                          {customer.referralCode && <div style={{ fontSize: "0.75rem", color: "#166534" }}>Code: {customer.referralCode}</div>}
+                        </div>
+                      ) : customer.source === "partner" ? (
                         <span style={{ color: "#2563eb" }}>Partner: {customer.partnerName || "Unknown"}</span>
                       ) : (
                         <span style={{ color: "#6b7280" }}>Direct</span>
                       )}
                     </td>
                     <td style={{ padding: "1rem", fontSize: "0.875rem", color: "#6b7280" }}>
-                      {customer.nextScheduledService
-                        ? new Date(customer.nextScheduledService).toLocaleDateString()
-                        : "None"}
+                      {isProspect
+                        ? "—"
+                        : customer.nextScheduledService
+                          ? new Date(customer.nextScheduledService).toLocaleDateString()
+                          : "None"}
                     </td>
                     <td style={{ padding: "1rem" }}>
+                      {isProspect ? (
+                        <span style={{ fontSize: "0.75rem", color: "#6b7280", fontWeight: "600" }}>
+                          Lead only
+                        </span>
+                      ) : (
                       <div style={{ display: "flex", gap: "0.5rem" }}>
                         <button
                           onClick={() => {
@@ -325,9 +372,11 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
                           History
                         </button>
                       </div>
+                      )}
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
