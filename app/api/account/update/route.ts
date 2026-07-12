@@ -1,7 +1,6 @@
 // app/api/account/update/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -47,27 +46,23 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Phone number is required" }, { status: 400 });
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json({ error: "Database not available" }, { status: 500 });
-    }
+    const db = await getAdminFirestore();
+    const userRef = db.collection("users").doc(authData.uid);
+    const userDoc = await userRef.get();
 
-    const firestore = await safeImportFirestore();
-    const { doc, getDoc, updateDoc, serverTimestamp } = firestore;
-
-    const userRef = doc(db, "users", authData.uid);
-    const userDoc = await getDoc(userRef);
-
-    if (!userDoc.exists()) {
+    if (!userDoc.exists) {
       return NextResponse.json({ error: "Account not found" }, { status: 404 });
     }
 
-    await updateDoc(userRef, {
+    const admin = await import("firebase-admin");
+    await userRef.update({
       firstName,
       lastName,
       phone,
-      updatedAt: serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+    const existingData = userDoc.data() || {};
 
     return NextResponse.json({
       success: true,
@@ -75,7 +70,7 @@ export async function PUT(req: NextRequest) {
         firstName,
         lastName,
         phone,
-        email: userDoc.data().email || authData.email || "",
+        email: existingData.email || authData.email || "",
       },
     });
   } catch (error: unknown) {
