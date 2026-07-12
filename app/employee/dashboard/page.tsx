@@ -43,6 +43,7 @@ interface Job {
   binCount?: number;
   binsCount?: number;
   scheduledTime?: string;
+  scheduledDate?: string;
   trashDay?: string;
   planType?: string;
   notes?: string;
@@ -65,6 +66,7 @@ export default function EmployeeDashboardPage() {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [clockInStatus, setClockInStatus] = useState<ClockInRecord | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [upcomingJobs, setUpcomingJobs] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isClockInLoading, setIsClockInLoading] = useState(false);
@@ -159,7 +161,8 @@ export default function EmployeeDashboardPage() {
       );
       if (response.ok) {
         const data = await response.json();
-        setJobs(data.jobs || []);
+        setJobs(data.todayJobs || data.jobs || []);
+        setUpcomingJobs(data.upcomingJobs || []);
       }
     } catch (error) {
       console.error("Error loading jobs:", error);
@@ -241,29 +244,38 @@ export default function EmployeeDashboardPage() {
             id: doc.id,
             ...doc.data(),
           })) as Job[];
-        
-        // Filter to only show today's and future jobs (scheduledDate >= today)
-        const filteredJobs = allJobs.filter((job: any) => {
-          return job.scheduledDate && job.scheduledDate >= today;
+
+        const activeJobs = allJobs.filter((job) => {
+          const status = (job as Job & { status?: string }).status;
+          const isCancelled = status === "cancelled" || job.jobStatus === "cancelled";
+          const isCompleted = status === "completed" || job.jobStatus === "completed";
+          return job.scheduledDate && job.scheduledDate >= today && !isCancelled && !isCompleted;
         });
-        
-        // Sort by date (today's first)
-        filteredJobs.sort((a: any, b: any) => {
+
+        activeJobs.sort((a, b) => {
           const dateA = a.scheduledDate || "";
           const dateB = b.scheduledDate || "";
           return dateA.localeCompare(dateB);
         });
-        
-        // Filter to only show today's jobs for the main display
-        const todayJobs = filteredJobs
-          .filter((job: any) => job.scheduledDate === today)
-          .map((job: any) => ({
+
+        const todayJobs = activeJobs
+          .filter((job) => job.scheduledDate === today)
+          .map((job) => ({
             ...job,
             binCount: job.binCount ?? job.binsCount ?? 1,
           }));
+
+        const futureJobs = activeJobs
+          .filter((job) => job.scheduledDate && job.scheduledDate > today)
+          .map((job) => ({
+            ...job,
+            binCount: job.binCount ?? job.binsCount ?? 1,
+          }));
+
         setJobs(todayJobs);
-        loadPayPreview(); // Refresh pay preview when jobs change
-        loadDashboardData(); // Refresh dashboard data when jobs change
+        setUpcomingJobs(futureJobs);
+        loadPayPreview();
+        loadDashboardData();
       });
 
       return unsubscribe;
@@ -850,6 +862,7 @@ export default function EmployeeDashboardPage() {
 
                 <JobList
                   jobs={jobs}
+                  upcomingJobs={upcomingJobs}
                   onJobClick={(job) => {
                     setSelectedJob(job);
                     setIsModalOpen(true);

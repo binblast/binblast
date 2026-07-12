@@ -50,7 +50,7 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
   const [filterPlan, setFilterPlan] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterServiceType, setFilterServiceType] = useState("");
-  const [filterByZone, setFilterByZone] = useState(true);
+  const [filterByZone, setFilterByZone] = useState(false);
   const [customers, setCustomers] = useState<CustomerWithAssignment[]>([]);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,7 +89,14 @@ export function CustomerAssignmentModule({ employeeId, onAssign }: CustomerAssig
     loadOperatorLocation();
     loadOperatorName();
     loadEmployeeWorkingDays();
+    searchCustomers();
   }, [employeeId]);
+
+  useEffect(() => {
+    if (employeeZones.length > 0 || employeeCounties.length > 0) {
+      searchCustomers();
+    }
+  }, [employeeZones, employeeCounties]);
 
   // Debounce search
   useEffect(() => {

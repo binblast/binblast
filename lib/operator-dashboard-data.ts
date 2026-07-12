@@ -22,9 +22,12 @@ function serializeCleaning(docId: string, data: Record<string, unknown>) {
     zipCode: (data.zipCode as string) || "",
     scheduledDate: cleaningDate.toISOString(),
     scheduledTime: (data.scheduledTime as string) || "TBD",
+    trashDay: (data.trashDay as string) || "",
     planType: (data.planType as string) || "",
     status: (data.status as string) || "scheduled",
     jobStatus: (data.jobStatus as string) || "",
+    assignedEmployeeId: (data.assignedEmployeeId as string) || "",
+    assignedEmployeeName: (data.assignedEmployeeName as string) || "",
     notes: (data.notes as string) || "",
     internalNotes: (data.internalNotes as string) || "",
     completedAt,
@@ -139,6 +142,28 @@ function computeCleaningMetrics(cleanings: ReturnType<typeof serializeCleaning>[
   });
 
   return { upcomingCount, completedThisWeek, todayCount, tomorrowCount };
+}
+
+function loadStaff(usersSnapshot: { forEach: (fn: (doc: { id: string; data: () => Record<string, unknown> }) => void) => void }) {
+  const staff: Array<{ id: string; name: string; role: string; email: string }> = [];
+
+  usersSnapshot.forEach((doc) => {
+    const data = doc.data();
+    const role = String(data.role || "");
+    if (role !== "employee" && role !== "operator") return;
+
+    const firstName = String(data.firstName || "");
+    const lastName = String(data.lastName || "");
+    staff.push({
+      id: doc.id,
+      name: `${firstName} ${lastName}`.trim() || String(data.email || "Team Member"),
+      role,
+      email: String(data.email || ""),
+    });
+  });
+
+  staff.sort((a, b) => a.name.localeCompare(b.name));
+  return staff;
 }
 
 async function loadCleanings(db: NonNullable<Awaited<ReturnType<typeof getDbInstance>>>, scope: OperatorDashboardScope) {
@@ -288,5 +313,6 @@ export async function getOperatorDashboardData(scope: OperatorDashboardScope) {
     scope,
     stats,
     cleanings,
+    staff: loadStaff(usersSnapshot),
   };
 }

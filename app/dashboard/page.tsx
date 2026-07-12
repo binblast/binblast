@@ -26,6 +26,7 @@ import {
   isCleaningCancelled,
 } from "@/lib/cleaning-schedule";
 import { CleaningReadinessBanner, CleaningJobPrepDetails } from "@/components/CleaningReadinessBanner";
+import { ScheduleEmployeeAssign } from "@/components/ScheduleEmployeeAssign";
 import {
   evaluateCleaningReadiness,
   getReadinessLabel,
@@ -240,6 +241,7 @@ function DashboardPageContent() {
   const [operatorDirectCustomers, setOperatorDirectCustomers] = useState<any[]>([]);
   const [operatorCommercialCustomers, setOperatorCommercialCustomers] = useState<any[]>([]);
   const [operatorAllCleanings, setOperatorAllCleanings] = useState<any[]>([]);
+  const [operatorStaff, setOperatorStaff] = useState<Array<{ id: string; name: string; role?: string }>>([]);
   
   // Extra bin state
   const [extraBinQuantity, setExtraBinQuantity] = useState(1);
@@ -1123,6 +1125,9 @@ function DashboardPageContent() {
           if (Array.isArray(data.cleanings)) {
             setOperatorAllCleanings(data.cleanings);
           }
+          if (Array.isArray(data.staff)) {
+            setOperatorStaff(data.staff);
+          }
           if (data.stats) setOperatorStats(data.stats);
         }
 
@@ -1295,6 +1300,20 @@ function DashboardPageContent() {
     
     return filtered;
   }, [roleDetermined, isOperator, operatorAllCleanings, operatorDateFilter, operatorCityFilter, operatorTypeFilter, getCleaningDate]);
+
+  const reloadOperatorSchedule = useCallback(async () => {
+    try {
+      const data = await fetchOperatorScope("schedule");
+      if (Array.isArray(data.cleanings)) {
+        setOperatorAllCleanings(data.cleanings);
+      }
+      if (Array.isArray(data.staff)) {
+        setOperatorStaff(data.staff);
+      }
+    } catch (err) {
+      console.error("[Dashboard] Error reloading operator schedule:", err);
+    }
+  }, [fetchOperatorScope]);
 
   const cleaningsByDate = useMemo(() => {
     if (!roleDetermined || !isOperator) return {};
@@ -2332,7 +2351,7 @@ function DashboardPageContent() {
                                         {cleaning.addressLine1}, {cleaning.city}
                                       </div>
                                       <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                                        {PLAN_NAMES[cleaning.planType] || cleaning.planType || "N/A"} • {cleaning.scheduledTime || "TBD"}
+                                        {cleaning.assignedEmployeeName || "Unassigned"} • {PLAN_NAMES[cleaning.planType] || cleaning.planType || "N/A"} • {cleaning.scheduledTime || "TBD"}
                                       </div>
                                       {cleaning.internalNotes && (
                                         <div style={{ fontSize: "0.875rem", marginTop: "0.5rem", padding: "0.5rem", background: "#ffffff", borderRadius: "4px" }}>
@@ -2340,7 +2359,7 @@ function DashboardPageContent() {
                                         </div>
                                       )}
                                     </div>
-                                    <div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: "flex-end" }}>
                                       <span style={{
                                         padding: "0.25rem 0.75rem",
                                         borderRadius: "999px",
@@ -2352,6 +2371,15 @@ function DashboardPageContent() {
                                       }}>
                                         {cleaning.status || (cleaning as any).jobStatus || "scheduled"}
                                       </span>
+                                      {!isCompleted && !isCancelled && (
+                                        <ScheduleEmployeeAssign
+                                          jobId={cleaning.id}
+                                          staff={operatorStaff}
+                                          assignedEmployeeId={cleaning.assignedEmployeeId}
+                                          assignedEmployeeName={cleaning.assignedEmployeeName}
+                                          onAssigned={reloadOperatorSchedule}
+                                        />
+                                      )}
                                     </div>
                                   </div>
                                   );

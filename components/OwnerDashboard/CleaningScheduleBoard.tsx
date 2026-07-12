@@ -13,6 +13,7 @@ import {
 } from "@/lib/schedule-board";
 import { getReadinessLabel, getReadinessStyle } from "@/lib/cleaning-readiness";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
+import { ScheduleEmployeeAssign } from "@/components/ScheduleEmployeeAssign";
 import { DAY_NAMES } from "@/lib/day-assignment";
 
 interface CleaningScheduleBoardProps {
@@ -431,10 +432,12 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
             <JobCard
               key={job.id}
               job={job}
+              staff={staff}
               selected={selectedJobIds.includes(job.id)}
               onToggleSelect={() => toggleJobSelection(job.id)}
               onEdit={() => setSelectedJob(job)}
               onQuickStatus={handleQuickStatus}
+              onAssigned={() => loadSchedule(true)}
             />
           ))}
         </div>
@@ -450,10 +453,12 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
                   <JobCard
                     key={job.id}
                     job={job}
+                    staff={staff}
                     selected={selectedJobIds.includes(job.id)}
                     onToggleSelect={() => toggleJobSelection(job.id)}
                     onEdit={() => setSelectedJob(job)}
                     onQuickStatus={handleQuickStatus}
+                    onAssigned={() => loadSchedule(true)}
                   />
                 ))}
               </div>
@@ -481,16 +486,20 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
 
 function JobCard({
   job,
+  staff,
   selected,
   onToggleSelect,
   onEdit,
   onQuickStatus,
+  onAssigned,
 }: {
   job: ScheduleJob;
+  staff: ScheduleStaffMember[];
   selected: boolean;
   onToggleSelect: () => void;
   onEdit: () => void;
   onQuickStatus: (job: ScheduleJob, status: string) => void;
+  onAssigned: () => void;
 }) {
   const status = normalizeJobStatus(job.status, job.jobStatus);
   const statusStyle = getStatusStyle(status);
@@ -527,7 +536,17 @@ function JobCard({
           Curb placement required before service window
         </div>
       </div>
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start", flexWrap: "wrap" }}>
+        {!isCancelled && status !== "completed" && (
+          <ScheduleEmployeeAssign
+            jobId={job.id}
+            staff={staff}
+            assignedEmployeeId={job.assignedEmployeeId}
+            assignedEmployeeName={job.assignedEmployeeName}
+            onAssigned={onAssigned}
+          />
+        )}
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
         <span style={{ padding: "0.25rem 0.75rem", borderRadius: "999px", fontSize: "0.75rem", fontWeight: "700", background: readinessStyle.background, color: readinessStyle.color, border: `1px solid ${readinessStyle.border}` }}>
           {getReadinessLabel(job.readinessStatus)}
         </span>
@@ -542,6 +561,7 @@ function JobCard({
           </>
         )}
         <button type="button" onClick={onEdit} style={smallButtonStyle}>Manage</button>
+        </div>
       </div>
     </div>
   );

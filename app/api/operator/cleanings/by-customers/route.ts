@@ -7,6 +7,7 @@ import {
   scoreCleaningForEmployee,
 } from "@/lib/day-assignment";
 import { loadEmployeeScheduleForDate } from "@/lib/employee-schedule";
+import { isActiveCleaningStatus } from "@/lib/cleaning-status";
 
 interface CustomerCleaningRecord {
   id: string;
@@ -54,10 +55,9 @@ export async function POST(req: NextRequest) {
         }))
         .filter((c) => {
           return (
-            c.status === "upcoming" &&
+            isActiveCleaningStatus(c.status, c.jobStatus) &&
             c.scheduledDate &&
-            c.scheduledDate >= today &&
-            c.jobStatus !== "completed"
+            c.scheduledDate >= today
           );
         });
 

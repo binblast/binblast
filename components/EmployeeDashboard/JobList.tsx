@@ -16,6 +16,7 @@ interface Job {
   binCount?: number;
   binsCount?: number;
   scheduledTime?: string;
+  scheduledDate?: string;
   trashDay?: string;
   planType?: string;
   notes?: string;
@@ -28,28 +29,117 @@ interface Job {
 
 interface JobListProps {
   jobs: Job[];
+  upcomingJobs?: Job[];
   onJobClick: (job: Job) => void;
   isClockedIn: boolean;
   onStartNextJob?: (job: Job) => void;
 }
 
-export function JobList({ jobs, onJobClick, isClockedIn, onStartNextJob }: JobListProps) {
+export function JobList({ jobs, upcomingJobs = [], onJobClick, isClockedIn, onStartNextJob }: JobListProps) {
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all");
-  
+
+  const formatJobDate = (date?: string) => {
+    if (!date) return "Date TBD";
+    return new Date(`${date}T12:00:00`).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const renderPreviewJob = (job: Job, isToday: boolean) => {
+    const fullAddress = `${job.addressLine1}${
+      job.addressLine2 ? `, ${job.addressLine2}` : ""
+    }, ${job.city}, ${job.state} ${job.zipCode}`;
+
+    return (
+      <div
+        key={job.id}
+        style={{
+          padding: "1rem",
+          borderRadius: "10px",
+          border: "1px solid #e5e7eb",
+          background: isToday ? "#f0fdf4" : "#ffffff",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontWeight: "700", color: "#111827", marginBottom: "0.25rem" }}>
+              {job.customerName || job.userEmail || "Customer"}
+            </div>
+            <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.35rem" }}>
+              {fullAddress}
+            </div>
+            <div style={{ fontSize: "0.8125rem", color: "#6b7280" }}>
+              {formatJobDate(job.scheduledDate)} • {job.scheduledTime || "Time TBD"} • {job.binCount ?? job.binsCount ?? 1} bins
+            </div>
+          </div>
+          <span
+            style={{
+              alignSelf: "flex-start",
+              padding: "0.25rem 0.65rem",
+              borderRadius: "999px",
+              fontSize: "0.75rem",
+              fontWeight: "600",
+              background: isToday ? "#dcfce7" : "#eff6ff",
+              color: isToday ? "#166534" : "#1d4ed8",
+            }}
+          >
+            {isToday ? "Today" : "Upcoming"}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   if (!isClockedIn) {
+    const previewJobs = [...jobs, ...upcomingJobs];
+
+    if (previewJobs.length === 0) {
+      return (
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "12px",
+            padding: "2rem",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+            border: "1px solid #e5e7eb",
+            textAlign: "center",
+            color: "#6b7280",
+          }}
+        >
+          <div style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem", color: "#111827" }}>
+            No route assigned yet
+          </div>
+          <div style={{ fontSize: "0.875rem", color: "#6b7280", lineHeight: "1.5" }}>
+            Your manager will assign stops here. Clock in when you&apos;re ready to start your route.
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         style={{
           background: "#ffffff",
           borderRadius: "12px",
-          padding: "2rem",
+          padding: "1.25rem",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
           border: "1px solid #e5e7eb",
-          textAlign: "center",
-          color: "#6b7280",
         }}
       >
-        Clock in to see your jobs
+        <div style={{ marginBottom: "1rem" }}>
+          <div style={{ fontSize: "1rem", fontWeight: "700", color: "#111827", marginBottom: "0.35rem" }}>
+            Your Assigned Route
+          </div>
+          <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+            Preview your stops below, then clock in to start working them.
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {jobs.map((job) => renderPreviewJob(job, true))}
+          {upcomingJobs.map((job) => renderPreviewJob(job, false))}
+        </div>
       </div>
     );
   }
