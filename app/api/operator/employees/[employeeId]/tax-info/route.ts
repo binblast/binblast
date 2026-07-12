@@ -71,10 +71,12 @@ export async function PUT(
     }
 
     const existingTaxInfo = userSnap.data().taxInfo || {};
-    const taxInfo = {
+    const taxIdType = body.taxIdType ?? existingTaxInfo.taxIdType ?? "ssn";
+
+    const taxInfo: Record<string, any> = {
       ...existingTaxInfo,
       name: body.name ?? existingTaxInfo.name ?? "",
-      ein: body.ein ?? existingTaxInfo.ein ?? "",
+      taxIdType,
       taxFormType: body.taxFormType ?? existingTaxInfo.taxFormType ?? "w9",
       address: body.address ?? existingTaxInfo.address ?? null,
       signature: body.signature ?? existingTaxInfo.signature ?? "",
@@ -86,8 +88,16 @@ export async function PUT(
       updatedAt: serverTimestamp(),
     };
 
-    if (body.ssn) {
-      taxInfo.ssn = body.ssn;
+    if (taxIdType === "ssn") {
+      taxInfo.ein = "";
+      if (body.ssn) {
+        taxInfo.ssn = body.ssn;
+      } else if (existingTaxInfo.ssn) {
+        taxInfo.ssn = existingTaxInfo.ssn;
+      }
+    } else {
+      taxInfo.ssn = "";
+      taxInfo.ein = body.ein ?? existingTaxInfo.ein ?? "";
     }
 
     await updateDoc(userRef, {

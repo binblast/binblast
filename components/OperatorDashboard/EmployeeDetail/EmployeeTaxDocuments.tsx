@@ -8,6 +8,19 @@ interface EmployeeTaxDocumentsProps {
   refreshKey?: number;
 }
 
+function formatSsnInput(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 9);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+}
+
+function formatEinInput(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 9);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+}
+
 export function EmployeeTaxDocuments({ employeeId, refreshKey = 0 }: EmployeeTaxDocumentsProps) {
   const [taxInfo, setTaxInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -18,6 +31,8 @@ export function EmployeeTaxDocuments({ employeeId, refreshKey = 0 }: EmployeeTax
 
   const [formData, setFormData] = useState({
     name: "",
+    taxIdType: "ssn" as "ssn" | "ein",
+    ssn: "",
     ein: "",
     taxFormType: "w9" as "w9" | "w4",
   });
@@ -35,6 +50,10 @@ export function EmployeeTaxDocuments({ employeeId, refreshKey = 0 }: EmployeeTax
         setTaxInfo(data.taxInfo);
         setFormData({
           name: data.taxInfo.name || "",
+          taxIdType:
+            data.taxInfo.taxIdType ||
+            (data.taxInfo.ein && !data.taxInfo.ssnLast4 ? "ein" : "ssn"),
+          ssn: "",
           ein: data.taxInfo.ein || "",
           taxFormType: data.taxInfo.taxFormType || "w9",
         });
@@ -87,7 +106,11 @@ export function EmployeeTaxDocuments({ employeeId, refreshKey = 0 }: EmployeeTax
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          taxIdType: formData.taxIdType,
+          taxFormType: formData.taxFormType,
+          ssn: formData.taxIdType === "ssn" ? formData.ssn : "",
+          ein: formData.taxIdType === "ein" ? formData.ein : "",
           w9DocumentUrl: url,
         }),
       });
@@ -117,7 +140,13 @@ export function EmployeeTaxDocuments({ employeeId, refreshKey = 0 }: EmployeeTax
       const response = await fetch(`/api/operator/employees/${employeeId}/tax-info`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          taxIdType: formData.taxIdType,
+          taxFormType: formData.taxFormType,
+          ssn: formData.taxIdType === "ssn" ? formData.ssn : "",
+          ein: formData.taxIdType === "ein" ? formData.ein : "",
+        }),
       });
 
       const data = await response.json();
@@ -301,22 +330,106 @@ export function EmployeeTaxDocuments({ employeeId, refreshKey = 0 }: EmployeeTax
 
         <div>
           <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem", color: "#374151" }}>
-            EIN / Tax ID (if applicable)
+            Tax ID Type
           </label>
-          <input
-            type="text"
-            value={formData.ein}
-            onChange={(e) => setFormData({ ...formData, ein: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #e5e7eb",
-              borderRadius: "6px",
-              fontSize: "0.875rem",
-            }}
-            placeholder="XX-XXXXXXX"
-          />
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontSize: "0.875rem",
+                color: "#374151",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="radio"
+                name="taxIdType"
+                value="ssn"
+                checked={formData.taxIdType === "ssn"}
+                onChange={() =>
+                  setFormData({ ...formData, taxIdType: "ssn", ein: "" })
+                }
+              />
+              Social Security Number (SSN)
+            </label>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontSize: "0.875rem",
+                color: "#374151",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="radio"
+                name="taxIdType"
+                value="ein"
+                checked={formData.taxIdType === "ein"}
+                onChange={() =>
+                  setFormData({ ...formData, taxIdType: "ein", ssn: "" })
+                }
+              />
+              Employer Identification Number (EIN)
+            </label>
+          </div>
         </div>
+
+        {formData.taxIdType === "ssn" ? (
+          <div>
+            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem", color: "#374151" }}>
+              Social Security Number
+            </label>
+            <input
+              type="text"
+              value={formData.ssn}
+              onChange={(e) =>
+                setFormData({ ...formData, ssn: formatSsnInput(e.target.value) })
+              }
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                border: "1px solid #e5e7eb",
+                borderRadius: "6px",
+                fontSize: "0.875rem",
+              }}
+              placeholder="XXX-XX-XXXX"
+              maxLength={11}
+              inputMode="numeric"
+            />
+            {taxInfo?.ssnLast4 && !formData.ssn && (
+              <p style={{ fontSize: "0.8125rem", color: "#6b7280", margin: "0.5rem 0 0" }}>
+                SSN on file: •••-••-{taxInfo.ssnLast4}. Enter the full number above to update.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div>
+            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem", color: "#374151" }}>
+              Employer Identification Number (EIN)
+            </label>
+            <input
+              type="text"
+              value={formData.ein}
+              onChange={(e) =>
+                setFormData({ ...formData, ein: formatEinInput(e.target.value) })
+              }
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                border: "1px solid #e5e7eb",
+                borderRadius: "6px",
+                fontSize: "0.875rem",
+              }}
+              placeholder="XX-XXXXXXX"
+              maxLength={10}
+              inputMode="numeric"
+            />
+          </div>
+        )}
 
         <div>
           <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem", color: "#374151" }}>
@@ -337,12 +450,6 @@ export function EmployeeTaxDocuments({ employeeId, refreshKey = 0 }: EmployeeTax
             <option value="w4">W-4 (Employee)</option>
           </select>
         </div>
-
-        {taxInfo?.ssnLast4 && (
-          <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-            SSN on file: •••-••-{taxInfo.ssnLast4}
-          </div>
-        )}
 
         <button
           type="submit"

@@ -30,6 +30,7 @@ export interface TaxInfo {
   w9DocumentUrl?: string;
   w9UploadedAt?: any;
   taxFormType?: "w9" | "w4";
+  taxIdType?: "ssn" | "ein";
 }
 
 export interface Employee {
