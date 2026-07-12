@@ -2,13 +2,14 @@
 "use client";
 
 import { useState } from "react";
+import { TeamAccountManagement } from "@/components/OwnerDashboard/TeamAccountManagement";
 
 interface SystemControlsProps {
   userId: string;
 }
 
 export function SystemControls({ userId }: SystemControlsProps) {
-  const [activeTab, setActiveTab] = useState<string>("pricing");
+  const [activeTab, setActiveTab] = useState<string>("team-logins");
 
   return (
     <div style={{ marginBottom: "3rem" }}>
@@ -24,6 +25,7 @@ export function SystemControls({ userId }: SystemControlsProps) {
         borderBottom: "1px solid #e5e7eb"
       }}>
         {[
+          { id: "team-logins", label: "Team Logins" },
           { id: "pricing", label: "Subscription Pricing" },
           { id: "partner", label: "Partner Program" },
           { id: "referral", label: "Referral Credits" },
@@ -58,6 +60,8 @@ export function SystemControls({ userId }: SystemControlsProps) {
         boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
         border: "1px solid #e5e7eb"
       }}>
+        {activeTab === "team-logins" && <TeamAccountManagement />}
+
         {activeTab === "pricing" && (
           <div>
             <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "1rem" }}>
