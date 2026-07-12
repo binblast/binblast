@@ -96,6 +96,8 @@ export async function POST(
       (typeof senderData?.role === "string" ? senderData.role : null) ||
       (recipientData.role === "operator" ? "admin" : "admin");
 
+    const trimmedSubject = typeof subject === "string" ? subject.trim() : "";
+
     const messageData = {
       employeeId: recipientId,
       employeeEmail: recipientData.email || "",
@@ -108,7 +110,7 @@ export async function POST(
       senderEmail: senderData?.email || "",
       senderRole,
       message: message.trim(),
-      subject: subject?.trim() || undefined,
+      ...(trimmedSubject ? { subject: trimmedSubject } : {}),
       type: type || "general",
       from: senderRole === "operator" ? "operator" : senderRole === "owner" ? "owner" : "admin",
       read: false,

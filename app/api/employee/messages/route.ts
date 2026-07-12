@@ -97,6 +97,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const trimmedSubject = typeof subject === "string" ? subject.trim() : "";
+
     const messageData = {
       employeeId: recipientId,
       employeeEmail: recipientData.email || "",
@@ -107,7 +109,7 @@ export async function POST(req: NextRequest) {
       senderEmail: employeeData.email || "",
       senderRole: employeeData.role || "employee",
       message: message.trim(),
-      subject: subject?.trim() || undefined,
+      ...(trimmedSubject ? { subject: trimmedSubject } : {}),
       type: "general",
       from: "employee",
       read: false,
