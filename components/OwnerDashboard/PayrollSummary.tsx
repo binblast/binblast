@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { formatHours } from "@/lib/operator-fleet-payroll";
 
 type PayrollRow = {
   employeeId: string;
@@ -18,6 +19,17 @@ type PayrollRow = {
   avgPerBin: number;
 };
 
+type OperatorPayrollRow = {
+  operatorId: string;
+  operatorName: string;
+  email: string;
+  hourlyRate: number;
+  hoursWorked: number;
+  daysWorked: number;
+  grossPay: number;
+  paymentStatus: string;
+};
+
 type PayrollSummaryResponse = {
   payPeriod: { startDate: string; endDate: string };
   totals: {
@@ -27,6 +39,16 @@ type PayrollSummaryResponse = {
     finalPay: number;
   };
   employees: PayrollRow[];
+  operatorPayroll?: {
+    payPeriod: { startDate: string; endDate: string };
+    hourlyRate: number;
+    totals: {
+      hoursWorked: number;
+      grossPay: number;
+      daysWorked: number;
+    };
+    operators: OperatorPayrollRow[];
+  };
 };
 
 function formatCurrency(amount: number): string {
@@ -97,6 +119,7 @@ export function PayrollSummary() {
     if (!data) return;
 
     const rows: string[][] = [
+      ["Field Employee Payroll"],
       [
         "Employee",
         "Email",
@@ -125,7 +148,66 @@ export function PayrollSummary() {
       ]),
     ];
 
+    if (data.operatorPayroll && data.operatorPayroll.operators.length > 0) {
+      rows.push([]);
+      rows.push(["Operator Hours & Pay"]);
+      rows.push([
+        "Operator",
+        "Email",
+        "Hours Worked",
+        "Days Worked",
+        "Hourly Rate",
+        "Gross Pay",
+        "Payment Status",
+      ]);
+      rows.push(
+        ...data.operatorPayroll.operators.map((row) => [
+          row.operatorName,
+          row.email,
+          formatHours(row.hoursWorked),
+          String(row.daysWorked),
+          row.hourlyRate.toFixed(2),
+          row.grossPay.toFixed(2),
+          row.paymentStatus,
+        ])
+      );
+    }
+
     downloadCsv(`payroll-summary-${data.payPeriod.startDate}-${data.payPeriod.endDate}.csv`, rows);
+  }
+
+  function exportOperatorCsv() {
+    if (!data?.operatorPayroll) return;
+
+    const rows: string[][] = [
+      [
+        "Operator",
+        "Email",
+        "Hours Worked",
+        "Days Worked",
+        "Hourly Rate",
+        "Gross Pay",
+        "Payment Status",
+        "Pay Period Start",
+        "Pay Period End",
+      ],
+      ...data.operatorPayroll.operators.map((row) => [
+        row.operatorName,
+        row.email,
+        formatHours(row.hoursWorked),
+        String(row.daysWorked),
+        row.hourlyRate.toFixed(2),
+        row.grossPay.toFixed(2),
+        row.paymentStatus,
+        data.payPeriod.startDate,
+        data.payPeriod.endDate,
+      ]),
+    ];
+
+    downloadCsv(
+      `operator-payroll-${data.payPeriod.startDate}-${data.payPeriod.endDate}.csv`,
+      rows
+    );
   }
 
   function exportPdf() {
@@ -142,8 +224,9 @@ export function PayrollSummary() {
         Payroll Summary
       </h3>
       <p style={{ color: "#6b7280", marginBottom: "1.25rem", lineHeight: 1.5 }}>
-        Employee gross pay from completed jobs. Compensation is calculated from owner settings — never
-        from customer pricing.
+        Employee gross pay from completed jobs and operator pay from locked clock in/out records.
+        Use date filters to track any pay period over time. All clock records are saved permanently in
+        the system.
       </p>
 
       {error && (
@@ -237,6 +320,23 @@ export function PayrollSummary() {
         >
           Export PDF
         </button>
+        {data?.operatorPayroll && data.operatorPayroll.operators.length > 0 && (
+          <button
+            type="button"
+            onClick={exportOperatorCsv}
+            style={{
+              padding: "0.5rem 1rem",
+              background: "#f0fdf4",
+              color: "#166534",
+              border: "1px solid #bbf7d0",
+              borderRadius: "8px",
+              fontWeight: "600",
+              cursor: "pointer",
+            }}
+          >
+            Export Operator CSV
+          </button>
+        )}
       </div>
 
       {data && (
@@ -326,6 +426,111 @@ export function PayrollSummary() {
               </tbody>
             </table>
           </div>
+
+          {data.operatorPayroll && (
+            <div style={{ marginTop: "2.5rem", paddingTop: "2rem", borderTop: "1px solid #e5e7eb" }}>
+              <h4 style={{ fontSize: "1.05rem", fontWeight: "700", margin: "0 0 0.35rem", color: "#111827" }}>
+                Operator Hours & Pay
+              </h4>
+              <p style={{ color: "#6b7280", marginBottom: "1rem", fontSize: "0.875rem", lineHeight: 1.5 }}>
+                Calculated from operator clock in/out records at{" "}
+                {data.operatorPayroll.hourlyRate > 0
+                  ? formatCurrency(data.operatorPayroll.hourlyRate)
+                  : "owner-set rate (not configured)"}
+                /hr. Hours cannot be edited by operators.
+              </p>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                  gap: "0.75rem",
+                  marginBottom: "1.25rem",
+                }}
+              >
+                {[
+                  { label: "Operator Hours", value: formatHours(data.operatorPayroll.totals.hoursWorked) },
+                  { label: "Operator Gross Pay", value: formatCurrency(data.operatorPayroll.totals.grossPay) },
+                  { label: "Days Worked", value: String(data.operatorPayroll.totals.daysWorked) },
+                  {
+                    label: "Hourly Rate",
+                    value:
+                      data.operatorPayroll.hourlyRate > 0
+                        ? `${formatCurrency(data.operatorPayroll.hourlyRate)}/hr`
+                        : "Not set",
+                  },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    style={{
+                      padding: "1rem",
+                      background: "#f0fdf4",
+                      borderRadius: "8px",
+                      border: "1px solid #bbf7d0",
+                    }}
+                  >
+                    <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem" }}>
+                      {stat.label}
+                    </div>
+                    <div style={{ fontSize: "1.125rem", fontWeight: "700", color: "#111827" }}>
+                      {stat.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {data.operatorPayroll.operators.length === 0 ? (
+                <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+                  No operator clock records for this pay period.
+                </p>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+                    <thead>
+                      <tr style={{ background: "#f0fdf4", textAlign: "left" }}>
+                        {["Operator", "Hours", "Days", "Rate", "Gross Pay", "Status"].map((header) => (
+                          <th
+                            key={header}
+                            style={{
+                              padding: "0.75rem",
+                              borderBottom: "1px solid #bbf7d0",
+                              fontWeight: "600",
+                              color: "#374151",
+                            }}
+                          >
+                            {header}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.operatorPayroll.operators.map((row) => (
+                        <tr key={row.operatorId} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                          <td style={{ padding: "0.75rem" }}>
+                            <div style={{ fontWeight: "600" }}>{row.operatorName}</div>
+                            <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>{row.email}</div>
+                          </td>
+                          <td style={{ padding: "0.75rem", fontWeight: "600" }}>
+                            {formatHours(row.hoursWorked)}
+                          </td>
+                          <td style={{ padding: "0.75rem" }}>{row.daysWorked}</td>
+                          <td style={{ padding: "0.75rem" }}>
+                            {row.hourlyRate > 0 ? `${formatCurrency(row.hourlyRate)}/hr` : "—"}
+                          </td>
+                          <td style={{ padding: "0.75rem", fontWeight: "700", color: "#15803d" }}>
+                            {row.hourlyRate > 0 ? formatCurrency(row.grossPay) : "—"}
+                          </td>
+                          <td style={{ padding: "0.75rem", textTransform: "capitalize" }}>
+                            {row.paymentStatus}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

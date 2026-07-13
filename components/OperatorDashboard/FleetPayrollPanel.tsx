@@ -99,6 +99,7 @@ export function FleetPayrollPanel() {
   function exportCsv() {
     if (!data) return;
     const rows: string[][] = [
+      ["Field Employee Hours & Pay"],
       [
         "Employee",
         "Email",
@@ -124,6 +125,38 @@ export function FleetPayrollPanel() {
         String(employee.week.jobsEligible),
       ]),
     ];
+
+    if (data.operators && data.operators.length > 0) {
+      rows.push([]);
+      rows.push(["Operator Hours & Pay"]);
+      rows.push([
+        "Operator",
+        "Email",
+        "Status",
+        "Hours Today",
+        "Pay Today",
+        "Hours Week",
+        "Pay Week",
+        "Hourly Rate",
+        "Week Start",
+        "Week End",
+      ]);
+      rows.push(
+        ...data.operators.map((operator) => [
+          operator.name,
+          operator.email,
+          operator.isClockedIn ? "On Shift" : "Off Shift",
+          formatHours(operator.todayHours),
+          operator.hourlyRate > 0 ? operator.todayPay.toFixed(2) : "",
+          formatHours(operator.weekHours),
+          operator.hourlyRate > 0 ? operator.weekPay.toFixed(2) : "",
+          operator.hourlyRate > 0 ? operator.hourlyRate.toFixed(2) : "",
+          data.weekStart,
+          data.weekEnd,
+        ])
+      );
+    }
+
     downloadCsv(`fleet-hours-pay-${data.weekStart}.csv`, rows);
   }
 

@@ -12,6 +12,7 @@ import {
   getJobCompensationAmount,
 } from "@/lib/employee-compensation";
 import { loadCompensationSettings } from "@/lib/employee-compensation-server";
+import { buildOperatorPayrollSummary } from "@/lib/operator-self-payroll";
 
 export const dynamic = "force-dynamic";
 
@@ -137,12 +138,15 @@ export async function GET(req: NextRequest) {
       { jobsCompleted: 0, binsCleaned: 0, grossEarnings: 0, finalPay: 0 }
     );
 
+    const operatorPayroll = await buildOperatorPayrollSummary(startDate, endDate);
+
     return NextResponse.json({
       payPeriod: { startDate, endDate },
       compensationSettings: {
         payModel: settings.payModel,
         residentialFirstBinPay: settings.residentialFirstBinPay,
         residentialAdditionalBinPay: settings.residentialAdditionalBinPay,
+        hourlyRate: settings.hourlyRate,
       },
       totals: {
         jobsCompleted: totals.jobsCompleted,
@@ -151,6 +155,7 @@ export async function GET(req: NextRequest) {
         finalPay: Math.round(totals.finalPay * 100) / 100,
       },
       employees: rows,
+      operatorPayroll,
     });
   } catch (error: unknown) {
     console.error("[Admin Payroll Summary] Error:", error);
