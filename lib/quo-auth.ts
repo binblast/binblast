@@ -1,27 +1,94 @@
 import { NextRequest } from "next/server";
 import crypto from "node:crypto";
 
+function normalizeSecretValue(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim() || undefined;
+  }
+
+  return trimmed;
+}
+
 export function getQuoApiKey(): string | undefined {
-  return process.env.QUO_API_KEY?.trim();
+  return normalizeSecretValue(process.env.QUO_API_KEY);
+}
+
+export function getQuoWebhookSigningSecret(): string | undefined {
+  return normalizeSecretValue(process.env.QUO_WEBHOOK_SIGNING_SECRET);
+}
+
+export function getQuoConfigStatus() {
+  return {
+    apiKeyConfigured: Boolean(getQuoApiKey()),
+    webhookSecretConfigured: Boolean(getQuoWebhookSigningSecret()),
+  };
+}
+
+function extractProvidedApiKeys(req: NextRequest): string[] {
+  const headerValues = [
+    req.headers.get("authorization"),
+    req.headers.get("x-quo-action-key"),
+    req.headers.get("x-api-key"),
+    req.headers.get("api-key"),
+  ];
+
+  const keys: string[] = [];
+
+  for (const value of headerValues) {
+    const trimmed = value?.trim();
+    if (!trimmed) continue;
+
+    keys.push(trimmed);
+
+    const bearerMatch = trimmed.match(/^Bearer\s+(.+)$/i);
+    if (bearerMatch?.[1]) {
+      keys.push(bearerMatch[1].trim());
+    }
+  }
+
+  return keys.filter(Boolean);
+}
+
+export function getQuoAuthFailureReason(
+  req: NextRequest
+): "missing_server_key" | "missing_client_key" | "invalid_key" {
+  if (!getQuoApiKey()) return "missing_server_key";
+  if (extractProvidedApiKeys(req).length === 0) return "missing_client_key";
+  return "invalid_key";
 }
 
 export function verifyQuoActionAuth(req: NextRequest): boolean {
   const apiKey = getQuoApiKey();
   if (!apiKey) return false;
 
-  const authorization = req.headers.get("authorization")?.trim();
-  const actionKey = req.headers.get("x-quo-action-key")?.trim();
+  return extractProvidedApiKeys(req).some((value) => value === apiKey);
+}
 
-  const candidates = [authorization, actionKey].filter(Boolean) as string[];
+export function buildQuoUnauthorizedResponse(req: NextRequest) {
+  const reason = getQuoAuthFailureReason(req);
 
-  return candidates.some((value) => {
-    if (value === apiKey) return true;
+  const hints: Record<typeof reason, string> = {
+    missing_server_key:
+      "QUO_API_KEY is empty or missing in Vercel. Paste the key, save, then redeploy.",
+    missing_client_key:
+      "Send your QUO API key in Authorization, Authorization: Bearer <key>, x-quo-action-key, or x-api-key.",
+    invalid_key:
+      "The API key sent in the request does not match QUO_API_KEY in Vercel. Re-copy the key from QUO and redeploy.",
+  };
 
-    const bearerMatch = value.match(/^Bearer\s+(.+)$/i);
-    if (bearerMatch && bearerMatch[1].trim() === apiKey) return true;
-
-    return false;
-  });
+  return {
+    error: "Unauthorized" as const,
+    reason,
+    hint: hints[reason],
+  };
 }
 
 export function verifyQuoWebhookSignature(
@@ -29,7 +96,7 @@ export function verifyQuoWebhookSignature(
   signatureHeader: string | null,
   signingSecret?: string
 ): boolean {
-  const secret = signingSecret || process.env.QUO_WEBHOOK_SIGNING_SECRET?.trim();
+  const secret = signingSecret || getQuoWebhookSigningSecret();
   if (!secret || !signatureHeader) {
     return process.env.NODE_ENV !== "production";
   }

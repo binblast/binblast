@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyQuoActionAuth } from "@/lib/quo-auth";
+import { verifyQuoActionAuth, buildQuoUnauthorizedResponse } from "@/lib/quo-auth";
 import {
   QUO_ACTION_DEFINITIONS,
   QuoActionName,
@@ -13,7 +13,7 @@ const ALLOWED_ACTIONS = new Set<string>(QUO_ACTION_DEFINITIONS.map((item) => ite
 
 export async function GET(req: NextRequest) {
   if (!verifyQuoActionAuth(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(buildQuoUnauthorizedResponse(req), { status: 401 });
   }
 
   return NextResponse.json({
@@ -23,8 +23,8 @@ export async function GET(req: NextRequest) {
     serviceAreas: getServiceAreasPayload(),
     actions: QUO_ACTION_DEFINITIONS,
     auth: {
-      headers: ["Authorization", "x-quo-action-key"],
-      note: "Pass your QUO_API_KEY as the raw Authorization value or as Authorization: Bearer <key>.",
+      headers: ["Authorization", "Authorization: Bearer", "x-quo-action-key", "x-api-key"],
+      note: "Use the same QUO API key value stored in Vercel as QUO_API_KEY.",
     },
   });
 }
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     if (!verifyQuoActionAuth(req)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(buildQuoUnauthorizedResponse(req), { status: 401 });
     }
 
     const body = await req.json();
