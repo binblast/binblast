@@ -85,7 +85,11 @@ export function CleaningLimitModal({
       }
       onUpgradeComplete?.();
       onClose();
-      window.location.reload();
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+        return;
+      }
+      window.location.href = `/dashboard?plan_upgrade=success&schedule_cleaning=1&new_plan=${data.newPlanId || "twice-month"}`;
     } catch (err: any) {
       setError(err.message || "Failed to upgrade subscription");
     } finally {

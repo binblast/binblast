@@ -190,8 +190,20 @@ function DashboardPageContent() {
   const [isOperator, setIsOperator] = useState(false);
   const [roleDetermined, setRoleDetermined] = useState(false); // Track if role has been determined
   const [showCleaningConfirmation, setShowCleaningConfirmation] = useState(false);
-  
-  // Admin state
+  const [openScheduleFormForNewCleaning, setOpenScheduleFormForNewCleaning] = useState(false);
+  const [scheduleActionMessage, setScheduleActionMessage] = useState<string | null>(null);
+  const [cleaningAccountSummary, setCleaningAccountSummary] = useState<{
+    planName: string;
+    cleaningCredits: number;
+    purchases: Array<{
+      id: string;
+      type: "one_time_cleaning" | "plan_upgrade";
+      label: string;
+      amount: number;
+      processedAt: string | null;
+    }>;
+  } | null>(null);
+  const purchaseReturnHandledRef = useRef(false);
   const [adminStats, setAdminStats] = useState({
     totalCustomers: 0,
     customersByPlan: {} as Record<string, number>,
@@ -331,6 +343,119 @@ function DashboardPageContent() {
       sessionStorage.removeItem("pendingSubscriptionChange");
     }
   }, [searchParams, router]);
+
+  const refreshUserProfile = useCallback(async (uid: string) => {
+    try {
+      const { getDbInstance } = await import("@/lib/firebase");
+      const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+      const db = await getDbInstance();
+      if (!db) return null;
+
+      const firestore = await safeImportFirestore();
+      const { doc, getDoc } = firestore;
+      const userDoc = await getDoc(doc(db, "users", uid));
+      if (!userDoc.exists()) return null;
+
+      const userData = userDoc.data() as UserData;
+      setUser(userData);
+      return userData;
+    } catch (error) {
+      console.error("[Dashboard] Failed to refresh user profile:", error);
+      return null;
+    }
+  }, []);
+
+  const loadCleaningAccountSummary = useCallback(async (uid: string) => {
+    try {
+      const response = await fetch(
+        `/api/customer/cleaning-purchases?userId=${encodeURIComponent(uid)}`
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+      setCleaningAccountSummary({
+        planName: data.planName,
+        cleaningCredits: data.cleaningCredits || 0,
+        purchases: data.purchases || [],
+      });
+    } catch (error) {
+      console.error("[Dashboard] Failed to load cleaning purchases:", error);
+    }
+  }, []);
+
+  const openScheduleFormAfterPurchase = useCallback((message: string) => {
+    setScheduleActionMessage(message);
+    setOpenScheduleFormForNewCleaning(true);
+    setAccountInfoExpanded(true);
+    setTimeout(() => {
+      scheduleSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.scrollBy(0, -20);
+    }, 250);
+  }, []);
+
+  useEffect(() => {
+    if (!userId || purchaseReturnHandledRef.current) return;
+
+    const oneTimeCleaning = searchParams.get("one_time_cleaning");
+    const planUpgrade = searchParams.get("plan_upgrade");
+    const scheduleCleaning = searchParams.get("schedule_cleaning");
+    const sessionId = searchParams.get("session_id");
+    const newPlan = searchParams.get("new_plan");
+
+    if (scheduleCleaning !== "1") return;
+
+    const handleReturn = async () => {
+      purchaseReturnHandledRef.current = true;
+
+      if (oneTimeCleaning === "success" && sessionId) {
+        try {
+          const response = await fetch("/api/stripe/verify-one-time-cleaning", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId, userId }),
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || "Failed to verify payment");
+          }
+
+          await refreshUserProfile(userId);
+          await loadCleaningAccountSummary(userId);
+          openScheduleFormAfterPurchase(
+            `Your $${data.amountPaid || "35.00"} one-time cleaning purchase is confirmed. Enter your cleaning details below.`
+          );
+        } catch (error: any) {
+          console.error("[Dashboard] One-time cleaning return error:", error);
+          setScheduleActionMessage(
+            error.message || "Payment received. If scheduling is still blocked, refresh and try again."
+          );
+          setOpenScheduleFormForNewCleaning(true);
+        }
+      } else if (planUpgrade === "success") {
+        await refreshUserProfile(userId);
+        await loadCleaningAccountSummary(userId);
+        const planLabel = newPlan ? (PLAN_NAMES[newPlan] || newPlan) : "your new plan";
+        openScheduleFormAfterPurchase(
+          `Your subscription has been updated to ${planLabel}. Schedule your next cleaning below.`
+        );
+      }
+
+      router.replace("/dashboard", undefined);
+    };
+
+    handleReturn();
+  }, [
+    userId,
+    searchParams,
+    router,
+    refreshUserProfile,
+    loadCleaningAccountSummary,
+    openScheduleFormAfterPurchase,
+  ]);
+
+  useEffect(() => {
+    if (!userId || isAdmin || isOperator || isOwner) return;
+    loadCleaningAccountSummary(userId);
+  }, [userId, isAdmin, isOperator, isOwner, loadCleaningAccountSummary, user?.selectedPlan, user?.cleaningCredits]);
 
   // Initialize Firebase
   useEffect(() => {
@@ -4328,10 +4453,31 @@ function DashboardPageContent() {
                 }}>
                   Pick your preferred cleaning day and confirm your address below.
                 </p>
+                {scheduleActionMessage && (
+                  <div
+                    style={{
+                      marginBottom: "1rem",
+                      padding: "0.875rem 1rem",
+                      background: "#ecfdf5",
+                      border: "1px solid #86efac",
+                      borderRadius: "10px",
+                      color: "#166534",
+                      fontSize: "0.9375rem",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {scheduleActionMessage}
+                  </div>
+                )}
                 <ScheduleCleaningForm
                   userId={userId}
                   userEmail={user.email}
+                  initialOpenForNewCleaning={openScheduleFormForNewCleaning}
+                  onInitialOpenHandled={() => setOpenScheduleFormForNewCleaning(false)}
                   onScheduleCreated={() => {
+                    setScheduleActionMessage(null);
+                    refreshUserProfile(userId);
+                    loadCleaningAccountSummary(userId);
                     window.location.reload();
                   }}
                   userData={{
@@ -5079,6 +5225,57 @@ function DashboardPageContent() {
                           <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "500" }}>Phone</div>
                           <div style={{ fontSize: "1rem", fontWeight: "500", color: "var(--text-dark)" }}>
                             {user.phone}
+                          </div>
+                        </div>
+                      )}
+                      <div>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "500" }}>Current Plan</div>
+                        <div style={{ fontSize: "1rem", fontWeight: "500", color: "var(--text-dark)" }}>
+                          {cleaningAccountSummary?.planName || PLAN_NAMES[user.selectedPlan || ""] || user.selectedPlan || "N/A"}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem", fontWeight: "500" }}>Available Cleaning Credits</div>
+                        <div style={{ fontSize: "1rem", fontWeight: "500", color: "var(--text-dark)" }}>
+                          {cleaningAccountSummary?.cleaningCredits ?? user.cleaningCredits ?? 0}
+                        </div>
+                        {(cleaningAccountSummary?.cleaningCredits ?? user.cleaningCredits ?? 0) > 0 && (
+                          <div style={{ fontSize: "0.875rem", color: "#166534", marginTop: "0.35rem" }}>
+                            Includes purchased one-time cleanings ready to schedule.
+                          </div>
+                        )}
+                      </div>
+                      {cleaningAccountSummary && cleaningAccountSummary.purchases.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.75rem", fontWeight: "500" }}>
+                            Cleaning Purchases
+                          </div>
+                          <div style={{ display: "grid", gap: "0.75rem" }}>
+                            {cleaningAccountSummary.purchases.map((purchase) => (
+                              <div
+                                key={purchase.id}
+                                style={{
+                                  padding: "0.875rem 1rem",
+                                  borderRadius: "10px",
+                                  border: "1px solid #e5e7eb",
+                                  background: "#f9fafb",
+                                }}
+                              >
+                                <div style={{ fontWeight: "600", color: "#111827", marginBottom: "0.25rem" }}>
+                                  {purchase.label}
+                                </div>
+                                <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                                  ${purchase.amount.toFixed(2)}
+                                  {purchase.processedAt
+                                    ? ` • ${new Date(purchase.processedAt).toLocaleDateString("en-US", {
+                                        month: "short",
+                                        day: "numeric",
+                                        year: "numeric",
+                                      })}`
+                                    : ""}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}

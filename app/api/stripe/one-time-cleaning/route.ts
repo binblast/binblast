@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
-    const successUrl = `${origin}/dashboard?one_time_cleaning=success&session_id={CHECKOUT_SESSION_ID}`;
+    const successUrl = `${origin}/dashboard?one_time_cleaning=success&schedule_cleaning=1&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${origin}/dashboard?one_time_cleaning=cancelled`;
 
     const session = await stripe.checkout.sessions.create({

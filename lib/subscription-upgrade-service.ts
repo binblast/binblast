@@ -272,6 +272,7 @@ export async function completeSubscriptionUpgrade(
 
   await userRef.update({
     selectedPlan: newPlanId,
+    subscriptionStatus: "active",
     cleaningCredits: currentCleaningCredits + cleaningCreditsRollover,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });

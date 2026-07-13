@@ -63,6 +63,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    let paymentIntentId: string | null = null;
+
     if (preview.proratedAmountCents > 0) {
       const paymentMethodId = await getDefaultPaymentMethodId(
         stripeCustomerId,
@@ -80,7 +82,7 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        await stripe.paymentIntents.create({
+        const paymentIntent = await stripe.paymentIntents.create({
           amount: preview.proratedAmountCents,
           currency: "usd",
           customer: stripeCustomerId,
@@ -97,6 +99,7 @@ export async function POST(req: NextRequest) {
             cleaningCreditsRollover: String(preview.cleaningCreditsRollover),
           },
         });
+        paymentIntentId = paymentIntent.id;
       } catch (paymentError: any) {
         const requiresAction =
           paymentError?.code === "authentication_required" ||
@@ -120,12 +123,29 @@ export async function POST(req: NextRequest) {
       preview.cleaningCreditsRollover
     );
 
+    const admin = await import("firebase-admin");
+    const paymentDocId =
+      paymentIntentId || `upgrade_${userId}_${Date.now()}`;
+    await db.collection("subscriptionUpgradePayments").doc(paymentDocId).set({
+      userId,
+      previousPlanId: preview.currentPlanId,
+      newPlanId: preview.newPlanId,
+      amountPaidCents: preview.proratedAmountCents,
+      subscriptionId: stripeSubscriptionId,
+      cleaningCreditsRollover: preview.cleaningCreditsRollover,
+      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    const origin = req.headers.get("origin") || "http://localhost:3000";
+    const redirectUrl = `${origin}/dashboard?plan_upgrade=success&schedule_cleaning=1&new_plan=${preview.newPlanId}`;
+
     return NextResponse.json({
       success: true,
       subscriptionId: updatedSubscription.id,
       newPlanId: preview.newPlanId,
       proratedAmount: preview.proratedAmountDollars,
       cleaningCreditsRollover: preview.cleaningCreditsRollover,
+      redirectUrl,
     });
   } catch (error: any) {
     console.error("[Upgrade On File] Error:", error);

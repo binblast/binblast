@@ -20,6 +20,8 @@ interface ScheduleCleaningFormProps {
   userId: string;
   userEmail: string;
   onScheduleCreated?: () => void;
+  initialOpenForNewCleaning?: boolean;
+  onInitialOpenHandled?: () => void;
   existingCleaning?: {
     id: string;
     scheduledDate: string;
@@ -60,7 +62,7 @@ interface EligibilityState {
   } | null;
 }
 
-export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, existingCleaning, userData }: ScheduleCleaningFormProps) {
+export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, initialOpenForNewCleaning = false, onInitialOpenHandled, existingCleaning, userData }: ScheduleCleaningFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   
   // Helper to parse date from various formats (including Firestore timestamps)
@@ -178,6 +180,13 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
     setIsRescheduling(false);
     setIsOpen(true);
   };
+
+  useEffect(() => {
+    if (!initialOpenForNewCleaning) return;
+    setIsRescheduling(false);
+    setIsOpen(true);
+    onInitialOpenHandled?.();
+  }, [initialOpenForNewCleaning, onInitialOpenHandled]);
 
   // Update form fields when existingCleaning prop changes (e.g., when pending data is available)
   useEffect(() => {
