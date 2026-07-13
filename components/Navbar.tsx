@@ -89,40 +89,22 @@ function PortalDropdownItem({
       {item.showDividerBefore && (
         <div
           role="separator"
-          style={{
-            height: "1px",
-            background: "#e5e7eb",
-            margin: isMobileMenu ? "0.25rem 1.25rem" : "0.25rem 0.75rem",
-          }}
+          className={`portal-menu-divider${isMobileMenu ? " portal-menu-divider--mobile" : ""}`}
         />
       )}
       <Link
         href={item.href}
         role="menuitem"
         onClick={handleClick}
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: "0.875rem",
-          padding: isMobileMenu ? "1rem 1.25rem 1rem 2rem" : "0.875rem 1rem",
-          color: "var(--text-dark)",
-          textDecoration: "none",
-          transition: "background-color 0.2s",
-          cursor: "pointer",
-          textAlign: "left",
-          borderLeft: isMobileMenu ? "3px solid transparent" : "none",
-          borderRadius: isMobileMenu ? "0" : "8px",
-          margin: isMobileMenu ? "0" : "0 0.375rem",
-          width: isMobileMenu ? "100%" : "calc(100% - 0.75rem)",
-        }}
+        className={`portal-menu-item${isMobileMenu ? " portal-menu-item--mobile" : ""}`}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = "#f3f4f6";
+          if (!isMobileMenu) e.currentTarget.style.backgroundColor = "#f3f4f6";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = "transparent";
+          if (!isMobileMenu) e.currentTarget.style.backgroundColor = "transparent";
         }}
         onFocus={(e) => {
-          e.currentTarget.style.backgroundColor = "#f3f4f6";
+          e.currentTarget.style.backgroundColor = isMobileMenu ? "rgba(255, 255, 255, 0.1)" : "#f3f4f6";
           e.currentTarget.style.outline = "2px solid #16a34a";
           e.currentTarget.style.outlineOffset = "-2px";
         }}
@@ -131,28 +113,12 @@ function PortalDropdownItem({
           e.currentTarget.style.outline = "none";
         }}
       >
-        <span
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "2.25rem",
-            height: "2.25rem",
-            borderRadius: "8px",
-            background: "#f0fdf4",
-            color: "#16a34a",
-            flexShrink: 0,
-          }}
-        >
+        <span className="portal-menu-item__icon">
           <PortalIcon type={item.icon} />
         </span>
-        <span style={{ display: "flex", flexDirection: "column", gap: "0.2rem", minWidth: 0 }}>
-          <span style={{ fontWeight: "600", fontSize: "0.95rem", lineHeight: 1.3, color: "var(--text-dark)" }}>
-            {item.title}
-          </span>
-          <span style={{ fontSize: "0.8rem", lineHeight: 1.4, color: "#6b7280" }}>
-            {item.subtitle}
-          </span>
+        <span className="portal-menu-item__text">
+          <span className="portal-menu-item__title">{item.title}</span>
+          <span className="portal-menu-item__subtitle">{item.subtitle}</span>
         </span>
       </Link>
     </>
@@ -184,6 +150,7 @@ export function Navbar() {
   useEffect(() => {
     if (isMenuOpen) {
       document.body.classList.add("nav-menu-open");
+      setIsSignInOpen(true);
     } else {
       document.body.classList.remove("nav-menu-open");
     }
@@ -586,7 +553,7 @@ export function Navbar() {
           </li>
           <li
             ref={signInRef}
-            style={{ position: "relative", width: isMenuOpen ? "100%" : "auto" }}
+            className="nav-sign-in-item"
             onMouseEnter={() => {
               if (!isMenuOpen) {
                 setIsSignInOpen(true);
@@ -606,39 +573,20 @@ export function Navbar() {
               aria-expanded={isSignInOpen}
               aria-controls="sign-in-menu"
               id="sign-in-button"
-              className={navPillClass(isSignInOpen && isMenuOpen, "nav-pill--ghost")}
+              className={navPillClass(isSignInOpen && isMenuOpen, "nav-pill--ghost nav-sign-in-toggle")}
             >
-              <span>Sign In</span>
+              <span>{isMenuOpen ? "Portals" : "Sign In"}</span>
               <span className="nav-pill__chevron" aria-hidden="true">
                 {isSignInOpen ? "▲" : "▼"}
               </span>
             </button>
             {isSignInOpen && (
-              <div
-                style={{
-                  position: isMenuOpen ? "static" : "absolute",
-                  top: isMenuOpen ? "auto" : "100%",
-                  left: isMenuOpen ? "auto" : "50%",
-                  transform: isMenuOpen ? "none" : "translateX(-50%)",
-                  paddingTop: isMenuOpen ? "0" : "8px",
-                  zIndex: 1000,
-                  width: isMenuOpen ? "100%" : "auto",
-                }}
-              >
+              <div className="sign-in-dropdown-wrap">
                 <div
                   id="sign-in-menu"
                   role="menu"
                   aria-labelledby="sign-in-button"
                   className="sign-in-dropdown"
-                  style={{
-                    background: isMenuOpen ? "#f9fafb" : "#ffffff",
-                    borderRadius: isMenuOpen ? "0" : "12px",
-                    boxShadow: isMenuOpen ? "none" : "0 10px 30px rgba(15, 23, 42, 0.12)",
-                    border: isMenuOpen ? "none" : "1px solid #e5e7eb",
-                    minWidth: isMenuOpen ? "100%" : "360px",
-                    maxWidth: isMenuOpen ? "100%" : "400px",
-                    padding: "0.5rem 0",
-                  }}
                 >
                   {portalMenuItems.map((item) => (
                     <PortalDropdownItem
