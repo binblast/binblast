@@ -17,10 +17,6 @@ import { TrainingStatus } from "@/components/OperatorDashboard/EmployeeDetail/Tr
 import { EmployeeIssuesPanel } from "@/components/OperatorDashboard/EmployeeDetail/EmployeeIssuesPanel";
 import { EmployeeTaxDocuments } from "@/components/OperatorDashboard/EmployeeDetail/EmployeeTaxDocuments";
 import { canAccessBusinessCommandCenter } from "@/lib/owner-auth";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { getOperatorStopDateWindow } from "@/lib/operator-stop-dates";
-import { parseGeoPoint } from "@/lib/geo-utils";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
   ssr: false,
@@ -79,50 +75,16 @@ export default function EmployeeDetailPage() {
   useEffect(() => {
     if (!employeeId || !userRole) return;
 
-    let unsubLocation: (() => void) | undefined;
-    let unsubTodayStops: (() => void) | undefined;
-
-    async function setupRealtimeListeners() {
-      const db = await getDbInstance();
-      if (!db) return;
-
-      const firestore = await safeImportFirestore();
-      const { doc, collection, query, where, onSnapshot } = firestore;
-      const { today } = getOperatorStopDateWindow();
-
-      loadStops();
-
-      unsubLocation = onSnapshot(doc(db, "users", employeeId), (snapshot) => {
-        if (!snapshot.exists()) return;
-        const data = snapshot.data();
-        const location = parseGeoPoint(data.lastKnownLocation);
-        if (location) {
-          setEmployeeLocation(location);
-        }
-      });
-
-      unsubTodayStops = onSnapshot(
-        query(
-          collection(db, "scheduledCleanings"),
-          where("assignedEmployeeId", "==", employeeId),
-          where("scheduledDate", "==", today)
-        ),
-        () => {
-          loadStops();
-        }
-      );
-    }
-
-    setupRealtimeListeners().catch((error) => {
-      console.error("Error setting up realtime listeners:", error);
-    });
+    loadStops();
+    loadLocation();
 
     const shiftInterval = setInterval(loadShiftStatus, 30000);
-    const stopsInterval = setInterval(loadStops, 20000);
+    const stopsInterval = setInterval(() => {
+      loadStops();
+      loadLocation();
+    }, 20000);
 
     return () => {
-      if (unsubLocation) unsubLocation();
-      if (unsubTodayStops) unsubTodayStops();
       clearInterval(shiftInterval);
       clearInterval(stopsInterval);
     };

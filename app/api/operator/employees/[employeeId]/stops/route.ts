@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getTodayDateString } from "@/lib/employee-utils";
+import { loadOperatorEmployeeStops } from "@/lib/operator-employee-stops";
 import {
   cleaningMatchesDayList,
   compareCleaningPriority,
@@ -32,21 +33,6 @@ function sortStopsByRouteSequence<T extends { routeSequence?: number }>(
     if (seqA !== seqB) return seqA - seqB;
     return fallbackSort(a, b);
   });
-}
-
-function getDateString(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
-
-function getNext7Days(): string[] {
-  const today = new Date();
-  const dates: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    dates.push(getDateString(date));
-  }
-  return dates;
 }
 
 async function processStopsInBatches(
@@ -80,6 +66,21 @@ export async function GET(
       );
     }
 
+    const { todayStops, upcomingStops } = await loadOperatorEmployeeStops(employeeId);
+
+    if (skipGeocode) {
+      return NextResponse.json({
+        todayStops: sortStopsByRouteSequence(todayStops, (a, b) =>
+          compareCleaningPriority(a, b)
+        ),
+        upcomingStops: sortStopsByRouteSequence(upcomingStops, (a, b) => {
+          const dateCompare = (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
+          if (dateCompare !== 0) return dateCompare;
+          return compareCleaningPriority(a, b);
+        }),
+      });
+    }
+
     const db = await getDbInstance();
     if (!db) {
       return NextResponse.json(
@@ -89,12 +90,7 @@ export async function GET(
     }
 
     const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs, orderBy, doc, updateDoc, getDoc } = firestore;
-
-    const today = getTodayDateString();
-    const next7Days = getNext7Days();
-
-    const cleaningsRef = collection(db, "scheduledCleanings");
+    const { doc, updateDoc, getDoc } = firestore;
 
     const loadUserCoordinates = async (stops: Array<Record<string, unknown>>) => {
       const userCoordsById = new Map<string, { latitude: number; longitude: number }>();
@@ -129,10 +125,6 @@ export async function GET(
     };
 
     const processStops = async (stops: Array<Record<string, unknown>>) => {
-      if (skipGeocode) {
-        return stops;
-      }
-
       try {
         const userCoordsById = await loadUserCoordinates(stops);
 
@@ -171,44 +163,6 @@ export async function GET(
       }
     };
 
-    // Get today's stops - simplified to avoid index requirement
-    // Query without orderBy, then sort in memory
-    const todayStopsQuery = query(
-      cleaningsRef,
-      where("assignedEmployeeId", "==", employeeId),
-      where("scheduledDate", "==", today)
-    );
-    const todaySnapshot = await getDocs(todayStopsQuery);
-    const todayStops = todaySnapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      // Sort manually by scheduledTime to avoid index requirement
-      .sort((a: any, b: any) => compareCleaningPriority(a, b));
-
-    // Get next 7 days stops - simplified to avoid index requirement
-    // Query without orderBy, then sort in memory
-    const upcomingStopsQuery = query(
-      cleaningsRef,
-      where("assignedEmployeeId", "==", employeeId),
-      where("scheduledDate", ">=", next7Days[1]),
-      where("scheduledDate", "<=", next7Days[6])
-    );
-    const upcomingSnapshot = await getDocs(upcomingStopsQuery);
-    const upcomingStops = upcomingSnapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      // Sort manually by date then time to avoid index requirement
-      .sort((a: any, b: any) => {
-        const dateCompare = (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
-        if (dateCompare !== 0) return dateCompare;
-        return compareCleaningPriority(a, b);
-      });
-
-    // Process both today's and upcoming stops with coordinate enrichment
     const [processedTodayStops, processedUpcomingStops] = await Promise.all([
       processStops(todayStops),
       processStops(upcomingStops),
@@ -225,8 +179,7 @@ export async function GET(
 
     if (needsRouteOptimization) {
       try {
-        const employeeRef = doc(db, "users", employeeId);
-        const employeeSnap = await getDoc(employeeRef);
+        const employeeSnap = await getDoc(doc(db, "users", employeeId));
         const employeeData = employeeSnap.exists() ? employeeSnap.data() : {};
         const employeeLocation = employeeData.lastKnownLocation;
         const startLat =

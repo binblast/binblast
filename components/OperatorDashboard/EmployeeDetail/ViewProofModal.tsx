@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { parseFirestoreTimestamp } from "@/lib/employee-utils";
 import { JobPhotosViewer } from "./JobPhotosViewer";
 
@@ -86,26 +84,9 @@ export function ViewProofModal({
     setLoading(true);
     loadProofs();
 
-    let unsubscribe: (() => void) | undefined;
     const pollInterval = window.setInterval(loadProofs, 15000);
 
-    async function setupListener() {
-      const db = await getDbInstance();
-      if (!db) return;
-
-      const firestore = await safeImportFirestore();
-      const { collection, query, where, onSnapshot } = firestore;
-
-      unsubscribe = onSnapshot(
-        query(collection(db, "scheduledCleanings"), where("assignedEmployeeId", "==", employeeId)),
-        () => loadProofs()
-      );
-    }
-
-    setupListener().catch(() => undefined);
-
     return () => {
-      if (unsubscribe) unsubscribe();
       window.clearInterval(pollInterval);
     };
   }, [isOpen, employeeId, loadProofs]);

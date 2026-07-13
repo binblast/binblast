@@ -73,6 +73,15 @@ service cloud.firestore {
         (isOwner(userId) && request.resource.data.email == resource.data.email)
         ||
         // Operator: can update internalNotes, servicePaused, serviceArea, counties, zones, status, lastKnownLocation for operations management
+    // Staff with owner/admin/operator role can read employee operational fields.
+        (isStaffOrAdminEmail() && 
+         request.resource.data.email == resource.data.email &&
+         request.resource.data.firstName == resource.data.firstName &&
+         request.resource.data.lastName == resource.data.lastName &&
+         request.resource.data.phone == resource.data.phone &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['internalNotes', 'servicePaused', 'serviceArea', 'counties', 'zones', 'status', 'lastKnownLocation', 'lastLocationUpdate', 'updatedAt']))
+        ||
+        // Legacy hardcoded operator email
         (isOperator() && 
          request.resource.data.email == resource.data.email && // Can't change email
          request.resource.data.firstName == resource.data.firstName && // Can't change name

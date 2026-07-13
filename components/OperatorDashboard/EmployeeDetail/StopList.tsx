@@ -5,9 +5,6 @@ import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 import { OperatorJobResolveModal } from "./OperatorJobResolveModal";
 import { AddNoteModal } from "./AddNoteModal";
 import { ViewProofModal } from "./ViewProofModal";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { getTodayDateString } from "@/lib/employee-utils";
 
 interface Stop {
   id: string;
@@ -84,36 +81,7 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
     loadStops();
 
     const pollInterval = window.setInterval(loadStops, 20000);
-    let unsubscribe: (() => void) | undefined;
-
-    async function setupTodayListener() {
-      const db = await getDbInstance();
-      if (!db) return;
-
-      const firestore = await safeImportFirestore();
-      const { collection, query, where, onSnapshot } = firestore;
-      const today = getTodayDateString();
-
-      unsubscribe = onSnapshot(
-        query(
-          collection(db, "scheduledCleanings"),
-          where("assignedEmployeeId", "==", employeeId),
-          where("scheduledDate", "==", today)
-        ),
-        () => {
-          loadStops();
-        }
-      );
-    }
-
-    setupTodayListener().catch((error) => {
-      console.error("Error setting up stops listener:", error);
-    });
-
-    return () => {
-      window.clearInterval(pollInterval);
-      if (unsubscribe) unsubscribe();
-    };
+    return () => window.clearInterval(pollInterval);
   }, [employeeId, refreshKey, loadStops]);
 
   const getStatusBadge = (stop: Stop) => {
