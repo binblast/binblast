@@ -1,6 +1,5 @@
 // lib/cleaning-schedule.ts
 import { getNextCleaningDate } from "@/lib/scheduling";
-import { getAdminFirestore } from "@/lib/firebase-admin";
 
 const PLAN_MIN_DAYS: Record<string, number> = {
   "one-time": 28,
@@ -128,6 +127,7 @@ export async function scheduleNextCleaningIfNeeded(
 ): Promise<string | null> {
   if (!completedCleaning.userId) return null;
 
+  const { getAdminFirestore } = await import("@/lib/firebase-admin");
   const db = await getAdminFirestore();
   const admin = await import("firebase-admin");
 
