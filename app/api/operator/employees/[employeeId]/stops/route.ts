@@ -49,12 +49,29 @@ function getNext7Days(): string[] {
   return dates;
 }
 
+async function processStopsInBatches(
+  stops: Array<Record<string, unknown>>,
+  processStop: (stop: Record<string, unknown>) => Promise<Record<string, unknown>>,
+  batchSize = 3
+) {
+  const processed: Array<Record<string, unknown>> = [];
+
+  for (let index = 0; index < stops.length; index += batchSize) {
+    const batch = stops.slice(index, index + batchSize);
+    const results = await Promise.all(batch.map((stop) => processStop(stop)));
+    processed.push(...results);
+  }
+
+  return processed;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { employeeId: string } }
 ) {
   try {
     const employeeId = params.employeeId;
+    const skipGeocode = req.nextUrl.searchParams.get("skipGeocode") === "1";
 
     if (!employeeId) {
       return NextResponse.json(
@@ -112,11 +129,14 @@ export async function GET(
     };
 
     const processStops = async (stops: Array<Record<string, unknown>>) => {
+      if (skipGeocode) {
+        return stops;
+      }
+
       try {
         const userCoordsById = await loadUserCoordinates(stops);
-        const processedStops: Array<Record<string, unknown>> = [];
 
-        for (const stop of stops) {
+        return processStopsInBatches(stops, async (stop) => {
           try {
             const userId = String(stop.userId || "");
             const enriched = await enrichStopCoordinates(
@@ -139,14 +159,12 @@ export async function GET(
               }
             );
 
-            processedStops.push(enriched as Record<string, unknown>);
+            return enriched as Record<string, unknown>;
           } catch (error) {
             console.error("Error processing stop:", error);
-            processedStops.push(stop);
+            return stop;
           }
-        }
-
-        return processedStops;
+        });
       } catch (error) {
         console.error("Error in processStops:", error);
         return stops;

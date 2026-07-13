@@ -19,7 +19,7 @@ import { EmployeeTaxDocuments } from "@/components/OperatorDashboard/EmployeeDet
 import { canAccessBusinessCommandCenter } from "@/lib/owner-auth";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { getTodayDateString } from "@/lib/employee-utils";
+import { getOperatorStopDateWindow } from "@/lib/operator-stop-dates";
 import { parseGeoPoint } from "@/lib/geo-utils";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
@@ -80,7 +80,7 @@ export default function EmployeeDetailPage() {
     if (!employeeId || !userRole) return;
 
     let unsubLocation: (() => void) | undefined;
-    let unsubStops: (() => void) | undefined;
+    let unsubTodayStops: (() => void) | undefined;
 
     async function setupRealtimeListeners() {
       const db = await getDbInstance();
@@ -88,7 +88,9 @@ export default function EmployeeDetailPage() {
 
       const firestore = await safeImportFirestore();
       const { doc, collection, query, where, onSnapshot } = firestore;
-      const today = getTodayDateString();
+      const { today } = getOperatorStopDateWindow();
+
+      loadStops();
 
       unsubLocation = onSnapshot(doc(db, "users", employeeId), (snapshot) => {
         if (!snapshot.exists()) return;
@@ -99,49 +101,14 @@ export default function EmployeeDetailPage() {
         }
       });
 
-      unsubStops = onSnapshot(
+      unsubTodayStops = onSnapshot(
         query(
           collection(db, "scheduledCleanings"),
-          where("assignedEmployeeId", "==", employeeId)
+          where("assignedEmployeeId", "==", employeeId),
+          where("scheduledDate", "==", today)
         ),
-        (snapshot) => {
-          const nextWeek = new Date();
-          nextWeek.setDate(nextWeek.getDate() + 7);
-          const endDate = `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, "0")}-${String(nextWeek.getDate()).padStart(2, "0")}`;
-
-          const routeStops = snapshot.docs
-            .map((docSnap) => ({
-              id: docSnap.id,
-              ...docSnap.data(),
-            })) as Array<{
-              id: string;
-              routeSequence?: number;
-              scheduledTime?: string;
-              scheduledDate?: string;
-              status?: string;
-              jobStatus?: string;
-            }>;
-
-          const filteredStops = routeStops.filter((stop) => {
-            const status = stop.status || stop.jobStatus;
-            return (
-              stop.scheduledDate &&
-              stop.scheduledDate >= today &&
-              stop.scheduledDate <= endDate &&
-              status !== "completed" &&
-              status !== "cancelled"
-            );
-          });
-
-          filteredStops.sort((a, b) => {
-            const dateCompare = (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
-            if (dateCompare !== 0) return dateCompare;
-            if (typeof a.routeSequence === "number" && typeof b.routeSequence === "number") {
-              return a.routeSequence - b.routeSequence;
-            }
-            return (a.scheduledTime || "").localeCompare(b.scheduledTime || "");
-          });
-          setStops(filteredStops);
+        () => {
+          loadStops();
         }
       );
     }
@@ -151,11 +118,13 @@ export default function EmployeeDetailPage() {
     });
 
     const shiftInterval = setInterval(loadShiftStatus, 30000);
+    const stopsInterval = setInterval(loadStops, 20000);
 
     return () => {
       if (unsubLocation) unsubLocation();
-      if (unsubStops) unsubStops();
+      if (unsubTodayStops) unsubTodayStops();
       clearInterval(shiftInterval);
+      clearInterval(stopsInterval);
     };
   }, [employeeId, userRole]);
 
@@ -257,11 +226,29 @@ export default function EmployeeDetailPage() {
 
   const loadStops = async () => {
     try {
-      const response = await fetch(`/api/operator/employees/${employeeId}/stops`);
+      const response = await fetch(
+        `/api/operator/employees/${employeeId}/stops?skipGeocode=1`,
+        { cache: "no-store" }
+      );
       if (response.ok) {
         const data = await response.json();
-        const allStops = [...(data.todayStops || []), ...(data.upcomingStops || [])];
-        setStops(allStops);
+        const todayStops = (data.todayStops || []) as Array<{
+          id: string;
+          routeSequence?: number;
+          scheduledTime?: string;
+          scheduledDate?: string;
+          status?: string;
+          jobStatus?: string;
+        }>;
+
+        todayStops.sort((a, b) => {
+          if (typeof a.routeSequence === "number" && typeof b.routeSequence === "number") {
+            return a.routeSequence - b.routeSequence;
+          }
+          return (a.scheduledTime || "").localeCompare(b.scheduledTime || "");
+        });
+
+        setStops(todayStops);
       }
     } catch (error) {
       console.error("Error loading stops:", error);

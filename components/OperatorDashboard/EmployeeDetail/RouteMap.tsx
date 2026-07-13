@@ -78,6 +78,7 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
   const [optimizedStops, setOptimizedStops] = useState<Stop[]>(stops);
   const [optimizing, setOptimizing] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
+  const [geocodingRemaining, setGeocodingRemaining] = useState(0);
   const [showRouteLines, setShowRouteLines] = useState(true);
   const [mapCenter, setMapCenter] = useState<[number, number]>([33.749, -84.388]);
   const [mapZoom, setMapZoom] = useState(11);
@@ -88,12 +89,17 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
   }, []);
 
   useEffect(() => {
+    setResolvedStops(stops);
+    setOptimizedStops(stops);
+  }, [stops]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function resolveStopCoordinates() {
       if (stops.length === 0) {
-        setResolvedStops([]);
-        setOptimizedStops([]);
+        setGeocoding(false);
+        setGeocodingRemaining(0);
         return;
       }
 
@@ -104,18 +110,39 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
         return 0;
       });
 
-      setGeocoding(true);
-      const enrichedStops: Stop[] = [];
+      const stopsNeedingGeocode = sortedStops.filter(
+        (stop) => !hasStopCoordinates(stop) && buildStopAddress(stop)
+      );
 
-      for (const stop of sortedStops) {
+      setGeocodingRemaining(stopsNeedingGeocode.length);
+
+      if (stopsNeedingGeocode.length === 0) {
+        setGeocoding(false);
+        return;
+      }
+
+      setGeocoding(true);
+
+      const geocodedById = new Map<string, Stop>();
+      for (let index = 0; index < stopsNeedingGeocode.length; index += 3) {
         if (cancelled) return;
-        enrichedStops.push(await geocodeStopAddress(stop));
+
+        const batch = stopsNeedingGeocode.slice(index, index + 3);
+        const geocodedBatch = await Promise.all(batch.map((stop) => geocodeStopAddress(stop)));
+        geocodedBatch.forEach((stop) => geocodedById.set(stop.id, stop));
+
+        const mergedStops = sortedStops.map(
+          (stop) => geocodedById.get(stop.id) || stop
+        );
+
+        setResolvedStops(mergedStops);
+        setOptimizedStops(mergedStops);
+        setGeocodingRemaining(stopsNeedingGeocode.length - geocodedById.size);
       }
 
       if (!cancelled) {
-        setResolvedStops(enrichedStops);
-        setOptimizedStops(enrichedStops);
         setGeocoding(false);
+        setGeocodingRemaining(0);
       }
     }
 
@@ -326,7 +353,7 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
 
       {stops.length > 0 && geocoding && (
         <div style={{ textAlign: "center", padding: "1rem", color: "#6b7280", fontSize: "0.875rem" }}>
-          Pinpointing {stops.length} stop address{stops.length === 1 ? "" : "es"} on the map...
+          Pinpointing {geocodingRemaining} remaining stop address{geocodingRemaining === 1 ? "" : "es"} on the map...
         </div>
       )}
 

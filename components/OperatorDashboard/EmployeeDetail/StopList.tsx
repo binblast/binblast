@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 import { OperatorJobResolveModal } from "./OperatorJobResolveModal";
 import { AddNoteModal } from "./AddNoteModal";
@@ -58,72 +58,63 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
   const [workingStopId, setWorkingStopId] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<Date | null>(null);
 
+  const loadStops = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `/api/operator/employees/${employeeId}/stops?skipGeocode=1`,
+        { cache: "no-store" }
+      );
+      if (!response.ok) {
+        throw new Error("Failed to load stops");
+      }
+
+      const data = await response.json();
+      setTodayStops((data.todayStops || []) as Stop[]);
+      setUpcomingStops((data.upcomingStops || []) as Stop[]);
+      setLastSync(new Date());
+    } catch (error) {
+      console.error("Error loading stops:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [employeeId]);
+
   useEffect(() => {
+    setLoading(true);
+    loadStops();
+
+    const pollInterval = window.setInterval(loadStops, 20000);
     let unsubscribe: (() => void) | undefined;
 
-    async function setupListener() {
+    async function setupTodayListener() {
       const db = await getDbInstance();
-      if (!db) {
-        setLoading(false);
-        return;
-      }
+      if (!db) return;
 
       const firestore = await safeImportFirestore();
       const { collection, query, where, onSnapshot } = firestore;
       const today = getTodayDateString();
-      const nextWeek = new Date();
-      nextWeek.setDate(nextWeek.getDate() + 7);
-      const nextWeekStr = `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, "0")}-${String(nextWeek.getDate()).padStart(2, "0")}`;
 
-      const stopsQuery = query(
-        collection(db, "scheduledCleanings"),
-        where("assignedEmployeeId", "==", employeeId)
+      unsubscribe = onSnapshot(
+        query(
+          collection(db, "scheduledCleanings"),
+          where("assignedEmployeeId", "==", employeeId),
+          where("scheduledDate", "==", today)
+        ),
+        () => {
+          loadStops();
+        }
       );
-
-      unsubscribe = onSnapshot(stopsQuery, (snapshot) => {
-        const allStops = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        })) as Stop[];
-
-        const todayList = allStops
-          .filter((stop) => stop.scheduledDate === today)
-          .sort((a, b) => {
-            if (typeof a.routeSequence === "number" && typeof b.routeSequence === "number") {
-              return a.routeSequence - b.routeSequence;
-            }
-            return (a.scheduledTime || "").localeCompare(b.scheduledTime || "");
-          });
-
-        const upcomingList = allStops
-          .filter(
-            (stop) =>
-              stop.scheduledDate &&
-              stop.scheduledDate > today &&
-              stop.scheduledDate <= nextWeekStr
-          )
-          .sort((a, b) => {
-            const dateCompare = (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
-            if (dateCompare !== 0) return dateCompare;
-            return (a.scheduledTime || "").localeCompare(b.scheduledTime || "");
-          });
-
-        setTodayStops(todayList);
-        setUpcomingStops(upcomingList);
-        setLastSync(new Date());
-        setLoading(false);
-      });
     }
 
-    setupListener().catch((error) => {
+    setupTodayListener().catch((error) => {
       console.error("Error setting up stops listener:", error);
-      setLoading(false);
     });
 
     return () => {
+      window.clearInterval(pollInterval);
       if (unsubscribe) unsubscribe();
     };
-  }, [employeeId, refreshKey]);
+  }, [employeeId, refreshKey, loadStops]);
 
   const getStatusBadge = (stop: Stop) => {
     const status = stop.status || stop.jobStatus || "pending";
