@@ -237,15 +237,79 @@ export async function getAllEmployees(): Promise<Employee[]> {
 }
 
 /**
+ * Parse Firestore Timestamp, seconds object, ISO string, or Date
+ */
+export function parseFirestoreTimestamp(timestamp: unknown): Date | null {
+  if (!timestamp) return null;
+  if (timestamp instanceof Date) {
+    return Number.isNaN(timestamp.getTime()) ? null : timestamp;
+  }
+  if (typeof timestamp === "string" || typeof timestamp === "number") {
+    const date = new Date(timestamp);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  if (typeof timestamp === "object" && timestamp !== null) {
+    const ts = timestamp as {
+      toDate?: () => Date;
+      seconds?: number;
+      _seconds?: number;
+    };
+    if (typeof ts.toDate === "function") {
+      const date = ts.toDate();
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+    const seconds = ts.seconds ?? ts._seconds;
+    if (typeof seconds === "number") {
+      return new Date(seconds * 1000);
+    }
+  }
+  return null;
+}
+
+/**
+ * Format scheduled clean date (YYYY-MM-DD)
+ */
+export function formatCleanDate(scheduledDate?: string): string {
+  if (!scheduledDate) return "Date TBD";
+  const date = new Date(`${scheduledDate}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return "Date TBD";
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/**
+ * Format clean date and completion time for closed jobs
+ */
+export function formatCleanDateTime(
+  scheduledDate?: string,
+  completedAt?: unknown
+): string {
+  const dateLabel = formatCleanDate(scheduledDate);
+  const completed = parseFirestoreTimestamp(completedAt);
+  if (!completed) {
+    return dateLabel;
+  }
+  const timeLabel = completed.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${dateLabel} · ${timeLabel}`;
+}
+
+/**
  * Format time from Firestore timestamp
  */
-export function formatTime(timestamp: any): string {
-  if (!timestamp) return "";
-  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-  return date.toLocaleTimeString("en-US", { 
-    hour: "numeric", 
+export function formatTime(timestamp: unknown): string {
+  const date = parseFirestoreTimestamp(timestamp);
+  if (!date) return "";
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
     minute: "2-digit",
-    hour12: true 
+    hour12: true,
   });
 }
 
@@ -255,9 +319,9 @@ export function formatTime(timestamp: any): string {
 export function calculateHoursWorked(clockInTime: any, clockOutTime: any | null): number {
   if (!clockInTime) return 0;
   
-  const start = clockInTime.toDate ? clockInTime.toDate() : new Date(clockInTime);
-  const end = clockOutTime 
-    ? (clockOutTime.toDate ? clockOutTime.toDate() : new Date(clockOutTime))
+  const start = parseFirestoreTimestamp(clockInTime) ?? new Date(0);
+  const end = clockOutTime
+    ? (parseFirestoreTimestamp(clockOutTime) ?? new Date())
     : new Date();
   
   const diffMs = end.getTime() - start.getTime();

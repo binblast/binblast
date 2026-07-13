@@ -3,6 +3,10 @@
 
 import { useState } from "react";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
+import {
+  formatCleanDateTime,
+  parseFirestoreTimestamp,
+} from "@/lib/employee-utils";
 
 interface Job {
   id: string;
@@ -25,28 +29,38 @@ interface Job {
   hasRequiredPhotos?: boolean;
   insidePhotoUrl?: string;
   outsidePhotoUrl?: string;
+  completedAt?: unknown;
 }
 
 interface JobListProps {
   jobs: Job[];
+  completedJobs?: Job[];
   upcomingJobs?: Job[];
   selectedJobId?: string | null;
   onJobClick: (job: Job) => void;
   onStartJob?: (job: Job) => Promise<void>;
   isClockedIn: boolean;
   onStartNextJob?: (job: Job) => void;
+  payRatePerJob?: number;
+}
+
+function isPayEligible(job: Job): boolean {
+  if (job.hasRequiredPhotos === true) return true;
+  return Boolean(job.insidePhotoUrl && job.outsidePhotoUrl);
 }
 
 export function JobList({
   jobs,
+  completedJobs = [],
   upcomingJobs = [],
   selectedJobId = null,
   onJobClick,
   onStartJob,
   isClockedIn,
   onStartNextJob,
+  payRatePerJob = 0,
 }: JobListProps) {
-  const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all");
+  const [routeTab, setRouteTab] = useState<"active" | "closed">("active");
 
   const formatJobDate = (date?: string) => {
     if (!date) return "Date TBD";
@@ -154,7 +168,7 @@ export function JobList({
     );
   }
 
-  if (jobs.length === 0) {
+  if (isClockedIn && jobs.length === 0 && completedJobs.length === 0) {
     return (
       <div
         style={{
@@ -213,22 +227,62 @@ export function JobList({
     window.open(mapUrl, "_blank");
   };
 
-  const filteredJobs = filter === "all" 
-    ? jobs 
-    : jobs.filter((job) => job.jobStatus === filter);
+  const completedCount = completedJobs.length;
+  const totalStops = jobs.length + completedCount;
 
-  const pendingCount = jobs.filter((j) => j.jobStatus === "pending" || !j.jobStatus).length;
-  const inProgressCount = jobs.filter((j) => j.jobStatus === "in_progress").length;
-  const completedCount = jobs.filter((j) => j.jobStatus === "completed").length;
-  
   const nextJob = jobs.find((j) => j.jobStatus === "pending" || !j.jobStatus);
   const currentStopIndex = jobs.findIndex((j) => j.jobStatus === "pending" || !j.jobStatus);
   const currentStopNumber = currentStopIndex >= 0 ? currentStopIndex + 1 : completedCount + 1;
+
+  const sortedClosedJobs = [...completedJobs].sort((a, b) => {
+    const aTime = parseFirestoreTimestamp(a.completedAt)?.getTime() ?? 0;
+    const bTime = parseFirestoreTimestamp(b.completedAt)?.getTime() ?? 0;
+    return bTime - aTime;
+  });
+
+  const tabButtonStyle = (active: boolean, color: string) => ({
+    flex: 1,
+    padding: "0.75rem 1rem",
+    borderRadius: "8px",
+    border: "none",
+    fontSize: "0.875rem",
+    fontWeight: "700",
+    cursor: "pointer",
+    background: active ? color : "#f3f4f6",
+    color: active ? "#ffffff" : "#6b7280",
+    transition: "all 0.2s",
+    minHeight: "44px",
+  });
 
   return (
     <div>
       <CleaningReadinessBanner variant="staff" />
 
+      {/* Active / Closed Tabs */}
+      <div
+        className="route-tabs"
+        style={{
+          display: "flex",
+          gap: "0.5rem",
+          marginBottom: "1rem",
+        }}
+      >
+        <button
+          onClick={() => setRouteTab("active")}
+          style={tabButtonStyle(routeTab === "active", "#2563eb")}
+        >
+          Active ({jobs.length})
+        </button>
+        <button
+          onClick={() => setRouteTab("closed")}
+          style={tabButtonStyle(routeTab === "closed", "#16a34a")}
+        >
+          Closed ({completedCount})
+        </button>
+      </div>
+
+      {routeTab === "active" && (
+      <>
       {/* Route Board Header */}
       <div
         className="route-board-header"
@@ -271,7 +325,7 @@ export function JobList({
                 color: "#111827",
               }}
             >
-              Stop {currentStopNumber} of {jobs.length}
+              Stop {currentStopNumber} of {totalStops}
             </div>
           </div>
           {nextJob && (
@@ -370,93 +424,37 @@ export function JobList({
           </div>
         )}
       </div>
+      </>
+      )}
 
-      {/* Filter Tabs */}
-      <div
-        className="filter-tabs"
-        style={{
-          display: "flex",
-          gap: "0.5rem",
-          marginBottom: "1rem",
-          flexWrap: "wrap",
-        }}
-      >
-        <button
-          onClick={() => setFilter("all")}
+      {routeTab === "active" && jobs.length === 0 && (
+        <div
           style={{
-            padding: "0.5rem 1rem",
-            borderRadius: "8px",
-            border: "none",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            cursor: "pointer",
-            background: filter === "all" ? "#16a34a" : "#f3f4f6",
-            color: filter === "all" ? "#ffffff" : "#6b7280",
-            transition: "all 0.2s",
+            background: "#ffffff",
+            borderRadius: "12px",
+            padding: "2rem",
+            textAlign: "center",
+            color: "#6b7280",
+            border: "1px solid #e5e7eb",
+            marginBottom: "1rem",
           }}
         >
-          All ({jobs.length})
-        </button>
-        <button
-          onClick={() => setFilter("pending")}
-          style={{
-            padding: "0.5rem 1rem",
-            borderRadius: "8px",
-            border: "none",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            cursor: "pointer",
-            background: filter === "pending" ? "#f59e0b" : "#f3f4f6",
-            color: filter === "pending" ? "#ffffff" : "#6b7280",
-            transition: "all 0.2s",
-          }}
-        >
-          Pending ({pendingCount})
-        </button>
-        <button
-          onClick={() => setFilter("in_progress")}
-          style={{
-            padding: "0.5rem 1rem",
-            borderRadius: "8px",
-            border: "none",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            cursor: "pointer",
-            background: filter === "in_progress" ? "#2563eb" : "#f3f4f6",
-            color: filter === "in_progress" ? "#ffffff" : "#6b7280",
-            transition: "all 0.2s",
-          }}
-        >
-          In Progress ({inProgressCount})
-        </button>
-        <button
-          onClick={() => setFilter("completed")}
-          style={{
-            padding: "0.5rem 1rem",
-            borderRadius: "8px",
-            border: "none",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            cursor: "pointer",
-            background: filter === "completed" ? "#16a34a" : "#f3f4f6",
-            color: filter === "completed" ? "#ffffff" : "#6b7280",
-            transition: "all 0.2s",
-          }}
-        >
-          Completed ({completedCount})
-        </button>
-      </div>
+          No active jobs on your route. Check the Closed tab for completed stops.
+        </div>
+      )}
 
+      {routeTab === "active" && (
+      <>
       {/* Load Board Grid */}
       <div
         className="job-list-grid"
         style={{
-          display: "grid",
+          display: jobs.length > 0 ? "grid" : "none",
           gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
           gap: "clamp(0.75rem, 3vw, 1rem)",
         }}
       >
-        {filteredJobs.map((job) => {
+        {jobs.map((job) => {
         const statusColors = getStatusColor(job.jobStatus);
         const fullAddress = `${job.addressLine1}${
           job.addressLine2 ? `, ${job.addressLine2}` : ""
@@ -754,19 +752,192 @@ export function JobList({
         );
       })}
       </div>
+      </>
+      )}
 
-      {filteredJobs.length === 0 && (
-        <div
-          style={{
-            background: "#ffffff",
-            borderRadius: "12px",
-            padding: "2rem",
-            textAlign: "center",
-            color: "#6b7280",
-            border: "1px solid #e5e7eb",
-          }}
-        >
-          No {filter === "all" ? "" : filter.replace("_", " ")} jobs found
+      {routeTab === "closed" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {sortedClosedJobs.length === 0 ? (
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: "12px",
+                padding: "2rem",
+                textAlign: "center",
+                color: "#6b7280",
+                border: "1px solid #e5e7eb",
+              }}
+            >
+              No completed jobs yet. Finished stops will appear here.
+            </div>
+          ) : (
+            sortedClosedJobs.map((job, index) => {
+              const bins = job.binCount ?? job.binsCount ?? 1;
+              const eligible = isPayEligible(job);
+              const fullAddress = `${job.addressLine1}${
+                job.addressLine2 ? `, ${job.addressLine2}` : ""
+              }, ${job.city}, ${job.state}`;
+              const cleanDateTime = formatCleanDateTime(job.scheduledDate, job.completedAt);
+
+              return (
+                <div
+                  key={job.id}
+                  onClick={() => onJobClick(job)}
+                  style={{
+                    display: "flex",
+                    gap: "0.75rem",
+                    padding: "0.875rem",
+                    borderRadius: "10px",
+                    border: "1px solid #e5e7eb",
+                    background: "#ffffff",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                    cursor: "pointer",
+                    transition: "background 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#f0fdf4";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ffffff";
+                  }}
+                >
+                  <div
+                    style={{
+                      flexShrink: 0,
+                      width: "2rem",
+                      height: "2rem",
+                      borderRadius: "50%",
+                      background: "#16a34a",
+                      color: "#ffffff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "0.75rem",
+                      fontWeight: "700",
+                    }}
+                  >
+                    {sortedClosedJobs.length - index}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: "0.5rem",
+                        flexWrap: "wrap",
+                        marginBottom: "0.25rem",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: "700",
+                          color: "#111827",
+                          fontSize: "0.9375rem",
+                        }}
+                      >
+                        {job.customerName || job.userEmail || "Customer"}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.8125rem",
+                          fontWeight: "600",
+                          color: "#6b7280",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {cleanDateTime}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: "0.8125rem",
+                        color: "#6b7280",
+                        marginBottom: "0.5rem",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={fullAddress}
+                    >
+                      {fullAddress}
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: "600",
+                          color: "#374151",
+                          background: "#f9fafb",
+                          border: "1px solid #e5e7eb",
+                          padding: "0.125rem 0.5rem",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        {bins} bin{bins !== 1 ? "s" : ""}
+                      </span>
+
+                      {eligible && payRatePerJob > 0 && (
+                        <span
+                          style={{
+                            fontSize: "0.75rem",
+                            fontWeight: "700",
+                            color: "#16a34a",
+                            background: "#dcfce7",
+                            padding: "0.125rem 0.5rem",
+                            borderRadius: "4px",
+                          }}
+                        >
+                          +${payRatePerJob.toFixed(2)}
+                        </span>
+                      )}
+
+                      {(job.insidePhotoUrl || job.outsidePhotoUrl) && (
+                        <div style={{ display: "flex", gap: "0.25rem", marginLeft: "auto" }}>
+                          {job.outsidePhotoUrl && (
+                            <img
+                              src={job.outsidePhotoUrl}
+                              alt="Outside bin"
+                              style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "4px",
+                                objectFit: "cover",
+                                border: "1px solid #e5e7eb",
+                              }}
+                            />
+                          )}
+                          {job.insidePhotoUrl && (
+                            <img
+                              src={job.insidePhotoUrl}
+                              alt="Inside bin"
+                              style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "4px",
+                                objectFit: "cover",
+                                border: "1px solid #e5e7eb",
+                              }}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       )}
     </div>

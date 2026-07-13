@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import "../../employee-dashboard-mobile.css";
 import { DailyMissionCard } from "@/components/EmployeeDashboard/DailyMissionCard";
-import { CompletedJobsHistory } from "@/components/EmployeeDashboard/CompletedJobsHistory";
 import { JobList } from "@/components/EmployeeDashboard/JobList";
 import { JobDetailModal } from "@/components/EmployeeDashboard/JobDetailModal";
 import { ProgressTracker } from "@/components/EmployeeDashboard/ProgressTracker";
@@ -923,21 +922,15 @@ export default function EmployeeDashboardPage() {
 
                 <JobList
                   jobs={jobs}
+                  completedJobs={completedJobsToday}
                   upcomingJobs={upcomingJobs}
                   selectedJobId={selectedJob?.id || null}
                   onJobClick={handleSelectJob}
                   onStartJob={handleStartJobFromCard}
                   isClockedIn={isClockedIn}
                   onStartNextJob={handleStartNextJob}
+                  payRatePerJob={payPreview.payRatePerJob}
                 />
-
-                {isClockedIn && (
-                  <CompletedJobsHistory
-                    jobs={completedJobsToday}
-                    payRatePerJob={payPreview.payRatePerJob}
-                    onJobClick={handleSelectJob}
-                  />
-                )}
               </div>
             </>
           )}

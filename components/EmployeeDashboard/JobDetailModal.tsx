@@ -6,6 +6,7 @@ import * as React from "react";
 import { IssueFlags } from "./IssueFlags";
 import { PhotoUpload } from "./PhotoUpload";
 import { StickerConfirmation, StickerStatus } from "./StickerConfirmation";
+import { formatCleanDateTime } from "@/lib/employee-utils";
 
 interface Job {
   id: string;
@@ -20,6 +21,7 @@ interface Job {
   binsCount?: number;
   planType?: string;
   notes?: string;
+  scheduledDate?: string;
   jobStatus?: "pending" | "in_progress" | "completed";
   flags?: string[];
   completionPhotoUrl?: string;
@@ -403,12 +405,9 @@ export function JobDetailModal({
             </div>
           )}
 
-          {isCompleted && job.completedAt && (
+          {isCompleted && (
             <div style={{ fontSize: "0.875rem", color: "#16a34a" }}>
-              Completed at:{" "}
-              {job.completedAt.toDate
-                ? job.completedAt.toDate().toLocaleString()
-                : new Date(job.completedAt).toLocaleString()}
+              Completed: {formatCleanDateTime(job.scheduledDate, job.completedAt)}
             </div>
           )}
         </div>
