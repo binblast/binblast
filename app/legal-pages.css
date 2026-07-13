@@ -40,18 +40,11 @@
 }
 
 .brand-logo--on-dark {
-  border-radius: 18px;
-  overflow: hidden;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
 }
 
 .brand-logo--on-light {
-  border-radius: 18px;
-  overflow: hidden;
-  background: #111111;
-  box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.22),
-    0 0 0 1px rgba(255, 255, 255, 0.08);
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2));
 }
 
 .legal-hero__brand-row {
