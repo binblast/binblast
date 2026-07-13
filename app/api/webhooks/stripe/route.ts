@@ -522,14 +522,6 @@ export async function POST(req: NextRequest) {
           const db = await getDbInstance();
           if (!db) break;
 
-          // Get subscription to find billing period
-          const subscriptionResponse = await stripe.subscriptions.retrieve(subscriptionId);
-          const subscription = subscriptionResponse as Stripe.Subscription;
-          // Use type assertion to access period properties (Stripe types may not expose these directly)
-          const billingPeriodStart = new Date((subscription as any).current_period_start * 1000);
-          const billingPeriodEnd = new Date((subscription as any).current_period_end * 1000);
-
-          // Find user by Stripe customer ID
           const usersQuery = query(
             collection(db, "users"),
             where("stripeCustomerId", "==", customerId)
@@ -538,39 +530,25 @@ export async function POST(req: NextRequest) {
 
           if (!usersSnapshot.empty) {
             const userDoc = usersSnapshot.docs[0];
-            const referrerId = userDoc.id;
+            const userId = userDoc.id;
 
-            // Count referrals completed in this billing period
-            const referralsQuery = query(
-              collection(db, "referrals"),
-              where("referrerId", "==", referrerId),
-              where("status", "==", "COMPLETED")
+            const { applyAutoRenewalCreditToUpcomingInvoice } = await import(
+              "@/lib/referral-renewal-credits"
             );
-            const referralsSnapshot = await getDocs(referralsQuery);
-
-            let referralsInPeriod = 0;
-            referralsSnapshot.forEach((refDoc) => {
-              const refData = refDoc.data();
-              const completedAt = refData.completedAt?.toDate?.() || new Date(refData.completedAt);
-              
-              // Check if referral was completed in this billing period
-              if (completedAt >= billingPeriodStart && completedAt < billingPeriodEnd) {
-                referralsInPeriod++;
-              }
+            const result = await applyAutoRenewalCreditToUpcomingInvoice({
+              invoiceId,
+              customerId,
+              userId,
             });
 
-            console.log("[Webhook] Invoice upcoming - calculating referral discount:", {
+            console.log("[Webhook] Invoice upcoming - auto-applied referral credit:", {
               invoiceId,
               subscriptionId,
-              referrerId,
-              billingPeriodStart: billingPeriodStart.toISOString(),
-              billingPeriodEnd: billingPeriodEnd.toISOString(),
-              referralsInPeriod,
+              userId,
+              applied: result.applied,
+              amountCents: result.amountCents,
+              creditIds: result.creditIds,
             });
-
-            // Apply discount to upcoming invoice based on referrals in this period ($10 per referral)
-            const { applyReferralDiscountToUpcomingInvoice } = await import("@/lib/stripe-coupons");
-            await applyReferralDiscountToUpcomingInvoice(invoiceId, subscriptionId, referralsInPeriod);
           }
         } catch (invoiceError: any) {
           console.error("[Webhook] Error processing invoice.upcoming:", invoiceError);
@@ -590,6 +568,24 @@ export async function POST(req: NextRequest) {
             : null;
 
         if (customerId && invoice.amount_paid > 0) {
+          try {
+            const { consumeRenewalCreditApplication } = await import(
+              "@/lib/referral-renewal-credits"
+            );
+            const creditResult = await consumeRenewalCreditApplication(invoice.id);
+            if (creditResult.consumed) {
+              console.log("[Webhook] Referral renewal credits consumed:", {
+                invoiceId: invoice.id,
+                creditIds: creditResult.creditIds,
+              });
+            }
+          } catch (renewalCreditError) {
+            console.error(
+              "[Webhook] Error consuming renewal referral credits:",
+              renewalCreditError
+            );
+          }
+
           try {
             const { completeReferralAfterPayment } = await import("@/lib/referral-service");
             const awardResult = await completeReferralAfterPayment({

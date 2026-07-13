@@ -237,9 +237,8 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
             You have ${totalCredits.toFixed(2)} ready to use.
           </p>
           <p style={{ margin: "0.5rem 0 0", fontSize: "0.85rem", color: "#065f46", lineHeight: 1.6 }}>
-            Apply up to $10 per checkout. Credits are used automatically when you check
-            &quot;Apply referral credit&quot; during plan signup, or when you purchase an
-            extra cleaning from your dashboard.
+            Up to $10 is applied automatically on each subscription renewal while you have a
+            credit balance — no checkbox needed.
           </p>
         </div>
       )}
@@ -276,7 +275,11 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
           <li>They sign up and complete their first paid service using your link.</li>
           <li>They receive $10 off at checkout when they use your code.</li>
           <li>You both receive a $10 credit in your account after their first payment.</li>
-          <li>Credits stay in your account until you use them — they do not expire.</li>
+          <li>Credits stay in your account until used — they do not expire.</li>
+          <li>
+            <strong>Auto-applied on renewal:</strong> $10 comes off each subscription
+            renewal automatically when you have credits available.
+          </li>
         </ol>
       </div>
 
@@ -309,21 +312,20 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
           }}
         >
           <li>
-            <strong>Stored in your account:</strong> Credits appear here and in your
-            Referral History after a friend pays.
+            <strong>Stored in your account:</strong> Credits appear here and in Referral
+            History after a friend pays.
           </li>
           <li>
-            <strong>At signup or plan checkout:</strong> Check &quot;Apply referral
-            credit&quot; to take up to $10 off that payment.
+            <strong>Subscription renewals:</strong> $10 is applied automatically each billing
+            cycle while you have unused credits.
           </li>
           <li>
-            <strong>Extra cleanings:</strong> When you buy a $35 one-time cleaning from
-            your dashboard, your credit can be applied automatically if you have a
-            balance.
+            <strong>Extra cleanings:</strong> You can also apply a credit when buying a
+            one-time cleaning from your dashboard.
           </li>
           <li>
-            <strong>One credit per checkout:</strong> Each $10 credit is used one at a
-            time, so multiple credits can be spread across future payments.
+            <strong>One credit per renewal:</strong> Each renewal uses up to $10 from your
+            balance until credits run out.
           </li>
         </ul>
       </div>
