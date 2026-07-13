@@ -1,7 +1,6 @@
 // app/api/employee/training/[moduleId]/pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 import { getModuleById } from "@/lib/training-modules";
 
 export const dynamic = 'force-dynamic';
@@ -36,13 +35,9 @@ export async function GET(
       });
     }
 
-    // Return PDF URL - can be:
-    // 1. module.pdfUrl (if set in training-modules.ts) - e.g., Firebase Storage URL
-    // 2. Relative path to public folder: /training-modules/${moduleId}/${pdfFileName}
-    // 3. Generated styled PDF URL (optional fallback)
-    // Note: If PDFs are stored in Firebase Storage, update module.pdfUrl in training-modules.ts
-    // If PDFs are in public/training-modules/, ensure the files exist at that path
-    const pdfUrl = module.pdfUrl || `/training-modules/${moduleId}/${module.pdfFileName || `${moduleId}.pdf`}`;
+    // Return a PDF URL only when a real hosted URL is configured.
+    // Markdown is the source of truth until PDFs are uploaded to Firebase Storage.
+    const pdfUrl = module.pdfUrl || "";
     
     // Optionally include styled PDF URL as fallback
     const baseUrl = req.nextUrl.origin;
@@ -51,37 +46,30 @@ export async function GET(
     // Mark as viewed if requested
     if (markViewed && employeeId) {
       try {
-        const db = await getDbInstance();
-        if (db) {
-          const firestore = await safeImportFirestore();
-          const { collection, query, where, getDocs, addDoc, updateDoc, serverTimestamp } = firestore;
+        const db = await getAdminFirestore();
+        const admin = await import("firebase-admin");
+        const snapshot = await db
+          .collection("employeeTraining")
+          .where("employeeId", "==", employeeId)
+          .where("moduleId", "==", moduleId)
+          .get();
 
-          const trainingRef = collection(db, "employeeTraining");
-          const trainingQuery = query(
-            trainingRef,
-            where("employeeId", "==", employeeId),
-            where("moduleId", "==", moduleId)
-          );
-          const snapshot = await getDocs(trainingQuery);
-
-          if (!snapshot.empty) {
-            const docRef = snapshot.docs[0].ref;
-            await updateDoc(docRef, {
-              pdfViewed: true,
-              pdfViewedAt: serverTimestamp(),
-            });
-          } else {
-            await addDoc(trainingRef, {
-              employeeId,
-              moduleId,
-              moduleName: module.name,
-              pdfViewed: true,
-              pdfViewedAt: serverTimestamp(),
-              completed: false,
-              progress: 0,
-              certificationStatus: "in_progress",
-            });
-          }
+        if (!snapshot.empty) {
+          await snapshot.docs[0].ref.update({
+            pdfViewed: true,
+            pdfViewedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        } else {
+          await db.collection("employeeTraining").add({
+            employeeId,
+            moduleId,
+            moduleName: module.name,
+            pdfViewed: true,
+            pdfViewedAt: admin.firestore.FieldValue.serverTimestamp(),
+            completed: false,
+            progress: 0,
+            certificationStatus: "in_progress",
+          });
         }
       } catch (error) {
         console.error("Error marking PDF as viewed:", error);

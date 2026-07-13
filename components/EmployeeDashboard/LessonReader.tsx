@@ -13,6 +13,11 @@ interface LessonReaderProps {
   employeeId: string;
 }
 
+function isUsablePdfUrl(url?: string): boolean {
+  if (!url) return false;
+  return url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/api/");
+}
+
 export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
   const [module, setModule] = useState<any>(null);
   const [progress, setProgress] = useState<any>(null);
@@ -149,8 +154,9 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
     );
   }
 
-  const hasPDF = module.pdfUrl && module.pdfUrl.trim() !== "";
+  const hasPDF = isUsablePdfUrl(module.pdfUrl);
   const hasMarkdown = markdownContent !== null;
+  const canReviewMaterial = hasPDF || hasMarkdown;
 
   // Calculate lesson number and total
   const totalModules = allModules.length;
@@ -347,7 +353,7 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
           </ul>
 
           {/* Material Reviewed Checkbox */}
-          {hasPDF && (
+          {canReviewMaterial && (
             <div style={{ marginBottom: "1rem" }}>
               <label
                 style={{
@@ -375,7 +381,7 @@ export function LessonReader({ moduleId, employeeId }: LessonReaderProps) {
           )}
 
           {/* Start Quiz Button (sticky at bottom) */}
-          {hasPDF && (
+          {canReviewMaterial && (
             <>
               <button
                 onClick={handleStartQuiz}

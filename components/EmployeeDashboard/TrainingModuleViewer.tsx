@@ -14,6 +14,11 @@ interface TrainingModuleViewerProps {
   pdfViewed: boolean;
 }
 
+function isUsablePdfUrl(url?: string): boolean {
+  if (!url) return false;
+  return url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/api/");
+}
+
 export function TrainingModuleViewer({
   moduleId,
   moduleName,
@@ -30,6 +35,7 @@ export function TrainingModuleViewer({
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
   const [showMarkdown, setShowMarkdown] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const hasUsablePdf = isUsablePdfUrl(pdfUrl);
 
   // Fetch Markdown content as fallback
   useEffect(() => {
@@ -39,8 +45,8 @@ export function TrainingModuleViewer({
         if (response.ok) {
           const data = await response.json();
           setMarkdownContent(data.content);
-          // If no PDF URL, show Markdown immediately
-          if (!pdfUrl) {
+          // If no hosted PDF URL exists, show Markdown immediately.
+          if (!isUsablePdfUrl(pdfUrl)) {
             setShowMarkdown(true);
             setLoading(false);
           }
@@ -66,32 +72,28 @@ export function TrainingModuleViewer({
 
   // Reset loading state when PDF URL changes and check if we should show Markdown
   useEffect(() => {
-    if (pdfUrl) {
-      // If PDF URL is a relative path (not Firebase Storage), it likely doesn't exist yet
-      // Proactively show Markdown if available instead of trying to load non-existent PDF
-      if (!pdfUrl.startsWith('http') && markdownContent) {
-        // Relative path - PDF doesn't exist yet, show Markdown immediately
+    if (hasUsablePdf) {
+      setLoading(true);
+      setError(null);
+      setPdfLoaded(false);
+      setShowMarkdown(false);
+    } else {
+      // Missing or relative PDF paths are not valid in production; use Markdown.
+      if (markdownContent) {
         setShowMarkdown(true);
         setPdfLoaded(false);
         setLoading(false);
         setError(null);
       } else {
-        // Firebase Storage URL or absolute URL - try to load PDF
         setLoading(true);
         setError(null);
         setPdfLoaded(false);
-        setShowMarkdown(false);
       }
-    } else if (markdownContent) {
-      // No PDF URL but we have Markdown - show it
-      setShowMarkdown(true);
-      setLoading(false);
-      setPdfLoaded(false);
     }
-  }, [pdfUrl, markdownContent]);
+  }, [hasUsablePdf, markdownContent]);
 
   const handleDownload = () => {
-    if (pdfUrl) {
+    if (hasUsablePdf && pdfUrl) {
       // Try to open in new tab first, then fallback to download
       const link = document.createElement("a");
       link.href = pdfUrl;
@@ -217,24 +219,26 @@ export function TrainingModuleViewer({
         >
           {moduleName}
         </h3>
-        <button
-          onClick={handleDownload}
-          style={{
-            padding: "0.5rem 1rem",
-            background: "#2563eb",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-          }}
-        >
-          Download PDF
-        </button>
+        {hasUsablePdf && (
+          <button
+            onClick={handleDownload}
+            style={{
+              padding: "0.5rem 1rem",
+              background: "#2563eb",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              fontWeight: "600",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            Download PDF
+          </button>
+        )}
       </div>
 
       {/* PDF Viewer or Markdown Content */}
@@ -276,7 +280,9 @@ export function TrainingModuleViewer({
                 animation: "spin 1s linear infinite",
               }}
             />
-            <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>Loading PDF...</span>
+            <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+              Loading training content...
+            </span>
           </div>
         )}
         {showMarkdown && markdownContent ? (
@@ -291,7 +297,7 @@ export function TrainingModuleViewer({
           >
             <StyledMarkdown content={markdownContent} moduleId={moduleId} />
           </div>
-        ) : (
+        ) : hasUsablePdf && pdfUrl ? (
           <iframe
             ref={iframeRef}
             src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
@@ -307,6 +313,17 @@ export function TrainingModuleViewer({
             title={moduleName}
             allow="fullscreen"
           />
+        ) : (
+          <div
+            style={{
+              padding: "2rem",
+              minHeight: "300px",
+              background: "#ffffff",
+              color: "#6b7280",
+            }}
+          >
+            Loading training content...
+          </div>
         )}
       </div>
 
@@ -340,7 +357,7 @@ export function TrainingModuleViewer({
             marginBottom: "1rem",
           }}
         >
-          PDF not yet available. Displaying training content from Markdown.
+          Displaying training content from Markdown.
         </div>
       )}
 

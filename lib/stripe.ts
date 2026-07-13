@@ -10,11 +10,9 @@ if (typeof window !== 'undefined') {
   throw new Error('lib/stripe.ts cannot be imported in client-side code. Stripe secret keys must never be exposed to the browser.');
 }
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set. Please set it in your environment variables.');
-}
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "sk_test_missing_build_time_key";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+export const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2025-11-17.clover', // API version required by stripe v20.0.0
   typescript: true,
 });
