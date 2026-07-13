@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useRef, useMemo, useState } from "react";
 import { buildWorkflowState, calculateProgress, StepStatus } from "@/lib/workflow-state";
 
 interface Job {
@@ -90,6 +90,7 @@ export function InteractiveWorkflow({
   }, [workflowState]);
 
   const jobListRef = useRef<HTMLDivElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Employees choose their first stop from the route list after clocking in.
 
@@ -322,6 +323,18 @@ export function InteractiveWorkflow({
       ? "Go to Next Stop"
       : "Go to First Stop";
 
+  const currentStepTitle = (() => {
+    if (!workflowState.currentStep) {
+      return `Step ${progress.currentStep}`;
+    }
+    if (workflowState.currentStep.id === "viewJobs") {
+      return viewJobsTitle;
+    }
+    return workflowState.currentStep.title;
+  })();
+
+  const focusJobName = focusJob?.customerName || focusJob?.userEmail;
+
   return (
     <div
       className="interactive-workflow"
@@ -335,59 +348,115 @@ export function InteractiveWorkflow({
         maxWidth: '100%',
       }}
     >
-      {/* Progress Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 'clamp(1rem, 2vw, 1.5rem)',
-          flexWrap: 'wrap',
-          gap: '0.5rem',
-        }}
-      >
-        <div
-          style={{
-            fontSize: 'clamp(0.9375rem, 2vw, 1rem)',
-            fontWeight: '600',
-            color: '#111827',
-          }}
-        >
-          Your Workflow
-        </div>
-        <div
-          style={{
-            fontSize: 'clamp(0.8125rem, 1.5vw, 0.875rem)',
-            fontWeight: '600',
-            color: '#6b7280',
-          }}
-        >
-          Step {progress.currentStep} of {progress.totalSteps}
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div
+      {/* Collapsible Header */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded((prev) => !prev)}
+        aria-expanded={isExpanded}
         style={{
           width: '100%',
-          height: '8px',
-          background: '#e5e7eb',
-          borderRadius: '4px',
-          overflow: 'hidden',
-          marginBottom: '1.5rem',
+          padding: 0,
+          border: 'none',
+          background: 'transparent',
+          cursor: 'pointer',
+          textAlign: 'left',
+          touchAction: 'manipulation',
+          WebkitTapHighlightColor: 'transparent',
         }}
       >
         <div
           style={{
-            width: `${progress.percentage}%`,
-            height: '100%',
-            background: '#16a34a',
-            transition: 'width 0.3s',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '0.75rem',
+            marginBottom: isExpanded ? 'clamp(1rem, 2vw, 1.5rem)' : '0.75rem',
           }}
-        />
-      </div>
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 'clamp(0.9375rem, 2vw, 1rem)',
+                fontWeight: '600',
+                color: '#111827',
+              }}
+            >
+              Your Workflow
+            </div>
+            {!isExpanded && (
+              <div
+                style={{
+                  fontSize: '0.8125rem',
+                  color: '#6b7280',
+                  marginTop: '0.25rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Step {progress.currentStep} of {progress.totalSteps}
+                {currentStepTitle ? ` · ${currentStepTitle}` : ""}
+                {focusJobName ? ` (${focusJobName})` : ""}
+              </div>
+            )}
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              flexShrink: 0,
+            }}
+          >
+            {isExpanded && (
+              <div
+                style={{
+                  fontSize: 'clamp(0.8125rem, 1.5vw, 0.875rem)',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                }}
+              >
+                Step {progress.currentStep} of {progress.totalSteps}
+              </div>
+            )}
+            <span
+              aria-hidden="true"
+              style={{
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s',
+              }}
+            >
+              ▼
+            </span>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div
+          style={{
+            width: '100%',
+            height: '8px',
+            background: '#e5e7eb',
+            borderRadius: '4px',
+            overflow: 'hidden',
+            marginBottom: isExpanded ? '1.5rem' : 0,
+          }}
+        >
+          <div
+            style={{
+              width: `${progress.percentage}%`,
+              height: '100%',
+              background: '#16a34a',
+              transition: 'width 0.3s',
+            }}
+          />
+        </div>
+      </button>
 
       {/* Workflow Steps */}
+      {isExpanded && (
       <div
         style={{
           display: 'flex',
@@ -473,6 +542,7 @@ export function InteractiveWorkflow({
           </div>
         )}
       </div>
+      )}
 
       {/* Hidden ref for job list scrolling */}
       <div ref={jobListRef} style={{ position: 'absolute', top: 0 }} />
