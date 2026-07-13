@@ -1,7 +1,7 @@
 // components/OwnerDashboard/SystemControls.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TeamAccountManagement } from "@/components/OwnerDashboard/TeamAccountManagement";
 import { SubscriptionPricingSettings } from "@/components/OwnerDashboard/SubscriptionPricingSettings";
 import { EmployeeCompensationSettings } from "@/components/OwnerDashboard/EmployeeCompensationSettings";
@@ -10,13 +10,27 @@ import { PayrollSummary } from "@/components/OwnerDashboard/PayrollSummary";
 interface SystemControlsProps {
   userId: string;
   onNavigateTab?: (tab: "live-ops" | "partners" | "employees") => void;
+  initialSettingsTab?: string | null;
+  onSettingsTabConsumed?: () => void;
 }
 
 type TeamLoginPanel = "create" | "help";
 
-export function SystemControls({ userId, onNavigateTab }: SystemControlsProps) {
+export function SystemControls({
+  userId,
+  onNavigateTab,
+  initialSettingsTab,
+  onSettingsTabConsumed,
+}: SystemControlsProps) {
   const [activeTab, setActiveTab] = useState<string>("team-logins");
   const [teamLoginPanel, setTeamLoginPanel] = useState<TeamLoginPanel>("create");
+
+  useEffect(() => {
+    if (initialSettingsTab) {
+      setActiveTab(initialSettingsTab);
+      onSettingsTabConsumed?.();
+    }
+  }, [initialSettingsTab, onSettingsTabConsumed]);
 
   function openTeamLogins(panel: TeamLoginPanel) {
     setTeamLoginPanel(panel);

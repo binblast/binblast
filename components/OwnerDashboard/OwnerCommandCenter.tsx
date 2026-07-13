@@ -8,8 +8,9 @@ import { CustomerManagement } from "@/components/OwnerDashboard/CustomerManageme
 import { CleaningScheduleBoard } from "@/components/OwnerDashboard/CleaningScheduleBoard";
 import { CommercialAccounts } from "@/components/OwnerDashboard/CommercialAccounts";
 import { PartnerProgramManagement } from "@/components/OwnerDashboard/PartnerProgramManagement";
-import { FinancialAnalytics } from "@/components/OwnerDashboard/FinancialAnalytics";
 import { SystemControls } from "@/components/OwnerDashboard/SystemControls";
+import { OwnerLiveOpsHub } from "@/components/OwnerDashboard/OwnerLiveOpsHub";
+import { OwnerFinancialsHub } from "@/components/OwnerDashboard/OwnerFinancialsHub";
 import { OwnerTrainingOverview } from "@/components/OwnerDashboard/OwnerTrainingOverview";
 import { OwnerPhotosOverview } from "@/components/OwnerDashboard/OwnerPhotosOverview";
 import { SiteLeadsManagement } from "@/components/OwnerDashboard/SiteLeadsManagement";
@@ -52,17 +53,17 @@ const HUB_SECTIONS: Array<{
   icon: string;
 }> = [
   { id: "overview", title: "Business Overview", subtitle: "Revenue, customers, subscriptions, and KPIs", icon: "📊" },
-  { id: "live-ops", title: "Live Operations", subtitle: "Clock-ins, active shifts, jobs, and open flags", icon: "⚡" },
+  { id: "live-ops", title: "Live Operations", subtitle: "Live map, fleet status, hours, pay, and flags", icon: "⚡" },
   { id: "schedule", title: "Schedule & Routes", subtitle: "Cleaning calendar, route board, and assignments", icon: "🗓️" },
   { id: "employees", title: "Employees", subtitle: "Hiring, profiles, routes, stops, and activity", icon: "👥" },
   { id: "customers", title: "Customers & Quotes", subtitle: "Direct accounts, custom quotes, and service history", icon: "🏠" },
   { id: "commercial", title: "Commercial Accounts", subtitle: "HOA and business client management", icon: "🏢" },
   { id: "partners", title: "Partner Program", subtitle: "Applications, payouts, and partner network", icon: "🤝" },
-  { id: "financials", title: "Financial Analytics", subtitle: "Revenue, profit, and payout tracking", icon: "💰" },
+  { id: "financials", title: "Financial Analytics", subtitle: "Payroll, revenue, profit, and payout tracking", icon: "💰" },
   { id: "messages", title: "Messages", subtitle: "Customer and team messaging center", icon: "💬" },
   { id: "training", title: "Training & Certification", subtitle: "Module completion and compliance status", icon: "🎓" },
   { id: "photos", title: "Cleaning Photos", subtitle: "Proof-of-work and before/after job photos", icon: "📸" },
-  { id: "settings", title: "System Settings", subtitle: "Pricing, permissions, and business controls", icon: "⚙️" },
+  { id: "settings", title: "System Settings", subtitle: "Compensation, pricing, payroll, and permissions", icon: "⚙️" },
 ];
 
 const TAB_LABELS: Record<OwnerTab, string> = {
@@ -152,11 +153,17 @@ export function OwnerCommandCenter({
 }: OwnerCommandCenterProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<OwnerTab>("hub");
+  const [settingsSubTab, setSettingsSubTab] = useState<string | null>(null);
   const [seenPartnerCount, setSeenPartnerCount] = useState(0);
   const [seenQuotesCount, setSeenQuotesCount] = useState(0);
 
   const goToHub = () => setActiveTab("hub");
   const showBackButton = activeTab !== "hub";
+
+  function openSettingsTab(tab: string) {
+    setSettingsSubTab(tab);
+    setActiveTab("settings");
+  }
 
   useEffect(() => {
     setSeenPartnerCount(getStoredSeenCount(PARTNER_APPS_SEEN_KEY));
@@ -395,6 +402,8 @@ export function OwnerCommandCenter({
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
               {[
                 { tab: "employees" as OwnerTab, label: "Hire & Manage Employees" },
+                { tab: "live-ops" as OwnerTab, label: "Live Map & Fleet" },
+                { tab: "financials" as OwnerTab, label: "Payroll & Revenue" },
                 { tab: "training" as OwnerTab, label: "Training Module Admin" },
                 { tab: "messages" as OwnerTab, label: "Full Messaging Center" },
                 { tab: "partners" as OwnerTab, label: "Partner Admin Panel" },
@@ -443,7 +452,14 @@ export function OwnerCommandCenter({
         )}
 
         {activeTab === "overview" && <BusinessOverview userId={userId} />}
-        {activeTab === "live-ops" && <EmployeeStatus userId={userId} />}
+        {activeTab === "live-ops" && (
+          <OwnerLiveOpsHub
+            userId={userId}
+            onOpenCompensation={() => openSettingsTab("compensation")}
+            onOpenPayrollSettings={() => openSettingsTab("payroll")}
+            onOpenSchedule={() => setActiveTab("schedule")}
+          />
+        )}
         {activeTab === "schedule" && <CleaningScheduleBoard userId={userId} />}
         {activeTab === "employees" && (
           <div>
@@ -478,7 +494,12 @@ export function OwnerCommandCenter({
             </div>
           </div>
         )}
-        {activeTab === "financials" && <FinancialAnalytics userId={userId} />}
+        {activeTab === "financials" && (
+          <OwnerFinancialsHub
+            userId={userId}
+            onOpenCompensation={() => openSettingsTab("compensation")}
+          />
+        )}
         {activeTab === "messages" && <MessagingCenter userId={userId} />}
         {activeTab === "training" && (
           <div>
@@ -498,6 +519,8 @@ export function OwnerCommandCenter({
         {activeTab === "settings" && (
           <SystemControls
             userId={userId}
+            initialSettingsTab={settingsSubTab}
+            onSettingsTabConsumed={() => setSettingsSubTab(null)}
             onNavigateTab={(tab) => setActiveTab(tab)}
           />
         )}
