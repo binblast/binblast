@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { FleetPayrollPanel } from "@/components/OperatorDashboard/FleetPayrollPanel";
 import { OpenFlagsPanel } from "@/components/OperatorDashboard/OpenFlagsPanel";
 import { ManagerClockControls } from "@/components/OperatorDashboard/ManagerClockControls";
 import {
@@ -31,6 +32,8 @@ interface EmployeeStatusProps {
   userId: string;
 }
 
+type EmployeeView = "fleet" | "payroll";
+
 const attentionToneStyles = {
   danger: { background: "#fef2f2", color: "#991b1b", border: "#fecaca" },
   warning: { background: "#fffbeb", color: "#92400e", border: "#fde68a" },
@@ -40,6 +43,7 @@ const attentionToneStyles = {
 
 export function EmployeeStatus({ userId }: EmployeeStatusProps) {
   const router = useRouter();
+  const [employeeView, setEmployeeView] = useState<EmployeeView>("fleet");
   const [employees, setEmployees] = useState<FleetEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,6 +113,15 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
     [employees, quickFilter]
   );
 
+  if (employeeView === "payroll") {
+    return (
+      <div style={{ marginBottom: "2rem" }}>
+        <EmployeeViewToggle view={employeeView} onViewChange={setEmployeeView} />
+        <FleetPayrollPanel />
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
@@ -119,6 +132,7 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
 
   return (
     <div style={{ marginBottom: "2rem" }}>
+      <EmployeeViewToggle view={employeeView} onViewChange={setEmployeeView} />
       <div
         style={{
           display: "flex",
@@ -472,6 +486,41 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function EmployeeViewToggle({
+  view,
+  onViewChange,
+}: {
+  view: EmployeeView;
+  onViewChange: (view: EmployeeView) => void;
+}) {
+  return (
+    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
+      {[
+        { id: "fleet" as EmployeeView, label: "Fleet Status" },
+        { id: "payroll" as EmployeeView, label: "Hours & Pay" },
+      ].map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => onViewChange(tab.id)}
+          style={{
+            padding: "0.55rem 0.9rem",
+            borderRadius: "999px",
+            border: "1px solid #e5e7eb",
+            background: view === tab.id ? "#111827" : "#ffffff",
+            color: view === tab.id ? "#ffffff" : "#374151",
+            fontSize: "0.8125rem",
+            fontWeight: "600",
+            cursor: "pointer",
+          }}
+        >
+          {tab.label}
+        </button>
+      ))}
     </div>
   );
 }
