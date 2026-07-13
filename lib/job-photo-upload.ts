@@ -1,9 +1,9 @@
 // lib/job-photo-upload.ts
 // Utility functions for uploading job photos to Firebase Storage and managing photo metadata
 
+import { randomUUID } from "crypto";
 import { getStorageInstance } from "./firebase-client";
-import { getDbInstance } from "./firebase";
-import { safeImportFirestore } from "./firebase-module-loader";
+import { getAdminFirestore, getAdminStorageBucket } from "./firebase-admin";
 
 export interface PhotoMetadata {
   fileSize: number;
@@ -43,25 +43,46 @@ export interface UploadPhotoResult {
   error?: string;
 }
 
+function buildFirebaseDownloadUrl(bucketName: string, storagePath: string, token: string): string {
+  const encodedPath = encodeURIComponent(storagePath);
+  return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}?alt=media&token=${token}`;
+}
+
+async function uploadBufferToStorage(
+  storagePath: string,
+  fileBuffer: Uint8Array,
+  contentType: string
+): Promise<string> {
+  const bucket = await getAdminStorageBucket();
+  const downloadToken = randomUUID();
+
+  await bucket.file(storagePath).save(Buffer.from(fileBuffer), {
+    metadata: {
+      contentType,
+      metadata: {
+        firebaseStorageDownloadTokens: downloadToken,
+      },
+    },
+  });
+
+  return buildFirebaseDownloadUrl(bucket.name, storagePath, downloadToken);
+}
+
+async function deleteStorageObject(storagePath: string): Promise<void> {
+  const bucket = await getAdminStorageBucket();
+  await bucket.file(storagePath).delete({ ignoreNotFound: true });
+}
+
 /**
  * Extract GPS coordinates from image EXIF data (client-side only)
  * Note: This requires browser APIs and won't work server-side
  */
 export async function extractGPSFromImage(file: File): Promise<GPSCoordinates | null> {
-  // This would require a library like exif-js or piexifjs
-  // For now, return null - GPS will be captured via browser geolocation API
   return null;
 }
 
 /**
  * Upload a job photo to Firebase Storage and create metadata document
- * @param jobId - The job ID
- * @param photoType - Type of photo (inside, outside, etc.)
- * @param file - Photo file to upload
- * @param employeeId - Employee ID uploading the photo
- * @param jobData - Job data containing customer info and address
- * @param gpsCoordinates - Optional GPS coordinates
- * @returns Upload result with photo ID and storage URL
  */
 export async function uploadJobPhoto(
   jobId: string,
@@ -80,71 +101,44 @@ export async function uploadJobPhoto(
   gpsCoordinates?: GPSCoordinates
 ): Promise<UploadPhotoResult> {
   try {
-    // Validate file type
     if (!file.type.startsWith("image/")) {
-      return {
-        success: false,
-        error: "File must be an image",
-      };
+      return { success: false, error: "File must be an image" };
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      return {
-        success: false,
-        error: "Image must be less than 5MB",
-      };
+      return { success: false, error: "Image must be less than 5MB" };
     }
 
-    const storage = await getStorageInstance();
-    if (!storage) {
-      return {
-        success: false,
-        error: "Firebase Storage is not available",
-      };
-    }
-
-    const { ref, uploadBytes, getDownloadURL } = await import("firebase/storage");
-
-    // Create storage path: job-photos/{jobId}/{photoType}/{timestamp}-{randomId}.jpg
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substring(2, 9);
     const fileExtension = file.name.split(".").pop() || "jpg";
     const storagePath = `job-photos/${jobId}/${photoType}/${timestamp}-${randomId}.${fileExtension}`;
 
-    const storageRef = ref(storage, storagePath);
-
-    // Convert File to ArrayBuffer for upload
     const arrayBuffer = await file.arrayBuffer();
     const fileBuffer = new Uint8Array(arrayBuffer);
 
-    // Upload to Firebase Storage
-    await uploadBytes(storageRef, fileBuffer, {
-      contentType: file.type,
-    });
+    let storageUrl: string;
 
-    // Get download URL
-    const storageUrl = await getDownloadURL(storageRef);
+    if (typeof window === "undefined") {
+      storageUrl = await uploadBufferToStorage(storagePath, fileBuffer, file.type);
+    } else {
+      const storage = await getStorageInstance();
+      if (!storage) {
+        return { success: false, error: "Firebase Storage is not available" };
+      }
 
-    // Get image dimensions if possible (would need canvas API on client-side)
+      const { ref, uploadBytes, getDownloadURL } = await import("firebase/storage");
+      const storageRef = ref(storage, storagePath);
+      await uploadBytes(storageRef, fileBuffer, { contentType: file.type });
+      storageUrl = await getDownloadURL(storageRef);
+    }
+
     const metadata: PhotoMetadata = {
       fileSize: file.size,
       mimeType: file.type,
     };
 
-    // Create photo metadata document in Firestore
-    const db = await getDbInstance();
-    if (!db) {
-      return {
-        success: false,
-        error: "Database not available",
-      };
-    }
-
-    const firestore = await safeImportFirestore();
-    const { collection, addDoc, serverTimestamp } = firestore;
-
-    const photoData: Omit<JobPhoto, "id" | "timestamp"> & { timestamp: any } = {
+    const photoData: Record<string, unknown> = {
       jobId,
       customerId: jobData.customerId || jobData.userId || "",
       employeeId,
@@ -157,7 +151,7 @@ export async function uploadJobPhoto(
       },
       photoType,
       storageUrl,
-      timestamp: serverTimestamp(),
+      timestamp: new Date(),
       metadata,
     };
 
@@ -165,8 +159,8 @@ export async function uploadJobPhoto(
       photoData.gpsCoordinates = gpsCoordinates;
     }
 
-    const photosRef = collection(db, "jobPhotos");
-    const photoDocRef = await addDoc(photosRef, photoData);
+    const db = await getAdminFirestore();
+    const photoDocRef = await db.collection("jobPhotos").add(photoData);
 
     return {
       success: true,
@@ -184,32 +178,22 @@ export async function uploadJobPhoto(
 
 /**
  * Get all photos for a job
- * @param jobId - The job ID
- * @returns Array of job photos
  */
 export async function getJobPhotos(jobId: string): Promise<JobPhoto[]> {
   try {
-    const db = await getDbInstance();
-    if (!db) {
-      throw new Error("Database not available");
-    }
+    const db = await getAdminFirestore();
+    const snapshot = await db
+      .collection("jobPhotos")
+      .where("jobId", "==", jobId)
+      .get();
 
-    const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs, orderBy } = firestore;
-
-    const photosRef = collection(db, "jobPhotos");
-    const photosQuery = query(
-      photosRef,
-      where("jobId", "==", jobId),
-      orderBy("timestamp", "desc")
-    );
-
-    const snapshot = await getDocs(photosQuery);
-    const photos: JobPhoto[] = [];
-
-    snapshot.forEach((doc) => {
+    const photos: JobPhoto[] = snapshot.docs.map((doc: any) => {
       const data = doc.data();
-      photos.push({
+      const timestamp = data.timestamp?.toDate
+        ? data.timestamp.toDate()
+        : new Date(data.timestamp || Date.now());
+
+      return {
         id: doc.id,
         jobId: data.jobId,
         customerId: data.customerId,
@@ -217,12 +201,13 @@ export async function getJobPhotos(jobId: string): Promise<JobPhoto[]> {
         address: data.address,
         photoType: data.photoType,
         storageUrl: data.storageUrl,
-        timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp),
+        timestamp,
         gpsCoordinates: data.gpsCoordinates,
         metadata: data.metadata,
-      });
+      };
     });
 
+    photos.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     return photos;
   } catch (error: any) {
     console.error("[Job Photo Upload] Error getting job photos:", error);
@@ -232,59 +217,42 @@ export async function getJobPhotos(jobId: string): Promise<JobPhoto[]> {
 
 /**
  * Delete a job photo (operators/admins only)
- * @param photoId - The photo document ID
- * @returns Success status
  */
 export async function deleteJobPhoto(photoId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const db = await getDbInstance();
-    if (!db) {
-      return {
-        success: false,
-        error: "Database not available",
-      };
-    }
+    const db = await getAdminFirestore();
+    const photoRef = db.collection("jobPhotos").doc(photoId);
+    const photoDoc = await photoRef.get();
 
-    const firestore = await safeImportFirestore();
-    const { doc, getDoc, deleteDoc } = firestore;
-
-    // Get photo document to retrieve storage URL
-    const photoRef = doc(db, "jobPhotos", photoId);
-    const photoDoc = await getDoc(photoRef);
-
-    if (!photoDoc.exists()) {
-      return {
-        success: false,
-        error: "Photo not found",
-      };
+    if (!photoDoc.exists) {
+      return { success: false, error: "Photo not found" };
     }
 
     const photoData = photoDoc.data();
-    const storageUrl = photoData.storageUrl;
+    const storageUrl = photoData?.storageUrl as string | undefined;
 
-    // Delete from Firebase Storage
     if (storageUrl) {
       try {
-        const storage = await getStorageInstance();
-        if (storage) {
-          const { ref, deleteObject } = await import("firebase/storage");
-          // Extract path from URL
-          const urlParts = storageUrl.split("/job-photos/");
-          if (urlParts.length > 1) {
-            const storagePath = `job-photos/${urlParts[1].split("?")[0]}`;
-            const storageRef = ref(storage, storagePath);
-            await deleteObject(storageRef);
+        const urlParts = storageUrl.split("/job-photos/");
+        if (urlParts.length > 1) {
+          const storagePath = `job-photos/${urlParts[1].split("?")[0]}`;
+          if (typeof window === "undefined") {
+            await deleteStorageObject(storagePath);
+          } else {
+            const storage = await getStorageInstance();
+            if (storage) {
+              const { ref, deleteObject } = await import("firebase/storage");
+              const storageRef = ref(storage, storagePath);
+              await deleteObject(storageRef);
+            }
           }
         }
       } catch (storageError: any) {
         console.error("[Job Photo Upload] Error deleting from storage:", storageError);
-        // Continue to delete Firestore document even if storage delete fails
       }
     }
 
-    // Delete Firestore document
-    await deleteDoc(photoRef);
-
+    await photoRef.delete();
     return { success: true };
   } catch (error: any) {
     console.error("[Job Photo Upload] Error deleting photo:", error);

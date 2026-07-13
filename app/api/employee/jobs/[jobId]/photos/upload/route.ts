@@ -2,9 +2,8 @@
 // API endpoint for uploading job photos to Firebase Storage
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
 import { uploadJobPhoto, GPSCoordinates } from "@/lib/job-photo-upload";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export const dynamic = 'force-dynamic';
 
@@ -38,29 +37,17 @@ export async function POST(
       );
     }
 
-    // Get job data to extract customer info and address
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 500 }
-      );
-    }
+    const db = await getAdminFirestore();
+    const jobDoc = await db.collection("scheduledCleanings").doc(jobId).get();
 
-    const firestore = await safeImportFirestore();
-    const { doc, getDoc } = firestore;
-
-    const jobRef = doc(db, "scheduledCleanings", jobId);
-    const jobDoc = await getDoc(jobRef);
-
-    if (!jobDoc.exists()) {
+    if (!jobDoc.exists) {
       return NextResponse.json(
         { error: "Job not found" },
         { status: 404 }
       );
     }
 
-    const jobData = jobDoc.data();
+    const jobData = jobDoc.data() || {};
 
     // Verify job is assigned to this employee
     if (jobData.assignedEmployeeId !== employeeId) {

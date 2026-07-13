@@ -120,3 +120,13 @@ export async function getAdminFirestore(): Promise<any> {
   const app = await getAdminApp();
   return app.firestore();
 }
+
+/**
+ * Get Storage bucket from Admin SDK
+ */
+export async function getAdminStorageBucket(): Promise<any> {
+  const admin = await import("firebase-admin");
+  await getAdminApp();
+  const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim();
+  return bucketName ? admin.storage().bucket(bucketName) : admin.storage().bucket();
+}
