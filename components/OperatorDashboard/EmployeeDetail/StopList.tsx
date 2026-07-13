@@ -1,9 +1,10 @@
-// components/OperatorDashboard/EmployeeDetail/StopList.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 import { OperatorJobResolveModal } from "./OperatorJobResolveModal";
+import { AddNoteModal } from "./AddNoteModal";
+import { ViewProofModal } from "./ViewProofModal";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getTodayDateString } from "@/lib/employee-utils";
@@ -20,12 +21,14 @@ interface Stop {
   scheduledDate?: string;
   scheduledTime?: string;
   binsCount?: number;
+  binCount?: number;
   notes?: string;
   status?: string;
   jobStatus?: string;
   routeSequence?: number;
   flags?: string[];
   needsOperatorReview?: boolean;
+  priority?: string;
 }
 
 interface StopListProps {
@@ -34,12 +37,25 @@ interface StopListProps {
   managerId?: string;
 }
 
+const actionBtn = {
+  padding: "0.3rem 0.55rem",
+  border: "none",
+  borderRadius: "4px",
+  fontSize: "0.7rem",
+  fontWeight: "600" as const,
+  cursor: "pointer",
+  whiteSpace: "nowrap" as const,
+};
+
 export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProps) {
   const [todayStops, setTodayStops] = useState<Stop[]>([]);
   const [upcomingStops, setUpcomingStops] = useState<Stop[]>([]);
   const [loading, setLoading] = useState(true);
-  const [resolveStop, setResolveStop] = useState<Stop | null>(null);
   const [showResolveModal, setShowResolveModal] = useState(false);
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [showPhotosModal, setShowPhotosModal] = useState(false);
+  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
+  const [workingStopId, setWorkingStopId] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -57,7 +73,7 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
       const today = getTodayDateString();
       const nextWeek = new Date();
       nextWeek.setDate(nextWeek.getDate() + 7);
-      const nextWeekStr = nextWeek.toISOString().split("T")[0];
+      const nextWeekStr = `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, "0")}-${String(nextWeek.getDate()).padStart(2, "0")}`;
 
       const stopsQuery = query(
         collection(db, "scheduledCleanings"),
@@ -120,14 +136,16 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
     };
     const style = colors[status] || colors.pending;
     return (
-      <span style={{
-        padding: "0.25rem 0.75rem",
-        borderRadius: "6px",
-        fontSize: "0.75rem",
-        fontWeight: "600",
-        background: style.bg,
-        color: style.color,
-      }}>
+      <span
+        style={{
+          padding: "0.25rem 0.75rem",
+          borderRadius: "6px",
+          fontSize: "0.75rem",
+          fontWeight: "600",
+          background: style.bg,
+          color: style.color,
+        }}
+      >
         {status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ")}
       </span>
     );
@@ -135,42 +153,175 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
+    const date = new Date(`${dateString}T12:00:00`);
+    if (Number.isNaN(date.getTime())) return dateString;
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const openResolve = (stopId: string) => {
+    setSelectedStopId(stopId);
+    setShowResolveModal(true);
+  };
+
+  const openNote = (stopId: string) => {
+    setSelectedStopId(stopId);
+    setShowNoteModal(true);
+  };
+
+  const openPhotos = (stopId: string) => {
+    setSelectedStopId(stopId);
+    setShowPhotosModal(true);
+  };
+
+  const handleMarkComplete = async (stopId: string) => {
+    setWorkingStopId(stopId);
     try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    } catch {
-      return dateString;
+      const { getAuthInstance } = await import("@/lib/firebase");
+      const auth = await getAuthInstance();
+      const operatorId = auth?.currentUser?.uid || managerId || "operator";
+
+      const response = await fetch(`/api/operator/jobs/${stopId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operatorId }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || data.error || "Failed to complete stop");
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to complete stop";
+      alert(message);
+    } finally {
+      setWorkingStopId(null);
     }
   };
 
-  const openResolveForStop = (stop: Stop) => {
-    setResolveStop(stop);
-    setShowResolveModal(true);
+  const handlePriorityChange = async (stopId: string, priority: string) => {
+    setWorkingStopId(stopId);
+    try {
+      const response = await fetch(`/api/operator/employees/${employeeId}/stops`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cleaningId: stopId, priority }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to update priority");
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update priority";
+      alert(message);
+    } finally {
+      setWorkingStopId(null);
+    }
+  };
+
+  const renderActions = (stop: Stop) => {
+    const status = stop.status || stop.jobStatus || "pending";
+    const isActive = status === "pending" || status === "in_progress";
+    const isCompleted = status === "completed";
+    const busy = workingStopId === stop.id;
+
+    return (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", minWidth: "220px" }}>
+        {isActive && (
+          <button
+            onClick={() => openResolve(stop.id)}
+            style={{
+              ...actionBtn,
+              background: stop.needsOperatorReview ? "#f59e0b" : "#16a34a",
+              color: "#ffffff",
+            }}
+          >
+            Resolve
+          </button>
+        )}
+        {isCompleted && (
+          <button
+            onClick={() => openPhotos(stop.id)}
+            style={{ ...actionBtn, background: "#6b7280", color: "#ffffff" }}
+          >
+            Photos
+          </button>
+        )}
+        <button
+          onClick={() => openNote(stop.id)}
+          style={{ ...actionBtn, background: "#3b82f6", color: "#ffffff" }}
+        >
+          Note
+        </button>
+        {isActive && (
+          <button
+            onClick={() => handleMarkComplete(stop.id)}
+            disabled={busy}
+            style={{
+              ...actionBtn,
+              background: busy ? "#9ca3af" : "#111827",
+              color: "#ffffff",
+              cursor: busy ? "not-allowed" : "pointer",
+            }}
+          >
+            {busy ? "..." : "Complete"}
+          </button>
+        )}
+        {isActive && (
+          <select
+            value={stop.priority || "normal"}
+            disabled={busy}
+            onChange={(e) => handlePriorityChange(stop.id, e.target.value)}
+            style={{
+              padding: "0.3rem 0.4rem",
+              borderRadius: "4px",
+              border: "1px solid #e5e7eb",
+              fontSize: "0.7rem",
+              background: "#ffffff",
+            }}
+          >
+            <option value="normal">Normal</option>
+            <option value="high">High Priority</option>
+            <option value="low">Low Priority</option>
+          </select>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
     return (
-      <div style={{
-        background: "#ffffff",
-        borderRadius: "12px",
-        padding: "2rem",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-        border: "1px solid #e5e7eb",
-      }}>
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: "12px",
+          padding: "2rem",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+          border: "1px solid #e5e7eb",
+        }}
+      >
         <div style={{ textAlign: "center", color: "#6b7280" }}>Loading stops...</div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      background: "#ffffff",
-      borderRadius: "12px",
-      padding: "2rem",
-      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-      border: "1px solid #e5e7eb",
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+    <div
+      style={{
+        background: "#ffffff",
+        borderRadius: "12px",
+        padding: "2rem",
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+        border: "1px solid #e5e7eb",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1.5rem",
+        }}
+      >
         <h3 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#111827" }}>
           Stop List
         </h3>
@@ -196,70 +347,46 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>#</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Customer</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Address</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Bins</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Status</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Actions</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>#</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Customer</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Address</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Bins</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Status</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Operator Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {todayStops.map((stop, index) => {
-                  const status = stop.status || stop.jobStatus || "pending";
-                  const canResolve = status === "pending" || status === "in_progress";
-                  return (
-                    <tr
-                      key={stop.id}
-                      style={{
-                        borderBottom: "1px solid #f3f4f6",
-                        background: stop.needsOperatorReview ? "#fffbeb" : "transparent",
-                      }}
-                    >
-                      <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "700", color: "#3b82f6" }}>
-                        {stop.routeSequence ?? index + 1}
-                      </td>
-                      <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
-                        <div style={{ fontWeight: "600", color: "#111827" }}>
-                          {stop.customerName || stop.customerEmail || "N/A"}
+                {todayStops.map((stop, index) => (
+                  <tr
+                    key={stop.id}
+                    style={{
+                      borderBottom: "1px solid #f3f4f6",
+                      background: stop.needsOperatorReview ? "#fffbeb" : "transparent",
+                    }}
+                  >
+                    <td style={{ padding: "0.75rem", fontWeight: "700", color: "#3b82f6" }}>
+                      {stop.routeSequence ?? index + 1}
+                    </td>
+                    <td style={{ padding: "0.75rem" }}>
+                      <div style={{ fontWeight: "600" }}>
+                        {stop.customerName || stop.customerEmail || "N/A"}
+                      </div>
+                      {stop.flags && stop.flags.length > 0 && (
+                        <div style={{ fontSize: "0.7rem", color: "#dc2626", marginTop: "0.25rem" }}>
+                          {stop.flags.join(", ")}
                         </div>
-                        {stop.flags && stop.flags.length > 0 && (
-                          <div style={{ fontSize: "0.7rem", color: "#dc2626", marginTop: "0.25rem" }}>
-                            {stop.flags.join(", ")}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
-                        {stop.addressLine1 ? `${stop.addressLine1}, ${stop.city}` : "N/A"}
-                      </td>
-                      <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
-                        {stop.binsCount || 1}
-                      </td>
-                      <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
-                        {getStatusBadge(stop)}
-                      </td>
-                      <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
-                        {canResolve && (
-                          <button
-                            onClick={() => openResolveForStop(stop)}
-                            style={{
-                              padding: "0.25rem 0.75rem",
-                              background: stop.needsOperatorReview ? "#f59e0b" : "#3b82f6",
-                              color: "#ffffff",
-                              border: "none",
-                              borderRadius: "4px",
-                              fontSize: "0.75rem",
-                              fontWeight: "600",
-                              cursor: "pointer",
-                            }}
-                          >
-                            {stop.needsOperatorReview ? "Resolve Flag" : "Resolve"}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                      )}
+                    </td>
+                    <td style={{ padding: "0.75rem", color: "#6b7280" }}>
+                      {stop.addressLine1 ? `${stop.addressLine1}, ${stop.city}` : "N/A"}
+                    </td>
+                    <td style={{ padding: "0.75rem", color: "#6b7280" }}>
+                      {stop.binsCount || stop.binCount || 1}
+                    </td>
+                    <td style={{ padding: "0.75rem" }}>{getStatusBadge(stop)}</td>
+                    <td style={{ padding: "0.75rem" }}>{renderActions(stop)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -279,27 +406,27 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Customer</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Date</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Bins</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Status</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Customer</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Date</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Bins</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Status</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {upcomingStops.map((stop) => (
                   <tr key={stop.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600" }}>
+                    <td style={{ padding: "0.75rem", fontWeight: "600" }}>
                       {stop.customerName || stop.customerEmail || "N/A"}
                     </td>
-                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                    <td style={{ padding: "0.75rem", color: "#6b7280" }}>
                       {formatDate(stop.scheduledDate || "")}
                     </td>
-                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
-                      {stop.binsCount || 1}
+                    <td style={{ padding: "0.75rem", color: "#6b7280" }}>
+                      {stop.binsCount || stop.binCount || 1}
                     </td>
-                    <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
-                      {getStatusBadge(stop)}
-                    </td>
+                    <td style={{ padding: "0.75rem" }}>{getStatusBadge(stop)}</td>
+                    <td style={{ padding: "0.75rem" }}>{renderActions(stop)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -312,13 +439,36 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
         isOpen={showResolveModal}
         onClose={() => {
           setShowResolveModal(false);
-          setResolveStop(null);
+          setSelectedStopId(null);
         }}
         employeeId={employeeId}
+        initialStopId={selectedStopId}
         onResolved={() => {
           setShowResolveModal(false);
-          setResolveStop(null);
+          setSelectedStopId(null);
         }}
+      />
+      <AddNoteModal
+        isOpen={showNoteModal}
+        onClose={() => {
+          setShowNoteModal(false);
+          setSelectedStopId(null);
+        }}
+        employeeId={employeeId}
+        initialStopId={selectedStopId}
+        onNoteAdded={() => {
+          setShowNoteModal(false);
+          setSelectedStopId(null);
+        }}
+      />
+      <ViewProofModal
+        isOpen={showPhotosModal}
+        onClose={() => {
+          setShowPhotosModal(false);
+          setSelectedStopId(null);
+        }}
+        employeeId={employeeId}
+        initialStopId={selectedStopId}
       />
     </div>
   );

@@ -570,7 +570,7 @@ export default function EmployeeDetailPage() {
                       employeeLocation={employeeLocation || undefined}
                       refreshKey={refreshKey}
                     />
-                    <StopList employeeId={employeeId} refreshKey={refreshKey} />
+                    <StopList employeeId={employeeId} refreshKey={refreshKey} managerId={managerId} />
                   </div>
                 </div>
               )}
@@ -587,7 +587,7 @@ export default function EmployeeDetailPage() {
               )}
 
               {activeTab === "stops" && (
-                <StopList employeeId={employeeId} refreshKey={refreshKey} />
+                <StopList employeeId={employeeId} refreshKey={refreshKey} managerId={managerId} />
               )}
 
               {activeTab === "training" && (

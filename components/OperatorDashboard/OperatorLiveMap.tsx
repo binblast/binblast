@@ -16,7 +16,6 @@ const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.Map
   ssr: false,
 });
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false });
-const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false });
 const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false });
 const Polyline = dynamic(() => import("react-leaflet").then((mod) => mod.Polyline), { ssr: false });
 const CircleMarker = dynamic(() => import("react-leaflet").then((mod) => mod.CircleMarker), {
@@ -276,8 +275,18 @@ export function OperatorLiveMap({ operatorId }: OperatorLiveMapProps) {
             )}
 
             {stopsWithCoords.map((stop, index) =>
-              Marker ? (
-                <Marker key={stop.id} position={[stop.latitude!, stop.longitude!]}>
+              CircleMarker ? (
+                <CircleMarker
+                  key={stop.id}
+                  center={[stop.latitude!, stop.longitude!]}
+                  radius={9}
+                  pathOptions={{
+                    color: stop.isToday ? "#111827" : "#92400e",
+                    fillColor: stop.isToday ? "#3b82f6" : "#f59e0b",
+                    fillOpacity: 0.9,
+                    weight: 2,
+                  }}
+                >
                   <Popup>
                     <div style={{ minWidth: "180px" }}>
                       <strong>
@@ -294,7 +303,7 @@ export function OperatorLiveMap({ operatorId }: OperatorLiveMapProps) {
                       </div>
                     </div>
                   </Popup>
-                </Marker>
+                </CircleMarker>
               ) : null
             )}
 

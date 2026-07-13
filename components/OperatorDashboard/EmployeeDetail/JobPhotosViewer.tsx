@@ -28,6 +28,8 @@ export function JobPhotosViewer({ cleaningId }: JobPhotosViewerProps) {
 
   useEffect(() => {
     loadPhotos();
+    const interval = window.setInterval(loadPhotos, 15000);
+    return () => window.clearInterval(interval);
   }, [cleaningId]);
 
   const loadPhotos = async () => {

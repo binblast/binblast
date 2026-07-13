@@ -25,6 +25,7 @@ interface OperatorJobResolveModalProps {
   onClose: () => void;
   employeeId: string;
   onResolved: () => void;
+  initialStopId?: string | null;
 }
 
 const RESOLUTION_PRESETS: Array<{
@@ -78,6 +79,7 @@ export function OperatorJobResolveModal({
   onClose,
   employeeId,
   onResolved,
+  initialStopId = null,
 }: OperatorJobResolveModalProps) {
   const [stops, setStops] = useState<Stop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,11 +92,22 @@ export function OperatorJobResolveModal({
   useEffect(() => {
     if (isOpen) {
       loadStops();
-      setSelectedStop(null);
+      if (!initialStopId) {
+        setSelectedStop(null);
+      }
       setNotes("");
       setError(null);
     }
-  }, [isOpen, employeeId]);
+  }, [isOpen, employeeId, initialStopId]);
+
+  useEffect(() => {
+    if (!isOpen || !initialStopId || stops.length === 0) return;
+    const match = stops.find((stop) => stop.id === initialStopId);
+    if (match) {
+      setSelectedStop(match);
+      setBinCount(match.binCount ?? match.binsCount ?? 1);
+    }
+  }, [isOpen, initialStopId, stops]);
 
   const loadStops = async () => {
     try {

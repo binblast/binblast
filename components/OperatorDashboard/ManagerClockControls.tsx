@@ -87,24 +87,26 @@ export function ManagerClockControls({
 
   return (
     <div onClick={(event) => event.stopPropagation()}>
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: compact ? "0.5rem" : "0.75rem" }}>
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: compact ? "0.5rem" : "0" }}>
         {!isClockedIn ? (
           <button
             type="button"
             onClick={handleClockIn}
             disabled={working !== null}
             style={{
-              padding: compact ? "0.4rem 0.75rem" : "0.5rem 0.875rem",
+              padding: compact ? "0.5rem 0.875rem" : "0.625rem 1rem",
               background: working === "in" ? "#86efac" : "#16a34a",
               color: "#ffffff",
               border: "none",
               borderRadius: "8px",
-              fontSize: compact ? "0.75rem" : "0.8125rem",
+              fontSize: compact ? "0.75rem" : "0.875rem",
               fontWeight: "600",
               cursor: working !== null ? "not-allowed" : "pointer",
+              width: compact ? "auto" : "100%",
+              minHeight: "44px",
             }}
           >
-            {working === "in" ? "Clocking In..." : "Clock In Employee"}
+            {working === "in" ? "Clocking In..." : "Clock In"}
           </button>
         ) : (
           <button
@@ -112,17 +114,19 @@ export function ManagerClockControls({
             onClick={handleClockOut}
             disabled={working !== null}
             style={{
-              padding: compact ? "0.4rem 0.75rem" : "0.5rem 0.875rem",
+              padding: compact ? "0.5rem 0.875rem" : "0.625rem 1rem",
               background: working === "out" ? "#fca5a5" : "#dc2626",
               color: "#ffffff",
               border: "none",
               borderRadius: "8px",
-              fontSize: compact ? "0.75rem" : "0.8125rem",
+              fontSize: compact ? "0.75rem" : "0.875rem",
               fontWeight: "600",
               cursor: working !== null ? "not-allowed" : "pointer",
+              width: compact ? "auto" : "100%",
+              minHeight: "44px",
             }}
           >
-            {working === "out" ? "Clocking Out..." : "Clock Out Employee"}
+            {working === "out" ? "Clocking Out..." : "Clock Out"}
           </button>
         )}
       </div>

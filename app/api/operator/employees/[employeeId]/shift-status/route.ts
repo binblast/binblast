@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { getTodayDateString } from "@/lib/employee-utils";
+import { getTodayDateString, getActiveClockIn, parseFirestoreTimestamp } from "@/lib/employee-utils";
 
 export async function GET(
   req: NextRequest,
@@ -27,55 +27,12 @@ export async function GET(
     }
 
     const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs, orderBy, limit } = firestore;
+    const { collection, query, where, getDocs } = firestore;
 
     const today = getTodayDateString();
 
-    // Get current clock-in status
-    const clockInsRef = collection(db, "clockIns");
-    let clockInData = null;
-    
-    try {
-      // Try query with orderBy first (requires index)
-      const activeClockInQuery = query(
-        clockInsRef,
-        where("employeeId", "==", employeeId),
-        where("date", "==", today),
-        where("isActive", "==", true),
-        orderBy("clockInTime", "desc"),
-        limit(1)
-      );
-      const clockInSnapshot = await getDocs(activeClockInQuery);
-      clockInData = clockInSnapshot.empty ? null : clockInSnapshot.docs[0].data();
-    } catch (error: any) {
-      // If orderBy fails (missing index), try without orderBy
-      console.warn("OrderBy query failed, trying without orderBy:", error.message);
-      try {
-        const activeClockInQuery = query(
-          clockInsRef,
-          where("employeeId", "==", employeeId),
-          where("date", "==", today),
-          where("isActive", "==", true)
-        );
-        const clockInSnapshot = await getDocs(activeClockInQuery);
-        if (!clockInSnapshot.empty) {
-          // Get the most recent one manually
-          const docs = clockInSnapshot.docs;
-          let latestDoc = docs[0];
-          for (const doc of docs) {
-            const docTime = doc.data().clockInTime?.toDate?.() || new Date(doc.data().clockInTime || 0);
-            const latestTime = latestDoc.data().clockInTime?.toDate?.() || new Date(latestDoc.data().clockInTime || 0);
-            if (docTime > latestTime) {
-              latestDoc = doc;
-            }
-          }
-          clockInData = latestDoc.data();
-        }
-      } catch (fallbackError) {
-        console.error("Error getting clock-in data:", fallbackError);
-        // Continue with null clockInData
-      }
-    }
+    const activeClockIn = await getActiveClockIn(employeeId);
+    const clockInData = activeClockIn?.isActive ? activeClockIn : null;
 
     // Get today's assigned stops
     const cleaningsRef = collection(db, "scheduledCleanings");
@@ -124,11 +81,8 @@ export async function GET(
       shiftStatus = "clocked_in";
       shiftStartTime = clockInData.clockInTime;
       
-      // Calculate expected end time (8 hours from clock-in)
       if (clockInData.clockInTime) {
-        const clockInDate = clockInData.clockInTime.toDate 
-          ? clockInData.clockInTime.toDate() 
-          : new Date(clockInData.clockInTime);
+        const clockInDate = parseFirestoreTimestamp(clockInData.clockInTime) ?? new Date();
         const expectedEnd = new Date(clockInDate);
         expectedEnd.setHours(expectedEnd.getHours() + 8);
         expectedEndTime = expectedEnd;

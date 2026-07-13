@@ -13,7 +13,7 @@ if (typeof window !== "undefined") {
 // Dynamically import Leaflet to avoid SSR issues
 const MapContainer = dynamic(() => import("react-leaflet").then(mod => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import("react-leaflet").then(mod => mod.TileLayer), { ssr: false });
-const Marker = dynamic(() => import("react-leaflet").then(mod => mod.Marker), { ssr: false });
+const CircleMarker = dynamic(() => import("react-leaflet").then(mod => mod.CircleMarker), { ssr: false });
 const Popup = dynamic(() => import("react-leaflet").then(mod => mod.Popup), { ssr: false });
 const Polyline = dynamic(() => import("react-leaflet").then(mod => mod.Polyline), { ssr: false });
 
@@ -30,6 +30,8 @@ interface Stop {
   customerName?: string;
   scheduledTime?: string;
   routeSequence?: number;
+  status?: string;
+  jobStatus?: string;
 }
 
 interface RouteMapProps {
@@ -225,6 +227,14 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
     );
   };
 
+  const getStopColor = (stop: Stop) => {
+    const status = stop.status || stop.jobStatus || "pending";
+    if (status === "completed") return "#16a34a";
+    if (status === "in_progress") return "#3b82f6";
+    if (status === "cancelled") return "#9ca3af";
+    return "#f59e0b";
+  };
+
   const formatAddress = (stop: Stop): string => {
     return buildStopAddress(stop) || "Address not available";
   };
@@ -256,13 +266,13 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
       border: "1px solid #e5e7eb",
     }}>
       <div style={{ marginBottom: "1rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-          <h3 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#111827" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
+          <h3 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#111827", margin: 0 }}>
             Route Map
           </h3>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
             {stopsWithCoords.length > 0 && (
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem", color: "#6b7280", cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem", color: "#6b7280", cursor: "pointer", whiteSpace: "nowrap" }}>
                 <input
                   type="checkbox"
                   checked={showRouteLines}
@@ -284,7 +294,7 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
                 fontSize: "0.875rem",
                 fontWeight: "600",
                 cursor: optimizing || geocoding || stopsWithCoords.length === 0 ? "not-allowed" : "pointer",
-                transition: "opacity 0.2s",
+                whiteSpace: "nowrap",
               }}
             >
               {optimizing ? "Optimizing..." : "Optimize Route"}
@@ -306,7 +316,7 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
       </div>
 
       <div style={{ height: "500px", borderRadius: "8px", overflow: "hidden", border: "1px solid #e5e7eb", position: "relative" }}>
-        {typeof window !== "undefined" && MapContainer && TileLayer && Marker && Popup ? (
+        {typeof window !== "undefined" && MapContainer && TileLayer && Popup ? (
           <MapContainer
             center={mapCenter}
             zoom={mapZoom}
@@ -326,45 +336,71 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
               />
             )}
 
-            {employeeLocation && (
-              <Marker position={[employeeLocation.latitude, employeeLocation.longitude]}>
+            {employeeLocation && CircleMarker && (
+              <CircleMarker
+                center={[employeeLocation.latitude, employeeLocation.longitude]}
+                radius={11}
+                pathOptions={{
+                  color: "#111827",
+                  fillColor: "#16a34a",
+                  fillOpacity: 0.95,
+                  weight: 3,
+                }}
+              >
                 <Popup>
                   <div>
                     <strong>Employee Location</strong>
                   </div>
                 </Popup>
-              </Marker>
+              </CircleMarker>
             )}
 
-            {stopsWithCoords.map((stop, index) => (
-              <Marker key={stop.id} position={[stop.latitude!, stop.longitude!]}>
-                <Popup>
-                  <div style={{ minWidth: "200px" }}>
-                    <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: "0.5rem", color: "#111827" }}>
-                      Stop {stop.routeSequence ?? index + 1}
-                    </div>
-                    {stop.customerName && (
+            {stopsWithCoords.map((stop, index) => {
+              const color = getStopColor(stop);
+              const order = stop.routeSequence ?? index + 1;
+
+              if (!CircleMarker) return null;
+
+              return (
+                <CircleMarker
+                  key={stop.id}
+                  center={[stop.latitude!, stop.longitude!]}
+                  radius={10}
+                  pathOptions={{
+                    color: "#111827",
+                    fillColor: color,
+                    fillOpacity: 0.92,
+                    weight: 2,
+                  }}
+                >
+                  <Popup>
+                    <div style={{ minWidth: "200px" }}>
+                      <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: "0.5rem", color: "#111827" }}>
+                        Stop {order}
+                      </div>
+                      {stop.customerName && (
+                        <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
+                          <strong>Customer:</strong> {stop.customerName}
+                        </div>
+                      )}
                       <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
-                        <strong>Customer:</strong> {stop.customerName}
+                        <strong>Address:</strong> {formatAddress(stop)}
                       </div>
-                    )}
-                    <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
-                      <strong>Address:</strong> {formatAddress(stop)}
+                      {stop.scheduledTime && (
+                        <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
+                          <strong>Time:</strong> {stop.scheduledTime}
+                        </div>
+                      )}
+                      {stop.county && (
+                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.5rem" }}>
+                          {stop.county}
+                        </div>
+                      )}
                     </div>
-                    {stop.scheduledTime && (
-                      <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
-                        <strong>Time:</strong> {stop.scheduledTime}
-                      </div>
-                    )}
-                    {stop.county && (
-                      <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.5rem" }}>
-                        {stop.county}
-                      </div>
-                    )}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
+                  </Popup>
+                </CircleMarker>
+              );
+            })}
           </MapContainer>
         ) : (
           <div style={{

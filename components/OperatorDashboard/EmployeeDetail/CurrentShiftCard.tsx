@@ -6,6 +6,7 @@ import { OperatorJobResolveModal } from "./OperatorJobResolveModal";
 import { AddNoteModal } from "./AddNoteModal";
 import { ViewProofModal } from "./ViewProofModal";
 import { ManagerClockControls } from "@/components/OperatorDashboard/ManagerClockControls";
+import { parseFirestoreTimestamp } from "@/lib/employee-utils";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 
@@ -49,6 +50,7 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [showViewProofModal, setShowViewProofModal] = useState(false);
+  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
 
   useEffect(() => {
     loadShiftStatus();
@@ -148,24 +150,27 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
     loadEarnings();
   };
 
-  const formatTime = (timestamp: any): string => {
-    if (!timestamp) return "N/A";
-    try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-    } catch {
-      return "N/A";
-    }
+  const formatTime = (timestamp: unknown): string => {
+    const date = parseFirestoreTimestamp(timestamp);
+    if (!date) return "N/A";
+    return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   };
 
-  const formatCompletionTime = (timestamp: any): string => {
-    if (!timestamp) return "N/A";
-    try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-    } catch {
-      return "N/A";
-    }
+  const formatCompletionTime = (timestamp: unknown): string => {
+    const date = parseFirestoreTimestamp(timestamp);
+    if (!date) return "N/A";
+    return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const actionButtonStyle = {
+    padding: "0.625rem 1rem",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "0.875rem",
+    fontWeight: "600" as const,
+    cursor: "pointer",
+    width: "100%",
+    minHeight: "44px",
   };
 
   if (loading) {
@@ -380,91 +385,85 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
         </div>
       </div>
 
-      <ManagerClockControls
-        employeeId={employeeId}
-        employeeName={employeeName}
-        isClockedIn={displayStatus.shiftStatus === "clocked_in"}
-        managerId={managerId}
-        managerEmail={managerEmail}
-        managerRole={managerRole}
-        onUpdated={handleRefresh}
-      />
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: "0.75rem",
+          marginTop: "0.5rem",
+        }}
+      >
+        <div style={{ gridColumn: "1 / -1" }}>
+          <ManagerClockControls
+            employeeId={employeeId}
+            employeeName={employeeName}
+            isClockedIn={displayStatus.shiftStatus === "clocked_in"}
+            managerId={managerId}
+            managerEmail={managerEmail}
+            managerRole={managerRole}
+            onUpdated={handleRefresh}
+          />
+        </div>
 
-      {/* Action Buttons */}
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
         <button
-          onClick={() => setShowResolveModal(true)}
-          style={{
-            padding: "0.5rem 1rem",
-            background: "#16a34a",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: "6px",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            cursor: "pointer",
-            transition: "opacity 0.2s",
+          onClick={() => {
+            setSelectedStopId(null);
+            setShowResolveModal(true);
           }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+          style={{ ...actionButtonStyle, background: "#16a34a", color: "#ffffff" }}
         >
           Resolve Job Issues
         </button>
+
         <button
-          onClick={() => setShowAddNoteModal(true)}
-          style={{
-            padding: "0.5rem 1rem",
-            background: "#3b82f6",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: "6px",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            cursor: "pointer",
-            transition: "opacity 0.2s",
+          onClick={() => {
+            setSelectedStopId(null);
+            setShowViewProofModal(true);
           }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
-        >
-          Add Note
-        </button>
-        <button
-          onClick={() => setShowViewProofModal(true)}
-          style={{
-            padding: "0.5rem 1rem",
-            background: "#6b7280",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: "6px",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            cursor: "pointer",
-            transition: "opacity 0.2s",
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+          style={{ ...actionButtonStyle, background: "#6b7280", color: "#ffffff" }}
         >
           View Cleaning Photos
         </button>
+
+        <button
+          onClick={() => {
+            setSelectedStopId(null);
+            setShowAddNoteModal(true);
+          }}
+          style={{ ...actionButtonStyle, background: "#3b82f6", color: "#ffffff" }}
+        >
+          Add Note
+        </button>
       </div>
 
-      {/* Modals */}
       <OperatorJobResolveModal
         isOpen={showResolveModal}
-        onClose={() => setShowResolveModal(false)}
+        onClose={() => {
+          setShowResolveModal(false);
+          setSelectedStopId(null);
+        }}
         employeeId={employeeId}
+        initialStopId={selectedStopId}
         onResolved={handleRefresh}
       />
       <AddNoteModal
         isOpen={showAddNoteModal}
-        onClose={() => setShowAddNoteModal(false)}
+        onClose={() => {
+          setShowAddNoteModal(false);
+          setSelectedStopId(null);
+        }}
         employeeId={employeeId}
+        initialStopId={selectedStopId}
         onNoteAdded={handleRefresh}
       />
       <ViewProofModal
         isOpen={showViewProofModal}
-        onClose={() => setShowViewProofModal(false)}
+        onClose={() => {
+          setShowViewProofModal(false);
+          setSelectedStopId(null);
+        }}
         employeeId={employeeId}
+        initialStopId={selectedStopId}
       />
     </div>
   );

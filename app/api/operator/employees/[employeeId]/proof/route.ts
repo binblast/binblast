@@ -2,8 +2,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { getTodayDateString } from "@/lib/employee-utils";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
+function isCompletedCleaning(data: Record<string, unknown>): boolean {
+  return data.status === "completed" || data.jobStatus === "completed";
+}
 
 export async function GET(
   req: NextRequest,
@@ -13,6 +18,7 @@ export async function GET(
     const employeeId = params.employeeId;
     const searchParams = req.nextUrl.searchParams;
     const cleaningId = searchParams.get("cleaningId");
+    const todayOnly = searchParams.get("todayOnly") !== "0";
 
     if (!employeeId) {
       return NextResponse.json(
@@ -30,10 +36,10 @@ export async function GET(
     }
 
     const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs, orderBy } = firestore;
+    const { collection, query, where, getDocs } = firestore;
+    const today = getTodayDateString();
 
     if (cleaningId) {
-      // Get proof for specific cleaning
       const { doc, getDoc } = firestore;
       const cleaningRef = doc(db, "scheduledCleanings", cleaningId);
       const cleaningSnap = await getDoc(cleaningRef);
@@ -46,50 +52,69 @@ export async function GET(
       }
 
       const cleaningData = cleaningSnap.data();
-      
+
       return NextResponse.json({
         proof: {
+          cleaningId,
           completionPhotoUrl: cleaningData.completionPhotoUrl || null,
+          insidePhotoUrl: cleaningData.insidePhotoUrl || null,
+          outsidePhotoUrl: cleaningData.outsidePhotoUrl || null,
           employeeNotes: cleaningData.employeeNotes || null,
           operatorNotes: cleaningData.operatorNotes || null,
           flags: cleaningData.flags || [],
-          completedAt: cleaningData.completedAt || null,
+          completedAt: cleaningData.completedAt || cleaningData.operatorResolvedAt || null,
+          customerName: cleaningData.customerName || cleaningData.userEmail || null,
+          addressLine1: cleaningData.addressLine1 || null,
+          city: cleaningData.city || null,
+          operatorSkipPhotos: cleaningData.operatorSkipPhotos === true,
         },
       });
-    } else {
-      // Get all proof for employee's completed stops
-      const cleaningsRef = collection(db, "scheduledCleanings");
-      const completedQuery = query(
-        cleaningsRef,
-        where("assignedEmployeeId", "==", employeeId),
-        where("status", "==", "completed"),
-        orderBy("completedAt", "desc")
-      );
+    }
 
-      const snapshot = await getDocs(completedQuery);
-      const proofs = snapshot.docs.map(doc => {
-        const data = doc.data();
+    const cleaningsRef = collection(db, "scheduledCleanings");
+    const assignedQuery = query(
+      cleaningsRef,
+      where("assignedEmployeeId", "==", employeeId)
+    );
+
+    const snapshot = await getDocs(assignedQuery);
+    const proofs = snapshot.docs
+      .map((docSnap) => {
+        const data = docSnap.data();
         return {
-          cleaningId: doc.id,
+          cleaningId: docSnap.id,
           completionPhotoUrl: data.completionPhotoUrl || null,
+          insidePhotoUrl: data.insidePhotoUrl || null,
+          outsidePhotoUrl: data.outsidePhotoUrl || null,
           employeeNotes: data.employeeNotes || null,
           operatorNotes: data.operatorNotes || null,
           flags: data.flags || [],
-          completedAt: data.completedAt || null,
+          completedAt: data.completedAt || data.operatorResolvedAt || null,
           scheduledDate: data.scheduledDate || null,
+          scheduledTime: data.scheduledTime || null,
+          customerName: data.customerName || data.userEmail || null,
+          addressLine1: data.addressLine1 || null,
+          addressLine2: data.addressLine2 || null,
+          city: data.city || null,
+          state: data.state || null,
+          zipCode: data.zipCode || null,
+          status: data.status || data.jobStatus || null,
+          operatorSkipPhotos: data.operatorSkipPhotos === true,
         };
+      })
+      .filter((proof) => isCompletedCleaning(proof as Record<string, unknown>))
+      .filter((proof) => (todayOnly ? proof.scheduledDate === today : true))
+      .sort((a, b) => {
+        const aTime = a.completedAt?.seconds || a.completedAt?.toDate?.()?.getTime?.() || 0;
+        const bTime = b.completedAt?.seconds || b.completedAt?.toDate?.()?.getTime?.() || 0;
+        return Number(bTime) - Number(aTime);
       });
 
-      return NextResponse.json({
-        proofs,
-      });
-    }
-  } catch (error: any) {
+    return NextResponse.json({ proofs });
+  } catch (error: unknown) {
     console.error("Error getting proof:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to get proof" },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Failed to get proof";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -109,7 +134,6 @@ export async function POST(
       );
     }
 
-    // Require photo unless operator override
     if (!photoUrl && !isOperatorOverride) {
       return NextResponse.json(
         { error: "Photo is required unless operator override is provided" },
@@ -138,7 +162,7 @@ export async function POST(
       );
     }
 
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       updatedAt: serverTimestamp(),
     };
 
@@ -161,12 +185,9 @@ export async function POST(
       success: true,
       message: "Proof uploaded successfully",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error uploading proof:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to upload proof" },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Failed to upload proof";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

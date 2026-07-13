@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { getTodayDateString, getEmployeeData, isPartnerEmployee } from "@/lib/employee-utils";
+import { getTodayDateString, getEmployeeData, isPartnerEmployee, parseFirestoreTimestamp } from "@/lib/employee-utils";
 
 export async function GET(
   req: NextRequest,
@@ -71,15 +71,12 @@ export async function GET(
     // For backward compatibility, also check if insidePhotoUrl and outsidePhotoUrl exist
     const eligibleJobs = completedSnapshot.docs.filter(doc => {
       const data = doc.data();
-      // New field: hasRequiredPhotos must be true
-      if (data.hasRequiredPhotos === true) {
+      if (data.hasRequiredPhotos === true || data.operatorSkipPhotos === true) {
         return true;
       }
-      // Backward compatibility: check if both photo URLs exist
       if (data.insidePhotoUrl && data.outsidePhotoUrl) {
         return true;
       }
-      // No photos = no payment eligibility
       return false;
     });
 
@@ -93,9 +90,9 @@ export async function GET(
         state: data.state || "",
         zipCode: data.zipCode || "",
         customerName: data.customerName || data.userEmail || "N/A",
-        completedAt: data.completedAt,
+        completedAt: data.completedAt || data.operatorResolvedAt || null,
         earnings: payRatePerJob,
-        hasRequiredPhotos: data.hasRequiredPhotos || false,
+        hasRequiredPhotos: data.hasRequiredPhotos || data.operatorSkipPhotos || false,
       };
     });
 

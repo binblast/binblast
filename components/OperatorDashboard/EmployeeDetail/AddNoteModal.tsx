@@ -21,6 +21,7 @@ interface AddNoteModalProps {
   onClose: () => void;
   employeeId: string;
   onNoteAdded: () => void;
+  initialStopId?: string | null;
 }
 
 export function AddNoteModal({
@@ -28,6 +29,7 @@ export function AddNoteModal({
   onClose,
   employeeId,
   onNoteAdded,
+  initialStopId = null,
 }: AddNoteModalProps) {
   const [stops, setStops] = useState<Stop[]>([]);
   const [selectedStopId, setSelectedStopId] = useState<string>("");
@@ -39,11 +41,19 @@ export function AddNoteModal({
   useEffect(() => {
     if (isOpen) {
       loadStops();
-      setSelectedStopId("");
       setNote("");
       setError(null);
     }
-  }, [isOpen, employeeId]);
+  }, [isOpen, employeeId, initialStopId]);
+
+  useEffect(() => {
+    if (!isOpen || !initialStopId || stops.length === 0) return;
+    const match = stops.find((stop) => stop.id === initialStopId);
+    if (match) {
+      setSelectedStopId(match.id);
+      setNote(match.operatorNotes || "");
+    }
+  }, [isOpen, initialStopId, stops]);
 
   const loadStops = async () => {
     try {
