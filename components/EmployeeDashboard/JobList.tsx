@@ -69,7 +69,19 @@ function isPayEligible(job: Job): boolean {
 }
 
 function getJobEarnings(job: Job, settings: CompensationSettings): number {
-  return getDisplayJobEarnings(job as unknown as Record<string, unknown>, settings);
+  if (!isPayEligible(job)) return 0;
+
+  const bins = Math.max(1, Number(job.binCount ?? job.binsCount ?? 1));
+  return getDisplayJobEarnings(
+    {
+      ...(job as unknown as Record<string, unknown>),
+      binCount: bins,
+      binsCount: bins,
+      jobStatus: "completed",
+      status: "completed",
+    },
+    settings
+  );
 }
 
 export function JobList({

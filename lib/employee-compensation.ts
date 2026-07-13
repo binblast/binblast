@@ -375,38 +375,24 @@ export function getJobCompensationAmount(
   data: Record<string, unknown>,
   settings: CompensationSettings = DEFAULT_COMPENSATION_SETTINGS
 ): number {
-  if (!isJobEligibleForCompensation(data, settings)) {
+  const normalized = {
+    ...data,
+    jobStatus: data.jobStatus || "completed",
+    status: data.status || "completed",
+  };
+
+  if (!isJobEligibleForCompensation(normalized, settings)) {
     return 0;
   }
 
-  const stored = Number(data.employeeCompensationAmount);
-  if (Number.isFinite(stored) && stored >= 0 && data.employeeCompensationLocked === true) {
-    return Math.round(stored * 100) / 100;
-  }
-
-  return calculateJobCompensationAmount(data, settings);
+  return calculateJobCompensationAmount(normalized, settings);
 }
 
 export function getDisplayJobEarnings(
   data: Record<string, unknown>,
   settings: CompensationSettings = DEFAULT_COMPENSATION_SETTINGS
 ): number {
-  const stored = Number(data.employeeCompensationAmount);
-  if (Number.isFinite(stored) && stored >= 0) {
-    return Math.round(stored * 100) / 100;
-  }
-
-  const completedData = {
-    ...data,
-    jobStatus: data.jobStatus || "completed",
-    status: data.status || "completed",
-  };
-
-  if (!isJobEligibleForCompensation(completedData, settings)) {
-    return 0;
-  }
-
-  return calculateJobCompensationAmount(completedData, settings);
+  return getJobCompensationAmount(data, settings);
 }
 
 export function buildCompensationPreview(
