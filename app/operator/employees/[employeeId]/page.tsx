@@ -102,11 +102,14 @@ export default function EmployeeDetailPage() {
       unsubStops = onSnapshot(
         query(
           collection(db, "scheduledCleanings"),
-          where("assignedEmployeeId", "==", employeeId),
-          where("scheduledDate", "==", today)
+          where("assignedEmployeeId", "==", employeeId)
         ),
         (snapshot) => {
-          const todayStops = snapshot.docs
+          const nextWeek = new Date();
+          nextWeek.setDate(nextWeek.getDate() + 7);
+          const endDate = `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, "0")}-${String(nextWeek.getDate()).padStart(2, "0")}`;
+
+          const routeStops = snapshot.docs
             .map((docSnap) => ({
               id: docSnap.id,
               ...docSnap.data(),
@@ -114,14 +117,31 @@ export default function EmployeeDetailPage() {
               id: string;
               routeSequence?: number;
               scheduledTime?: string;
+              scheduledDate?: string;
+              status?: string;
+              jobStatus?: string;
             }>;
-          todayStops.sort((a, b) => {
+
+          const filteredStops = routeStops.filter((stop) => {
+            const status = stop.status || stop.jobStatus;
+            return (
+              stop.scheduledDate &&
+              stop.scheduledDate >= today &&
+              stop.scheduledDate <= endDate &&
+              status !== "completed" &&
+              status !== "cancelled"
+            );
+          });
+
+          filteredStops.sort((a, b) => {
+            const dateCompare = (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
+            if (dateCompare !== 0) return dateCompare;
             if (typeof a.routeSequence === "number" && typeof b.routeSequence === "number") {
               return a.routeSequence - b.routeSequence;
             }
             return (a.scheduledTime || "").localeCompare(b.scheduledTime || "");
           });
-          setStops(todayStops);
+          setStops(filteredStops);
         }
       );
     }

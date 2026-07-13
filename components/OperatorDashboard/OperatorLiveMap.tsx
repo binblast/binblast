@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getTodayDateString } from "@/lib/employee-utils";
-import { parseGeoPoint } from "@/lib/geo-utils";
 import { hasStopCoordinates } from "@/lib/stop-coordinates";
 
 if (typeof window !== "undefined") {
@@ -27,8 +26,9 @@ const CircleMarker = dynamic(() => import("react-leaflet").then((mod) => mod.Cir
 type FleetEmployee = {
   id: string;
   name: string;
-  latitude?: number;
-  longitude?: number;
+  email?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   isClockedIn: boolean;
 };
 
@@ -44,6 +44,17 @@ type FleetStop = {
   jobStatus?: string;
   status?: string;
   routeSequence?: number;
+  scheduledDate?: string;
+  isToday?: boolean;
+  isUpcoming?: boolean;
+};
+
+type FleetStats = {
+  totalEmployees: number;
+  clockedIn: number;
+  todayActiveStops: number;
+  upcomingActiveStops: number;
+  totalActiveStops: number;
 };
 
 interface OperatorLiveMapProps {
@@ -55,15 +66,44 @@ export function OperatorLiveMap({ operatorId }: OperatorLiveMapProps) {
   const [mapReady, setMapReady] = useState(false);
   const [employees, setEmployees] = useState<FleetEmployee[]>([]);
   const [stops, setStops] = useState<FleetStop[]>([]);
+  const [stats, setStats] = useState<FleetStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [mapView, setMapView] = useState<"all" | "today" | "upcoming">("all");
+
+  const loadFleetData = useCallback(async () => {
+    try {
+      const response = await fetch("/api/operator/fleet/live", { cache: "no-store" });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to load fleet data");
+      }
+
+      const data = await response.json();
+      setEmployees(data.employees || []);
+      setStops(data.stops || []);
+      setStats(data.stats || null);
+      setError(null);
+      setLastSync(new Date());
+    } catch (loadError: unknown) {
+      const message = loadError instanceof Error ? loadError.message : "Failed to load fleet data";
+      console.error("[OperatorLiveMap]", message);
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     setMapReady(true);
   }, []);
 
   useEffect(() => {
+    loadFleetData();
+
     let unsubscribers: Array<() => void> = [];
+    const pollInterval = window.setInterval(loadFleetData, 20000);
 
     async function setupListeners() {
       const db = await getDbInstance();
@@ -73,67 +113,45 @@ export function OperatorLiveMap({ operatorId }: OperatorLiveMapProps) {
       const { collection, query, where, onSnapshot } = firestore;
       const today = getTodayDateString();
 
-      const employeesQuery = query(collection(db, "users"), where("role", "==", "employee"));
+      const clockInsQuery = query(collection(db, "clockIns"), where("date", "==", today));
       const cleaningsQuery = query(
         collection(db, "scheduledCleanings"),
-        where("scheduledDate", "==", today)
+        where("scheduledDate", ">=", today)
       );
 
-      const unsubEmployees = onSnapshot(employeesQuery, (snapshot) => {
-        const fleet = snapshot.docs.map((docSnap) => {
-          const data = docSnap.data();
-          const location = parseGeoPoint(data.lastKnownLocation);
-          return {
-            id: docSnap.id,
-            name: `${data.firstName || ""} ${data.lastName || ""}`.trim() || data.email || "Employee",
-            latitude: location?.latitude,
-            longitude: location?.longitude,
-            isClockedIn: data.isClockedIn === true || data.shiftStatus === "clocked_in",
-          };
-        });
-        setEmployees(fleet);
-        setLastSync(new Date());
-        setLoading(false);
-      });
+      const unsubClockIns = onSnapshot(
+        clockInsQuery,
+        () => loadFleetData(),
+        () => loadFleetData()
+      );
+      const unsubCleanings = onSnapshot(
+        cleaningsQuery,
+        () => loadFleetData(),
+        () => loadFleetData()
+      );
 
-      const unsubCleanings = onSnapshot(cleaningsQuery, (snapshot) => {
-        const todayStops = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        })) as FleetStop[];
-
-        const activeStops = todayStops.filter((stop) => {
-          const status = stop.status || stop.jobStatus;
-          return status !== "completed" && status !== "cancelled";
-        });
-
-        activeStops.sort((a, b) => {
-          if (typeof a.routeSequence === "number" && typeof b.routeSequence === "number") {
-            return a.routeSequence - b.routeSequence;
-          }
-          return 0;
-        });
-
-        setStops(activeStops);
-        setLastSync(new Date());
-      });
-
-      unsubscribers = [unsubEmployees, unsubCleanings];
+      unsubscribers = [unsubClockIns, unsubCleanings];
     }
 
-    setupListeners().catch((error) => {
-      console.error("[OperatorLiveMap] listener setup failed:", error);
-      setLoading(false);
+    setupListeners().catch((listenerError) => {
+      console.warn("[OperatorLiveMap] realtime listener unavailable, using polling only:", listenerError);
     });
 
     return () => {
       unsubscribers.forEach((unsub) => unsub());
+      window.clearInterval(pollInterval);
     };
-  }, [operatorId]);
+  }, [loadFleetData, operatorId]);
+
+  const visibleStops = useMemo(() => {
+    if (mapView === "today") return stops.filter((stop) => stop.isToday);
+    if (mapView === "upcoming") return stops.filter((stop) => stop.isUpcoming);
+    return stops;
+  }, [stops, mapView]);
 
   const stopsWithCoords = useMemo(
-    () => stops.filter((stop) => hasStopCoordinates(stop)),
-    [stops]
+    () => visibleStops.filter((stop) => hasStopCoordinates(stop)),
+    [visibleStops]
   );
 
   const mapCenter = useMemo((): [number, number] => {
@@ -188,23 +206,53 @@ export function OperatorLiveMap({ operatorId }: OperatorLiveMapProps) {
         border: "1px solid #e5e7eb",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
         <div>
           <h3 style={{ fontSize: "1.25rem", fontWeight: "700", color: "#111827" }}>Live Fleet Map</h3>
           <p style={{ fontSize: "0.8125rem", color: "#6b7280" }}>
-            Real-time employee locations and today&apos;s routes
+            Employee locations and active routes (today + next 7 days)
             {lastSync ? ` · synced ${lastSync.toLocaleTimeString()}` : ""}
           </p>
         </div>
-        <div style={{ display: "flex", gap: "1rem", fontSize: "0.75rem", color: "#374151" }}>
+        <div style={{ display: "flex", gap: "1rem", fontSize: "0.75rem", color: "#374151", flexWrap: "wrap" }}>
           <span>
-            <strong>{employees.filter((e) => e.isClockedIn).length}</strong> clocked in
+            <strong>{stats?.clockedIn ?? employees.filter((e) => e.isClockedIn).length}</strong> clocked in
           </span>
           <span>
-            <strong>{stops.length}</strong> active stops
+            <strong>{stats?.todayActiveStops ?? stops.filter((s) => s.isToday).length}</strong> today
+          </span>
+          <span>
+            <strong>{stats?.upcomingActiveStops ?? stops.filter((s) => s.isUpcoming).length}</strong> upcoming
           </span>
         </div>
       </div>
+
+      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+        {(["all", "today", "upcoming"] as const).map((view) => (
+          <button
+            key={view}
+            onClick={() => setMapView(view)}
+            style={{
+              padding: "0.375rem 0.75rem",
+              borderRadius: "6px",
+              border: mapView === view ? "2px solid #16a34a" : "1px solid #e5e7eb",
+              background: mapView === view ? "#ecfdf5" : "#ffffff",
+              color: mapView === view ? "#065f46" : "#374151",
+              fontSize: "0.75rem",
+              fontWeight: "600",
+              cursor: "pointer",
+            }}
+          >
+            {view === "all" ? "All Routes" : view === "today" ? "Today" : "Upcoming"}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <div style={{ padding: "0.75rem", background: "#fee2e2", color: "#991b1b", borderRadius: "6px", fontSize: "0.875rem", marginBottom: "0.75rem" }}>
+          {error}
+        </div>
+      )}
 
       <div style={{ height: "480px", borderRadius: "8px", overflow: "hidden", border: "1px solid #e5e7eb" }}>
         {MapContainer && (
@@ -240,6 +288,9 @@ export function OperatorLiveMap({ operatorId }: OperatorLiveMapProps) {
                       </div>
                       <div style={{ fontSize: "0.75rem", marginTop: "0.25rem" }}>
                         {stop.assignedEmployeeName || "Unassigned"} · {stop.jobStatus || stop.status}
+                      </div>
+                      <div style={{ fontSize: "0.75rem", color: stop.isToday ? "#16a34a" : "#f59e0b", fontWeight: "600" }}>
+                        {stop.isToday ? "Today" : stop.scheduledDate || "Upcoming"}
                       </div>
                     </div>
                   </Popup>
@@ -292,7 +343,44 @@ export function OperatorLiveMap({ operatorId }: OperatorLiveMapProps) {
 
       {loading && (
         <div style={{ textAlign: "center", padding: "0.75rem", color: "#6b7280", fontSize: "0.875rem" }}>
-          Connecting to live data...
+          Loading fleet data...
+        </div>
+      )}
+
+      {!loading && stopsWithCoords.length === 0 && visibleStops.length > 0 && (
+        <div style={{ textAlign: "center", padding: "0.75rem", color: "#92400e", fontSize: "0.875rem" }}>
+          {visibleStops.length} stop{visibleStops.length === 1 ? "" : "s"} found but none have map coordinates yet. Open an employee profile to geocode addresses.
+        </div>
+      )}
+
+      {!loading && visibleStops.length === 0 && (
+        <div style={{ textAlign: "center", padding: "0.75rem", color: "#6b7280", fontSize: "0.875rem" }}>
+          No active stops in this view. Assign upcoming cleanings to employees from their profile → Assignment &amp; Zones.
+        </div>
+      )}
+
+      {!loading && employees.length > 0 && (
+        <div style={{ marginTop: "0.75rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+          {employees.map((employee) => {
+            const employeeStops = stops.filter((stop) => stop.assignedEmployeeId === employee.id);
+            return (
+              <button
+                key={employee.id}
+                onClick={() => router.push(`/operator/employees/${employee.id}`)}
+                style={{
+                  padding: "0.375rem 0.75rem",
+                  borderRadius: "999px",
+                  border: "1px solid #e5e7eb",
+                  background: employee.isClockedIn ? "#ecfdf5" : "#f9fafb",
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                }}
+              >
+                {employee.name} · {employeeStops.length} stop{employeeStops.length === 1 ? "" : "s"}
+                {employee.isClockedIn ? " · on shift" : ""}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
