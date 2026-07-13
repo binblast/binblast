@@ -12,7 +12,16 @@ export function verifyQuoActionAuth(req: NextRequest): boolean {
   const authorization = req.headers.get("authorization")?.trim();
   const actionKey = req.headers.get("x-quo-action-key")?.trim();
 
-  return authorization === apiKey || actionKey === apiKey;
+  const candidates = [authorization, actionKey].filter(Boolean) as string[];
+
+  return candidates.some((value) => {
+    if (value === apiKey) return true;
+
+    const bearerMatch = value.match(/^Bearer\s+(.+)$/i);
+    if (bearerMatch && bearerMatch[1].trim() === apiKey) return true;
+
+    return false;
+  });
 }
 
 export function verifyQuoWebhookSignature(

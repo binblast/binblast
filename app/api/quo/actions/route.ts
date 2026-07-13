@@ -23,8 +23,8 @@ export async function GET(req: NextRequest) {
     serviceAreas: getServiceAreasPayload(),
     actions: QUO_ACTION_DEFINITIONS,
     auth: {
-      header: "Authorization",
-      note: "Pass your QUO_API_KEY directly in the Authorization header.",
+      headers: ["Authorization", "x-quo-action-key"],
+      note: "Pass your QUO_API_KEY as the raw Authorization value or as Authorization: Bearer <key>.",
     },
   });
 }
