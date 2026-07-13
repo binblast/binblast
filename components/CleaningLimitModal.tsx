@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface UpgradePreview {
   newPlanId: string;
@@ -39,6 +39,28 @@ export function CleaningLimitModal({
   const [step, setStep] = useState<"options" | "upgrade-warning">("options");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availableCredit, setAvailableCredit] = useState(0);
+  const [applyCredit, setApplyCredit] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !userId) return;
+
+    async function loadCredits() {
+      try {
+        const response = await fetch(`/api/referral/get-credits?userId=${encodeURIComponent(userId)}`);
+        const data = await response.json();
+        if (response.ok) {
+          const total = Number(data.totalCredits) || 0;
+          setAvailableCredit(total);
+          setApplyCredit(total > 0);
+        }
+      } catch (creditError) {
+        console.error("[CleaningLimitModal] Failed to load referral credits:", creditError);
+      }
+    }
+
+    loadCredits();
+  }, [isOpen, userId]);
 
   if (!isOpen) return null;
 
@@ -49,7 +71,7 @@ export function CleaningLimitModal({
       const response = await fetch("/api/stripe/one-time-cleaning", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, applyCredit: applyCredit && availableCredit > 0 }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -171,8 +193,37 @@ export function CleaningLimitModal({
                 cursor: loading ? "not-allowed" : "pointer",
               }}
             >
-              {loading ? "Redirecting..." : `Buy One-Time Cleaning — $${oneTimePrice.toFixed(2)}`}
+              {loading
+                ? "Redirecting..."
+                : applyCredit && availableCredit > 0
+                  ? `Buy One-Time Cleaning — $${Math.max(0, oneTimePrice - Math.min(10, availableCredit)).toFixed(2)} (with $${Math.min(10, availableCredit).toFixed(2)} credit)`
+                  : `Buy One-Time Cleaning — $${oneTimePrice.toFixed(2)}`}
             </button>
+
+            {availableCredit > 0 && (
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "0.5rem",
+                  marginBottom: "0.75rem",
+                  fontSize: "0.875rem",
+                  color: "#047857",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={applyCredit}
+                  onChange={(event) => setApplyCredit(event.target.checked)}
+                  style={{ marginTop: "0.2rem" }}
+                />
+                <span>
+                  Apply ${Math.min(10, availableCredit).toFixed(2)} referral credit from your
+                  account (${availableCredit.toFixed(2)} available)
+                </span>
+              </label>
+            )}
 
             {upgradePreview && (
               <button

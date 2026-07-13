@@ -745,6 +745,45 @@ export async function syncPendingReferralsForReferrer(referrerId: string): Promi
   };
 }
 
+export async function syncReferrerStatsForUser(referrerId: string): Promise<{
+  completedReferrals: number;
+  referralCount: number;
+  totalCredits: number;
+  creditCount: number;
+}> {
+  const db = await getAdminFirestore();
+  const completedReferralsSnapshot = await db
+    .collection("referrals")
+    .where("referrerId", "==", referrerId)
+    .where("status", "==", "COMPLETED")
+    .get();
+
+  const completedReferrals = completedReferralsSnapshot.size;
+  const { credits, totalCredits } = await getUnusedCreditsForUser(referrerId);
+
+  const userRef = db.collection("users").doc(referrerId);
+  const userDoc = await userRef.get();
+  const storedCount = Number(userDoc.data()?.referralCount || 0);
+
+  if (userDoc.exists && storedCount !== completedReferrals) {
+    const admin = await import("firebase-admin");
+    await userRef.set(
+      {
+        referralCount: completedReferrals,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  return {
+    completedReferrals,
+    referralCount: completedReferrals,
+    totalCredits,
+    creditCount: credits.length,
+  };
+}
+
 export async function getUnusedCreditsForUser(userId: string) {
   const db = await getAdminFirestore();
   const snapshot = await db

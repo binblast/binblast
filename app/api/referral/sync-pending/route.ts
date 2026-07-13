@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { syncPendingReferralsForReferrer } from "@/lib/referral-service";
+import {
+  syncPendingReferralsForReferrer,
+  syncReferrerStatsForUser,
+} from "@/lib/referral-service";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +16,16 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await syncPendingReferralsForReferrer(referrerId);
+    const stats = await syncReferrerStatsForUser(referrerId);
 
     return NextResponse.json({
       success: true,
       checked: result.checked,
       awarded: result.awarded,
+      completedReferrals: stats.completedReferrals,
+      referralCount: stats.referralCount,
+      totalCredits: stats.totalCredits,
+      creditCount: stats.creditCount,
     });
   } catch (err: unknown) {
     console.error("[Sync Pending Referrals] Error:", err);

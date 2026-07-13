@@ -4,7 +4,6 @@
 import { useState, useEffect } from "react";
 import { useFirebase } from "@/lib/firebase-context";
 import { ReferralCodeDisplay } from "@/components/ReferralCodeDisplay";
-// Note: Firebase functions are imported dynamically inside useEffect to prevent build-time initialization errors
 
 interface ReferralRewardsProps {
   userId: string;
@@ -14,12 +13,12 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
   const [referralCode, setReferralCode] = useState<string>("");
   const [referralCount, setReferralCount] = useState<number>(0);
   const [totalCredits, setTotalCredits] = useState<number>(0);
+  const [creditCount, setCreditCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const { isReady: firebaseReady } = useFirebase();
 
   useEffect(() => {
-    // Only load data when Firebase is ready
     if (!firebaseReady || !userId) {
       setLoading(false);
       return;
@@ -29,64 +28,34 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
 
     async function loadReferralData() {
       try {
-        // Ensure Firebase is initialized before querying
+        const statsResponse = await fetch(
+          `/api/referral/stats?userId=${encodeURIComponent(userId)}&syncPending=1`
+        );
+        const statsData = await statsResponse.json();
+
+        if (statsResponse.ok) {
+          setReferralCount(statsData.completedReferrals || statsData.referralCount || 0);
+          setTotalCredits(Number(statsData.totalCredits) || 0);
+          setCreditCount(Number(statsData.creditCount) || 0);
+        }
+
         const { getDbInstance } = await import("@/lib/firebase");
         const db = await getDbInstance();
-        if (!db || !userId) return;
+        if (!db) return;
 
-        // CRITICAL: Use safe import wrapper to ensure Firebase app exists
         const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
         const firestore = await safeImportFirestore();
         const { doc, getDoc } = firestore;
-        const userDocRef = doc(db, "users", userId);
-        const userDoc = await getDoc(userDocRef);
+        const userDoc = await getDoc(doc(db, "users", userId));
 
         if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const code = userData.referralCode;
-          const count = userData.referralCount || 0;
-
-          // Referral codes are only generated during initial registration
-          // If a user doesn't have a referral code, they should contact support
+          const code = userDoc.data().referralCode;
           if (!code || code.trim() === "") {
-            console.warn("[ReferralRewards] User does not have a referral code. Referral codes are only generated during initial registration.");
-          }
-
-          setReferralCode(code || "");
-          setReferralCount(count);
-
-          // Load unused credits
-          // Get authenticated user's UID to match Firestore security rules
-          try {
-            const { getAuthInstance } = await import("@/lib/firebase");
-            const auth = await getAuthInstance();
-            const currentUserId = auth?.currentUser?.uid;
-            
-            if (!currentUserId) {
-              setTotalCredits(0);
-              return;
-            }
-            
-            const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-            const firestore = await safeImportFirestore();
-            const { collection, query, where, getDocs } = firestore;
-            const creditsQuery = query(
-              collection(db, "credits"),
-              where("userId", "==", currentUserId),
-              where("used", "==", false)
+            console.warn(
+              "[ReferralRewards] User does not have a referral code. Referral codes are only generated during initial registration."
             );
-            const creditsSnapshot = await getDocs(creditsQuery);
-            
-            let total = 0;
-            creditsSnapshot.forEach((creditDoc) => {
-              const creditData = creditDoc.data();
-              total += creditData.amount || 0;
-            });
-            
-            setTotalCredits(total);
-          } catch (creditError) {
-            console.error("Error loading credits:", creditError);
           }
+          setReferralCode(code || "");
         }
       } catch (error) {
         console.error("Error loading referral data:", error);
@@ -104,223 +73,350 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
     };
   }, [firebaseReady, userId]);
 
-  const referralUrl = typeof window !== "undefined" 
-    ? `${window.location.origin}/?ref=${referralCode}#pricing`
-    : "";
+  const referralUrl =
+    typeof window !== "undefined" && referralCode
+      ? `${window.location.origin}/?ref=${referralCode}#pricing`
+      : "";
 
   const handleCopy = async () => {
-    if (referralUrl) {
-      try {
-        await navigator.clipboard.writeText(referralUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (error) {
-        console.error("Failed to copy:", error);
-      }
+    if (!referralUrl) return;
+    try {
+      await navigator.clipboard.writeText(referralUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy:", error);
     }
   };
 
   if (loading) {
     return (
-      <div style={{
-        background: "#ffffff",
-        borderRadius: "20px",
-        padding: "2rem",
-        boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
-        border: "1px solid #e5e7eb",
-        marginBottom: "1.5rem"
-      }}>
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: "20px",
+          padding: "2rem",
+          boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
+          border: "1px solid #e5e7eb",
+          marginBottom: "1.5rem",
+        }}
+      >
         <p style={{ color: "var(--text-light)" }}>Loading referral information...</p>
       </div>
     );
   }
 
   return (
-    <div style={{
-      background: "#ffffff",
-      borderRadius: "20px",
-      padding: "2.5rem",
-      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-      border: "1px solid #e5e7eb",
-      marginBottom: "1.5rem"
-    }}>
-      <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "0.5rem" }}>
+    <div
+      style={{
+        background: "#ffffff",
+        borderRadius: "20px",
+        padding: "2.5rem",
+        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+        border: "1px solid #e5e7eb",
+        marginBottom: "1.5rem",
+      }}
+    >
+      <h2
+        style={{
+          fontSize: "1.5rem",
+          fontWeight: "700",
+          color: "var(--text-dark)",
+          margin: 0,
+          marginBottom: "0.5rem",
+        }}
+      >
         Referral Rewards
       </h2>
-      <p style={{ 
-        fontSize: "0.95rem", 
-        color: "#6b7280", 
-        marginBottom: "1.5rem"
-      }}>
-        Share your link and both you and your friend get $10 off your next service.
+      <p
+        style={{
+          fontSize: "0.95rem",
+          color: "#6b7280",
+          marginBottom: "1.5rem",
+        }}
+      >
+        Share your link and earn $10 every time a friend completes their first paid
+        service. Your friend also gets $10 off at signup.
       </p>
+
       {!referralCode && (
-        <div style={{
-          padding: "1rem",
-          background: "#fef3c7",
-          borderRadius: "12px",
-          marginBottom: "1rem",
-          border: "1px solid #f59e0b"
-        }}>
-          <p style={{ 
-            fontSize: "0.875rem", 
-            color: "#92400e", 
-            margin: 0,
-            fontWeight: "600"
-          }}>
-            No referral code found. Referral codes are generated when you first sign up for an account. 
-            If you believe this is an error, please contact support.
+        <div
+          style={{
+            padding: "1rem",
+            background: "#fef3c7",
+            borderRadius: "12px",
+            marginBottom: "1rem",
+            border: "1px solid #f59e0b",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "0.875rem",
+              color: "#92400e",
+              margin: 0,
+              fontWeight: "600",
+            }}
+          >
+            No referral code found. Referral codes are generated when you first sign
+            up. If you believe this is an error, please contact support.
           </p>
         </div>
       )}
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1.5rem" }}>
-        <div style={{
-          padding: "0.75rem 1rem",
-          background: "#f0f9ff",
-          borderRadius: "12px",
-          fontSize: "0.875rem",
-          fontWeight: "600",
-          color: "#0369a1",
-          border: "1px solid #bae6fd"
-        }}>
-          {referralCount === 0 
-            ? "0 referrals so far — your next $10 reward is waiting."
-            : `${referralCount} ${referralCount === 1 ? "referral" : "referrals"} completed`}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "1rem",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <div
+          style={{
+            padding: "1rem",
+            background: "#f0f9ff",
+            borderRadius: "12px",
+            border: "1px solid #bae6fd",
+          }}
+        >
+          <p style={{ margin: 0, fontSize: "0.75rem", color: "#0369a1", fontWeight: "600" }}>
+            Completed Referrals
+          </p>
+          <p style={{ margin: "0.35rem 0 0", fontSize: "1.5rem", fontWeight: "700", color: "#0c4a6e" }}>
+            {referralCount}
+          </p>
         </div>
-        {totalCredits > 0 && (
-          <div style={{
-            padding: "0.75rem 1rem",
+
+        <div
+          style={{
+            padding: "1rem",
+            background: totalCredits > 0 ? "#ecfdf5" : "#f9fafb",
+            borderRadius: "12px",
+            border: `1px solid ${totalCredits > 0 ? "#86efac" : "#e5e7eb"}`,
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: "0.75rem",
+              color: totalCredits > 0 ? "#047857" : "#6b7280",
+              fontWeight: "600",
+            }}
+          >
+            Available Credit Balance
+          </p>
+          <p
+            style={{
+              margin: "0.35rem 0 0",
+              fontSize: "1.5rem",
+              fontWeight: "700",
+              color: totalCredits > 0 ? "#047857" : "#374151",
+            }}
+          >
+            ${totalCredits.toFixed(2)}
+          </p>
+          {creditCount > 0 && (
+            <p style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: "#6b7280" }}>
+              {creditCount} unused {creditCount === 1 ? "credit" : "credits"}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {totalCredits > 0 && (
+        <div
+          style={{
+            padding: "1rem 1.25rem",
             background: "#ecfdf5",
             borderRadius: "12px",
+            border: "1px solid #86efac",
+            marginBottom: "1.5rem",
+          }}
+        >
+          <p style={{ margin: 0, fontSize: "0.9rem", color: "#047857", fontWeight: "600" }}>
+            You have ${totalCredits.toFixed(2)} ready to use.
+          </p>
+          <p style={{ margin: "0.5rem 0 0", fontSize: "0.85rem", color: "#065f46", lineHeight: 1.6 }}>
+            Apply up to $10 per checkout. Credits are used automatically when you check
+            &quot;Apply referral credit&quot; during plan signup, or when you purchase an
+            extra cleaning from your dashboard.
+          </p>
+        </div>
+      )}
+
+      <div
+        style={{
+          padding: "1.25rem",
+          background: "#f8fafc",
+          borderRadius: "12px",
+          border: "1px solid #e2e8f0",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <h3
+          style={{
+            margin: "0 0 0.75rem",
+            fontSize: "1rem",
+            fontWeight: "700",
+            color: "var(--text-dark)",
+          }}
+        >
+          How the program works
+        </h3>
+        <ol
+          style={{
+            margin: 0,
+            paddingLeft: "1.25rem",
+            color: "#475569",
             fontSize: "0.875rem",
-            fontWeight: "600",
-            color: "#047857",
-            border: "1px solid #86efac"
-          }}>
-            You have ${totalCredits.toFixed(2)} in referral rewards ready to use on your next service.
-          </div>
-        )}
+            lineHeight: 1.7,
+          }}
+        >
+          <li>Share your referral link or code with a friend.</li>
+          <li>They sign up and complete their first paid service using your link.</li>
+          <li>They receive $10 off at checkout when they use your code.</li>
+          <li>You both receive a $10 credit in your account after their first payment.</li>
+          <li>Credits stay in your account until you use them — they do not expire.</li>
+        </ol>
+      </div>
+
+      <div
+        style={{
+          padding: "1.25rem",
+          background: "#fffbeb",
+          borderRadius: "12px",
+          border: "1px solid #fde68a",
+          marginBottom: referralCode ? "1.5rem" : 0,
+        }}
+      >
+        <h3
+          style={{
+            margin: "0 0 0.75rem",
+            fontSize: "1rem",
+            fontWeight: "700",
+            color: "#92400e",
+          }}
+        >
+          Where credits go and how to use them
+        </h3>
+        <ul
+          style={{
+            margin: 0,
+            paddingLeft: "1.25rem",
+            color: "#78350f",
+            fontSize: "0.875rem",
+            lineHeight: 1.7,
+          }}
+        >
+          <li>
+            <strong>Stored in your account:</strong> Credits appear here and in your
+            Referral History after a friend pays.
+          </li>
+          <li>
+            <strong>At signup or plan checkout:</strong> Check &quot;Apply referral
+            credit&quot; to take up to $10 off that payment.
+          </li>
+          <li>
+            <strong>Extra cleanings:</strong> When you buy a $35 one-time cleaning from
+            your dashboard, your credit can be applied automatically if you have a
+            balance.
+          </li>
+          <li>
+            <strong>One credit per checkout:</strong> Each $10 credit is used one at a
+            time, so multiple credits can be spread across future payments.
+          </li>
+        </ul>
       </div>
 
       {referralCode && (
-      <div style={{
-        background: "#f0f9ff",
-        borderRadius: "12px",
-        padding: "1.5rem",
-        border: "2px solid #bae6fd",
-        marginBottom: "1rem"
-      }}>
-        
-        <div style={{ marginBottom: "1rem" }}>
-          <label style={{ 
-            fontSize: "0.875rem", 
-            color: "#0c4a6e", 
-            fontWeight: "600",
-            display: "block",
-            marginBottom: "0.5rem"
-          }}>
-            Your Referral Code:
-          </label>
-          <div style={{
-            display: "flex",
-            gap: "0.5rem",
-            alignItems: "center",
-            flexWrap: "wrap"
-          }}>
-            <div style={{
-              padding: "0.75rem 1rem",
-              background: "#ffffff",
-              borderRadius: "8px",
-              border: "1px solid #bae6fd",
-              flex: "1",
-              minWidth: "200px",
-            }}>
-              <ReferralCodeDisplay code={referralCode} size="lg" showLegend grouped />
-            </div>
-          </div>
-        </div>
-
-        <div style={{ marginBottom: "1rem" }}>
-          <label style={{ 
-            fontSize: "0.875rem", 
-            color: "#0c4a6e", 
-            fontWeight: "600",
-            display: "block",
-            marginBottom: "0.5rem"
-          }}>
-            Your Referral Link:
-          </label>
-          <div style={{
-            display: "flex",
-            gap: "0.5rem",
-            alignItems: "center",
-            flexWrap: "wrap"
-          }}>
-            <input
-              type="text"
-              readOnly
-              value={referralUrl}
+        <div
+          style={{
+            background: "#f0f9ff",
+            borderRadius: "12px",
+            padding: "1.5rem",
+            border: "2px solid #bae6fd",
+          }}
+        >
+          <div style={{ marginBottom: "1rem" }}>
+            <label
               style={{
-                flex: "1",
+                fontSize: "0.875rem",
+                color: "#0c4a6e",
+                fontWeight: "600",
+                display: "block",
+                marginBottom: "0.5rem",
+              }}
+            >
+              Your Referral Code
+            </label>
+            <div
+              style={{
                 padding: "0.75rem 1rem",
                 background: "#ffffff",
                 borderRadius: "8px",
                 border: "1px solid #bae6fd",
-                fontSize: "0.875rem",
-                color: "#0369a1",
-                minWidth: "200px",
-                fontFamily: "monospace"
-              }}
-            />
-            <button
-              onClick={handleCopy}
-              style={{
-                padding: "0.75rem 1.5rem",
-                background: copied ? "#16a34a" : "#0369a1",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "background 0.2s",
-                whiteSpace: "nowrap"
-              }}
-              onMouseEnter={(e) => {
-                if (!copied) {
-                  e.currentTarget.style.background = "#075985";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!copied) {
-                  e.currentTarget.style.background = "#0369a1";
-                }
               }}
             >
-              {copied ? "✓ Copied!" : "Copy Link"}
-            </button>
+              <ReferralCodeDisplay code={referralCode} size="lg" showLegend grouped />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "1rem" }}>
+            <label
+              style={{
+                fontSize: "0.875rem",
+                color: "#0c4a6e",
+                fontWeight: "600",
+                display: "block",
+                marginBottom: "0.5rem",
+              }}
+            >
+              Your Referral Link
+            </label>
+            <div
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <input
+                type="text"
+                readOnly
+                value={referralUrl}
+                style={{
+                  flex: "1",
+                  padding: "0.75rem 1rem",
+                  background: "#ffffff",
+                  borderRadius: "8px",
+                  border: "1px solid #bae6fd",
+                  fontSize: "0.875rem",
+                  color: "#0369a1",
+                  minWidth: "200px",
+                  fontFamily: "monospace",
+                }}
+              />
+              <button
+                onClick={handleCopy}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  background: copied ? "#16a34a" : "#0369a1",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {copied ? "Copied!" : "Copy Link"}
+              </button>
+            </div>
           </div>
         </div>
-
-        <div style={{
-          padding: "1rem",
-          background: "#ffffff",
-          borderRadius: "8px",
-          border: "1px solid #bae6fd"
-        }}>
-          <p style={{ 
-            fontSize: "0.875rem", 
-            color: "#0c4a6e", 
-            margin: 0,
-            lineHeight: "1.6"
-          }}>
-            <strong>How it works:</strong> Share your referral link with friends. When they sign up and pay using your link, 
-            both you and your friend get $10 off — $10 at checkout for them, then $10 credits for each of you after their first paid service.
-          </p>
-        </div>
-      </div>
       )}
     </div>
   );
 }
-

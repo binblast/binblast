@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
+import { getReferralCouponId } from "@/lib/stripe-coupons";
+import { getUnusedCreditsForUser } from "@/lib/referral-service";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +10,7 @@ const ONE_TIME_CLEANING_PRICE = 3500;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId } = body;
+    const { userId, applyCredit } = body;
 
     if (!userId) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
     const successUrl = `${origin}/dashboard?one_time_cleaning=success&schedule_cleaning=1&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${origin}/dashboard?one_time_cleaning=cancelled`;
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Record<string, unknown> = {
       payment_method_types: ["card"],
       mode: "payment",
       customer: stripeCustomerId,
@@ -60,12 +62,42 @@ export async function POST(req: NextRequest) {
         userId,
         type: "one_time_cleaning",
       },
-    });
+    };
+
+    let creditApplied = 0;
+    const creditsToUse: string[] = [];
+
+    if (applyCredit === true) {
+      const { credits } = await getUnusedCreditsForUser(userId);
+      let discountAmount = 0;
+
+      for (const creditData of credits) {
+        if (discountAmount >= 1000) break;
+        const creditAmount = Math.min((creditData.amount || 0) * 100, 1000 - discountAmount);
+        if (creditAmount > 0) {
+          creditsToUse.push(creditData.id);
+          discountAmount += creditAmount;
+        }
+      }
+
+      if (discountAmount >= 100) {
+        const couponId = await getReferralCouponId();
+        if (couponId) {
+          sessionParams.discounts = [{ coupon: couponId }];
+          creditApplied = discountAmount / 100;
+          (sessionParams.metadata as Record<string, string>).creditApplied = creditApplied.toFixed(2);
+          (sessionParams.metadata as Record<string, string>).creditsToUse = creditsToUse.join(",");
+        }
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams as any);
 
     return NextResponse.json({
       sessionId: session.id,
       url: session.url,
-      totalAmount: (ONE_TIME_CLEANING_PRICE / 100).toFixed(2),
+      totalAmount: ((ONE_TIME_CLEANING_PRICE - creditApplied * 100) / 100).toFixed(2),
+      creditApplied: creditApplied.toFixed(2),
     });
   } catch (error: any) {
     console.error("[One-Time Cleaning Checkout] Error:", error);
