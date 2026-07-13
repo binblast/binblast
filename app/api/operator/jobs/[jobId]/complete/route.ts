@@ -1,7 +1,6 @@
 // app/api/operator/jobs/[jobId]/complete/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule";
 
 export async function POST(
@@ -20,44 +19,24 @@ export async function POST(
       );
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { message: "Database not available" },
-        { status: 500 }
-      );
-    }
+    const db = await getAdminFirestore();
+    const admin = await import("firebase-admin");
+    const jobRef = db.collection("scheduledCleanings").doc(jobId);
+    const jobDoc = await jobRef.get();
 
-    const firestore = await safeImportFirestore();
-    const { doc, getDoc, updateDoc, serverTimestamp } = firestore;
-
-    // Verify job exists
-    const jobRef = doc(db, "scheduledCleanings", jobId);
-    const jobDoc = await getDoc(jobRef);
-
-    if (!jobDoc.exists()) {
+    if (!jobDoc.exists) {
       return NextResponse.json(
         { message: "Job not found" },
         { status: 404 }
       );
     }
 
-    const jobData = jobDoc.data();
+    const jobData = jobDoc.data() || {};
 
-    // Verify operator has permission (check if user is operator or admin)
-    const { getAuthInstance } = await import("@/lib/firebase");
-    const auth = await getAuthInstance();
-    const token = req.headers.get("authorization");
-    
-    // For now, allow any authenticated operator/admin to complete jobs
-    // In production, you might want to add more specific permission checks
-
-    // Update job with completion data
-    // Set both jobStatus and status for compatibility
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       jobStatus: "completed",
       status: "completed",
-      completedAt: serverTimestamp(),
+      completedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
     if (notes) {
@@ -68,35 +47,37 @@ export async function POST(
       updateData.binCount = parseInt(binCount.toString(), 10);
     }
 
-    await updateDoc(jobRef, updateData);
+    await jobRef.update(updateData);
 
-    await scheduleNextCleaningIfNeeded(db, {
-      id: jobId,
-      userId: jobData.userId,
-      userEmail: jobData.userEmail,
-      addressLine1: jobData.addressLine1,
-      addressLine2: jobData.addressLine2,
-      city: jobData.city,
-      state: jobData.state,
-      zipCode: jobData.zipCode,
-      trashDay: jobData.trashDay,
-      scheduledTime: jobData.scheduledTime,
-      notes: jobData.notes,
-      scheduledDate: jobData.scheduledDate,
-      status: "completed",
-      jobStatus: "completed",
-    });
+    try {
+      await scheduleNextCleaningIfNeeded({
+        id: jobId,
+        userId: jobData.userId,
+        userEmail: jobData.userEmail,
+        addressLine1: jobData.addressLine1,
+        addressLine2: jobData.addressLine2,
+        city: jobData.city,
+        state: jobData.state,
+        zipCode: jobData.zipCode,
+        trashDay: jobData.trashDay,
+        scheduledTime: jobData.scheduledTime,
+        notes: jobData.notes,
+        scheduledDate: jobData.scheduledDate,
+        status: "completed",
+        jobStatus: "completed",
+      });
+    } catch (scheduleError: unknown) {
+      console.error("Error scheduling next cleaning after completion:", scheduleError);
+    }
 
     return NextResponse.json(
       { message: "Job completed successfully" },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error completing job:", error);
-    return NextResponse.json(
-      { message: error.message || "Failed to complete job" },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Failed to complete job";
+    return NextResponse.json({ message }, { status: 500 });
   }
 }
 

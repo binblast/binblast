@@ -1,7 +1,6 @@
 // app/api/employee/jobs/[jobId]/complete/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 import { getJobPhotos } from "@/lib/job-photo-upload";
 import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule";
 
@@ -12,7 +11,15 @@ export async function POST(
   try {
     const { jobId } = params;
     const body = await req.json();
-    const { employeeId, completionPhotoUrl, insidePhotoUrl, outsidePhotoUrl, employeeNotes, binCount, stickerStatus, stickerPlaced } = body;
+    const {
+      employeeId,
+      completionPhotoUrl,
+      insidePhotoUrl,
+      outsidePhotoUrl,
+      employeeNotes,
+      stickerStatus,
+      stickerPlaced,
+    } = body;
 
     if (!jobId || !employeeId) {
       return NextResponse.json(
@@ -21,29 +28,19 @@ export async function POST(
       );
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { message: "Database not available" },
-        { status: 500 }
-      );
-    }
+    const db = await getAdminFirestore();
+    const admin = await import("firebase-admin");
+    const jobRef = db.collection("scheduledCleanings").doc(jobId);
+    const jobDoc = await jobRef.get();
 
-    const firestore = await safeImportFirestore();
-    const { doc, getDoc, updateDoc, serverTimestamp } = firestore;
-
-    // Verify job exists and is assigned to this employee
-    const jobRef = doc(db, "scheduledCleanings", jobId);
-    const jobDoc = await getDoc(jobRef);
-
-    if (!jobDoc.exists()) {
+    if (!jobDoc.exists) {
       return NextResponse.json(
         { message: "Job not found" },
         { status: 404 }
       );
     }
 
-    const jobData = jobDoc.data();
+    const jobData = jobDoc.data() || {};
     if (jobData.assignedEmployeeId !== employeeId) {
       return NextResponse.json(
         { message: "Job not assigned to this employee" },
@@ -51,12 +48,11 @@ export async function POST(
       );
     }
 
-    // ENFORCE MANDATORY PHOTO REQUIREMENTS (NON-NEGOTIABLE)
-    // Both inside and outside photos are REQUIRED for every job completion
     if (!insidePhotoUrl || !outsidePhotoUrl) {
       return NextResponse.json(
-        { 
-          message: "Both inside and outside photos are required to complete this job. Please upload both photos before marking the job as complete.",
+        {
+          message:
+            "Both inside and outside photos are required to complete this job. Please upload both photos before marking the job as complete.",
           requiredPhotos: ["inside", "outside"],
           missingPhotos: [
             !insidePhotoUrl ? "inside" : null,
@@ -67,16 +63,16 @@ export async function POST(
       );
     }
 
-    // Verify photos exist in jobPhotos collection
     try {
       const jobPhotos = await getJobPhotos(jobId);
-      const hasInsidePhoto = jobPhotos.some(p => p.photoType === "inside");
-      const hasOutsidePhoto = jobPhotos.some(p => p.photoType === "outside");
+      const hasInsidePhoto = jobPhotos.some((p) => p.photoType === "inside");
+      const hasOutsidePhoto = jobPhotos.some((p) => p.photoType === "outside");
 
       if (!hasInsidePhoto || !hasOutsidePhoto) {
         return NextResponse.json(
-          { 
-            message: "Required photos not found in photo documentation. Please ensure photos are uploaded before completing the job.",
+          {
+            message:
+              "Required photos not found in photo documentation. Please ensure photos are uploaded before completing the job.",
             missingInDatabase: {
               inside: !hasInsidePhoto,
               outside: !hasOutsidePhoto,
@@ -85,40 +81,28 @@ export async function POST(
           { status: 400 }
         );
       }
-    } catch (photoError: any) {
+    } catch (photoError: unknown) {
       console.error("Error verifying photos in jobPhotos collection:", photoError);
-      // Continue with completion if verification fails (photos may be in process of uploading)
-      // But still require the URLs to be provided
     }
 
-    // Update job with completion data
-    // Set both jobStatus and status for compatibility with customer dashboard
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       jobStatus: "completed",
       status: "completed",
-      completedAt: serverTimestamp(),
+      completedAt: admin.firestore.FieldValue.serverTimestamp(),
       hasRequiredPhotos: true,
       photoDocumentationStatus: "complete",
+      insidePhotoUrl,
+      outsidePhotoUrl,
+      binCount: jobData.binCount ?? jobData.binsCount ?? 1,
     };
 
-    // Store photo URLs for backward compatibility
     if (completionPhotoUrl) {
       updateData.completionPhotoUrl = completionPhotoUrl;
-    }
-
-    if (insidePhotoUrl) {
-      updateData.insidePhotoUrl = insidePhotoUrl;
-    }
-
-    if (outsidePhotoUrl) {
-      updateData.outsidePhotoUrl = outsidePhotoUrl;
     }
 
     if (employeeNotes) {
       updateData.employeeNotes = employeeNotes;
     }
-
-    updateData.binCount = jobData.binCount ?? jobData.binsCount ?? 1;
 
     if (stickerStatus) {
       updateData.stickerStatus = stickerStatus;
@@ -128,35 +112,38 @@ export async function POST(
       updateData.stickerPlaced = stickerPlaced;
     }
 
-    await updateDoc(jobRef, updateData);
+    await jobRef.update(updateData);
 
-    await scheduleNextCleaningIfNeeded(db, {
-      id: jobId,
-      userId: jobData.userId,
-      userEmail: jobData.userEmail,
-      addressLine1: jobData.addressLine1,
-      addressLine2: jobData.addressLine2,
-      city: jobData.city,
-      state: jobData.state,
-      zipCode: jobData.zipCode,
-      trashDay: jobData.trashDay,
-      scheduledTime: jobData.scheduledTime,
-      notes: jobData.notes,
-      scheduledDate: jobData.scheduledDate,
-      status: "completed",
-      jobStatus: "completed",
-    });
+    try {
+      await scheduleNextCleaningIfNeeded({
+        id: jobId,
+        userId: jobData.userId,
+        userEmail: jobData.userEmail,
+        addressLine1: jobData.addressLine1,
+        addressLine2: jobData.addressLine2,
+        city: jobData.city,
+        state: jobData.state,
+        zipCode: jobData.zipCode,
+        trashDay: jobData.trashDay,
+        scheduledTime: jobData.scheduledTime,
+        notes: jobData.notes,
+        scheduledDate: jobData.scheduledDate,
+        status: "completed",
+        jobStatus: "completed",
+        assignedEmployeeId: jobData.assignedEmployeeId,
+        assignedEmployeeName: jobData.assignedEmployeeName,
+      });
+    } catch (scheduleError: unknown) {
+      console.error("Error scheduling next cleaning after completion:", scheduleError);
+    }
 
     return NextResponse.json(
       { message: "Job completed successfully" },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error completing job:", error);
-    return NextResponse.json(
-      { message: error.message || "Failed to complete job" },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Failed to complete job";
+    return NextResponse.json({ message }, { status: 500 });
   }
 }
-

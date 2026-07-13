@@ -1,5 +1,6 @@
 // lib/cleaning-schedule.ts
 import { getNextCleaningDate } from "@/lib/scheduling";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
 const PLAN_MIN_DAYS: Record<string, number> = {
   "one-time": 28,
@@ -23,6 +24,8 @@ export interface CleaningRecord {
   status?: string;
   jobStatus?: string;
   scheduledDate?: unknown;
+  assignedEmployeeId?: string | null;
+  assignedEmployeeName?: string | null;
 }
 
 /** Safely parse scheduledDate from string, Date, or Firestore Timestamp. */
@@ -121,29 +124,17 @@ export function buildCompletionUpdateData(status: string): Record<string, unknow
  * After a cleaning is marked complete, create the next recurring appointment if needed.
  */
 export async function scheduleNextCleaningIfNeeded(
-  db: unknown,
   completedCleaning: CleaningRecord
 ): Promise<string | null> {
   if (!completedCleaning.userId) return null;
 
-  const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-  const firestore = await safeImportFirestore();
-  const {
-    collection,
-    query,
-    where,
-    getDocs,
-    addDoc,
-    doc,
-    getDoc,
-    serverTimestamp,
-  } = firestore;
+  const db = await getAdminFirestore();
+  const admin = await import("firebase-admin");
 
-  const userRef = doc(db as never, "users", completedCleaning.userId);
-  const userDoc = await getDoc(userRef);
-  if (!userDoc.exists()) return null;
+  const userDoc = await db.collection("users").doc(completedCleaning.userId).get();
+  if (!userDoc.exists) return null;
 
-  const userData = userDoc.data();
+  const userData = userDoc.data() || {};
   const planId = userData.selectedPlan as string | undefined;
   if (!planId || !PLAN_MIN_DAYS[planId]) return null;
 
@@ -158,13 +149,12 @@ export async function scheduleNextCleaningIfNeeded(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const existingQuery = query(
-    collection(db as never, "scheduledCleanings"),
-    where("userId", "==", completedCleaning.userId)
-  );
-  const existingSnapshot = await getDocs(existingQuery);
+  const existingSnapshot = await db
+    .collection("scheduledCleanings")
+    .where("userId", "==", completedCleaning.userId)
+    .get();
 
-  const hasUpcoming = existingSnapshot.docs.some((existingDoc) => {
+  const hasUpcoming = existingSnapshot.docs.some((existingDoc: { id: string; data: () => Record<string, unknown> }) => {
     if (completedCleaning.id && existingDoc.id === completedCleaning.id) return false;
     const data = existingDoc.data();
     if (isCleaningCompleted(data) || isCleaningCancelled(data)) return false;
@@ -185,27 +175,26 @@ export async function scheduleNextCleaningIfNeeded(
     zipCode: completedCleaning.zipCode || userData.zipCode || "",
     trashDay,
     scheduledDate: nextDateString,
-    scheduledTime: completedCleaning.scheduledTime || userData.preferredTimeWindow || "9:00 AM - 12:00 PM",
+    scheduledTime:
+      completedCleaning.scheduledTime ||
+      userData.preferredTimeWindow ||
+      "9:00 AM - 12:00 PM",
     notes: completedCleaning.notes || null,
     status: "upcoming",
     jobStatus: "pending",
     assignedEmployeeId:
-      (completedCleaning as { assignedEmployeeId?: string }).assignedEmployeeId ||
+      completedCleaning.assignedEmployeeId ||
       (userData.defaultAssignedEmployeeId as string | undefined) ||
       null,
     assignedEmployeeName:
-      (completedCleaning as { assignedEmployeeName?: string }).assignedEmployeeName ||
+      completedCleaning.assignedEmployeeName ||
       (userData.defaultAssignedEmployeeName as string | undefined) ||
       null,
     assignmentSource: "recurring",
-    createdAt: serverTimestamp(),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
     autoScheduledFrom: completedCleaning.id || null,
   };
 
-  const newDocRef = await addDoc(
-    collection(db as never, "scheduledCleanings"),
-    newCleaning
-  );
-
+  const newDocRef = await db.collection("scheduledCleanings").add(newCleaning);
   return newDocRef.id;
 }

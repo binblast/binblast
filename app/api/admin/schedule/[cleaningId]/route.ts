@@ -75,7 +75,7 @@ export async function PATCH(
     await docRef.update(updates);
 
     if (body.status === "completed") {
-      await scheduleNextCleaningIfNeeded(db as never, {
+      await scheduleNextCleaningIfNeeded({
         id: cleaningId,
         ...existing,
         ...updates,
