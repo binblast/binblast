@@ -73,41 +73,72 @@ function buildDateRange(start: string, end: string): string[] {
   return dates;
 }
 
-async function loadOperatorClocksForPeriod(
-  operatorId: string,
-  startDate: string,
-  endDate: string
-): Promise<Map<string, ClockRecord[]>> {
-  const db = await getAdminFirestore();
-  const clockSnap = await db
-    .collection("clockIns")
-    .where("employeeId", "==", operatorId)
-    .where("date", ">=", startDate)
-    .where("date", "<=", endDate)
-    .get();
+function groupClocksByEmployee(
+  docs: FirebaseFirestore.QueryDocumentSnapshot[]
+): Map<string, Map<string, ClockRecord[]>> {
+  const clocksByEmployee = new Map<string, Map<string, ClockRecord[]>>();
 
-  const clocksByDate = new Map<string, ClockRecord[]>();
-  clockSnap.docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+  docs.forEach((doc) => {
     const data = doc.data() as ClockRecord;
+    const employeeId = data.employeeId;
     const date = data.date;
-    if (!date) return;
+    if (!employeeId || !date) return;
+
+    if (!clocksByEmployee.has(employeeId)) {
+      clocksByEmployee.set(employeeId, new Map());
+    }
+
+    const clocksByDate = clocksByEmployee.get(employeeId)!;
     if (!clocksByDate.has(date)) clocksByDate.set(date, []);
     clocksByDate.get(date)!.push(data);
   });
 
-  return clocksByDate;
+  return clocksByEmployee;
+}
+
+async function loadClocksByEmployeeForPeriod(
+  startDate: string,
+  endDate: string
+): Promise<Map<string, Map<string, ClockRecord[]>>> {
+  const db = await getAdminFirestore();
+  const clockSnap = await db
+    .collection("clockIns")
+    .where("date", ">=", startDate)
+    .where("date", "<=", endDate)
+    .get();
+
+  return groupClocksByEmployee(clockSnap.docs);
+}
+
+async function loadOperatorClocksForPeriod(
+  operatorId: string,
+  startDate: string,
+  endDate: string,
+  preloaded?: Map<string, Map<string, ClockRecord[]>>
+): Promise<Map<string, ClockRecord[]>> {
+  const clocksByEmployee =
+    preloaded ?? (await loadClocksByEmployeeForPeriod(startDate, endDate));
+
+  return clocksByEmployee.get(operatorId) ?? new Map();
 }
 
 export async function buildOperatorPayrollRow(
   operatorId: string,
   startDate: string,
   endDate: string,
-  hourlyRate: number
+  hourlyRate: number,
+  operator?: { fullName: string; email: string },
+  preloaded?: Map<string, Map<string, ClockRecord[]>>
 ): Promise<OperatorPayrollRow | null> {
-  const operator = await getOperatorAccount(operatorId);
-  if (!operator) return null;
+  const account = operator ? null : await getOperatorAccount(operatorId);
+  if (!operator && !account) return null;
 
-  const clocksByDate = await loadOperatorClocksForPeriod(operatorId, startDate, endDate);
+  const clocksByDate = await loadOperatorClocksForPeriod(
+    operatorId,
+    startDate,
+    endDate,
+    preloaded
+  );
   const periodDates = buildDateRange(startDate, endDate);
 
   let hoursWorked = 0;
@@ -124,8 +155,8 @@ export async function buildOperatorPayrollRow(
 
   return {
     operatorId,
-    operatorName: operator.fullName,
-    email: operator.email,
+    operatorName: operator?.fullName ?? account!.fullName,
+    email: operator?.email ?? account!.email,
     hourlyRate,
     hoursWorked: roundedHours,
     daysWorked,
@@ -143,12 +174,25 @@ export async function buildOperatorPayrollSummary(
 
   const db = await getAdminFirestore();
   const operatorsSnap = await db.collection("users").where("role", "==", "operator").get();
+  const clocksByEmployee = await loadClocksByEmployeeForPeriod(startDate, endDate);
 
   const operators = (
     await Promise.all(
-      operatorsSnap.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) =>
-        buildOperatorPayrollRow(doc.id, startDate, endDate, hourlyRate)
-      )
+      operatorsSnap.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+        const data = doc.data() as Record<string, unknown>;
+        const fullName =
+          `${String(data.firstName || "")} ${String(data.lastName || "")}`.trim() ||
+          String(data.email || "Operator");
+
+        return buildOperatorPayrollRow(
+          doc.id,
+          startDate,
+          endDate,
+          hourlyRate,
+          { fullName, email: String(data.email || "") },
+          clocksByEmployee
+        );
+      })
     )
   ).filter((row): row is OperatorPayrollRow => row !== null);
 
