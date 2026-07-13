@@ -1,22 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CustomerSubTab } from "@/lib/operator-customers";
+import { OperatorTourSlidePreview } from "@/components/OperatorDashboard/OperatorTourSlidePreview";
 import {
   OPERATOR_TOUR_STORAGE_KEY,
   OPERATOR_TOUR_STEPS,
-  type OperatorTourPlacement,
   type OperatorTourTab,
-  getOperatorTourTargetSelector,
 } from "@/lib/operator-dashboard-tour";
-
-type Rect = {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-};
 
 interface OperatorDashboardTourProps {
   activeTab: OperatorTourTab;
@@ -24,114 +16,115 @@ interface OperatorDashboardTourProps {
   onCustomerSubTabChange?: (tab: CustomerSubTab) => void;
 }
 
-function getTargetRect(target?: string, padding = 10): Rect | null {
-  const selector = getOperatorTourTargetSelector(target);
-  if (!selector) return null;
-  const element = document.querySelector(selector);
-  if (!element) return null;
+function renderTitle(title: string, accent?: string) {
+  if (!accent) return title;
 
-  const rect = element.getBoundingClientRect();
-  return {
-    top: Math.max(8, rect.top - padding),
-    left: Math.max(8, rect.left - padding),
-    width: rect.width + padding * 2,
-    height: rect.height + padding * 2,
-  };
-}
+  const lowerTitle = title.toLowerCase();
+  const lowerAccent = accent.toLowerCase();
+  const start = lowerTitle.indexOf(lowerAccent);
 
-function getTooltipPosition(
-  rect: Rect | null,
-  placement: OperatorTourPlacement,
-  tooltipSize: { width: number; height: number }
-): { top: number; left: number } {
-  const margin = 16;
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-
-  if (!rect || placement === "center") {
-    return {
-      top: Math.max(margin, (viewportHeight - tooltipSize.height) / 2),
-      left: Math.max(margin, (viewportWidth - Math.min(tooltipSize.width, viewportWidth - margin * 2)) / 2),
-    };
+  if (start !== -1) {
+    const end = start + accent.length;
+    return (
+      <>
+        {title.slice(0, start)}
+        <span
+          style={{
+            background: "linear-gradient(135deg, #4ade80 0%, #60a5fa 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
+        >
+          {title.slice(start, end)}
+        </span>
+        {title.slice(end)}
+      </>
+    );
   }
 
-  let top = rect.top;
-  let left = rect.left;
-
-  if (placement === "bottom") {
-    top = rect.top + rect.height + margin;
-    left = rect.left + rect.width / 2 - tooltipSize.width / 2;
-  } else if (placement === "top") {
-    top = rect.top - tooltipSize.height - margin;
-    left = rect.left + rect.width / 2 - tooltipSize.width / 2;
-  } else if (placement === "left") {
-    top = rect.top + rect.height / 2 - tooltipSize.height / 2;
-    left = rect.left - tooltipSize.width - margin;
-  } else if (placement === "right") {
-    top = rect.top + rect.height / 2 - tooltipSize.height / 2;
-    left = rect.left + rect.width + margin;
-  }
-
-  const maxLeft = viewportWidth - tooltipSize.width - margin;
-  const maxTop = viewportHeight - tooltipSize.height - margin;
-
-  return {
-    top: Math.max(margin, Math.min(top, maxTop)),
-    left: Math.max(margin, Math.min(left, maxLeft)),
-  };
+  return (
+    <>
+      {title}
+      <span
+        style={{
+          display: "block",
+          marginTop: "0.35rem",
+          fontSize: "0.95em",
+          background: "linear-gradient(135deg, #4ade80 0%, #60a5fa 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}
+      >
+        {accent}
+      </span>
+    </>
+  );
 }
 
 export function OperatorDashboardTour({
-  activeTab,
   onTabChange,
   onCustomerSubTabChange,
 }: OperatorDashboardTourProps) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
-  const [targetRect, setTargetRect] = useState<Rect | null>(null);
-  const [navigating, setNavigating] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<"next" | "back">("next");
 
   const step = OPERATOR_TOUR_STEPS[stepIndex];
   const isFirstStep = stepIndex === 0;
   const isLastStep = stepIndex === OPERATOR_TOUR_STEPS.length - 1;
+  const progress = ((stepIndex + 1) / OPERATOR_TOUR_STEPS.length) * 100;
 
-  const placement = step?.placement || (step?.target ? "bottom" : "center");
-
-  const startTour = useCallback((fromBeginning = true) => {
-    if (fromBeginning) {
-      setStepIndex(0);
-      onTabChange("overview");
-    }
-    setOpen(true);
-  }, [onTabChange]);
-
-  const closeTour = useCallback((markComplete = false) => {
-    setOpen(false);
-    if (markComplete && typeof window !== "undefined") {
-      localStorage.setItem(OPERATOR_TOUR_STORAGE_KEY, "true");
-    }
-  }, []);
-
-  const goToStep = useCallback(
-    (nextIndex: number) => {
-      if (nextIndex < 0 || nextIndex >= OPERATOR_TOUR_STEPS.length) return;
-      setStepIndex(nextIndex);
+  const startTour = useCallback(
+    (fromBeginning = true) => {
+      if (fromBeginning) {
+        setStepIndex(0);
+        setSlideDirection("next");
+      }
+      setOpen(true);
     },
     []
   );
+
+  const closeTour = useCallback(
+    (markComplete = false) => {
+      setOpen(false);
+      if ((markComplete || dontShowAgain) && typeof window !== "undefined") {
+        localStorage.setItem(OPERATOR_TOUR_STORAGE_KEY, "true");
+      }
+    },
+    [dontShowAgain]
+  );
+
+  const goToStep = useCallback((nextIndex: number, direction: "next" | "back") => {
+    if (nextIndex < 0 || nextIndex >= OPERATOR_TOUR_STEPS.length) return;
+    setSlideDirection(direction);
+    setStepIndex(nextIndex);
+  }, []);
 
   const handleNext = useCallback(() => {
     if (isLastStep) {
       closeTour(true);
       return;
     }
-    goToStep(stepIndex + 1);
+    goToStep(stepIndex + 1, "next");
   }, [closeTour, goToStep, isLastStep, stepIndex]);
 
   const handleBack = useCallback(() => {
-    if (!isFirstStep) goToStep(stepIndex - 1);
+    if (!isFirstStep) goToStep(stepIndex - 1, "back");
   }, [goToStep, isFirstStep, stepIndex]);
+
+  const goToSection = useCallback(() => {
+    if (!step?.tab) return;
+    onTabChange(step.tab);
+    if (step.customerSubTab) {
+      onCustomerSubTabChange?.(step.customerSubTab);
+    }
+    closeTour(false);
+  }, [closeTour, onCustomerSubTabChange, onTabChange, step]);
 
   useEffect(() => {
     setMounted(true);
@@ -141,67 +134,10 @@ export function OperatorDashboardTour({
     if (!mounted || typeof window === "undefined") return;
     const completed = localStorage.getItem(OPERATOR_TOUR_STORAGE_KEY);
     if (!completed) {
-      const timer = window.setTimeout(() => startTour(true), 800);
+      const timer = window.setTimeout(() => startTour(true), 900);
       return () => window.clearTimeout(timer);
     }
   }, [mounted, startTour]);
-
-  useEffect(() => {
-    if (!open || !step) return;
-
-    let cancelled = false;
-    setNavigating(true);
-
-    if (step.tab && step.tab !== activeTab) {
-      onTabChange(step.tab);
-    }
-    if (step.customerSubTab) {
-      onCustomerSubTabChange?.(step.customerSubTab);
-    }
-
-    const delay = step.navDelayMs ?? (step.tab ? 300 : 120);
-
-    const timer = window.setTimeout(() => {
-      if (cancelled) return;
-
-      const rect = getTargetRect(step.target);
-      if (rect && step.target) {
-        const element = document.querySelector(getOperatorTourTargetSelector(step.target) || "");
-        element?.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-        window.setTimeout(() => {
-          if (!cancelled) {
-            setTargetRect(getTargetRect(step.target));
-            setNavigating(false);
-          }
-        }, 280);
-      } else {
-        setTargetRect(null);
-        setNavigating(false);
-      }
-    }, delay);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [open, step, activeTab, onTabChange, onCustomerSubTabChange]);
-
-  useEffect(() => {
-    if (!open || !step) return;
-
-    function updateRect() {
-      setTargetRect(getTargetRect(step.target));
-    }
-
-    updateRect();
-    window.addEventListener("resize", updateRect);
-    window.addEventListener("scroll", updateRect, true);
-
-    return () => {
-      window.removeEventListener("resize", updateRect);
-      window.removeEventListener("scroll", updateRect, true);
-    };
-  }, [open, step, stepIndex, navigating]);
 
   useEffect(() => {
     if (!open) return;
@@ -216,18 +152,14 @@ export function OperatorDashboardTour({
       }
     }
 
+    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, closeTour, handleBack, handleNext]);
 
-  const tooltipPosition = useMemo(
-    () =>
-      getTooltipPosition(targetRect, placement, {
-        width: Math.min(420, window.innerWidth - 32),
-        height: 280,
-      }),
-    [targetRect, placement]
-  );
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, closeTour, handleBack, handleNext]);
 
   if (!mounted || !step) return null;
 
@@ -283,160 +215,391 @@ export function OperatorDashboardTour({
               position: "fixed",
               inset: 0,
               zIndex: 10000,
-              pointerEvents: "auto",
+              background: "rgba(8, 12, 22, 0.82)",
+              backdropFilter: "blur(6px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "1rem",
+            }}
+            onClick={(event) => {
+              if (event.target === event.currentTarget) closeTour(false);
             }}
           >
-            {targetRect && placement !== "center" ? (
-              <div
-                style={{
-                  position: "fixed",
-                  top: targetRect.top,
-                  left: targetRect.left,
-                  width: targetRect.width,
-                  height: targetRect.height,
-                  borderRadius: "12px",
-                  boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.68)",
-                  pointerEvents: "none",
-                  transition: "all 0.25s ease",
-                  zIndex: 10001,
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  position: "fixed",
-                  inset: 0,
-                  background: "rgba(15, 23, 42, 0.68)",
-                  zIndex: 10001,
-                }}
-              />
-            )}
-
             <div
               style={{
-                position: "fixed",
-                top: tooltipPosition.top,
-                left: tooltipPosition.left,
-                width: "min(420px, calc(100vw - 32px))",
-                background: "#ffffff",
-                borderRadius: "16px",
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 20px 50px rgba(15, 23, 42, 0.28)",
-                padding: "1.25rem",
-                zIndex: 10002,
+                width: "min(920px, 100%)",
+                maxHeight: "min(90vh, 720px)",
+                background: "linear-gradient(180deg, #151a28 0%, #0f131d 100%)",
+                borderRadius: "20px",
+                border: "1px solid rgba(255,255,255,0.08)",
+                boxShadow: "0 30px 80px rgba(0,0,0,0.55)",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                animation: `${slideDirection === "next" ? "tourSlideInRight" : "tourSlideInLeft"} 0.28s ease`,
               }}
             >
+              <style>{`
+                @keyframes tourSlideInRight {
+                  from { opacity: 0; transform: translateX(24px); }
+                  to { opacity: 1; transform: translateX(0); }
+                }
+                @keyframes tourSlideInLeft {
+                  from { opacity: 0; transform: translateX(-24px); }
+                  to { opacity: 1; transform: translateX(0); }
+                }
+              `}</style>
+
+              {/* Top bar */}
               <div
                 style={{
+                  padding: "1rem 1.25rem 0.75rem",
+                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    marginBottom: "0.75rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        padding: "0.3rem 0.65rem",
+                        borderRadius: "999px",
+                        background: "rgba(37,99,235,0.15)",
+                        border: "1px solid rgba(96,165,250,0.25)",
+                        color: "#93c5fd",
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        letterSpacing: "0.06em",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "6px",
+                          height: "6px",
+                          borderRadius: "50%",
+                          background: "#60a5fa",
+                          boxShadow: "0 0 6px #60a5fa",
+                        }}
+                      />
+                      OPERATOR TOUR
+                    </span>
+                    <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 600 }}>
+                      {stepIndex + 1} of {OPERATOR_TOUR_STEPS.length}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => closeTour(false)}
+                    aria-label="Close tour"
+                    style={{
+                      border: "none",
+                      background: "rgba(255,255,255,0.06)",
+                      color: "#94a3b8",
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "8px",
+                      fontSize: "1.1rem",
+                      cursor: "pointer",
+                      lineHeight: 1,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    height: "3px",
+                    borderRadius: "999px",
+                    background: "rgba(255,255,255,0.06)",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${progress}%`,
+                      background: "linear-gradient(90deg, #16a34a 0%, #3b82f6 100%)",
+                      borderRadius: "999px",
+                      transition: "width 0.3s ease",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Body */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(0, 1.1fr) minmax(0, 0.9fr)",
+                  gap: "1.25rem",
+                  padding: "1.25rem",
+                  overflowY: "auto",
+                  flex: 1,
+                }}
+                className="operator-tour-body"
+              >
+                <style>{`
+                  @media (max-width: 720px) {
+                    .operator-tour-body {
+                      grid-template-columns: 1fr !important;
+                    }
+                  }
+                `}</style>
+
+                <div>
+                  <h2
+                    style={{
+                      margin: "0 0 0.65rem",
+                      fontSize: "clamp(1.25rem, 3vw, 1.65rem)",
+                      fontWeight: 800,
+                      color: "#f8fafc",
+                      lineHeight: 1.25,
+                    }}
+                  >
+                    {renderTitle(step.title, step.accent)}
+                  </h2>
+                  <p
+                    style={{
+                      margin: "0 0 1rem",
+                      fontSize: "0.9rem",
+                      lineHeight: 1.65,
+                      color: "#94a3b8",
+                    }}
+                  >
+                    {step.body}
+                  </p>
+
+                  {step.highlights && step.highlights.length > 0 && (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+                        gap: "0.5rem",
+                        marginBottom: "1rem",
+                      }}
+                    >
+                      {step.highlights.map((item) => (
+                        <div
+                          key={item.label}
+                          style={{
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            borderRadius: "10px",
+                            padding: "0.65rem 0.75rem",
+                          }}
+                        >
+                          <div style={{ fontSize: "0.65rem", color: "#64748b", marginBottom: "0.15rem" }}>
+                            {item.label}
+                          </div>
+                          <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#e2e8f0" }}>{item.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {step.bullets && step.bullets.length > 0 && (
+                    <ul
+                      style={{
+                        margin: "0 0 1rem",
+                        paddingLeft: "1.1rem",
+                        color: "#cbd5e1",
+                        fontSize: "0.82rem",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {step.bullets.map((bullet) => (
+                        <li key={bullet} style={{ marginBottom: "0.3rem" }}>
+                          {bullet}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {step.examples && step.examples.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      <div
+                        style={{
+                          fontSize: "0.7rem",
+                          fontWeight: 700,
+                          color: "#64748b",
+                          letterSpacing: "0.05em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Real-world examples
+                      </div>
+                      {step.examples.map((example) => (
+                        <div
+                          key={example.scenario}
+                          style={{
+                            background: "rgba(255,255,255,0.03)",
+                            border: "1px solid rgba(255,255,255,0.07)",
+                            borderRadius: "10px",
+                            padding: "0.75rem 0.875rem",
+                            fontSize: "0.8rem",
+                            lineHeight: 1.55,
+                          }}
+                        >
+                          <div style={{ color: "#e2e8f0", marginBottom: "0.3rem" }}>
+                            <span style={{ color: "#fbbf24", fontWeight: 700 }}>Scenario: </span>
+                            {example.scenario}
+                          </div>
+                          <div style={{ color: "#94a3b8" }}>
+                            <span style={{ color: "#4ade80", fontWeight: 700 }}>What to do: </span>
+                            {example.action}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ minHeight: "260px" }}>
+                  <OperatorTourSlidePreview previewId={step.preview} />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "1rem 1.25rem 1.15rem",
+                  borderTop: "1px solid rgba(255,255,255,0.06)",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  gap: "0.75rem",
-                  marginBottom: "0.75rem",
+                  gap: "1rem",
+                  flexWrap: "wrap",
                 }}
               >
-                <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "#6b7280", letterSpacing: "0.04em" }}>
-                  STEP {stepIndex + 1} OF {OPERATOR_TOUR_STEPS.length}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => closeTour(false)}
-                  aria-label="Close tour"
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    color: "#9ca3af",
-                    fontSize: "1.25rem",
-                    cursor: "pointer",
-                    lineHeight: 1,
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-
-              <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.125rem", fontWeight: "700", color: "#111827" }}>
-                {step.title}
-              </h3>
-              <p style={{ margin: "0 0 0.75rem", fontSize: "0.9rem", lineHeight: 1.6, color: "#4b5563" }}>
-                {step.body}
-              </p>
-
-              {step.bullets && step.bullets.length > 0 && (
-                <ul
-                  style={{
-                    margin: "0 0 1rem",
-                    paddingLeft: "1.1rem",
-                    color: "#374151",
-                    fontSize: "0.85rem",
-                    lineHeight: 1.55,
-                  }}
-                >
-                  {step.bullets.map((bullet) => (
-                    <li key={bullet} style={{ marginBottom: "0.35rem" }}>
-                      {bullet}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {navigating && (
-                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.75rem" }}>
-                  Loading this section...
-                </div>
-              )}
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  disabled={isFirstStep}
-                  style={{
-                    padding: "0.55rem 0.9rem",
-                    borderRadius: "10px",
-                    border: "1px solid #d1d5db",
-                    background: "#ffffff",
-                    color: isFirstStep ? "#9ca3af" : "#374151",
-                    fontSize: "0.8125rem",
-                    fontWeight: "600",
-                    cursor: isFirstStep ? "not-allowed" : "pointer",
-                  }}
-                >
-                  Back
-                </button>
-
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <button
-                    type="button"
-                    onClick={() => closeTour(true)}
+                <div>
+                  <div style={{ display: "flex", gap: "0.35rem", marginBottom: "0.55rem" }}>
+                    {OPERATOR_TOUR_STEPS.map((_, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => goToStep(index, index > stepIndex ? "next" : "back")}
+                        aria-label={`Go to slide ${index + 1}`}
+                        style={{
+                          width: index === stepIndex ? "20px" : "8px",
+                          height: "8px",
+                          borderRadius: "999px",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                          background:
+                            index === stepIndex
+                              ? "linear-gradient(90deg, #16a34a, #3b82f6)"
+                              : index < stepIndex
+                                ? "rgba(74,222,128,0.5)"
+                                : "rgba(255,255,255,0.15)",
+                          transition: "all 0.2s ease",
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <label
                     style={{
-                      padding: "0.55rem 0.9rem",
-                      borderRadius: "10px",
-                      border: "1px solid #e5e7eb",
-                      background: "#f9fafb",
-                      color: "#6b7280",
-                      fontSize: "0.8125rem",
-                      fontWeight: "600",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.45rem",
+                      fontSize: "0.75rem",
+                      color: "#64748b",
                       cursor: "pointer",
+                      userSelect: "none",
                     }}
                   >
-                    Skip Tour
+                    <input
+                      type="checkbox"
+                      checked={dontShowAgain}
+                      onChange={(event) => setDontShowAgain(event.target.checked)}
+                      style={{ accentColor: "#16a34a" }}
+                    />
+                    Don&apos;t show this again on login
+                  </label>
+                </div>
+
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+                  {step.tab && !isLastStep && (
+                    <button
+                      type="button"
+                      onClick={goToSection}
+                      style={{
+                        padding: "0.6rem 0.9rem",
+                        borderRadius: "10px",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        background: "rgba(255,255,255,0.04)",
+                        color: "#94a3b8",
+                        fontSize: "0.8rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Open in dashboard →
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    disabled={isFirstStep}
+                    style={{
+                      padding: "0.6rem 1rem",
+                      borderRadius: "10px",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      background: "rgba(255,255,255,0.04)",
+                      color: isFirstStep ? "#475569" : "#cbd5e1",
+                      fontSize: "0.8125rem",
+                      fontWeight: "600",
+                      cursor: isFirstStep ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    Back
                   </button>
+                  {!isLastStep && (
+                    <button
+                      type="button"
+                      onClick={() => closeTour(dontShowAgain)}
+                      style={{
+                        padding: "0.6rem 0.9rem",
+                        borderRadius: "10px",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        background: "transparent",
+                        color: "#64748b",
+                        fontSize: "0.8125rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Skip
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleNext}
                     style={{
-                      padding: "0.55rem 1rem",
+                      padding: "0.6rem 1.15rem",
                       borderRadius: "10px",
                       border: "none",
-                      background: "#16a34a",
+                      background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
                       color: "#ffffff",
                       fontSize: "0.8125rem",
-                      fontWeight: "600",
+                      fontWeight: "700",
                       cursor: "pointer",
+                      boxShadow: "0 4px 16px rgba(22,163,74,0.35)",
                     }}
                   >
-                    {isLastStep ? "Finish" : "Next"}
+                    {isLastStep ? "Start Operating" : "Continue"}
                   </button>
                 </div>
               </div>
