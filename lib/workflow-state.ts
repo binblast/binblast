@@ -31,6 +31,7 @@ export interface WorkflowState {
 export interface Prerequisites {
   isClockedIn: boolean;
   hasJobs: boolean;
+  hasStartedRoute: boolean;
   selectedJob: {
     id: string;
     status: 'pending' | 'in_progress' | 'completed';
@@ -116,6 +117,7 @@ export function getStepStatus(
 
     case 'viewJobs':
       if (!prerequisites.isClockedIn) return 'locked';
+      if (prerequisites.hasStartedRoute) return 'completed';
       if (!prerequisites.hasJobs) return 'pending';
       return 'active';
 
@@ -195,11 +197,17 @@ export function buildWorkflowState(
   isClockedIn: boolean,
   jobs: Array<{ id: string; jobStatus?: 'pending' | 'in_progress' | 'completed'; hasRequiredPhotos?: boolean; insidePhotoUrl?: string; outsidePhotoUrl?: string }>,
   activeJobId: string | null,
-  selectedJob: { id: string; jobStatus?: 'pending' | 'in_progress' | 'completed'; hasRequiredPhotos?: boolean; insidePhotoUrl?: string; outsidePhotoUrl?: string; stickerStatus?: string } | null
+  selectedJob: { id: string; jobStatus?: 'pending' | 'in_progress' | 'completed'; hasRequiredPhotos?: boolean; insidePhotoUrl?: string; outsidePhotoUrl?: string; stickerStatus?: string } | null,
+  completedJobsCount = 0
 ): WorkflowState {
+  const hasStartedRoute =
+    completedJobsCount > 0 ||
+    jobs.some((job) => job.jobStatus === 'in_progress' || job.jobStatus === 'completed');
+
   const prerequisites: Prerequisites = {
     isClockedIn,
     hasJobs: jobs.length > 0,
+    hasStartedRoute,
     selectedJob: selectedJob ? {
       id: selectedJob.id,
       status: selectedJob.jobStatus || 'pending',

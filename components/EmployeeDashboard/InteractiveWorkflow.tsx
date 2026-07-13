@@ -42,6 +42,7 @@ interface JobCompletionData {
 interface InteractiveWorkflowProps {
   isClockedIn: boolean;
   jobs: Job[];
+  completedJobs?: Job[];
   activeJob: Job | null;
   onClockIn: () => void;
   onJobClick: (job: Job) => void;
@@ -54,6 +55,7 @@ interface InteractiveWorkflowProps {
 export function InteractiveWorkflow({
   isClockedIn,
   jobs,
+  completedJobs = [],
   activeJob,
   onClockIn,
   onJobClick,
@@ -62,15 +64,22 @@ export function InteractiveWorkflow({
   employeeId,
   onWorkflowStepClick,
 }: InteractiveWorkflowProps) {
+  const inProgressJob = jobs.find((job) => job.jobStatus === "in_progress") || null;
+  const nextPendingJob =
+    jobs.find((job) => job.jobStatus === "pending" || !job.jobStatus) || null;
+  const focusJob = activeJob || inProgressJob || nextPendingJob;
+  const routeComplete = jobs.length === 0 && completedJobs.length > 0;
+
   // Rebuild workflow state whenever props change (memoized for performance)
   const workflowState = useMemo(() => {
     return buildWorkflowState(
       isClockedIn,
       jobs,
-      activeJob?.id || null,
-      activeJob || null
+      focusJob?.id || null,
+      focusJob || null,
+      completedJobs.length
     );
-  }, [isClockedIn, jobs, activeJob]);
+  }, [isClockedIn, jobs, focusJob, completedJobs.length]);
 
   const progress = useMemo(() => {
     return calculateProgress(
@@ -105,24 +114,22 @@ export function InteractiveWorkflow({
         break;
 
       case 'startJob':
-        if (activeJob && (activeJob.jobStatus === "pending" || !activeJob.jobStatus)) {
-          onStartJob(activeJob.id);
-        } else if (activeJob) {
-          onJobClick(activeJob);
+        if (focusJob && (focusJob.jobStatus === "pending" || !focusJob.jobStatus)) {
+          onStartJob(focusJob.id);
+        } else if (focusJob) {
+          onJobClick(focusJob);
         }
         break;
 
       case 'uploadPhotos':
-        if (jobId && activeJob) {
-          onJobClick(activeJob);
-          // JobDetailModal will handle focusing on photo section
+        if (focusJob) {
+          onJobClick(focusJob);
         }
         break;
 
       case 'completeJob':
-        if (jobId && activeJob) {
-          onJobClick(activeJob);
-          // JobDetailModal will handle focusing on completion section
+        if (focusJob) {
+          onJobClick(focusJob);
         }
         break;
     }
@@ -193,7 +200,7 @@ export function InteractiveWorkflow({
         className="workflow-step"
         onClick={() => {
           if (isClickable && !isDisabled) {
-            handleStepClick(stepId, activeJob?.id);
+            handleStepClick(stepId, focusJob?.id);
           }
         }}
         disabled={isDisabled}
@@ -305,10 +312,15 @@ export function InteractiveWorkflow({
     );
   };
 
-  // Don't show workflow if not clocked in (clock in is handled by TodayStatusBar)
-  if (!isClockedIn) {
+  // Don't show workflow if not clocked in or route is fully complete
+  if (!isClockedIn || routeComplete) {
     return null;
   }
+
+  const viewJobsTitle =
+    completedJobs.length > 0 && workflowState.shiftSteps.viewJobs !== "completed"
+      ? "Go to Next Stop"
+      : "Go to First Stop";
 
   return (
     <div
@@ -398,25 +410,27 @@ export function InteractiveWorkflow({
         {renderStep(
           'viewJobs',
           2,
-          'Go to First Stop',
-          'Open your route and navigate to the first customer',
+          viewJobsTitle,
+          workflowState.shiftSteps.viewJobs === 'completed'
+            ? 'You are on your route'
+            : 'Open your route and navigate to the next customer',
           workflowState.shiftSteps.viewJobs,
           workflowState.currentStep?.id === 'viewJobs' ? workflowState.currentStep.lockedReason : undefined,
           false
         )}
 
         {/* Job-Specific Steps */}
-        {activeJob && workflowState.jobSteps[activeJob.id] && (
+        {focusJob && workflowState.jobSteps[focusJob.id] && (
           <>
             {renderStep(
               'startJob',
               3,
               'Start Job',
-              `Begin work on ${activeJob.customerName || activeJob.userEmail || 'this job'}`,
-              workflowState.jobSteps[activeJob.id].startJob,
+              `Begin work on ${focusJob.customerName || focusJob.userEmail || 'this job'}`,
+              workflowState.jobSteps[focusJob.id].startJob,
               workflowState.currentStep?.id === 'startJob' ? workflowState.currentStep.lockedReason : undefined,
               true,
-              activeJob.customerName || activeJob.userEmail || undefined
+              focusJob.customerName || focusJob.userEmail || undefined
             )}
 
             {renderStep(
@@ -424,10 +438,10 @@ export function InteractiveWorkflow({
               4,
               'Upload Photos',
               'Take inside and outside photos',
-              workflowState.jobSteps[activeJob.id].uploadPhotos,
+              workflowState.jobSteps[focusJob.id].uploadPhotos,
               workflowState.currentStep?.id === 'uploadPhotos' ? workflowState.currentStep.lockedReason : undefined,
               true,
-              activeJob.customerName || activeJob.userEmail || undefined
+              focusJob.customerName || focusJob.userEmail || undefined
             )}
 
             {renderStep(
@@ -435,16 +449,16 @@ export function InteractiveWorkflow({
               5,
               'Complete Job',
               'Submit job with all requirements',
-              workflowState.jobSteps[activeJob.id].completeJob,
+              workflowState.jobSteps[focusJob.id].completeJob,
               workflowState.currentStep?.id === 'completeJob' ? workflowState.currentStep.lockedReason : undefined,
               true,
-              activeJob.customerName || activeJob.userEmail || undefined
+              focusJob.customerName || focusJob.userEmail || undefined
             )}
           </>
         )}
 
         {/* No Job Selected Message */}
-        {!activeJob && workflowState.shiftSteps.viewJobs === 'completed' && (
+        {!focusJob && workflowState.shiftSteps.viewJobs === 'completed' && (
           <div
             style={{
               padding: '1rem',

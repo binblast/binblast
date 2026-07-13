@@ -836,6 +836,7 @@ export default function EmployeeDashboardPage() {
               <InteractiveWorkflow
                 isClockedIn={isClockedIn}
                 jobs={jobs}
+                completedJobs={completedJobsToday}
                 activeJob={selectedJob}
                 onClockIn={handleClockIn}
                 onJobClick={handleSelectJob}
