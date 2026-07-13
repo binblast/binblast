@@ -53,6 +53,16 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
           setLoading(false);
           return;
         }
+
+        try {
+          await fetch("/api/referral/sync-pending", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ referrerId: currentUserId }),
+          });
+        } catch (syncError) {
+          console.error("[ReferralHistory] Failed to sync pending referrals:", syncError);
+        }
         
         const db = await getDbInstance();
         if (!db) {

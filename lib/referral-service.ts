@@ -240,22 +240,207 @@ export type AwardReferralCreditsResult = {
   referralId?: string;
   referrerId?: string;
   alreadyCompleted?: boolean;
+  userId?: string;
+  queued?: boolean;
 };
+
+async function resolveUserForReferralPayment(params: {
+  userId?: string | null;
+  userEmail?: string | null;
+  stripeCustomerId?: string | null;
+}) {
+  const db = await getAdminFirestore();
+  let userId = params.userId || null;
+  let userEmail = params.userEmail?.trim().toLowerCase() || null;
+
+  if (userId) {
+    const userDoc = await db.collection("users").doc(userId).get();
+    if (userDoc.exists) {
+      return {
+        userId,
+        userEmail: userEmail || String(userDoc.data()?.email || "").toLowerCase(),
+        userDoc,
+      };
+    }
+  }
+
+  if (params.stripeCustomerId) {
+    const byStripe = await db
+      .collection("users")
+      .where("stripeCustomerId", "==", params.stripeCustomerId)
+      .limit(1)
+      .get();
+    if (!byStripe.empty) {
+      const doc = byStripe.docs[0];
+      return {
+        userId: doc.id,
+        userEmail: String(doc.data()?.email || userEmail || "").toLowerCase(),
+        userDoc: doc,
+      };
+    }
+  }
+
+  if (userEmail) {
+    const byEmail = await db
+      .collection("users")
+      .where("email", "==", userEmail)
+      .limit(1)
+      .get();
+    if (!byEmail.empty) {
+      const doc = byEmail.docs[0];
+      return {
+        userId: doc.id,
+        userEmail,
+        userDoc: doc,
+      };
+    }
+  }
+
+  return { userId: null, userEmail, userDoc: null };
+}
+
+export async function queuePendingReferralPayment(params: {
+  userEmail: string;
+  referralCode?: string | null;
+  stripeCustomerId?: string | null;
+  stripeSessionId?: string | null;
+}) {
+  const userEmail = params.userEmail.trim().toLowerCase();
+  const normalizedCode = params.referralCode
+    ? normalizeReferralCode(params.referralCode)
+    : "";
+
+  if (!userEmail) {
+    return;
+  }
+
+  const db = await getAdminFirestore();
+  const admin = await import("firebase-admin");
+
+  await db
+    .collection("pendingReferralPayments")
+    .doc(userEmail)
+    .set(
+      {
+        userEmail,
+        referralCode: normalizedCode || null,
+        stripeCustomerId: params.stripeCustomerId || null,
+        stripeSessionId: params.stripeSessionId || null,
+        processed: false,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+}
+
+export async function processPendingReferralPaymentForUser(
+  userId: string,
+  userEmail: string
+): Promise<AwardReferralCreditsResult> {
+  const normalizedEmail = userEmail.trim().toLowerCase();
+  const db = await getAdminFirestore();
+  const pendingRef = db.collection("pendingReferralPayments").doc(normalizedEmail);
+  const pendingDoc = await pendingRef.get();
+
+  if (!pendingDoc.exists || pendingDoc.data()?.processed) {
+    return { awarded: false, creditsAwarded: 0, userId };
+  }
+
+  const pendingData = pendingDoc.data() || {};
+  if (pendingData.referralCode) {
+    await ensureReferralFromCheckout({
+      referralCode: pendingData.referralCode,
+      userId,
+      userEmail: normalizedEmail,
+    });
+  }
+
+  const awardResult = await awardReferralCreditsForUser(userId);
+  const admin = await import("firebase-admin");
+  await pendingRef.set(
+    {
+      processed: true,
+      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      userId,
+    },
+    { merge: true }
+  );
+
+  return { ...awardResult, userId };
+}
+
+export async function completeReferralAfterPayment(params: {
+  userId?: string | null;
+  userEmail?: string | null;
+  stripeCustomerId?: string | null;
+  stripeSessionId?: string | null;
+  referralCode?: string | null;
+  markPaid?: boolean;
+}): Promise<AwardReferralCreditsResult> {
+  const resolved = await resolveUserForReferralPayment(params);
+
+  if (!resolved.userId) {
+    if (params.userEmail && params.referralCode) {
+      await queuePendingReferralPayment({
+        userEmail: params.userEmail,
+        referralCode: params.referralCode,
+        stripeCustomerId: params.stripeCustomerId,
+        stripeSessionId: params.stripeSessionId,
+      });
+    }
+    return { awarded: false, creditsAwarded: 0, queued: true };
+  }
+
+  const userId = resolved.userId;
+  const userEmail = resolved.userEmail || params.userEmail?.trim().toLowerCase() || "";
+
+  if (params.referralCode && userEmail) {
+    await ensureReferralFromCheckout({
+      referralCode: params.referralCode,
+      userId,
+      userEmail,
+    });
+  }
+
+  if (params.markPaid) {
+    const db = await getAdminFirestore();
+    const admin = await import("firebase-admin");
+    const updates: Record<string, unknown> = {
+      paymentStatus: "paid",
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    if (params.stripeCustomerId) {
+      updates.stripeCustomerId = params.stripeCustomerId;
+    }
+    await db.collection("users").doc(userId).set(updates, { merge: true });
+  }
+
+  const pendingResult = userEmail
+    ? await processPendingReferralPaymentForUser(userId, userEmail)
+    : { awarded: false, creditsAwarded: 0, userId };
+
+  if (pendingResult.awarded) {
+    return pendingResult;
+  }
+
+  const awardResult = await awardReferralCreditsForUser(userId);
+  return { ...awardResult, userId };
+}
 
 export async function awardReferralCreditsForUser(
   userId: string
 ): Promise<AwardReferralCreditsResult> {
   const db = await getAdminFirestore();
-  const userDoc = await db.collection("users").doc(userId).get();
+  const userRef = db.collection("users").doc(userId);
+  const userDoc = await userRef.get();
 
   if (!userDoc.exists) {
     return { awarded: false, creditsAwarded: 0 };
   }
 
   const userData = userDoc.data() || {};
-  if (!userData.referredBy) {
-    return { awarded: false, creditsAwarded: 0 };
-  }
+  let referrerId = userData.referredBy as string | undefined;
 
   const pendingReferrals = await db
     .collection("referrals")
@@ -270,7 +455,24 @@ export async function awardReferralCreditsForUser(
 
   const referralDoc = pendingReferrals.docs[0];
   const referralData = referralDoc.data();
-  const referrerId = referralData.referrerId as string;
+  referrerId = referrerId || (referralData.referrerId as string);
+
+  if (!referrerId) {
+    return { awarded: false, creditsAwarded: 0 };
+  }
+
+  if (!userData.referredBy) {
+    const admin = await import("firebase-admin");
+    await userRef.set(
+      {
+        referredBy: referrerId,
+        referredByCode: referralData.referralCode || userData.referredByCode || null,
+        referralCodeUsed: true,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
 
   const existingCredits = await db
     .collection("credits")
@@ -343,6 +545,46 @@ export async function awardReferralCreditsForUser(
     creditsAwarded: 2,
     referralId: referralDoc.id,
     referrerId,
+  };
+}
+
+export async function syncPendingReferralsForReferrer(referrerId: string): Promise<{
+  checked: number;
+  awarded: number;
+}> {
+  const db = await getAdminFirestore();
+  const pendingReferrals = await db
+    .collection("referrals")
+    .where("referrerId", "==", referrerId)
+    .where("status", "==", "PENDING")
+    .get();
+
+  let awarded = 0;
+
+  for (const referralDoc of pendingReferrals.docs) {
+    const referredUserId = referralDoc.data().referredUserId as string | undefined;
+    if (!referredUserId) continue;
+
+    const referredUserDoc = await db.collection("users").doc(referredUserId).get();
+    if (!referredUserDoc.exists) continue;
+
+    const referredUserData = referredUserDoc.data() || {};
+    const hasPaid =
+      referredUserData.paymentStatus === "paid" ||
+      Boolean(referredUserData.stripeSubscriptionId) ||
+      Boolean(referredUserData.stripeCustomerId);
+
+    if (!hasPaid) continue;
+
+    const result = await awardReferralCreditsForUser(referredUserId);
+    if (result.awarded) {
+      awarded += 1;
+    }
+  }
+
+  return {
+    checked: pendingReferrals.size,
+    awarded,
   };
 }
 

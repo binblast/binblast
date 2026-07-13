@@ -457,6 +457,30 @@ function DashboardPageContent() {
     loadCleaningAccountSummary(userId);
   }, [userId, isAdmin, isOperator, isOwner, loadCleaningAccountSummary, user?.selectedPlan, user?.cleaningCredits]);
 
+  useEffect(() => {
+    if (!userId || isAdmin || isOperator || isOwner) return;
+
+    const hasPaid =
+      user?.paymentStatus === "paid" || Boolean(user?.stripeSubscriptionId);
+
+    if (!hasPaid) return;
+
+    fetch("/api/referral/award-credits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    }).catch((error) => {
+      console.error("[Dashboard] Referral credit auto-award failed:", error);
+    });
+  }, [
+    userId,
+    user?.paymentStatus,
+    user?.stripeSubscriptionId,
+    isAdmin,
+    isOperator,
+    isOwner,
+  ]);
+
   // Initialize Firebase
   useEffect(() => {
     let isMounted = true;

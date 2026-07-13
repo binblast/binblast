@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       alreadyProcessed: result.alreadyProcessed || false,
       message: result.alreadyProcessed
         ? "Referral already linked to this account."
-        : "Referral processed successfully. Credits will be awarded after first purchase!",
+        : "Referral processed successfully.",
     });
   } catch (err: unknown) {
     console.error("Referral processing error:", err);

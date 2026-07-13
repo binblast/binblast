@@ -93,6 +93,40 @@ export async function POST(req: NextRequest) {
             console.error("[Webhook] Error processing one-time cleaning payment:", oneTimeCleaningError);
           }
         }
+
+        // Award referral credits as soon as payment completes.
+        if (session.payment_status === "paid") {
+          try {
+            const { completeReferralAfterPayment } = await import("@/lib/referral-service");
+            const awardResult = await completeReferralAfterPayment({
+              userId: session.metadata?.userId || null,
+              userEmail: session.customer_details?.email || null,
+              stripeCustomerId:
+                typeof session.customer === "string"
+                  ? session.customer
+                  : session.customer?.id || null,
+              stripeSessionId: session.id,
+              referralCode: session.metadata?.referralCode || null,
+              markPaid: true,
+            });
+
+            if (awardResult.awarded) {
+              console.log("[Webhook] Referral credits awarded after payment:", {
+                referralId: awardResult.referralId,
+                referredUserId: awardResult.userId,
+                referrerId: awardResult.referrerId,
+                creditsAwarded: awardResult.creditsAwarded,
+              });
+            } else if (awardResult.queued) {
+              console.log("[Webhook] Referral payment queued until account exists:", {
+                customerEmail: session.customer_details?.email,
+                referralCode: session.metadata?.referralCode,
+              });
+            }
+          } catch (referralPaymentError) {
+            console.error("[Webhook] Error completing referral after payment:", referralPaymentError);
+          }
+        }
         
         // Get customer email from session
         const customerEmail = session.customer_details?.email;
@@ -233,38 +267,7 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Link referral from checkout metadata if registration did not already process it.
-          if (session.metadata?.referralCode && session.payment_status === "paid" && userId && customerEmail) {
-            try {
-              const { ensureReferralFromCheckout } = await import("@/lib/referral-service");
-              await ensureReferralFromCheckout({
-                referralCode: session.metadata.referralCode,
-                userId,
-                userEmail: customerEmail,
-              });
-            } catch (referralCodeError) {
-              console.error("[Webhook] Error processing referral code from checkout:", referralCodeError);
-            }
-          }
 
-          // Award referral credits after first paid purchase.
-          if (userId && session.payment_status === "paid") {
-            try {
-              const { awardReferralCreditsForUser } = await import("@/lib/referral-service");
-              const awardResult = await awardReferralCreditsForUser(userId);
-              if (awardResult.awarded) {
-                console.log("[Webhook] Referral credits awarded:", {
-                  referralId: awardResult.referralId,
-                  referredUserId: userId,
-                  referrerId: awardResult.referrerId,
-                  creditsAwarded: awardResult.creditsAwarded,
-                });
-              }
-            } catch (creditError) {
-              console.error("[Webhook] Error awarding referral credits:", creditError);
-            }
-          }
-          
           // Handle partner revenue share and create PartnerBooking record
           if (session.payment_status === 'paid' && session.metadata?.partnerId) {
             try {
@@ -582,8 +585,26 @@ export async function POST(req: NextRequest) {
           ? invoice.customer
           : invoice.customer?.id;
 
-        const db = await getDbInstance();
-        if (customerId && db) {
+        if (customerId && invoice.amount_paid > 0) {
+          try {
+            const { completeReferralAfterPayment } = await import("@/lib/referral-service");
+            const awardResult = await completeReferralAfterPayment({
+              stripeCustomerId: customerId,
+              markPaid: true,
+            });
+
+            if (awardResult.awarded) {
+              console.log("[Webhook] Referral credits awarded from invoice payment:", {
+                referredUserId: awardResult.userId,
+                referrerId: awardResult.referrerId,
+                creditsAwarded: awardResult.creditsAwarded,
+                invoiceId: invoice.id,
+              });
+            }
+          } catch (invoiceReferralError) {
+            console.error("[Webhook] Error awarding referral credits from invoice:", invoiceReferralError);
+          }
+
           console.log("Invoice payment succeeded:", {
             invoiceId: invoice.id,
             customerId,
