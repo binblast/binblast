@@ -26,6 +26,10 @@ import {
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getAuthInstance } from "@/lib/firebase";
+import {
+  DEFAULT_COMPENSATION_SETTINGS,
+  type CompensationSettings,
+} from "@/lib/employee-compensation";
 import { isActiveCleaningStatus, isCleaningCompleted } from "@/lib/cleaning-status";
 import { useEmployeeLocationTracking } from "@/hooks/useEmployeeLocationTracking";
 
@@ -86,6 +90,7 @@ export default function EmployeeDashboardPage() {
     payRatePerJob: 0,
     estimatedPay: 0,
     lastJobEarnings: 0,
+    compensationSettings: DEFAULT_COMPENSATION_SETTINGS as CompensationSettings,
   });
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [dashboardData, setDashboardData] = useState<{
@@ -198,6 +203,7 @@ export default function EmployeeDashboardPage() {
           payRatePerJob: data.payRatePerJob || 0,
           estimatedPay: data.estimatedPay || 0,
           lastJobEarnings: data.lastJobEarnings || 0,
+          compensationSettings: data.compensationSettings || DEFAULT_COMPENSATION_SETTINGS,
         });
       }
     } catch (error) {
@@ -978,6 +984,7 @@ export default function EmployeeDashboardPage() {
                   isClockedIn={isClockedIn}
                   onStartNextJob={handleStartNextJob}
                   payRatePerJob={payPreview.payRatePerJob}
+                  compensationSettings={payPreview.compensationSettings}
                 />
               </div>
             </>

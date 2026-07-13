@@ -9,7 +9,8 @@ import {
   sumClockHours,
 } from "@/lib/operator-fleet-payroll";
 import { getTodayDateString } from "@/lib/employee-utils";
-import { loadCompensationSettings, sumCompensationFromCleanings } from "@/lib/employee-compensation";
+import { loadCompensationSettings } from "@/lib/employee-compensation-server";
+import { sumCompensationFromCleanings } from "@/lib/employee-compensation";
 
 export const dynamic = "force-dynamic";
 

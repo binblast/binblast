@@ -6,9 +6,11 @@ import {
   getBinsFromCleaning,
 } from "@/lib/operator-fleet-payroll";
 import {
+  loadCompensationSettings,
+} from "@/lib/employee-compensation-server";
+import {
   getJobCompensationAmount,
   isJobEligibleForCompensation,
-  loadCompensationSettings,
 } from "@/lib/employee-compensation";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +68,8 @@ export async function GET(req: NextRequest) {
           payModel: settings.payModel,
           residentialFirstBinPay: settings.residentialFirstBinPay,
           residentialAdditionalBinPay: settings.residentialAdditionalBinPay,
+          commercialFirstContainerPay: settings.commercialFirstContainerPay,
+          commercialAdditionalContainerPay: settings.commercialAdditionalContainerPay,
         },
         // Backward compatibility for older UI references
         payRatePerJob: settings.residentialFirstBinPay,

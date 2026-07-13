@@ -7,9 +7,11 @@ import {
   isJobCompleted,
 } from "@/lib/operator-fleet-payroll";
 import {
+  loadCompensationSettings,
+} from "@/lib/employee-compensation-server";
+import {
   getJobCompensationAmount,
   isJobEligibleForCompensation,
-  loadCompensationSettings,
 } from "@/lib/employee-compensation";
 
 export const dynamic = "force-dynamic";

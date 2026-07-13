@@ -1,6 +1,6 @@
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule-admin";
-import { recordJobCompensationSnapshot } from "@/lib/employee-compensation";
+import { recordJobCompensationSnapshot } from "@/lib/employee-compensation-server";
 
 export const OPERATOR_RESOLUTION_TYPES = [
   "bins_not_present",

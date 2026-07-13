@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { getBinsFromCleaning } from "@/lib/operator-fleet-payroll";
 import {
+  loadCompensationSettings,
+  saveJobCompensationAdjustments,
+} from "@/lib/employee-compensation-server";
+import {
   buildCompensationBreakdown,
   calculateJobCompensationAmount,
   COMMERCIAL_BONUS_TYPES,
   getJobCompensationCategory,
   isCommercialOrHoaJob,
-  loadCompensationSettings,
-  saveJobCompensationAdjustments,
   type CommercialBonusType,
   type JobCommercialBonuses,
 } from "@/lib/employee-compensation";

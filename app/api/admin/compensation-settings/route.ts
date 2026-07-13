@@ -5,11 +5,13 @@ import {
   buildCommercialCompensationPreview,
   COMPENSATION_PAY_MODELS,
   DEFAULT_COMPENSATION_SETTINGS,
-  loadCompensationSettings,
   mergeCompensationSettings,
-  saveCompensationSettings,
   type CompensationSettings,
 } from "@/lib/employee-compensation";
+import {
+  loadCompensationSettings,
+  saveCompensationSettings,
+} from "@/lib/employee-compensation-server";
 
 export const dynamic = "force-dynamic";
 

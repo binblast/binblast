@@ -10,6 +10,11 @@ import {
   parseFirestoreTimestamp,
 } from "@/lib/employee-utils";
 import {
+  DEFAULT_COMPENSATION_SETTINGS,
+  getDisplayJobEarnings,
+  type CompensationSettings,
+} from "@/lib/employee-compensation";
+import {
   buildRouteClusters,
   formatDistanceMiles,
   getDistanceMiles,
@@ -40,6 +45,9 @@ interface Job {
   insidePhotoUrl?: string;
   outsidePhotoUrl?: string;
   completedAt?: unknown;
+  employeeCompensationAmount?: number;
+  operatorSkipPhotos?: boolean;
+  isCommercial?: boolean;
 }
 
 interface JobListProps {
@@ -52,11 +60,16 @@ interface JobListProps {
   isClockedIn: boolean;
   onStartNextJob?: (job: Job) => void;
   payRatePerJob?: number;
+  compensationSettings?: CompensationSettings;
 }
 
 function isPayEligible(job: Job): boolean {
-  if (job.hasRequiredPhotos === true) return true;
+  if (job.hasRequiredPhotos === true || job.operatorSkipPhotos === true) return true;
   return Boolean(job.insidePhotoUrl && job.outsidePhotoUrl);
+}
+
+function getJobEarnings(job: Job, settings: CompensationSettings): number {
+  return getDisplayJobEarnings(job as unknown as Record<string, unknown>, settings);
 }
 
 export function JobList({
@@ -69,6 +82,7 @@ export function JobList({
   isClockedIn,
   onStartNextJob,
   payRatePerJob = 0,
+  compensationSettings = DEFAULT_COMPENSATION_SETTINGS,
 }: JobListProps) {
   const [routeTab, setRouteTab] = useState<"active" | "closed">("active");
   const [routeView, setRouteView] = useState<"list" | "map">("list");
@@ -893,6 +907,7 @@ export function JobList({
             sortedClosedJobs.map((job, index) => {
               const bins = job.binCount ?? job.binsCount ?? 1;
               const eligible = isPayEligible(job);
+              const jobEarnings = getJobEarnings(job, compensationSettings);
               const fullAddress = `${job.addressLine1}${
                 job.addressLine2 ? `, ${job.addressLine2}` : ""
               }, ${job.city}, ${job.state}`;
@@ -1006,7 +1021,7 @@ export function JobList({
                         {bins} bin{bins !== 1 ? "s" : ""}
                       </span>
 
-                      {eligible && payRatePerJob > 0 && (
+                      {eligible && jobEarnings > 0 && (
                         <span
                           style={{
                             fontSize: "0.75rem",
@@ -1017,7 +1032,7 @@ export function JobList({
                             borderRadius: "4px",
                           }}
                         >
-                          +${payRatePerJob.toFixed(2)}
+                          +${jobEarnings.toFixed(2)}
                         </span>
                       )}
 
