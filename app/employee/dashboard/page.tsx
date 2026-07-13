@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import "../../employee-dashboard-mobile.css";
 import { DailyMissionCard } from "@/components/EmployeeDashboard/DailyMissionCard";
+import { CompletedJobsHistory } from "@/components/EmployeeDashboard/CompletedJobsHistory";
 import { JobList } from "@/components/EmployeeDashboard/JobList";
 import { JobDetailModal } from "@/components/EmployeeDashboard/JobDetailModal";
 import { ProgressTracker } from "@/components/EmployeeDashboard/ProgressTracker";
@@ -25,7 +26,7 @@ import {
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getAuthInstance } from "@/lib/firebase";
-import { isActiveCleaningStatus } from "@/lib/cleaning-status";
+import { isActiveCleaningStatus, isCleaningCompleted } from "@/lib/cleaning-status";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
   ssr: false,
@@ -67,6 +68,7 @@ export default function EmployeeDashboardPage() {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [clockInStatus, setClockInStatus] = useState<ClockInRecord | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [completedJobsToday, setCompletedJobsToday] = useState<Job[]>([]);
   const [upcomingJobs, setUpcomingJobs] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -163,6 +165,7 @@ export default function EmployeeDashboardPage() {
       if (response.ok) {
         const data = await response.json();
         setJobs(data.todayJobs || data.jobs || []);
+        setCompletedJobsToday(data.completedJobsToday || []);
         setUpcomingJobs(data.upcomingJobs || []);
       }
     } catch (error) {
@@ -268,6 +271,29 @@ export default function EmployeeDashboardPage() {
             binCount: job.binCount ?? job.binsCount ?? 1,
           }));
 
+        const todayCompletedJobs = allJobs
+          .filter(
+            (job) =>
+              job.scheduledDate === today &&
+              isCleaningCompleted(
+                (job as Job & { status?: string }).status,
+                job.jobStatus
+              )
+          )
+          .map((job) => ({
+            ...job,
+            binCount: job.binCount ?? job.binsCount ?? 1,
+          }))
+          .sort((a, b) => {
+            const getTime = (job: Job) => {
+              if (!job.completedAt) return 0;
+              if (job.completedAt.toDate) return job.completedAt.toDate().getTime();
+              if (job.completedAt.seconds) return job.completedAt.seconds * 1000;
+              return new Date(job.completedAt).getTime();
+            };
+            return getTime(b) - getTime(a);
+          });
+
         const futureJobs = activeJobs
           .filter((job) => job.scheduledDate && job.scheduledDate > today)
           .map((job) => ({
@@ -276,6 +302,7 @@ export default function EmployeeDashboardPage() {
           }));
 
         setJobs(todayJobs);
+        setCompletedJobsToday(todayCompletedJobs);
         setUpcomingJobs(futureJobs);
         loadPayPreview();
         loadDashboardData();
@@ -607,8 +634,9 @@ export default function EmployeeDashboardPage() {
     return null;
   }
 
-  const completedJobs = jobs.filter((j) => j.jobStatus === "completed").length;
-  const remainingJobs = jobs.length - completedJobs;
+  const completedJobs = completedJobsToday.length;
+  const totalJobsToday = jobs.length + completedJobsToday.length;
+  const remainingJobs = jobs.length;
   const isClockedIn = clockInStatus?.isActive === true;
 
   return (
@@ -683,7 +711,7 @@ export default function EmployeeDashboardPage() {
           <DailyMissionCard
             employeeName={`${employee.firstName} ${employee.lastName}`}
             clockInStatus={clockInStatus}
-            jobsTotal={jobs.length}
+            jobsTotal={totalJobsToday}
             jobsCompleted={completedJobs}
             estimatedPay={payPreview.estimatedPay}
             payRatePerJob={payPreview.payRatePerJob}
@@ -861,7 +889,7 @@ export default function EmployeeDashboardPage() {
                         fontWeight: "600",
                       }}
                     >
-                      {completedJobs} / {jobs.length} completed
+                      {completedJobs} / {totalJobsToday} completed
                     </div>
                   )}
                 </div>
@@ -871,7 +899,7 @@ export default function EmployeeDashboardPage() {
                     <ProgressTracker
                       completed={completedJobs}
                       remaining={remainingJobs}
-                      total={jobs.length}
+                      total={totalJobsToday}
                     />
 
                     <LiveEarningsTracker
@@ -879,7 +907,7 @@ export default function EmployeeDashboardPage() {
                       payRatePerJob={payPreview.payRatePerJob}
                       estimatedPay={payPreview.estimatedPay}
                       isClockedIn={isClockedIn}
-                      totalJobs={jobs.length}
+                      totalJobs={totalJobsToday}
                     />
                   </>
                 )}
@@ -902,6 +930,14 @@ export default function EmployeeDashboardPage() {
                   isClockedIn={isClockedIn}
                   onStartNextJob={handleStartNextJob}
                 />
+
+                {isClockedIn && (
+                  <CompletedJobsHistory
+                    jobs={completedJobsToday}
+                    payRatePerJob={payPreview.payRatePerJob}
+                    onJobClick={handleSelectJob}
+                  />
+                )}
               </div>
             </>
           )}

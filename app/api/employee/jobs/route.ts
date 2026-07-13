@@ -4,7 +4,7 @@ import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getTodayDateString } from "@/lib/employee-utils";
 import { checkCertificationStatus } from "@/lib/training-certification";
-import { isActiveCleaningStatus } from "@/lib/cleaning-status";
+import { isActiveCleaningStatus, isCleaningCompleted } from "@/lib/cleaning-status";
 
 export const dynamic = 'force-dynamic';
 
@@ -112,10 +112,37 @@ export async function GET(req: NextRequest) {
       activeJobs.filter((job) => job.scheduledDate && job.scheduledDate > today)
     );
 
+    const completedJobsToday = allJobs
+      .filter(
+        (job) =>
+          job.scheduledDate === today &&
+          isCleaningCompleted(job.status, job.jobStatus)
+      )
+      .map(normalizeJob)
+      .sort((a, b) => {
+        const getTime = (job: (typeof allJobs)[number]) => {
+          const completedAt = job.completedAt as
+            | { toDate?: () => Date; seconds?: number }
+            | string
+            | Date
+            | undefined;
+          if (!completedAt) return 0;
+          if (typeof completedAt === "object" && "toDate" in completedAt && completedAt.toDate) {
+            return completedAt.toDate().getTime();
+          }
+          if (typeof completedAt === "object" && "seconds" in completedAt && completedAt.seconds) {
+            return completedAt.seconds * 1000;
+          }
+          return new Date(completedAt as string | Date).getTime();
+        };
+        return getTime(b) - getTime(a);
+      });
+
     return NextResponse.json({
       jobs: todayJobs,
       todayJobs,
       upcomingJobs,
+      completedJobsToday,
     }, { status: 200 });
   } catch (error: unknown) {
     console.error("Error getting jobs:", error);
