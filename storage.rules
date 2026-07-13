@@ -1,52 +1,75 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Helper function to check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    // Helper function to check if user is admin
+
     function isAdmin() {
       return isAuthenticated() && request.auth.token.email == "binblastcompany@gmail.com";
     }
-    
-    // Helper function to check if user is operator
+
     function isOperator() {
       return isAuthenticated() && request.auth.token.email == "keyjboone@gmail.com";
     }
-    
-    // Helper function to check if user is admin or operator
+
     function isAdminOrOperator() {
       return isAdmin() || isOperator();
     }
-    
-    // Training modules - public read access, authenticated write for admin/operator
+
+    function isValidPhotoType(photoType) {
+      return photoType in ["inside", "outside", "dumpster_pad", "sticker_placement"];
+    }
+
+    function isValidJobPhotoUpload() {
+      return request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches("image/.*");
+    }
+
+    function isAssignedToJob(jobId) {
+      return firestore.exists(/databases/(default)/documents/scheduledCleanings/$(jobId))
+        && firestore.get(/databases/(default)/documents/scheduledCleanings/$(jobId)).data.assignedEmployeeId == request.auth.uid;
+    }
+
+    // Training modules - public read, admin/operator write
     match /training-modules/{fileName} {
-      // Public read access for all training PDFs
       allow read: if true;
-      
-      // Only admin/operator can upload/update training PDFs
-      allow write: if isAdminOrOperator();
-      
-      // Delete only by admin/operator
+      allow create, update: if isAdminOrOperator()
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType == "application/pdf";
       allow delete: if isAdminOrOperator();
     }
-    
-    // Job photos - employees can upload for their assigned jobs, operators/admins can read all
+
+    // Job photos - employees upload before/after photos for assigned jobs
     match /job-photos/{jobId}/{photoType}/{fileName} {
-      // Employees can upload photos for jobs assigned to them (checked via API route)
-      // Operators and admins can read all job photos
-      allow read: if isAuthenticated();
-      
-      // Upload is handled via API route which verifies job assignment
-      // Storage rules allow authenticated uploads (API route enforces permissions)
-      allow write: if isAuthenticated();
-      
-      // Only operators/admins can delete photos
+      allow read: if isAuthenticated()
+        && (isAdminOrOperator() || isAssignedToJob(jobId));
+
+      allow create: if isAuthenticated()
+        && isValidPhotoType(photoType)
+        && isValidJobPhotoUpload()
+        && (isAssignedToJob(jobId) || isAdminOrOperator());
+
+      // Photos are immutable once uploaded
+      allow update: if false;
+
       allow delete: if isAdminOrOperator();
     }
-    
+
+    // Employee W-9 documents - operator uploads, employee can read own file
+    match /employees/{employeeId}/w9/{fileName} {
+      allow read: if isAdminOrOperator()
+        || (isAuthenticated() && request.auth.uid == employeeId);
+
+      allow create: if isAdminOrOperator()
+        && request.resource.size < 10 * 1024 * 1024
+        && (request.resource.contentType == "application/pdf"
+            || request.resource.contentType.matches("image/.*"));
+
+      allow update: if false;
+      allow delete: if isAdminOrOperator();
+    }
+
     // Default deny all other paths
     match /{allPaths=**} {
       allow read, write: if false;
