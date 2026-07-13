@@ -74,6 +74,14 @@ const OperatorDashboardTour = dynamic(
   { ssr: false }
 );
 
+const OperatorSelfClockPanel = dynamic(
+  () =>
+    import("@/components/OperatorDashboard/OperatorSelfClockPanel").then(
+      (mod) => mod.OperatorSelfClockPanel
+    ),
+  { loading: () => <p style={{ color: "#6b7280", padding: "1rem 0" }}>Loading shift clock...</p> }
+);
+
 const CustomQuotesManagement = dynamic(
   () => import("@/components/AdminDashboard/CustomQuotesManagement").then((mod) => mod.CustomQuotesManagement),
   { loading: () => <p style={{ color: "#6b7280", padding: "1rem 0" }}>Loading quotes...</p> }
@@ -1526,6 +1534,15 @@ function DashboardPageContent() {
                   onCustomerSubTabChange={setOperatorCustomerSubTab}
                 />
               </div>
+
+              <OperatorSelfClockPanel
+                operatorId={userId}
+                operatorName={
+                  user
+                    ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email
+                    : undefined
+                }
+              />
 
               {/* New Quotes Notification Banner for Operators */}
               {newQuotesCount > 0 && showQuotesNotification && (

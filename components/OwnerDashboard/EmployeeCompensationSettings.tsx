@@ -11,7 +11,7 @@ const COMMERCIAL_BONUS_TYPES = Object.keys(COMMERCIAL_BONUS_LABELS) as Commercia
 
 const PAY_MODEL_LABELS: Record<CompensationPayModel, string> = {
   per_bin: "Per Bin (Active)",
-  hourly: "Hourly (Coming Soon)",
+  hourly: "Hourly (Operators)",
   per_job: "Per Job (Coming Soon)",
   flat_daily: "Flat Daily Rate (Coming Soon)",
   commission_percentage: "Commission % (Coming Soon)",
@@ -70,10 +70,14 @@ const FIELD_GROUPS: Array<{
     ],
   },
   {
+    title: "Operator Hourly Pay",
+    description: "Hourly rate for operators/managers on the operations dashboard. Hours are locked to clock in/out records.",
+    fields: [{ key: "hourlyRate", label: "Operator Hourly Rate" }],
+  },
+  {
     title: "Future Pay Models",
     description: "Saved now; applied when those models are enabled.",
     fields: [
-      { key: "hourlyRate", label: "Hourly Rate", future: true },
       { key: "flatDailyRate", label: "Flat Daily Rate", future: true },
     ],
   },

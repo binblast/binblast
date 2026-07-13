@@ -22,7 +22,24 @@ interface FleetPayrollResponse {
     weekBins: number;
     weekEarnings: number;
   };
+  operatorTotals?: {
+    todayHours: number;
+    todayPay: number;
+    weekHours: number;
+    weekPay: number;
+  };
   employees: FleetPayrollEmployeeSummary[];
+  operators?: Array<{
+    operatorId: string;
+    name: string;
+    email: string;
+    hourlyRate: number;
+    isClockedIn: boolean;
+    todayHours: number;
+    todayPay: number;
+    weekHours: number;
+    weekPay: number;
+  }>;
 }
 
 function downloadCsv(filename: string, rows: string[][]) {
@@ -315,6 +332,110 @@ export function FleetPayrollPanel() {
         Pay is estimated from completed jobs with required proof photos at each employee&apos;s per-bin rate.
         Partner employees are paid through their partner account.
       </p>
+
+      {data.operators && data.operators.length > 0 && (
+        <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid #e5e7eb" }}>
+          <h3 style={{ fontSize: "1.125rem", fontWeight: "700", color: "#111827", margin: "0 0 0.35rem" }}>
+            Operator Hours & Pay
+          </h3>
+          <p style={{ margin: "0 0 1rem", fontSize: "0.8125rem", color: "#6b7280" }}>
+            Locked to operator clock in/out records. Operators cannot edit their hours.
+          </p>
+
+          {data.operatorTotals && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: "0.75rem",
+                marginBottom: "1rem",
+              }}
+            >
+              {[
+                { label: "Op Hours Today", value: formatHours(data.operatorTotals.todayHours), color: "#2563eb" },
+                { label: "Op Pay Today", value: formatCurrency(data.operatorTotals.todayPay), color: "#16a34a" },
+                { label: "Op Hours Week", value: formatHours(data.operatorTotals.weekHours), color: "#111827" },
+                { label: "Op Pay Week", value: formatCurrency(data.operatorTotals.weekPay), color: "#15803d" },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  style={{
+                    background: "#f9fafb",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "10px",
+                    padding: "0.75rem 0.875rem",
+                  }}
+                >
+                  <div style={{ fontSize: "0.7rem", color: "#6b7280", fontWeight: "600" }}>{item.label}</div>
+                  <div style={{ fontSize: "1rem", fontWeight: "700", color: item.color }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "12px",
+              border: "1px solid #e5e7eb",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "720px" }}>
+                <thead>
+                  <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                    {["Operator", "Status", "Hours Today", "Pay Today", "Hours Week", "Pay Week", "Rate"].map(
+                      (label) => (
+                        <th
+                          key={label}
+                          style={{
+                            padding: "0.875rem 1rem",
+                            textAlign: "left",
+                            fontSize: "0.8125rem",
+                            fontWeight: "700",
+                            color: "#374151",
+                          }}
+                        >
+                          {label}
+                        </th>
+                      )
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.operators.map((operator) => (
+                    <tr key={operator.operatorId} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                      <td style={{ padding: "0.875rem 1rem" }}>
+                        <div style={{ fontWeight: "700", color: "#111827" }}>{operator.name}</div>
+                        <div style={{ fontSize: "0.8125rem", color: "#6b7280" }}>{operator.email}</div>
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem", color: operator.isClockedIn ? "#16a34a" : "#6b7280", fontWeight: 600 }}>
+                        {operator.isClockedIn ? "On Shift" : "Off Shift"}
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem", fontWeight: "600" }}>
+                        {formatHours(operator.todayHours)}
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem", fontWeight: "700", color: "#16a34a" }}>
+                        {operator.hourlyRate > 0 ? formatCurrency(operator.todayPay) : "—"}
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem", fontWeight: "600" }}>
+                        {formatHours(operator.weekHours)}
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem", fontWeight: "700", color: "#15803d" }}>
+                        {operator.hourlyRate > 0 ? formatCurrency(operator.weekPay) : "—"}
+                      </td>
+                      <td style={{ padding: "0.875rem 1rem" }}>
+                        {operator.hourlyRate > 0 ? `${formatCurrency(operator.hourlyRate)}/hr` : "Owner sets rate"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

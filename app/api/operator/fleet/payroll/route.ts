@@ -11,6 +11,7 @@ import {
 import { getTodayDateString } from "@/lib/employee-utils";
 import { loadCompensationSettings } from "@/lib/employee-compensation-server";
 import { sumCompensationFromCleanings } from "@/lib/employee-compensation";
+import { buildAllOperatorTimecards } from "@/lib/operator-self-payroll";
 
 export const dynamic = "force-dynamic";
 
@@ -189,6 +190,18 @@ export async function GET() {
       }
     );
 
+    const operators = await buildAllOperatorTimecards();
+    const operatorTotals = operators.reduce(
+      (acc, operator) => {
+        acc.todayHours += operator.todayHours;
+        acc.todayPay += operator.todayPay;
+        acc.weekHours += operator.weekHours;
+        acc.weekPay += operator.weekPay;
+        return acc;
+      },
+      { todayHours: 0, todayPay: 0, weekHours: 0, weekPay: 0 }
+    );
+
     return NextResponse.json({
       today,
       weekStart,
@@ -197,6 +210,7 @@ export async function GET() {
         payModel: settings.payModel,
         residentialFirstBinPay: settings.residentialFirstBinPay,
         residentialAdditionalBinPay: settings.residentialAdditionalBinPay,
+        hourlyRate: settings.hourlyRate,
       },
       totals: {
         todayHours: Math.round(totals.todayHours * 100) / 100,
@@ -206,7 +220,14 @@ export async function GET() {
         weekBins: totals.weekBins,
         weekEarnings: Math.round(totals.weekEarnings * 100) / 100,
       },
+      operatorTotals: {
+        todayHours: Math.round(operatorTotals.todayHours * 100) / 100,
+        todayPay: Math.round(operatorTotals.todayPay * 100) / 100,
+        weekHours: Math.round(operatorTotals.weekHours * 100) / 100,
+        weekPay: Math.round(operatorTotals.weekPay * 100) / 100,
+      },
       employees,
+      operators,
     });
   } catch (error: unknown) {
     console.error("[Operator Fleet Payroll] Error:", error);
