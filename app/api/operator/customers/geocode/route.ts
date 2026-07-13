@@ -1,8 +1,8 @@
 // app/api/operator/customers/geocode/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { geocodeAddress } from "@/lib/geocoding";
+import { getAdminFirestore } from "@/lib/firebase-admin";
+import { geocodeStopServer } from "@/lib/geocoding-server";
+import { hasStopCoordinates } from "@/lib/stop-coordinates";
 
 export const dynamic = 'force-dynamic';
 
@@ -22,34 +22,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 500 }
-      );
-    }
-
-    const firestore = await safeImportFirestore();
-    const { doc, getDoc, updateDoc } = firestore;
+    const db = await getAdminFirestore();
 
     const results = [];
     const errors = [];
 
     for (const customerId of customerIds) {
       try {
-        const customerRef = doc(db, "users", customerId);
-        const customerSnap = await getDoc(customerRef);
+        const customerRef = db.collection("users").doc(customerId);
+        const customerSnap = await customerRef.get();
 
-        if (!customerSnap.exists()) {
+        if (!customerSnap.exists) {
           errors.push({ customerId, error: "Customer not found" });
           continue;
         }
 
-        const customerData = customerSnap.data();
+        const customerData = customerSnap.data() as Record<string, unknown>;
 
-        // Skip if already geocoded
-        if (customerData.latitude && customerData.longitude) {
+        if (hasStopCoordinates(customerData)) {
           results.push({
             customerId,
             latitude: customerData.latitude,
@@ -59,34 +49,23 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // Build address string
-        const addressParts = [
-          customerData.addressLine1,
-          customerData.addressLine2,
-          customerData.city,
-          customerData.state,
-          customerData.zipCode,
-        ].filter(Boolean);
-
-        if (addressParts.length < 3) {
-          errors.push({ customerId, error: "Insufficient address data" });
-          continue;
-        }
-
-        const addressString = addressParts.join(", ");
-
-        // Geocode address
-        const geocodeResult = await geocodeAddress(addressString);
+        const geocodeResult = await geocodeStopServer({
+          addressLine1: String(customerData.addressLine1 || ""),
+          addressLine2: customerData.addressLine2 ? String(customerData.addressLine2) : undefined,
+          city: String(customerData.city || ""),
+          state: String(customerData.state || ""),
+          zipCode: String(customerData.zipCode || ""),
+        });
 
         if (!geocodeResult) {
           errors.push({ customerId, error: "Geocoding failed" });
           continue;
         }
 
-        // Update customer document with coordinates
-        await updateDoc(customerRef, {
+        await customerRef.update({
           latitude: geocodeResult.latitude,
           longitude: geocodeResult.longitude,
+          geocodePrecision: geocodeResult.precision,
           geocodedAt: new Date().toISOString(),
         });
 
@@ -94,11 +73,14 @@ export async function POST(req: NextRequest) {
           customerId,
           latitude: geocodeResult.latitude,
           longitude: geocodeResult.longitude,
-          cached: geocodeResult.cached,
+          precision: geocodeResult.precision,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Error geocoding customer ${customerId}:`, error);
-        errors.push({ customerId, error: error.message || "Unknown error" });
+        errors.push({
+          customerId,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
       }
     }
 

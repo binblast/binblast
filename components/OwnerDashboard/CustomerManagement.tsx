@@ -42,6 +42,8 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [geocodingCustomers, setGeocodingCustomers] = useState(false);
+  const [geocodeMessage, setGeocodeMessage] = useState<string | null>(null);
 
   const customerCount = customers.filter((customer) => customer.recordType !== "prospect").length;
   const prospectCount = customers.filter((customer) => customer.recordType === "prospect").length;
@@ -103,6 +105,32 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
     setFilteredCustomers(filtered);
   }, [customers, searchTerm, filterTier, filterStatus, filterSource]);
 
+  async function handleGeocodeCustomers() {
+    try {
+      setGeocodingCustomers(true);
+      setGeocodeMessage(null);
+
+      const response = await fetch("/api/admin/customers/geocode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to geocode customers");
+      }
+
+      setGeocodeMessage(
+        `Mapped ${data.summary.geocoded} customer${data.summary.geocoded === 1 ? "" : "s"}` +
+          (data.summary.failed > 0 ? ` · ${data.summary.failed} could not be mapped` : "")
+      );
+    } catch (error: unknown) {
+      setGeocodeMessage(error instanceof Error ? error.message : "Failed to geocode customers");
+    } finally {
+      setGeocodingCustomers(false);
+    }
+  }
+
   const handleEditCustomer = async (customer: Customer, updates: Partial<Customer>) => {
     if (customer.recordType === "prospect") {
       return;
@@ -139,17 +167,64 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
 
   return (
     <div style={{ marginBottom: "3rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "#111827" }}>
+      <div
+        className="mobile-stack-header action-button-row"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1.5rem",
+          gap: "0.75rem",
+          flexWrap: "wrap",
+        }}
+      >
+        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "#111827", margin: 0 }}>
           Customer Management
         </h2>
-        <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-          {filteredCustomers.length} of {customers.length} records
-          {customers.length > 0 && (
-            <span> ({prospectCount} prospects, {customerCount} accounts)</span>
-          )}
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={handleGeocodeCustomers}
+            disabled={geocodingCustomers}
+            style={{
+              padding: "0.55rem 0.95rem",
+              borderRadius: "10px",
+              border: "1px solid #bbf7d0",
+              background: "#f0fdf4",
+              color: "#166534",
+              fontWeight: 600,
+              fontSize: "0.875rem",
+              cursor: geocodingCustomers ? "not-allowed" : "pointer",
+              opacity: geocodingCustomers ? 0.7 : 1,
+              minHeight: "44px",
+            }}
+          >
+            {geocodingCustomers ? "Mapping..." : "Map Customer Addresses"}
+          </button>
+          <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+            {filteredCustomers.length} of {customers.length} records
+            {customers.length > 0 && (
+              <span> ({prospectCount} prospects, {customerCount} accounts)</span>
+            )}
+          </div>
         </div>
       </div>
+
+      {geocodeMessage && (
+        <div
+          style={{
+            marginBottom: "1rem",
+            padding: "0.75rem 1rem",
+            borderRadius: "8px",
+            background: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            color: "#166534",
+            fontSize: "0.875rem",
+          }}
+        >
+          {geocodeMessage}
+        </div>
+      )}
 
       {/* Filters */}
       <div style={{

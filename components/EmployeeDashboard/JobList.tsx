@@ -148,6 +148,24 @@ export function JobList({
     return distances;
   }, [resolvedStops]);
 
+  const completedCount = completedJobs.length;
+  const totalStops = jobs.length + completedCount;
+
+  const nextJob = useMemo(() => {
+    return (
+      orderedJobs.find((job) => job.jobStatus === "pending" || !job.jobStatus) ||
+      orderedJobs.find((job) => job.jobStatus === "in_progress") ||
+      jobs.find((job) => job.jobStatus === "pending" || !job.jobStatus || job.jobStatus === "in_progress")
+    );
+  }, [orderedJobs, jobs]);
+
+  const currentStopNumber = useMemo(() => {
+    if (!nextJob || totalStops === 0) return 0;
+    const indexInActive = orderedJobs.findIndex((job) => job.id === nextJob.id);
+    const activePosition = indexInActive >= 0 ? indexInActive + 1 : 1;
+    return completedCount + activePosition;
+  }, [nextJob, orderedJobs, completedCount, totalStops]);
+
   const formatJobDate = (date?: string) => {
     if (!date) return "Date TBD";
     return new Date(`${date}T12:00:00`).toLocaleDateString("en-US", {
@@ -313,13 +331,6 @@ export function JobList({
     window.open(mapUrl, "_blank");
   };
 
-  const completedCount = completedJobs.length;
-  const totalStops = jobs.length + completedCount;
-
-  const nextJob = jobs.find((j) => j.jobStatus === "pending" || !j.jobStatus);
-  const currentStopIndex = jobs.findIndex((j) => j.jobStatus === "pending" || !j.jobStatus);
-  const currentStopNumber = currentStopIndex >= 0 ? currentStopIndex + 1 : completedCount + 1;
-
   const handleRouteStopClick = (stopId: string) => {
     const job = jobs.find((item) => item.id === stopId);
     if (job) {
@@ -416,10 +427,18 @@ export function JobList({
                 fontSize: "1.5rem",
                 fontWeight: "700",
                 color: "#111827",
+                lineHeight: 1.2,
               }}
             >
               Stop {currentStopNumber} of {totalStops}
             </div>
+            {totalStops > 0 && (
+              <div style={{ fontSize: "0.8125rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                {completedCount > 0 ? `${completedCount} done` : "0 done"}
+                {" · "}
+                {jobs.length} left
+              </div>
+            )}
           </div>
           {nextJob && (
             <div

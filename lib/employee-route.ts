@@ -57,6 +57,7 @@ export function jobToRouteStop(job: {
   latitude?: number;
   longitude?: number;
   location?: { latitude?: number; longitude?: number };
+  geocodePrecision?: "exact" | "approximate";
 }): RouteStop {
   const coords = extractStopCoordinates(job);
   return {
@@ -72,6 +73,7 @@ export function jobToRouteStop(job: {
     jobStatus: job.jobStatus,
     latitude: coords.latitude,
     longitude: coords.longitude,
+    geocodePrecision: job.geocodePrecision,
   };
 }
 

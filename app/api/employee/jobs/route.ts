@@ -5,6 +5,7 @@ import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getTodayDateString } from "@/lib/employee-utils";
 import { checkCertificationStatus } from "@/lib/training-certification";
 import { isActiveCleaningStatus, isCleaningCompleted } from "@/lib/cleaning-status";
+import { enrichJobsWithCoordinates } from "@/lib/job-coordinates";
 
 export const dynamic = 'force-dynamic';
 
@@ -112,6 +113,11 @@ export async function GET(req: NextRequest) {
       activeJobs.filter((job) => job.scheduledDate && job.scheduledDate > today)
     );
 
+    const [enrichedTodayJobs, enrichedUpcomingJobs] = await Promise.all([
+      enrichJobsWithCoordinates(todayJobs),
+      enrichJobsWithCoordinates(upcomingJobs),
+    ]);
+
     const completedJobsToday = allJobs
       .filter(
         (job) =>
@@ -139,9 +145,9 @@ export async function GET(req: NextRequest) {
       });
 
     return NextResponse.json({
-      jobs: todayJobs,
-      todayJobs,
-      upcomingJobs,
+      jobs: enrichedTodayJobs,
+      todayJobs: enrichedTodayJobs,
+      upcomingJobs: enrichedUpcomingJobs,
       completedJobsToday,
     }, { status: 200 });
   } catch (error: unknown) {
