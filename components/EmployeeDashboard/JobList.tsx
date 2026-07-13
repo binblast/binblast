@@ -94,6 +94,34 @@ export function JobList({
     };
   }, [jobs, isClockedIn]);
 
+  const routeClusters = useMemo(
+    () => buildRouteClusters(resolvedStops),
+    [resolvedStops]
+  );
+
+  const orderedJobs = useMemo(() => {
+    const optimized = getOptimizedActiveStops(resolvedStops);
+    if (optimized.length === 0) {
+      return jobs;
+    }
+    return optimized
+      .map((stop) => jobs.find((job) => job.id === stop.id))
+      .filter((job): job is Job => Boolean(job));
+  }, [resolvedStops, jobs]);
+
+  const distanceFromPrevious = useMemo(() => {
+    const optimized = getOptimizedActiveStops(resolvedStops);
+    const distances = new Map<string, string>();
+    for (let i = 1; i < optimized.length; i++) {
+      const miles = getDistanceMiles(optimized[i - 1], optimized[i]);
+      const label = formatDistanceMiles(miles);
+      if (label) {
+        distances.set(optimized[i].id, label);
+      }
+    }
+    return distances;
+  }, [resolvedStops]);
+
   const formatJobDate = (date?: string) => {
     if (!date) return "Date TBD";
     return new Date(`${date}T12:00:00`).toLocaleDateString("en-US", {
@@ -265,34 +293,6 @@ export function JobList({
   const nextJob = jobs.find((j) => j.jobStatus === "pending" || !j.jobStatus);
   const currentStopIndex = jobs.findIndex((j) => j.jobStatus === "pending" || !j.jobStatus);
   const currentStopNumber = currentStopIndex >= 0 ? currentStopIndex + 1 : completedCount + 1;
-
-  const routeClusters = useMemo(
-    () => buildRouteClusters(resolvedStops),
-    [resolvedStops]
-  );
-
-  const orderedJobs = useMemo(() => {
-    const optimized = getOptimizedActiveStops(resolvedStops);
-    if (optimized.length === 0) {
-      return jobs;
-    }
-    return optimized
-      .map((stop) => jobs.find((job) => job.id === stop.id))
-      .filter((job): job is Job => Boolean(job));
-  }, [resolvedStops, jobs]);
-
-  const distanceFromPrevious = useMemo(() => {
-    const optimized = getOptimizedActiveStops(resolvedStops);
-    const distances = new Map<string, string>();
-    for (let i = 1; i < optimized.length; i++) {
-      const miles = getDistanceMiles(optimized[i - 1], optimized[i]);
-      const label = formatDistanceMiles(miles);
-      if (label) {
-        distances.set(optimized[i].id, label);
-      }
-    }
-    return distances;
-  }, [resolvedStops]);
 
   const handleRouteStopClick = (stopId: string) => {
     const job = jobs.find((item) => item.id === stopId);
