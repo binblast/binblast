@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { getJobPhotos } from "@/lib/job-photo-upload";
 import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule-admin";
+import { recordJobCompensationSnapshot } from "@/lib/employee-compensation";
 
 export async function POST(
   req: NextRequest,
@@ -126,6 +127,26 @@ export async function POST(
 
     await jobRef.update(updateData);
 
+    let compensationAmount = 0;
+    try {
+      const compensation = await recordJobCompensationSnapshot({
+        jobId,
+        jobData: {
+          ...jobData,
+          ...updateData,
+          jobStatus: "completed",
+          status: "completed",
+          hasRequiredPhotos: true,
+          insidePhotoUrl,
+          outsidePhotoUrl,
+        },
+        employeeId,
+      });
+      compensationAmount = compensation?.amount ?? 0;
+    } catch (compensationError: unknown) {
+      console.error("Error recording job compensation:", compensationError);
+    }
+
     try {
       await scheduleNextCleaningIfNeeded({
         id: jobId,
@@ -150,7 +171,7 @@ export async function POST(
     }
 
     return NextResponse.json(
-      { message: "Job completed successfully" },
+      { message: "Job completed successfully", compensationAmount },
       { status: 200 }
     );
   } catch (error: unknown) {

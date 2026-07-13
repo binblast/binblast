@@ -4,6 +4,8 @@
 import { useState } from "react";
 import { TeamAccountManagement } from "@/components/OwnerDashboard/TeamAccountManagement";
 import { SubscriptionPricingSettings } from "@/components/OwnerDashboard/SubscriptionPricingSettings";
+import { EmployeeCompensationSettings } from "@/components/OwnerDashboard/EmployeeCompensationSettings";
+import { PayrollSummary } from "@/components/OwnerDashboard/PayrollSummary";
 
 interface SystemControlsProps {
   userId: string;
@@ -41,6 +43,8 @@ export function SystemControls({ userId, onNavigateTab }: SystemControlsProps) {
         {[
           { id: "team-logins", label: "Team Logins" },
           { id: "pricing", label: "Subscription Pricing" },
+          { id: "compensation", label: "Employee Compensation" },
+          { id: "payroll", label: "Payroll Summary" },
           { id: "partner", label: "Partner Program" },
           { id: "referral", label: "Referral Credits" },
           { id: "loyalty", label: "Loyalty Tiers" },
@@ -78,6 +82,10 @@ export function SystemControls({ userId, onNavigateTab }: SystemControlsProps) {
         {activeTab === "team-logins" && <TeamAccountManagement initialPanel={teamLoginPanel} />}
 
         {activeTab === "pricing" && <SubscriptionPricingSettings />}
+
+        {activeTab === "compensation" && <EmployeeCompensationSettings />}
+
+        {activeTab === "payroll" && <PayrollSummary />}
 
         {activeTab === "partner" && (
           <div>

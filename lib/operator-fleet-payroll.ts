@@ -17,6 +17,8 @@ export interface FleetPayrollEmployeeSummary {
   name: string;
   email: string;
   payRatePerJob: number;
+  residentialFirstBinPay?: number;
+  residentialAdditionalBinPay?: number;
   isPartnerEmployee: boolean;
   today: FleetPayrollDaySummary;
   week: {

@@ -28,6 +28,7 @@ interface ShiftStatus {
 
 interface EarningsData {
   totalEarnings: number;
+  totalBins?: number;
   payRatePerJob: number;
   completedStopsCount: number;
   stops: Array<{
@@ -219,7 +220,8 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
             </span>
           </div>
           <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.75rem" }}>
-            {earnings.completedStopsCount} stops × ${earnings.payRatePerJob.toFixed(2)} per stop
+            {earnings.completedStopsCount} paid stop{earnings.completedStopsCount === 1 ? "" : "s"}
+            {typeof earnings.totalBins === "number" ? ` · ${earnings.totalBins} bins` : ""}
           </div>
           
           {/* Earnings Breakdown Table */}

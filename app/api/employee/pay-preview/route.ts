@@ -1,93 +1,80 @@
 // app/api/employee/pay-preview/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { getTodayDateString, getEmployeeData } from "@/lib/employee-utils";
+import { getAdminFirestore } from "@/lib/firebase-admin";
+import { getTodayDateString } from "@/lib/employee-utils";
+import {
+  getBinsFromCleaning,
+} from "@/lib/operator-fleet-payroll";
+import {
+  getJobCompensationAmount,
+  isJobEligibleForCompensation,
+  loadCompensationSettings,
+} from "@/lib/employee-compensation";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const searchParams = req.nextUrl.searchParams;
-    const employeeId = searchParams.get("employeeId");
+    const employeeId = req.nextUrl.searchParams.get("employeeId");
 
     if (!employeeId) {
-      return NextResponse.json(
-        { message: "Missing employeeId" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Missing employeeId" }, { status: 400 });
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { message: "Database not available" },
-        { status: 500 }
-      );
+    const db = await getAdminFirestore();
+    const employeeDoc = await db.collection("users").doc(employeeId).get();
+    if (!employeeDoc.exists) {
+      return NextResponse.json({ message: "Employee not found" }, { status: 404 });
     }
 
-    const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs } = firestore;
-
-    // Get employee data to find pay rate
-    const employee = await getEmployeeData(employeeId);
-    if (!employee) {
-      return NextResponse.json(
-        { message: "Employee not found" },
-        { status: 404 }
-      );
-    }
-
-    const payRatePerJob = employee.payRatePerJob || 0;
-
-    // Count completed jobs today WITH REQUIRED PHOTOS
-    // Payment protection: Only jobs with required photos count toward payment
+    const settings = await loadCompensationSettings();
     const today = getTodayDateString();
-    const cleaningsRef = collection(db, "scheduledCleanings");
-    const completedJobsQuery = query(
-      cleaningsRef,
-      where("assignedEmployeeId", "==", employeeId),
-      where("scheduledDate", "==", today),
-      where("jobStatus", "==", "completed")
-    );
 
-    const completedSnapshot = await getDocs(completedJobsQuery);
-    
-    // Filter to only include jobs with required photos
-    // For backward compatibility, also check if insidePhotoUrl and outsidePhotoUrl exist
-    const eligibleJobs = completedSnapshot.docs.filter(doc => {
-      const data = doc.data();
-      // New field: hasRequiredPhotos must be true
-      if (data.hasRequiredPhotos === true) {
-        return true;
-      }
-      // Backward compatibility: check if both photo URLs exist
-      if (data.insidePhotoUrl && data.outsidePhotoUrl) {
-        return true;
-      }
-      // No photos = no payment eligibility
-      return false;
-    });
+    const completedSnapshot = await db
+      .collection("scheduledCleanings")
+      .where("assignedEmployeeId", "==", employeeId)
+      .where("scheduledDate", "==", today)
+      .where("jobStatus", "==", "completed")
+      .get();
+
+    const eligibleJobs = completedSnapshot.docs
+      .map((doc: FirebaseFirestore.QueryDocumentSnapshot) => doc.data() as Record<string, unknown>)
+      .filter((data: Record<string, unknown>) => isJobEligibleForCompensation(data, settings));
 
     const completedJobsCount = eligibleJobs.length;
+    const binsToday = eligibleJobs.reduce(
+      (sum: number, job: Record<string, unknown>) => sum + getBinsFromCleaning(job),
+      0
+    );
+    const estimatedPay = eligibleJobs.reduce(
+      (sum: number, job: Record<string, unknown>) => sum + getJobCompensationAmount(job, settings),
+      0
+    );
 
-    // Calculate estimated pay (only for jobs with required photos)
-    const estimatedPay = completedJobsCount * payRatePerJob;
+    const lastJob = eligibleJobs[eligibleJobs.length - 1];
+    const lastJobEarnings = lastJob ? getJobCompensationAmount(lastJob, settings) : 0;
+    const lastJobBins = lastJob ? getBinsFromCleaning(lastJob) : 0;
 
     return NextResponse.json(
       {
         completedJobs: completedJobsCount,
-        payRatePerJob,
-        estimatedPay,
+        binsToday,
+        estimatedPay: Math.round(estimatedPay * 100) / 100,
+        lastJobEarnings: Math.round(lastJobEarnings * 100) / 100,
+        lastJobBins,
+        compensationSettings: {
+          payModel: settings.payModel,
+          residentialFirstBinPay: settings.residentialFirstBinPay,
+          residentialAdditionalBinPay: settings.residentialAdditionalBinPay,
+        },
+        // Backward compatibility for older UI references
+        payRatePerJob: settings.residentialFirstBinPay,
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error getting pay preview:", error);
-    return NextResponse.json(
-      { message: error.message || "Failed to get pay preview" },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Failed to get pay preview";
+    return NextResponse.json({ message }, { status: 500 });
   }
 }
-

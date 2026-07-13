@@ -25,6 +25,17 @@ interface FleetPayrollResponse {
   employees: FleetPayrollEmployeeSummary[];
 }
 
+function downloadCsv(filename: string, rows: string[][]) {
+  const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function FleetPayrollPanel() {
   const router = useRouter();
   const [data, setData] = useState<FleetPayrollResponse | null>(null);
@@ -68,6 +79,37 @@ export function FleetPayrollPanel() {
     return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
   }, [data]);
 
+  function exportCsv() {
+    if (!data) return;
+    const rows: string[][] = [
+      [
+        "Employee",
+        "Email",
+        "Hours Today",
+        "Bins Today",
+        "Pay Today",
+        "Hours Week",
+        "Bins Week",
+        "Pay Week",
+        "Jobs Paid Today",
+        "Jobs Paid Week",
+      ],
+      ...data.employees.map((employee) => [
+        employee.name,
+        employee.email,
+        formatHours(employee.today.hoursWorked),
+        String(employee.today.binsCleaned),
+        employee.isPartnerEmployee ? "Partner payroll" : employee.today.earnings.toFixed(2),
+        formatHours(employee.week.hoursWorked),
+        String(employee.week.binsCleaned),
+        employee.isPartnerEmployee ? "Partner payroll" : employee.week.earnings.toFixed(2),
+        String(employee.today.jobsEligible),
+        String(employee.week.jobsEligible),
+      ]),
+    ];
+    downloadCsv(`fleet-hours-pay-${data.weekStart}.csv`, rows);
+  }
+
   if (loading) {
     return (
       <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
@@ -101,16 +143,24 @@ export function FleetPayrollPanel() {
             Hours & Pay
           </h2>
           <p style={{ color: "#6b7280", fontSize: "0.9rem", margin: "0.35rem 0 0" }}>
-            Track daily and weekly hours, bins cleaned, and estimated pay from completed jobs with proof photos.
+            Per-bin employee pay from owner settings — independent of customer pricing.
           </p>
           <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.35rem" }}>
             Week of {weekLabel}
             {lastSync ? ` · Updated ${lastSync.toLocaleTimeString()}` : ""}
           </div>
         </div>
-        <OperatorActionButton variant="neutral" size="sm" onClick={() => loadPayroll(true)} disabled={refreshing}>
-          {refreshing ? "Refreshing..." : "Refresh"}
-        </OperatorActionButton>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <OperatorActionButton variant="neutral" size="sm" onClick={exportCsv}>
+            Export CSV
+          </OperatorActionButton>
+          <OperatorActionButton variant="neutral" size="sm" onClick={() => window.print()}>
+            Export PDF
+          </OperatorActionButton>
+          <OperatorActionButton variant="neutral" size="sm" onClick={() => loadPayroll(true)} disabled={refreshing}>
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </OperatorActionButton>
+        </div>
       </div>
 
       {error && (
@@ -205,7 +255,9 @@ export function FleetPayrollPanel() {
                     <div style={{ fontWeight: "700", color: "#111827" }}>{employee.name}</div>
                     <div style={{ fontSize: "0.8125rem", color: "#6b7280" }}>{employee.email}</div>
                     <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.15rem" }}>
-                      {formatCurrency(employee.payRatePerJob)} / bin
+                      {employee.residentialFirstBinPay != null && employee.residentialAdditionalBinPay != null
+                        ? `${formatCurrency(employee.residentialFirstBinPay)} first + ${formatCurrency(employee.residentialAdditionalBinPay)} add'l`
+                        : `${formatCurrency(employee.payRatePerJob)} first bin`}
                       {employee.isPartnerEmployee ? " · Partner employee" : ""}
                     </div>
                   </td>

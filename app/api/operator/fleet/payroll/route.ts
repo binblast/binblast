@@ -4,14 +4,12 @@ import { formatEmployeeName } from "@/lib/operator-fleet";
 import {
   FleetPayrollDaySummary,
   FleetPayrollEmployeeSummary,
-  getBinsFromCleaning,
   getWeekDateStrings,
-  isEligibleForPay,
-  isJobCompleted,
   serializeTimestamp,
   sumClockHours,
 } from "@/lib/operator-fleet-payroll";
 import { getTodayDateString } from "@/lib/employee-utils";
+import { loadCompensationSettings, sumCompensationFromCleanings } from "@/lib/employee-compensation";
 
 export const dynamic = "force-dynamic";
 
@@ -23,38 +21,28 @@ type ClockRecord = {
   date?: string;
 };
 
-type CleaningRecord = {
-  assignedEmployeeId?: string;
-  scheduledDate?: string;
-  binsCount?: number;
-  binCount?: number;
-  status?: string;
-  jobStatus?: string;
-  hasRequiredPhotos?: boolean;
-  operatorSkipPhotos?: boolean;
-  insidePhotoUrl?: string;
-  outsidePhotoUrl?: string;
-};
+type CleaningRecord = Record<string, unknown>;
 
 function buildDaySummary({
   clockRecords,
   cleanings,
-  payRatePerJob,
+  isPartnerEmployee,
+  settings,
 }: {
   clockRecords: ClockRecord[];
   cleanings: CleaningRecord[];
-  payRatePerJob: number;
+  isPartnerEmployee: boolean;
+  settings: Awaited<ReturnType<typeof loadCompensationSettings>>;
 }): FleetPayrollDaySummary {
-  const completed = cleanings.filter(isJobCompleted);
-  const eligible = completed.filter(isEligibleForPay);
+  const compensation = sumCompensationFromCleanings(cleanings, settings);
   const primaryClock = clockRecords[0];
 
   return {
     hoursWorked: Math.round(sumClockHours(clockRecords) * 100) / 100,
-    jobsCompleted: completed.length,
-    jobsEligible: eligible.length,
-    binsCleaned: completed.reduce((sum, cleaning) => sum + getBinsFromCleaning(cleaning), 0),
-    earnings: Math.round(eligible.length * payRatePerJob * 100) / 100,
+    jobsCompleted: compensation.jobsCompleted,
+    jobsEligible: compensation.jobsEligible,
+    binsCleaned: compensation.binsCleaned,
+    earnings: isPartnerEmployee ? 0 : compensation.earnings,
     clockInTime: primaryClock ? serializeTimestamp(primaryClock.clockInTime) : null,
     clockOutTime: primaryClock?.isActive
       ? null
@@ -66,6 +54,7 @@ function buildDaySummary({
 export async function GET() {
   try {
     const db = await getAdminFirestore();
+    const settings = await loadCompensationSettings();
     const today = getTodayDateString();
     const weekDates = getWeekDateStrings();
     const weekStart = weekDates[0];
@@ -98,8 +87,8 @@ export async function GET() {
     const cleaningsByEmployeeDate = new Map<string, Map<string, CleaningRecord[]>>();
     cleaningsSnap.docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
       const data = doc.data() as CleaningRecord;
-      const employeeId = data.assignedEmployeeId;
-      const date = data.scheduledDate;
+      const employeeId = data.assignedEmployeeId as string | undefined;
+      const date = data.scheduledDate as string | undefined;
       if (!employeeId || !date) return;
       if (!cleaningsByEmployeeDate.has(employeeId)) {
         cleaningsByEmployeeDate.set(employeeId, new Map());
@@ -113,7 +102,6 @@ export async function GET() {
       .map((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
         const data = doc.data() as Record<string, unknown>;
         const employeeId = doc.id;
-        const payRatePerJob = Number(data.payRatePerJob || 10);
         const isPartnerEmployee = Boolean(data.partnerId);
         const employeeClocks = clocksByEmployeeDate.get(employeeId) || new Map();
         const employeeCleanings = cleaningsByEmployeeDate.get(employeeId) || new Map();
@@ -123,7 +111,8 @@ export async function GET() {
         const todaySummary = buildDaySummary({
           clockRecords: todayClocks,
           cleanings: todayCleanings,
-          payRatePerJob: isPartnerEmployee ? 0 : payRatePerJob,
+          isPartnerEmployee,
+          settings,
         });
 
         let weekHours = 0;
@@ -139,18 +128,13 @@ export async function GET() {
           const dayHours = sumClockHours(dayClocks);
           if (dayHours > 0) daysWorked += 1;
 
-          const completed = dayCleanings.filter(isJobCompleted);
-          const eligible = completed.filter(isEligibleForPay);
-
+          const compensation = sumCompensationFromCleanings(dayCleanings, settings);
           weekHours += dayHours;
-          weekJobsCompleted += completed.length;
-          weekJobsEligible += eligible.length;
-          weekBins += completed.reduce(
-            (sum: number, cleaning: CleaningRecord) => sum + getBinsFromCleaning(cleaning),
-            0
-          );
+          weekJobsCompleted += compensation.jobsCompleted;
+          weekJobsEligible += compensation.jobsEligible;
+          weekBins += compensation.binsCleaned;
           if (!isPartnerEmployee) {
-            weekEarnings += eligible.length * payRatePerJob;
+            weekEarnings += compensation.earnings;
           }
         });
 
@@ -161,7 +145,9 @@ export async function GET() {
               String(data.email || "Employee")
           ),
           email: String(data.email || ""),
-          payRatePerJob,
+          payRatePerJob: settings.residentialFirstBinPay,
+          residentialFirstBinPay: settings.residentialFirstBinPay,
+          residentialAdditionalBinPay: settings.residentialAdditionalBinPay,
           isPartnerEmployee,
           today: todaySummary,
           week: {
@@ -206,6 +192,11 @@ export async function GET() {
       today,
       weekStart,
       weekEnd,
+      compensationSettings: {
+        payModel: settings.payModel,
+        residentialFirstBinPay: settings.residentialFirstBinPay,
+        residentialAdditionalBinPay: settings.residentialAdditionalBinPay,
+      },
       totals: {
         todayHours: Math.round(totals.todayHours * 100) / 100,
         todayBins: totals.todayBins,

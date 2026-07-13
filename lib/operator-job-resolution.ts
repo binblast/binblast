@@ -1,5 +1,6 @@
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule-admin";
+import { recordJobCompensationSnapshot } from "@/lib/employee-compensation";
 
 export const OPERATOR_RESOLUTION_TYPES = [
   "bins_not_present",
@@ -89,6 +90,27 @@ export async function applyOperatorJobResolution(params: ApplyOperatorResolution
     binsSkipped: params.resolution === "bins_not_present",
     employeeCanProceed: true,
   });
+
+  const assignedEmployeeId = String(jobData.assignedEmployeeId || "");
+  if (assignedEmployeeId && binsCleaned > 0) {
+    try {
+      await recordJobCompensationSnapshot({
+        jobId: params.jobId,
+        jobData: {
+          ...jobData,
+          status: "completed",
+          jobStatus: "completed",
+          operatorSkipPhotos: skipPhotos,
+          hasRequiredPhotos: skipPhotos ? true : jobData.hasRequiredPhotos ?? false,
+          binCount: binsCleaned,
+          binsCount: binsCleaned,
+        },
+        employeeId: assignedEmployeeId,
+      });
+    } catch (compensationError) {
+      console.error("[Operator Resolution] compensation recording failed:", compensationError);
+    }
+  }
 
   try {
     await scheduleNextCleaningIfNeeded({

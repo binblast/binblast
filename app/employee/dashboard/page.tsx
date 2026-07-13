@@ -16,6 +16,7 @@ import { ToastContainer, Toast } from "@/components/EmployeeDashboard/Toast";
 import { TrainingSection } from "@/components/EmployeeDashboard/TrainingSection";
 import { EquipmentChecklist } from "@/components/EmployeeDashboard/EquipmentChecklist";
 import { InteractiveWorkflow } from "@/components/EmployeeDashboard/InteractiveWorkflow";
+import { EmployeeEarningsPanel } from "@/components/EmployeeDashboard/EmployeeEarningsPanel";
 import { MessagingCenter } from "@/components/AdminDashboard/MessagingCenter";
 import {
   getEmployeeData,
@@ -63,7 +64,7 @@ interface Job {
   employeeCanProceed?: boolean;
 }
 
-type DashboardTab = "home" | "training" | "equipment" | "messages";
+type DashboardTab = "home" | "earnings" | "training" | "equipment" | "messages";
 
 export default function EmployeeDashboardPage() {
   const router = useRouter();
@@ -81,8 +82,10 @@ export default function EmployeeDashboardPage() {
   const [workflowStep, setWorkflowStep] = useState<'start' | 'photos' | 'complete' | undefined>(undefined);
   const [payPreview, setPayPreview] = useState({
     completedJobs: 0,
+    binsToday: 0,
     payRatePerJob: 0,
     estimatedPay: 0,
+    lastJobEarnings: 0,
   });
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [dashboardData, setDashboardData] = useState<{
@@ -191,8 +194,10 @@ export default function EmployeeDashboardPage() {
         const data = await response.json();
         setPayPreview({
           completedJobs: data.completedJobs || 0,
+          binsToday: data.binsToday || 0,
           payRatePerJob: data.payRatePerJob || 0,
           estimatedPay: data.estimatedPay || 0,
+          lastJobEarnings: data.lastJobEarnings || 0,
         });
       }
     } catch (error) {
@@ -583,8 +588,13 @@ export default function EmployeeDashboardPage() {
         throw new Error(error.message || "Failed to complete job");
       }
 
-      // Show celebration toast
-      addToast(`Bin Blasted! +$${payPreview.payRatePerJob.toFixed(2)}`, "success");
+      const result = await response.json();
+      const earnedAmount =
+        typeof result.compensationAmount === "number"
+          ? result.compensationAmount
+          : payPreview.lastJobEarnings;
+
+      addToast(`Bin Blasted! +$${earnedAmount.toFixed(2)}`, "success");
 
       // Refresh jobs and pay preview immediately
       await loadJobs();
@@ -773,6 +783,28 @@ export default function EmployeeDashboardPage() {
             >
               Home
             </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveTab("earnings");
+              }}
+              type="button"
+              style={{
+                padding: "0.75rem 1.5rem",
+                border: "none",
+                background: "transparent",
+                fontSize: "0.95rem",
+                fontWeight: "600",
+                color: activeTab === "earnings" ? "#16a34a" : "#6b7280",
+                cursor: "pointer",
+                borderBottom: activeTab === "earnings" ? "2px solid #16a34a" : "2px solid transparent",
+                marginBottom: "-2px",
+                transition: "all 0.2s",
+              }}
+            >
+              Earnings
+            </button>
             {/* Only show Training tab if not certified */}
             {(!certificationStatus?.isCertified) && (
               <button
@@ -953,6 +985,10 @@ export default function EmployeeDashboardPage() {
 
           {activeTab === "training" && employee && !certificationStatus?.isCertified && (
             <TrainingSection employeeId={employee.id} />
+          )}
+
+          {activeTab === "earnings" && employee && (
+            <EmployeeEarningsPanel employeeId={employee.id} />
           )}
 
           {activeTab === "equipment" && (
