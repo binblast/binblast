@@ -33,6 +33,7 @@ import {
   getReadinessStyle,
 } from "@/lib/cleaning-readiness";
 import type { ScheduleJob, ScheduleStaffMember } from "@/lib/schedule-board";
+import type { CustomerSubTab } from "@/lib/operator-customers";
 
 const OwnerCommandCenter = dynamic(
   () => import("@/components/OwnerDashboard/OwnerCommandCenter").then((m) => m.OwnerCommandCenter),
@@ -55,6 +56,14 @@ const OperatorScheduleBoard = dynamic(
       (mod) => mod.OperatorScheduleBoard
     ),
   { loading: () => <p style={{ color: "#6b7280", padding: "2rem 0", textAlign: "center" }}>Loading schedule board...</p> }
+);
+
+const OperatorCustomersHub = dynamic(
+  () =>
+    import("@/components/OperatorDashboard/OperatorCustomersHub").then(
+      (mod) => mod.OperatorCustomersHub
+    ),
+  { loading: () => <p style={{ color: "#6b7280", padding: "2rem 0", textAlign: "center" }}>Loading customers...</p> }
 );
 
 const CustomQuotesManagement = dynamic(
@@ -290,8 +299,7 @@ function DashboardPageContent() {
   });
   const operatorScopesLoadedRef = useRef<Set<string>>(new Set());
   const [operatorLoadedScopes, setOperatorLoadedScopes] = useState<string[]>([]);
-  const [operatorCustomerSearch, setOperatorCustomerSearch] = useState("");
-  const [operatorCustomerFilter, setOperatorCustomerFilter] = useState<{ plan?: string; status?: string }>({});
+  const [operatorCustomerSubTab, setOperatorCustomerSubTab] = useState<CustomerSubTab>("residential");
   const [operatorActiveTab, setOperatorActiveTab] = useState<"overview" | "employees" | "customers" | "schedule" | "messages">("overview");
   const [adminActiveTab, setAdminActiveTab] = useState<"overview" | "customers" | "operations" | "financial" | "partners" | "analytics" | "employees" | "messages">("overview");
   const [newQuotesCount, setNewQuotesCount] = useState(0);
@@ -1400,38 +1408,6 @@ function DashboardPageContent() {
   const isFirebaseReady = Boolean(firebaseReady);
   const shouldShowSubscriptionManager = Boolean(hasValidPlan && hasValidSubscription && hasUserId && isFirebaseReady);
 
-  // Compute filtered customers for operator view (must be before early returns)
-  const filteredDirectCustomers = useMemo(() => {
-    if (!roleDetermined || !isOperator) return [];
-    let filtered = operatorDirectCustomers;
-    
-    if (operatorCustomerSearch) {
-      const search = operatorCustomerSearch.toLowerCase();
-      filtered = filtered.filter(c => 
-        `${c.firstName} ${c.lastName}`.toLowerCase().includes(search) ||
-        (c.email || "").toLowerCase().includes(search) ||
-        (c.addressLine1 || "").toLowerCase().includes(search) ||
-        (c.city || "").toLowerCase().includes(search)
-      );
-    }
-    
-    if (operatorCustomerFilter.plan) {
-      filtered = filtered.filter(c => c.selectedPlan === operatorCustomerFilter.plan);
-    }
-    
-    if (operatorCustomerFilter.status) {
-      if (operatorCustomerFilter.status === "active") {
-        filtered = filtered.filter(c => c.subscriptionStatus === "active" && !c.servicePaused);
-      } else if (operatorCustomerFilter.status === "paused") {
-        filtered = filtered.filter(c => c.servicePaused);
-      } else if (operatorCustomerFilter.status === "canceled") {
-        filtered = filtered.filter(c => c.subscriptionStatus === "cancelled" || c.subscriptionStatus === "canceled");
-      }
-    }
-    
-    return filtered;
-  }, [roleDetermined, isOperator, operatorDirectCustomers, operatorCustomerSearch, operatorCustomerFilter]);
-
   const reloadOperatorSchedule = useCallback(async () => {
     try {
       const data = await fetchOperatorScope("schedule");
@@ -1577,6 +1553,7 @@ function DashboardPageContent() {
                     <button
                       onClick={() => {
                         setOperatorActiveTab("customers");
+                        setOperatorCustomerSubTab("quotes");
                         setShowQuotesNotification(false);
                       }}
                       style={{
@@ -2139,237 +2116,14 @@ function DashboardPageContent() {
 
                     {/* TAB: Customers */}
                     {operatorActiveTab === "customers" && operatorLoadedScopes.includes("customers") && (
-                      <div>
-                        {/* Custom Quotes Management for Operators */}
-                        <CustomQuotesManagement />
-
-                        <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", marginTop: "2rem", color: "var(--text-dark)" }}>
-                      Direct Customers
-                    </h2>
-                    
-                    {/* Search and Filters */}
-                    <div style={{ 
-                      display: "flex", 
-                      gap: "1rem", 
-                      marginBottom: "1rem",
-                      flexWrap: "wrap"
-                    }}>
-                      <input
-                        type="text"
-                        placeholder="Search customers..."
-                        value={operatorCustomerSearch}
-                        onChange={(e) => setOperatorCustomerSearch(e.target.value)}
-                        style={{
-                          flex: "1",
-                          minWidth: "200px",
-                          padding: "0.75rem 1rem",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "8px",
-                          fontSize: "0.95rem"
-                        }}
+                      <OperatorCustomersHub
+                        directCustomers={operatorDirectCustomers}
+                        commercialCustomers={operatorCommercialCustomers}
+                        cleanings={operatorAllCleanings}
+                        loading={operatorLoading}
+                        subTab={operatorCustomerSubTab}
+                        onSubTabChange={setOperatorCustomerSubTab}
                       />
-                      <select
-                        value={operatorCustomerFilter.plan || ""}
-                        onChange={(e) => setOperatorCustomerFilter({ ...operatorCustomerFilter, plan: e.target.value || undefined })}
-                        style={{
-                          padding: "0.75rem 1rem",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "8px",
-                          fontSize: "0.95rem",
-                          background: "#ffffff"
-                        }}
-                      >
-                        <option value="">All Plans</option>
-                        <option value="one-time">Monthly Clean</option>
-                        <option value="twice-month">Bi-Weekly</option>
-                        <option value="bi-monthly">Bi-Monthly</option>
-                        <option value="quarterly">Quarterly</option>
-                      </select>
-                      <select
-                        value={operatorCustomerFilter.status || ""}
-                        onChange={(e) => setOperatorCustomerFilter({ ...operatorCustomerFilter, status: e.target.value || undefined })}
-                        style={{
-                          padding: "0.75rem 1rem",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "8px",
-                          fontSize: "0.95rem",
-                          background: "#ffffff"
-                        }}
-                      >
-                        <option value="">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="paused">Paused</option>
-                        <option value="canceled">Canceled</option>
-                      </select>
-                    </div>
-
-                    {/* Customers Table */}
-                    <div style={{
-                      background: "#ffffff",
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                      border: "1px solid #e5e7eb"
-                    }}>
-                      {filteredDirectCustomers.length === 0 ? (
-                        <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
-                          No customers found.
-                        </div>
-                      ) : (
-                        <div style={{ overflowX: "auto" }}>
-                          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                            <thead>
-                              <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Name</th>
-                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Email</th>
-                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Address</th>
-                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Plan</th>
-                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Status</th>
-                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Loyalty</th>
-                                <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>Next Cleaning</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {filteredDirectCustomers.map((customer) => {
-                                const customerEmailLower = (customer.email || "").toLowerCase();
-                                const nextCleaning = operatorAllCleanings
-                                  .filter(c => {
-                                    const cleaningEmailLower = (c.customerEmail || "").toLowerCase();
-                                    return cleaningEmailLower === customerEmailLower && 
-                                           c.status !== "cancelled" && 
-                                           c.status !== "completed";
-                                  })
-                                  .sort((a, b) => {
-                                    const dateA = getCleaningDate(a);
-                                    const dateB = getCleaningDate(b);
-                                    return dateA.getTime() - dateB.getTime();
-                                  })[0];
-                                
-                                return (
-                                  <tr key={customer.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                                    <td style={{ padding: "1rem", fontSize: "0.95rem" }}>
-                                      {customer.firstName} {customer.lastName}
-                                    </td>
-                                    <td style={{ padding: "1rem", fontSize: "0.95rem", color: "#6b7280" }}>
-                                      {customer.email}
-                                    </td>
-                                    <td style={{ padding: "1rem", fontSize: "0.95rem", color: "#6b7280" }}>
-                                      {customer.addressLine1 ? `${customer.addressLine1}, ${customer.city}` : customer.city || "N/A"}
-                                    </td>
-                                    <td style={{ padding: "1rem", fontSize: "0.95rem" }}>
-                                      {PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan || "N/A"}
-                                    </td>
-                                    <td style={{ padding: "1rem" }}>
-                                      <span style={{
-                                        padding: "0.25rem 0.75rem",
-                                        borderRadius: "999px",
-                                        fontSize: "0.75rem",
-                                        fontWeight: "600",
-                                        background: customer.servicePaused ? "#fef3c7" : customer.subscriptionStatus === "active" ? "#d1fae5" : "#fee2e2",
-                                        color: customer.servicePaused ? "#92400e" : customer.subscriptionStatus === "active" ? "#065f46" : "#991b1b"
-                                      }}>
-                                        {customer.servicePaused ? "Paused" : customer.subscriptionStatus === "active" ? "Active" : "Inactive"}
-                                      </span>
-                                    </td>
-                                    <td style={{ padding: "1rem", fontSize: "0.95rem", color: "#6b7280" }}>
-                                      {customer.loyaltyRanking || "Getting Started"}
-                                    </td>
-                                    <td style={{ padding: "1rem", fontSize: "0.95rem", color: "#6b7280" }}>
-                                      {nextCleaning ? (
-                                        <>
-                                          {getCleaningDate(nextCleaning).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                                          <br />
-                                          <span style={{ fontSize: "0.75rem" }}>{nextCleaning.scheduledTime || "TBD"}</span>
-                                        </>
-                                      ) : "None scheduled"}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                  </div>
-
-                        {/* Commercial Accounts Section */}
-                        <div style={{ marginTop: "2rem", paddingTop: "2rem", borderTop: "1px solid #e5e7eb" }}>
-                          <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
-                      Commercial Accounts
-                          </h3>
-                    
-                    {operatorCommercialCustomers.length === 0 ? (
-                      <div style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        padding: "2rem",
-                        textAlign: "center",
-                        color: "#6b7280",
-                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                        border: "1px solid #e5e7eb"
-                      }}>
-                        No commercial accounts found.
-                      </div>
-                    ) : (
-                      <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                        gap: "1rem"
-                      }}>
-                        {operatorCommercialCustomers.map((account) => {
-                          const accountEmailLower = (account.email || "").toLowerCase();
-                          const nextService = operatorAllCleanings
-                            .filter(c => {
-                              const cleaningEmailLower = (c.customerEmail || "").toLowerCase();
-                              return cleaningEmailLower === accountEmailLower && 
-                                     c.status !== "cancelled" && 
-                                     c.status !== "completed";
-                            })
-                            .sort((a, b) => {
-                              const dateA = getCleaningDate(a);
-                              const dateB = getCleaningDate(b);
-                              return dateA.getTime() - dateB.getTime();
-                            })[0];
-                          
-                          return (
-                            <div key={account.id} style={{
-                              background: "#ffffff",
-                              borderRadius: "12px",
-                              padding: "1.5rem",
-                              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                              border: "1px solid #e5e7eb"
-                            }}>
-                              <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                                {account.businessName}
-                              </h3>
-                              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "1rem" }}>
-                                <div>{account.contactPerson}</div>
-                                <div>{account.email}</div>
-                                {account.phone && <div>{account.phone}</div>}
-                              </div>
-                              <div style={{ fontSize: "0.875rem", marginBottom: "0.5rem" }}>
-                                <strong>Bins:</strong> {account.binsCount}
-                              </div>
-                              <div style={{ fontSize: "0.875rem", marginBottom: "0.5rem" }}>
-                                <strong>Frequency:</strong> {account.frequency}
-                              </div>
-                              <div style={{ fontSize: "0.875rem", marginBottom: "0.5rem" }}>
-                                <strong>Next Service:</strong> {nextService ? (
-                                  getCleaningDate(nextService).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                                ) : "Not scheduled"}
-                              </div>
-                              {account.specialInstructions && (
-                                <div style={{ fontSize: "0.875rem", marginTop: "1rem", padding: "0.75rem", background: "#f9fafb", borderRadius: "8px" }}>
-                                  <strong>Notes:</strong> {account.specialInstructions}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                      </div>
                     )}
 
                     {/* TAB: Schedule */}

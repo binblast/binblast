@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { CreateOfferModal } from "./CreateOfferModal";
 import { ContactCustomerModal } from "@/components/OperatorDashboard/ContactCustomerModal";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { parseFirestoreTimestamp } from "@/lib/employee-utils";
 
 interface CustomQuote {
   id: string;
@@ -27,7 +28,7 @@ interface CustomQuote {
   [key: string]: any;
 }
 
-export function CustomQuotesManagement() {
+export function CustomQuotesManagement({ embedded = false }: { embedded?: boolean }) {
   const isMobile = useIsMobile();
   const [quotes, setQuotes] = useState<CustomQuote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,20 +130,16 @@ export function CustomQuotesManagement() {
     }
   };
 
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return "N/A";
-    try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return "N/A";
-    }
+  const formatDate = (timestamp: unknown) => {
+    const date = parseFirestoreTimestamp(timestamp);
+    if (!date) return "Date unavailable";
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const getPropertyTypeLabel = (type: string) => {
@@ -168,12 +165,12 @@ export function CustomQuotesManagement() {
 
   return (
     <div style={{
-      background: "#ffffff",
-      borderRadius: "16px",
-      padding: "clamp(1rem, 4vw, 2rem)",
-      border: "1px solid #e5e7eb",
-      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-      marginBottom: "2rem"
+      background: embedded ? "transparent" : "#ffffff",
+      borderRadius: embedded ? "0" : "16px",
+      padding: embedded ? "0" : "clamp(1rem, 4vw, 2rem)",
+      border: embedded ? "none" : "1px solid #e5e7eb",
+      boxShadow: embedded ? "none" : "0 4px 16px rgba(0, 0, 0, 0.06)",
+      marginBottom: embedded ? "0" : "2rem"
     }}>
       <div style={{
         display: "flex",
@@ -183,14 +180,16 @@ export function CustomQuotesManagement() {
         flexWrap: "wrap",
         gap: "1rem"
       }}>
-        <h3 style={{
-          fontSize: "clamp(1.125rem, 3vw, 1.25rem)",
-          fontWeight: "700",
-          color: "var(--text-dark)",
-          margin: 0
-        }}>
-          Custom Quote Requests
-        </h3>
+        {!embedded && (
+          <h3 style={{
+            fontSize: "clamp(1.125rem, 3vw, 1.25rem)",
+            fontWeight: "700",
+            color: "var(--text-dark)",
+            margin: 0
+          }}>
+            Custom Quote Requests
+          </h3>
+        )}
         <div
           className={isMobile ? "mobile-filter-row tab-navigation" : undefined}
           style={{
@@ -200,7 +199,8 @@ export function CustomQuotesManagement() {
             overflowX: isMobile ? "auto" : "visible",
             WebkitOverflowScrolling: "touch",
             paddingBottom: isMobile ? "0.25rem" : 0,
-            width: isMobile ? "100%" : "auto",
+            width: embedded || isMobile ? "100%" : "auto",
+            marginLeft: embedded ? "auto" : undefined,
           }}
         >
           {["all", "pending", "pending_review", "contacted", "quoted", "converted"].map((status) => (
