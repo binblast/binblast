@@ -22,6 +22,7 @@ const inputStyle: CSSProperties = {
   borderRadius: "8px",
   fontSize: "0.95rem",
   boxSizing: "border-box",
+  minHeight: "44px",
 };
 
 export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
@@ -109,53 +110,22 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="lead-capture-title"
-      style={{
-        position: "fixed",
-        inset: 0,
-        backgroundColor: "rgba(15, 23, 42, 0.72)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1002,
-        padding: "20px",
-      }}
+      className="lead-capture-overlay"
+      onClick={handleDismiss}
     >
       <div
-        style={{
-          background: "#ffffff",
-          borderRadius: "16px",
-          maxWidth: "560px",
-          width: "100%",
-          maxHeight: "92vh",
-          overflowY: "auto",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-        }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lead-capture-title"
+        className="lead-capture-dialog"
         onClick={(event) => event.stopPropagation()}
       >
-        <div
-          style={{
-            padding: "1.25rem 1.5rem",
-            borderBottom: "1px solid #e5e7eb",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: "1rem",
-            background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-            borderTopLeftRadius: "16px",
-            borderTopRightRadius: "16px",
-          }}
-        >
+        <div className="lead-capture-header">
           <div>
-            <h2
-              id="lead-capture-title"
-              style={{ margin: 0, fontSize: "1.35rem", fontWeight: "700", color: "#ffffff" }}
-            >
+            <h2 id="lead-capture-title" className="lead-capture-title">
               Welcome to Bin Blast Co.
             </h2>
-            <p style={{ margin: "0.35rem 0 0", fontSize: "0.875rem", color: "#dcfce7", lineHeight: 1.5 }}>
+            <p className="lead-capture-subtitle">
               Before you explore, tell us a little about yourself so we can serve you better.
             </p>
           </div>
@@ -163,26 +133,16 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
             type="button"
             onClick={handleDismiss}
             aria-label="Close and continue without entering information"
-            style={{
-              background: "rgba(255,255,255,0.15)",
-              border: "1px solid rgba(255,255,255,0.35)",
-              borderRadius: "999px",
-              width: "36px",
-              height: "36px",
-              color: "#ffffff",
-              fontSize: "1.35rem",
-              lineHeight: 1,
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
+            className="lead-capture-close"
           >
             ×
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <div className="lead-capture-body">
+          <form onSubmit={handleSubmit} className="lead-capture-form">
           <div>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.4rem", color: "#111827" }}>
+            <label className="lead-capture-label">
               Full Name
             </label>
             <input
@@ -195,9 +155,9 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
+          <div className="lead-capture-form-grid">
             <div>
-              <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.4rem", color: "#111827" }}>
+              <label className="lead-capture-label">
                 Email
               </label>
               <input
@@ -210,7 +170,7 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
               />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.4rem", color: "#111827" }}>
+              <label className="lead-capture-label">
                 Phone Number
               </label>
               <input
@@ -225,7 +185,7 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.4rem", color: "#111827" }}>
+            <label className="lead-capture-label">
               How did you hear about us?
             </label>
             <select
@@ -244,7 +204,7 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.4rem", color: "#111827" }}>
+            <label className="lead-capture-label">
               Who referred you?
             </label>
             <input
@@ -258,31 +218,13 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
           </div>
 
           {(attribution.referralCode || attribution.partnerCode) && (
-            <div
-              style={{
-                padding: "0.75rem 1rem",
-                background: "#f0fdf4",
-                border: "1px solid #bbf7d0",
-                borderRadius: "8px",
-                fontSize: "0.8125rem",
-                color: "#166534",
-              }}
-            >
+            <div className="lead-capture-referral">
               Referral detected: {attribution.referralCode || attribution.partnerCode}
             </div>
           )}
 
           {error && (
-            <div
-              style={{
-                padding: "0.75rem 1rem",
-                background: "#fef2f2",
-                border: "1px solid #fecaca",
-                borderRadius: "8px",
-                color: "#b91c1c",
-                fontSize: "0.875rem",
-              }}
-            >
+            <div className="lead-capture-error">
               {error}
             </div>
           )}
@@ -290,15 +232,9 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
           <button
             type="submit"
             disabled={loading}
+            className="lead-capture-submit"
             style={{
-              width: "100%",
-              padding: "0.875rem 1rem",
-              borderRadius: "10px",
-              border: "none",
               background: loading ? "#86efac" : "#16a34a",
-              color: "#ffffff",
-              fontSize: "1rem",
-              fontWeight: "700",
               cursor: loading ? "not-allowed" : "pointer",
             }}
           >
@@ -308,21 +244,12 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
           <button
             type="button"
             onClick={handleDismiss}
-            style={{
-              width: "100%",
-              padding: "0.75rem 1rem",
-              borderRadius: "10px",
-              border: "1px solid #e5e7eb",
-              background: "#ffffff",
-              color: "#6b7280",
-              fontSize: "0.875rem",
-              fontWeight: "600",
-              cursor: "pointer",
-            }}
+            className="lead-capture-skip"
           >
             Skip for now
           </button>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

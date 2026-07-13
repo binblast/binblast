@@ -72,7 +72,23 @@ function getRoleBadgeStyle(type: ConversationType) {
   }
 }
 
+function useIsMobile(breakpoint = 767) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const update = () => setIsMobile(mediaQuery.matches);
+
+    update();
+    mediaQuery.addEventListener("change", update);
+    return () => mediaQuery.removeEventListener("change", update);
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
 export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps) {
+  const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -251,21 +267,19 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
 
   const isEmployeePortal = mode === "employee";
 
+  const centerClassName = [
+    "messaging-center",
+    isMobile && selectedConversation ? "messaging-center--thread-open" : "",
+    isMobile && !selectedConversation ? "messaging-center--list-only" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div style={{ display: "flex", height: "min(700px, calc(100vh - 220px))", gap: "1rem" }}>
-      <div
-        style={{
-          width: "min(340px, 100%)",
-          minWidth: "280px",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px",
-          display: "flex",
-          flexDirection: "column",
-          background: "#ffffff",
-        }}
-      >
-        <div style={{ padding: "1rem", borderBottom: "1px solid #e5e7eb", background: "#f9fafb" }}>
-          <h2 style={{ margin: "0 0 0.75rem 0", fontSize: "1.25rem", fontWeight: "600" }}>
+    <div className={centerClassName}>
+      <div className="messaging-sidebar">
+        <div className="messaging-sidebar-header">
+          <h2 className="messaging-sidebar-title">
             {mode === "employee" ? "Team Messages" : "Messages"}
           </h2>
           <input
@@ -273,33 +287,19 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search team members..."
-            style={{
-              width: "100%",
-              padding: "0.625rem 0.75rem",
-              border: "1px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "0.875rem",
-              marginBottom: "0.75rem",
-              boxSizing: "border-box",
-            }}
+            className="messaging-search"
           />
           {mode === "staff" && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
+            <div className="messaging-filters">
               {(["all", "employees", "operators", "management", "partners"] as ContactFilter[]).map((filter) => (
                 <button
                   key={filter}
                   type="button"
                   onClick={() => setContactFilter(filter)}
+                  className="messaging-filter-btn"
                   style={{
-                    padding: "0.375rem 0.625rem",
-                    borderRadius: "999px",
-                    border: "1px solid #e5e7eb",
                     background: contactFilter === filter ? "#16a34a" : "#ffffff",
                     color: contactFilter === filter ? "#ffffff" : "#374151",
-                    fontSize: "0.75rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    textTransform: "capitalize",
                   }}
                 >
                   {filter}
@@ -309,7 +309,7 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
           )}
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto" }}>
+        <div className="messaging-conversation-list">
           {loading && filteredConversations.length === 0 ? (
             <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>Loading team...</div>
           ) : filteredConversations.length === 0 ? (
@@ -327,15 +327,9 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
                 <div
                   key={conv.id}
                   onClick={() => setSelectedConversation(conv)}
+                  className="messaging-conversation-item"
                   style={{
-                    padding: "1rem",
-                    borderBottom: "1px solid #e5e7eb",
-                    cursor: "pointer",
                     background: selectedConversation?.id === conv.id ? "#eff6ff" : "#ffffff",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    gap: "0.75rem",
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -390,10 +384,19 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
         </div>
       </div>
 
-      <div style={{ flex: 1, border: "1px solid #e5e7eb", borderRadius: "8px", display: "flex", flexDirection: "column", background: "#ffffff", minWidth: 0 }}>
+      <div className="messaging-thread">
         {selectedConversation ? (
           <>
-            <div style={{ padding: "1rem", borderBottom: "1px solid #e5e7eb", background: "#f9fafb" }}>
+            <div className="messaging-thread-header">
+              {isMobile && (
+                <button
+                  type="button"
+                  className="messaging-back-btn"
+                  onClick={() => setSelectedConversation(null)}
+                >
+                  ← Back to conversations
+                </button>
+              )}
               <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: "600" }}>{displayName}</h3>
               <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
                 {selectedConversation.type === "partner"
@@ -402,7 +405,7 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
+            <div className="messaging-messages">
               {loading ? (
                 <div style={{ textAlign: "center", color: "#6b7280", padding: "2rem" }}>Loading messages...</div>
               ) : messages.length === 0 ? (
@@ -429,18 +432,14 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
                         }}
                       >
                         <div
+                          className="messaging-bubble"
                           style={{
-                            padding: "0.75rem 1rem",
                             background: isMine ? "#16a34a" : "#f3f4f6",
                             color: isMine ? "#ffffff" : "#111827",
                             borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                            maxWidth: "75%",
-                            fontSize: "0.9375rem",
-                            lineHeight: 1.5,
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
                           }}
                         >
-                          <div style={{ fontSize: "0.9375rem" }}>{msg.message}</div>
+                          <div>{msg.message}</div>
                           <div
                             style={{
                               fontSize: "0.6875rem",
@@ -459,23 +458,15 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
               )}
             </div>
 
-            <div style={{ padding: "1rem", borderTop: "1px solid #e5e7eb", background: "#f9fafb" }}>
+            <div className="messaging-compose">
               {isStaffToStaff && (
-                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
+                <div className="messaging-quick-actions">
                   <button
                     type="button"
+                    className="messaging-quick-btn"
                     onClick={() => {
                       setMessageText("Good job this week");
                       setMessageType("praise");
-                    }}
-                    style={{
-                      padding: "0.5rem 1rem",
-                      background: "#e5e7eb",
-                      color: "#111827",
-                      border: "none",
-                      borderRadius: "6px",
-                      fontSize: "0.875rem",
-                      cursor: "pointer",
                     }}
                   >
                     Good job this week
@@ -483,19 +474,11 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
                   {selectedConversation.type === "employee" && (
                     <button
                       type="button"
+                      className="messaging-quick-btn"
                       onClick={() => {
                         setMessageText("Please check your schedule for updates");
                         setMessageType("request");
                         setSubject("Schedule Update");
-                      }}
-                      style={{
-                        padding: "0.5rem 1rem",
-                        background: "#e5e7eb",
-                        color: "#111827",
-                        border: "none",
-                        borderRadius: "6px",
-                        fontSize: "0.875rem",
-                        cursor: "pointer",
                       }}
                     >
                       Schedule Update
@@ -504,17 +487,11 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
+              <div className="messaging-compose-meta">
                 {isStaffToStaff && (
                   <select
                     value={messageType}
                     onChange={(e) => setMessageType(e.target.value as MessageType)}
-                    style={{
-                      padding: "0.5rem 0.75rem",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "6px",
-                      fontSize: "0.875rem",
-                    }}
                   >
                     <option value="praise">Praise</option>
                     <option value="request">Request</option>
@@ -527,19 +504,11 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="Subject (optional)"
-                    style={{
-                      flex: 1,
-                      minWidth: "180px",
-                      padding: "0.5rem 0.75rem",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "6px",
-                      fontSize: "0.875rem",
-                    }}
                   />
                 )}
               </div>
 
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div className="messaging-compose-row">
                 <textarea
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
@@ -549,29 +518,15 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
                       : "Type your message..."
                   }
                   rows={3}
-                  style={{
-                    flex: 1,
-                    padding: "0.75rem",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    resize: "vertical",
-                  }}
                 />
                 <button
                   type="button"
+                  className="messaging-send-btn"
                   onClick={handleSendMessage}
                   disabled={!messageText.trim() || sending}
                   style={{
-                    padding: "0.75rem 1.5rem",
                     background: !messageText.trim() || sending ? "#9ca3af" : "#0369a1",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
                     cursor: !messageText.trim() || sending ? "not-allowed" : "pointer",
-                    alignSelf: "flex-end",
                   }}
                 >
                   {sending ? "Sending..." : "Send"}

@@ -7,6 +7,7 @@
 @import './employee-dashboard-mobile.css';
 @import './site-mobile.css';
 @import './dashboard-mobile.css';
+@import './messaging-mobile.css';
 
 /* Ensure full screen coverage */
 html {
@@ -396,7 +397,7 @@ main {
   
   /* Modal optimizations */
   .modal-content,
-  [role="dialog"] {
+  [role="dialog"]:not(.lead-capture-dialog) {
     width: 95% !important;
     max-width: 95% !important;
     margin: 1rem auto !important;
