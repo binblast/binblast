@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { getJobPhotos } from "@/lib/job-photo-upload";
-import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule";
+import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule-admin";
 
 export async function POST(
   req: NextRequest,

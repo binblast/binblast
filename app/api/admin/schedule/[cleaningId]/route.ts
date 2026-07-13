@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAdminAccess, logAdminAction } from "@/lib/admin-auth";
 import { getAdminFirestore } from "@/lib/firebase-admin";
-import {
-  buildCompletionUpdateData,
-  scheduleNextCleaningIfNeeded,
-} from "@/lib/cleaning-schedule";
+import { buildCompletionUpdateData } from "@/lib/cleaning-schedule";
+import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule-admin";
 
 export const dynamic = "force-dynamic";
 

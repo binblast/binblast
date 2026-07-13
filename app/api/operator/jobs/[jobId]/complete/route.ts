@@ -1,7 +1,7 @@
 // app/api/operator/jobs/[jobId]/complete/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminFirestore } from "@/lib/firebase-admin";
-import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule";
+import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule-admin";
 
 export async function POST(
   req: NextRequest,
