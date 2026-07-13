@@ -27,6 +27,14 @@ const ChatWidget = dynamic(() => import("@/components/ChatWidget").then(mod => (
   loading: () => null,
 });
 
+const SERVICE_AREAS = [
+  "Peachtree City",
+  "Fayetteville",
+  "Tyrone",
+  "Sharpsburg",
+  "Senoia",
+] as const;
+
 export default function HomePage() {
   return (
     <>
@@ -39,10 +47,34 @@ export default function HomePage() {
             <p className="hero-subheadline">
               Homeowners get fresh, odor-free bins on autopilot. Local service businesses plug into our system to add bin cleaning as a new, done-for-you revenue stream.
             </p>
+            <p className="hero-service-areas">
+              Now serving Peachtree City, Fayetteville, Tyrone, Sharpsburg &amp; Senoia
+            </p>
             <div className="hero-buttons">
               <Link href="#pricing" className="btn btn-primary btn-large">Book a Cleaning</Link>
               <Link href="#why-different" className="btn btn-secondary btn-large">Explore Features</Link>
             </div>
+          </div>
+        </section>
+
+        {/* Service Areas Section */}
+        <section id="service-areas" className="service-areas-section">
+          <div className="container">
+            <h2 className="section-title">Areas We Service</h2>
+            <p className="section-subtitle service-areas-subtitle">
+              Bin Blast Co. provides professional curbside bin cleaning across south metro Atlanta. If you live or work in one of these communities, we&apos;ve got you covered.
+            </p>
+            <div className="service-areas-grid">
+              {SERVICE_AREAS.map((area) => (
+                <span key={area} className="service-area-chip">
+                  {area}
+                </span>
+              ))}
+            </div>
+            <p className="service-areas-note">
+              Don&apos;t see your city?{" "}
+              <Link href="#pricing">Book a cleaning</Link> or contact us — we&apos;re expanding and may already be in your neighborhood.
+            </p>
           </div>
         </section>
 
@@ -522,6 +554,10 @@ export default function HomePage() {
                   <h3 className="footer-heading">Hours</h3>
                   <p>Monday – Saturday: 8:00 AM – 6:00 PM</p>
                   <p>Sunday: Closed</p>
+                </div>
+                <div className="footer-section">
+                  <h3 className="footer-heading">Service Areas</h3>
+                  <p>{SERVICE_AREAS.join(" · ")}</p>
                 </div>
                 <div className="footer-section">
                   <h3 className="footer-heading">For Businesses</h3>
