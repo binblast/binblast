@@ -380,14 +380,14 @@ main {
   }
   
   /* Form optimizations */
-  input[type="text"],
-  input[type="email"],
-  input[type="tel"],
+  input[type="text"]:not(.lead-capture-input),
+  input[type="email"]:not(.lead-capture-input),
+  input[type="tel"]:not(.lead-capture-input),
   input[type="password"],
   input[type="date"],
   input[type="time"],
   textarea,
-  select {
+  select:not(.lead-capture-select) {
     font-size: 16px !important; /* Prevents iOS zoom */
     padding: 0.75rem 1rem !important;
     min-height: 44px !important;
