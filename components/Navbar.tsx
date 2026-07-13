@@ -445,23 +445,31 @@ export function Navbar() {
       }
     };
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeSignIn();
-        signInButtonRef.current?.focus();
-      }
-    };
-
     if (isSignInOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleEscape);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
     };
   }, [isSignInOpen, closeSignIn]);
+
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (isMenuOpen) {
+          setIsMenuOpen(false);
+        }
+        if (isSignInOpen) {
+          closeSignIn();
+          signInButtonRef.current?.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isMenuOpen, isSignInOpen, closeSignIn]);
 
   useEffect(() => {
     closeSignIn();
@@ -501,7 +509,15 @@ export function Navbar() {
   };
 
   return (
-    <nav className="navbar">
+    <nav className={`navbar${isMenuOpen ? " nav-open" : ""}`}>
+      {isMenuOpen && (
+        <button
+          type="button"
+          className="nav-mobile-backdrop"
+          aria-label="Close menu"
+          onClick={() => setIsMenuOpen(false)}
+        />
+      )}
       <div className="nav-container">
         <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", height: "40px" }}>
           {showTextLogo ? (
@@ -545,7 +561,7 @@ export function Navbar() {
             </div>
           )}
         </Link>
-        <ul className={`nav-links nav-links--segmented ${isMenuOpen ? "active" : ""}`}>
+        <ul className={`nav-links nav-links--segmented${isMenuOpen ? " active nav-mobile-menu" : ""}`}>
           <li>
             {isLoggedIn ? (
               <Link href="/" className={navPillClass(isHomeActive)}>
