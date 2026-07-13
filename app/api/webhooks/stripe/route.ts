@@ -584,12 +584,17 @@ export async function POST(req: NextRequest) {
         const customerId = typeof invoice.customer === 'string'
           ? invoice.customer
           : invoice.customer?.id;
+        const customerEmail =
+          typeof invoice.customer_email === "string"
+            ? invoice.customer_email
+            : null;
 
         if (customerId && invoice.amount_paid > 0) {
           try {
             const { completeReferralAfterPayment } = await import("@/lib/referral-service");
             const awardResult = await completeReferralAfterPayment({
               stripeCustomerId: customerId,
+              userEmail: customerEmail,
               markPaid: true,
             });
 

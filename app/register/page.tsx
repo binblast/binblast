@@ -645,7 +645,7 @@ function RegisterForm() {
           console.warn("[Register] Referral code provided but db or user not available:", { normalizedReferralCode, hasDb: !!db, hasUser: !!userCredential.user });
         }
 
-        if (stripeData && userCredential.user) {
+        if ((stripeData || sessionId) && userCredential.user) {
           try {
             const awardResponse = await fetch("/api/referral/award-credits", {
               method: "POST",

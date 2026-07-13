@@ -55,11 +55,17 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
         }
 
         try {
-          await fetch("/api/referral/sync-pending", {
+          const syncResponse = await fetch("/api/referral/sync-pending", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ referrerId: currentUserId }),
           });
+          const syncData = await syncResponse.json().catch(() => null);
+          if (!syncResponse.ok) {
+            console.error("[ReferralHistory] Sync pending referrals failed:", syncData);
+          } else if (syncData?.awarded > 0) {
+            console.log("[ReferralHistory] Sync awarded credits for", syncData.awarded, "referrals");
+          }
         } catch (syncError) {
           console.error("[ReferralHistory] Failed to sync pending referrals:", syncError);
         }

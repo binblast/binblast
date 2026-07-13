@@ -461,7 +461,9 @@ function DashboardPageContent() {
     if (!userId || isAdmin || isOperator || isOwner) return;
 
     const hasPaid =
-      user?.paymentStatus === "paid" || Boolean(user?.stripeSubscriptionId);
+      user?.paymentStatus === "paid" ||
+      Boolean(user?.stripeSubscriptionId) ||
+      Boolean(user?.stripeCustomerId);
 
     if (!hasPaid) return;
 

@@ -4,6 +4,7 @@ import { getAdminFirestore } from "@/lib/firebase-admin";
 import {
   awardReferralCreditsForUser,
   processReferralSignup,
+  referredUserHasCompletedPayment,
   validateReferralCode,
 } from "@/lib/referral-service";
 
@@ -47,10 +48,13 @@ export async function POST(req: NextRequest) {
     const referredUserId = referredDoc.id;
     const referredData = referredDoc.data();
 
-    const hasPaid =
-      referredData.paymentStatus === "paid" ||
-      Boolean(referredData.stripeSubscriptionId) ||
-      Boolean(referredData.stripeCustomerId);
+    const hasPaid = (
+      await referredUserHasCompletedPayment({
+        referredUserId,
+        referredUserData: referredData,
+        referredUserEmail: referredEmail,
+      })
+    ).hasPaid;
 
     let processResult: Awaited<ReturnType<typeof processReferralSignup>>;
 
