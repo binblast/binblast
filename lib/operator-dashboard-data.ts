@@ -1,6 +1,8 @@
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { parseCleaningDate, isCleaningCompleted, isCleaningCancelled } from "@/lib/cleaning-schedule";
+import { buildOperatorScheduleJobs } from "@/lib/operator-schedule-board";
+import { buildScheduleStats } from "@/lib/schedule-board";
 
 export type OperatorDashboardScope = "overview" | "customers" | "schedule";
 
@@ -24,6 +26,7 @@ function serializeCleaning(docId: string, data: Record<string, unknown>) {
     scheduledTime: (data.scheduledTime as string) || "TBD",
     trashDay: (data.trashDay as string) || "",
     planType: (data.planType as string) || "",
+    binsCount: Number(data.binsCount || data.binCount || 1),
     status: (data.status as string) || "scheduled",
     jobStatus: (data.jobStatus as string) || "",
     assignedEmployeeId: (data.assignedEmployeeId as string) || "",
@@ -186,6 +189,23 @@ async function loadCleanings(db: NonNullable<Awaited<ReturnType<typeof getDbInst
     const cleaningDate = parseCleaningDate(cleaning.scheduledDate);
 
     if (scope === "schedule") {
+      const isCancelled = isCleaningCancelled(cleaning);
+      const isCompleted = isCleaningCompleted(cleaning);
+      const pastCutoff = new Date(today);
+      pastCutoff.setDate(pastCutoff.getDate() - 14);
+      const futureCutoff = new Date(today);
+      futureCutoff.setDate(futureCutoff.getDate() + 45);
+
+      if (isCancelled && cleaningDate < pastCutoff) {
+        return;
+      }
+      if (cleaningDate > futureCutoff) {
+        return;
+      }
+      if (cleaningDate < pastCutoff && !isCompleted) {
+        return;
+      }
+
       cleanings.push(cleaning);
       return;
     }
@@ -306,6 +326,53 @@ export async function getOperatorDashboardData(scope: OperatorDashboardScope) {
       directCustomers,
       commercialCustomers,
       cleanings,
+    };
+  }
+
+  if (scope === "schedule") {
+    const userMap = new Map<string, Record<string, unknown>>();
+    usersSnapshot.forEach((doc) => {
+      userMap.set(doc.id, doc.data());
+    });
+
+    const cleaningDocs = cleanings.map((cleaning) => ({
+      id: cleaning.id,
+      data: () => {
+        const scheduledDate = parseCleaningDate(cleaning.scheduledDate);
+        return {
+          userId: cleaning.userId,
+          userName: cleaning.customerName,
+          userEmail: cleaning.customerEmail,
+          addressLine1: cleaning.addressLine1,
+          addressLine2: cleaning.addressLine2,
+          city: cleaning.city,
+          state: cleaning.state,
+          zipCode: cleaning.zipCode,
+          scheduledDate,
+          scheduledTime: cleaning.scheduledTime,
+          trashDay: cleaning.trashDay,
+          planType: cleaning.planType,
+          status: cleaning.status,
+          jobStatus: cleaning.jobStatus,
+          assignedEmployeeId: cleaning.assignedEmployeeId,
+          assignedEmployeeName: cleaning.assignedEmployeeName,
+          notes: cleaning.notes,
+          internalNotes: cleaning.internalNotes,
+          completedAt: cleaning.completedAt,
+          binsCount: cleaning.binsCount,
+        } as Record<string, unknown>;
+      },
+    }));
+
+    const jobs = buildOperatorScheduleJobs(cleaningDocs, userMap);
+
+    return {
+      scope,
+      stats,
+      cleanings,
+      jobs,
+      scheduleStats: buildScheduleStats(jobs),
+      staff: loadStaff(usersSnapshot),
     };
   }
 

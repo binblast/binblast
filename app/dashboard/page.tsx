@@ -32,6 +32,7 @@ import {
   getReadinessLabel,
   getReadinessStyle,
 } from "@/lib/cleaning-readiness";
+import type { ScheduleJob, ScheduleStaffMember } from "@/lib/schedule-board";
 
 const OwnerCommandCenter = dynamic(
   () => import("@/components/OwnerDashboard/OwnerCommandCenter").then((m) => m.OwnerCommandCenter),
@@ -46,6 +47,14 @@ const EmployeeStatus = dynamic(
 const OperatorLiveMap = dynamic(
   () => import("@/components/OperatorDashboard/OperatorLiveMap").then((mod) => mod.OperatorLiveMap),
   { loading: () => <p style={{ color: "#6b7280", padding: "2rem 0", textAlign: "center" }}>Loading live map...</p> }
+);
+
+const OperatorScheduleBoard = dynamic(
+  () =>
+    import("@/components/OperatorDashboard/OperatorScheduleBoard").then(
+      (mod) => mod.OperatorScheduleBoard
+    ),
+  { loading: () => <p style={{ color: "#6b7280", padding: "2rem 0", textAlign: "center" }}>Loading schedule board...</p> }
 );
 
 const CustomQuotesManagement = dynamic(
@@ -259,7 +268,8 @@ function DashboardPageContent() {
   const [operatorDirectCustomers, setOperatorDirectCustomers] = useState<any[]>([]);
   const [operatorCommercialCustomers, setOperatorCommercialCustomers] = useState<any[]>([]);
   const [operatorAllCleanings, setOperatorAllCleanings] = useState<any[]>([]);
-  const [operatorStaff, setOperatorStaff] = useState<Array<{ id: string; name: string; role?: string }>>([]);
+  const [operatorScheduleJobs, setOperatorScheduleJobs] = useState<ScheduleJob[]>([]);
+  const [operatorStaff, setOperatorStaff] = useState<ScheduleStaffMember[]>([]);
   
   // Extra bin state
   const [extraBinQuantity, setExtraBinQuantity] = useState(1);
@@ -282,9 +292,6 @@ function DashboardPageContent() {
   const [operatorLoadedScopes, setOperatorLoadedScopes] = useState<string[]>([]);
   const [operatorCustomerSearch, setOperatorCustomerSearch] = useState("");
   const [operatorCustomerFilter, setOperatorCustomerFilter] = useState<{ plan?: string; status?: string }>({});
-  const [operatorDateFilter, setOperatorDateFilter] = useState<string>("");
-  const [operatorCityFilter, setOperatorCityFilter] = useState<string>("");
-  const [operatorTypeFilter, setOperatorTypeFilter] = useState<string>("");
   const [operatorActiveTab, setOperatorActiveTab] = useState<"overview" | "employees" | "customers" | "schedule" | "messages">("overview");
   const [adminActiveTab, setAdminActiveTab] = useState<"overview" | "customers" | "operations" | "financial" | "partners" | "analytics" | "employees" | "messages">("overview");
   const [newQuotesCount, setNewQuotesCount] = useState(0);
@@ -1279,6 +1286,9 @@ function DashboardPageContent() {
             });
           }
         } else if (tabScope === "schedule") {
+          if (Array.isArray(data.jobs)) {
+            setOperatorScheduleJobs(data.jobs);
+          }
           if (Array.isArray(data.cleanings)) {
             setOperatorAllCleanings(data.cleanings);
           }
@@ -1422,45 +1432,12 @@ function DashboardPageContent() {
     return filtered;
   }, [roleDetermined, isOperator, operatorDirectCustomers, operatorCustomerSearch, operatorCustomerFilter]);
 
-  const filteredCleanings = useMemo(() => {
-    if (!roleDetermined || !isOperator) return [];
-    let filtered = operatorAllCleanings;
-    
-    if (operatorDateFilter) {
-      try {
-        const filterDate = new Date(operatorDateFilter);
-        if (!isNaN(filterDate.getTime())) {
-          filterDate.setHours(0, 0, 0, 0);
-          const filterDateEnd = new Date(filterDate);
-          filterDateEnd.setHours(23, 59, 59, 999);
-          filtered = filtered.filter(c => {
-            const cleaningDate = getCleaningDate(c);
-            return cleaningDate >= filterDate && cleaningDate <= filterDateEnd;
-          });
-        }
-      } catch (e) {
-        console.warn("[Operator] Invalid date filter:", operatorDateFilter);
-      }
-    }
-    
-    if (operatorCityFilter) {
-      filtered = filtered.filter(c => (c.city || "").toLowerCase().includes(operatorCityFilter.toLowerCase()));
-    }
-    
-    if (operatorTypeFilter) {
-      if (operatorTypeFilter === "commercial") {
-        filtered = filtered.filter(c => c.isCommercial);
-      } else if (operatorTypeFilter === "residential") {
-        filtered = filtered.filter(c => !c.isCommercial);
-      }
-    }
-    
-    return filtered;
-  }, [roleDetermined, isOperator, operatorAllCleanings, operatorDateFilter, operatorCityFilter, operatorTypeFilter, getCleaningDate]);
-
   const reloadOperatorSchedule = useCallback(async () => {
     try {
       const data = await fetchOperatorScope("schedule");
+      if (Array.isArray(data.jobs)) {
+        setOperatorScheduleJobs(data.jobs);
+      }
       if (Array.isArray(data.cleanings)) {
         setOperatorAllCleanings(data.cleanings);
       }
@@ -1469,22 +1446,9 @@ function DashboardPageContent() {
       }
     } catch (err) {
       console.error("[Dashboard] Error reloading operator schedule:", err);
+      throw err;
     }
   }, [fetchOperatorScope]);
-
-  const cleaningsByDate = useMemo(() => {
-    if (!roleDetermined || !isOperator) return {};
-    const grouped: Record<string, any[]> = {};
-    filteredCleanings.forEach(cleaning => {
-      const date = getCleaningDate(cleaning);
-      const dateKey = date.toISOString().split('T')[0];
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
-      grouped[dateKey].push(cleaning);
-    });
-    return grouped;
-  }, [roleDetermined, isOperator, filteredCleanings, getCleaningDate]);
 
   if (loading) {
     return (
@@ -2410,149 +2374,12 @@ function DashboardPageContent() {
 
                     {/* TAB: Schedule */}
                     {operatorActiveTab === "schedule" && operatorLoadedScopes.includes("schedule") && (
-                      <div>
-                        <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
-                      Schedule & Route Board
-                    </h2>
-                    
-                    {/* Filters */}
-                    <div style={{ 
-                      display: "flex", 
-                      gap: "1rem", 
-                      marginBottom: "1rem",
-                      flexWrap: "wrap"
-                    }}>
-                      <input
-                        type="date"
-                        value={operatorDateFilter}
-                        onChange={(e) => setOperatorDateFilter(e.target.value)}
-                        style={{
-                          padding: "0.75rem 1rem",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "8px",
-                          fontSize: "0.95rem"
-                        }}
+                      <OperatorScheduleBoard
+                        jobs={operatorScheduleJobs}
+                        staff={operatorStaff}
+                        loading={operatorLoading}
+                        onRefresh={reloadOperatorSchedule}
                       />
-                      <input
-                        type="text"
-                        placeholder="Filter by city..."
-                        value={operatorCityFilter}
-                        onChange={(e) => setOperatorCityFilter(e.target.value)}
-                        style={{
-                          padding: "0.75rem 1rem",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "8px",
-                          fontSize: "0.95rem"
-                        }}
-                      />
-                      <select
-                        value={operatorTypeFilter}
-                        onChange={(e) => setOperatorTypeFilter(e.target.value)}
-                        style={{
-                          padding: "0.75rem 1rem",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "8px",
-                          fontSize: "0.95rem",
-                          background: "#ffffff"
-                        }}
-                      >
-                        <option value="">All Types</option>
-                        <option value="commercial">Commercial</option>
-                        <option value="residential">Residential</option>
-                      </select>
-                    </div>
-
-                    {/* Schedule by Date */}
-                    <div style={{
-                      background: "#ffffff",
-                      borderRadius: "12px",
-                      padding: "1.5rem",
-                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-                      border: "1px solid #e5e7eb"
-                    }}>
-                      {Object.keys(cleaningsByDate).length === 0 ? (
-                        <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
-                          No cleanings scheduled.
-                        </div>
-                      ) : (
-                        Object.keys(cleaningsByDate).sort().map(dateKey => {
-                          const cleanings = cleaningsByDate[dateKey];
-                          const date = new Date(dateKey);
-                          
-                          return (
-                            <div key={dateKey} style={{ marginBottom: "2rem" }}>
-                              <h3 style={{ 
-                                fontSize: "1.125rem", 
-                                fontWeight: "600", 
-                                marginBottom: "1rem",
-                                color: "var(--text-dark)",
-                                paddingBottom: "0.5rem",
-                                borderBottom: "2px solid #e5e7eb"
-                              }}>
-                                {date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-                              </h3>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                                {cleanings.map(cleaning => {
-                                  const isCompleted = cleaning.status === "completed" || (cleaning as any).jobStatus === "completed";
-                                  const isCancelled = cleaning.status === "cancelled";
-                                  return (
-                                  <div key={cleaning.id} style={{
-                                    padding: "1rem",
-                                    background: isCompleted ? "#f0fdf4" : isCancelled ? "#fef2f2" : "#f0f9ff",
-                                    borderRadius: "8px",
-                                    border: `1px solid ${isCompleted ? "#bbf7d0" : isCancelled ? "#fecaca" : "#bae6fd"}`,
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "start"
-                                  }}>
-                                    <div style={{ flex: 1 }}>
-                                      <div style={{ fontWeight: "600", marginBottom: "0.25rem", color: "var(--text-dark)" }}>
-                                        {cleaning.customerName || cleaning.customerEmail}
-                                      </div>
-                                      <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
-                                        {cleaning.addressLine1}, {cleaning.city}
-                                      </div>
-                                      <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                                        {cleaning.assignedEmployeeName || "Unassigned"} • {PLAN_NAMES[cleaning.planType] || cleaning.planType || "N/A"} • {cleaning.scheduledTime || "TBD"}
-                                      </div>
-                                      {cleaning.internalNotes && (
-                                        <div style={{ fontSize: "0.875rem", marginTop: "0.5rem", padding: "0.5rem", background: "#ffffff", borderRadius: "4px" }}>
-                                          <strong>Notes:</strong> {cleaning.internalNotes}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: "flex-end" }}>
-                                      <span style={{
-                                        padding: "0.25rem 0.75rem",
-                                        borderRadius: "999px",
-                                        fontSize: "0.75rem",
-                                        fontWeight: "600",
-                                        textTransform: "capitalize",
-                                        background: isCompleted ? "#d1fae5" : isCancelled ? "#fee2e2" : "#dbeafe",
-                                        color: isCompleted ? "#065f46" : isCancelled ? "#991b1b" : "#1e40af"
-                                      }}>
-                                        {cleaning.status || (cleaning as any).jobStatus || "scheduled"}
-                                      </span>
-                                      {!isCompleted && !isCancelled && (
-                                        <ScheduleEmployeeAssign
-                                          jobId={cleaning.id}
-                                          staff={operatorStaff}
-                                          assignedEmployeeId={cleaning.assignedEmployeeId}
-                                          assignedEmployeeName={cleaning.assignedEmployeeName}
-                                          onAssigned={reloadOperatorSchedule}
-                                        />
-                                      )}
-                                    </div>
-                                  </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
                     )}
 
                     {/* Additional sections in Overview tab */}
