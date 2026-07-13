@@ -1,6 +1,8 @@
 // components/AdminDashboard/HireEmployeeForm.tsx
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState } from "react";
 
 interface HireEmployeeFormProps {
@@ -31,7 +33,7 @@ export function HireEmployeeForm({ onSuccess, onCancel }: HireEmployeeFormProps)
         ? formData.serviceArea.split(",").map((area) => area.trim()).filter(Boolean)
         : [];
 
-      const response = await fetch("/api/admin/employees", {
+      const response = await fetchWithAuth("/api/admin/employees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

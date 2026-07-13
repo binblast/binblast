@@ -1,5 +1,8 @@
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -181,7 +184,7 @@ export function OperatorScheduleBoard({
   async function handleQuickStatus(job: ScheduleJob, status: string) {
     try {
       setError(null);
-      const response = await fetch(`/api/admin/schedule/${job.id}`, {
+      const response = await fetchWithAuth(`/api/admin/schedule/${job.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),

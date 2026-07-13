@@ -1,5 +1,8 @@
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatHours } from "@/lib/operator-fleet-payroll";
 
@@ -88,7 +91,7 @@ export function PayrollSummary() {
       if (startDate) params.set("startDate", startDate);
       if (endDate) params.set("endDate", endDate);
 
-      const response = await fetch(`/api/admin/payroll-summary?${params.toString()}`, {
+      const response = await fetchWithAuth(`/api/admin/payroll-summary?${params.toString()}`, {
         cache: "no-store",
       });
       const payload = await response.json();

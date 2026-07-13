@@ -1,6 +1,8 @@
 // components/AdminDashboard/EmployeeTaxInfo.tsx
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState, useEffect } from "react";
 
 interface EmployeeTaxInfoProps {
@@ -36,7 +38,7 @@ export function EmployeeTaxInfo({ employeeId }: EmployeeTaxInfoProps) {
   async function loadTaxInfo() {
     try {
       setLoading(true);
-      const response = await fetch(`/api/admin/employees/${employeeId}/tax-info`);
+      const response = await fetchWithAuth(`/api/admin/employees/${employeeId}/tax-info`);
       const data = await response.json();
 
       if (data.success) {
@@ -72,7 +74,7 @@ export function EmployeeTaxInfo({ employeeId }: EmployeeTaxInfoProps) {
     setSaving(true);
 
     try {
-      const response = await fetch(`/api/admin/employees/${employeeId}/tax-info`, {
+      const response = await fetchWithAuth(`/api/admin/employees/${employeeId}/tax-info`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

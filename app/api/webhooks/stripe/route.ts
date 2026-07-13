@@ -492,11 +492,35 @@ export async function POST(req: NextRequest) {
 
         const db = await getDbInstance();
         if (customerId && db) {
-          // Find user by stripeCustomerId and update subscription status to cancelled
-          console.log("Subscription deleted:", {
-            subscriptionId: subscription.id,
-            customerId,
-          });
+          try {
+            const usersQuery = query(
+              collection(db, "users"),
+              where("stripeCustomerId", "==", customerId)
+            );
+            const usersSnapshot = await getDocs(usersQuery);
+
+            if (!usersSnapshot.empty) {
+              const userDoc = usersSnapshot.docs[0];
+              await updateDoc(userDoc.ref, {
+                subscriptionStatus: "cancelled",
+                servicePaused: true,
+                updatedAt: serverTimestamp(),
+              });
+
+              console.log("Subscription deleted - user updated:", {
+                subscriptionId: subscription.id,
+                customerId,
+                userId: userDoc.id,
+              });
+            } else {
+              console.log("Subscription deleted - no matching user:", {
+                subscriptionId: subscription.id,
+                customerId,
+              });
+            }
+          } catch (deleteError) {
+            console.error("[Webhook] Error updating user after subscription deleted:", deleteError);
+          }
         }
         break;
       }
@@ -623,10 +647,35 @@ export async function POST(req: NextRequest) {
 
         const db = await getDbInstance();
         if (customerId && db) {
-          console.log("Invoice payment failed:", {
-            invoiceId: invoice.id,
-            customerId,
-          });
+          try {
+            const usersQuery = query(
+              collection(db, "users"),
+              where("stripeCustomerId", "==", customerId)
+            );
+            const usersSnapshot = await getDocs(usersQuery);
+
+            if (!usersSnapshot.empty) {
+              const userDoc = usersSnapshot.docs[0];
+              await updateDoc(userDoc.ref, {
+                paymentStatus: "failed",
+                servicePaused: true,
+                updatedAt: serverTimestamp(),
+              });
+
+              console.log("Invoice payment failed - user updated:", {
+                invoiceId: invoice.id,
+                customerId,
+                userId: userDoc.id,
+              });
+            } else {
+              console.log("Invoice payment failed - no matching user:", {
+                invoiceId: invoice.id,
+                customerId,
+              });
+            }
+          } catch (paymentFailedError) {
+            console.error("[Webhook] Error updating user after payment failed:", paymentFailedError);
+          }
         }
         break;
       }

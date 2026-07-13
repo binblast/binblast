@@ -561,6 +561,17 @@ export default function HomePage() {
             </div>
             <div className="footer-bottom">
               <p>&copy; 2024 Bin Blast Co. All rights reserved.</p>
+              <p style={{ marginTop: "0.75rem", fontSize: "0.9rem" }}>
+                <Link href="/terms" style={{ color: "inherit", textDecoration: "underline", marginRight: "1rem" }}>
+                  Terms of Service
+                </Link>
+                <Link href="/privacy" style={{ color: "inherit", textDecoration: "underline", marginRight: "1rem" }}>
+                  Privacy Policy
+                </Link>
+                <Link href="/cancellation" style={{ color: "inherit", textDecoration: "underline" }}>
+                  Cancellation &amp; Refunds
+                </Link>
+              </p>
             </div>
           </div>
         </footer>

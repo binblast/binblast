@@ -1,5 +1,8 @@
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
+
 import { useEffect, useMemo, useState } from "react";
 import type { PlanId } from "@/lib/stripe-config";
 
@@ -35,7 +38,7 @@ export function SubscriptionPricingSettings() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch("/api/admin/platform-pricing");
+      const response = await fetchWithAuth("/api/admin/platform-pricing");
       const data = await response.json();
 
       if (!response.ok) {
@@ -83,7 +86,7 @@ export function SubscriptionPricingSettings() {
       setError(null);
       setMessage(null);
 
-      const response = await fetch("/api/admin/platform-pricing", {
+      const response = await fetchWithAuth("/api/admin/platform-pricing", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

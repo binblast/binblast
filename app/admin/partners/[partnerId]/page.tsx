@@ -3,6 +3,8 @@
 
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -55,7 +57,7 @@ export default function PartnerDetailPage() {
       setLoading(true);
       
       // Load partner details
-      const partnerResponse = await fetch(`/api/admin/partners/${partnerId}`);
+      const partnerResponse = await fetchWithAuth(`/api/admin/partners/${partnerId}`);
       const partnerData = await partnerResponse.json();
       if (partnerData.success) {
         setPartner(partnerData.partner);
@@ -63,19 +65,19 @@ export default function PartnerDetailPage() {
 
       // Load tab-specific data
       if (activeTab === "jobs") {
-        const jobsResponse = await fetch(`/api/admin/partners/${partnerId}/jobs`);
+        const jobsResponse = await fetchWithAuth(`/api/admin/partners/${partnerId}/jobs`);
         const jobsData = await jobsResponse.json();
         if (jobsData.success) {
           setJobs(jobsData.jobs || []);
         }
       } else if (activeTab === "customers") {
-        const customersResponse = await fetch(`/api/admin/partners/${partnerId}/customers`);
+        const customersResponse = await fetchWithAuth(`/api/admin/partners/${partnerId}/customers`);
         const customersData = await customersResponse.json();
         if (customersData.success) {
           setCustomers(customersData.customers || []);
         }
       } else if (activeTab === "financials") {
-        const financialsResponse = await fetch(`/api/admin/partners/${partnerId}/financials`);
+        const financialsResponse = await fetchWithAuth(`/api/admin/partners/${partnerId}/financials`);
         const financialsData = await financialsResponse.json();
         if (financialsData.success) {
           setFinancials(financialsData);
@@ -443,7 +445,7 @@ function ServiceAreasTab({ partner, onUpdate }: { partner: Partner; onUpdate: ()
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/admin/partners/${partner.id}/service-areas`, {
+      const response = await fetchWithAuth(`/api/admin/partners/${partner.id}/service-areas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ serviceAreas: allAreas }),
@@ -591,7 +593,7 @@ function SettingsTab({ partner, onUpdate }: { partner: Partner; onUpdate: () => 
     if (!confirm("Pause this partner? They will not receive new job assignments.")) return;
     
     try {
-      const response = await fetch(`/api/admin/partners/${partner.id}/pause`, { method: "POST" });
+      const response = await fetchWithAuth(`/api/admin/partners/${partner.id}/pause`, { method: "POST" });
       const data = await response.json();
       if (data.success) {
         alert("Partner paused");
@@ -606,7 +608,7 @@ function SettingsTab({ partner, onUpdate }: { partner: Partner; onUpdate: () => 
 
   async function handleResume() {
     try {
-      const response = await fetch(`/api/admin/partners/${partner.id}/resume`, { method: "POST" });
+      const response = await fetchWithAuth(`/api/admin/partners/${partner.id}/resume`, { method: "POST" });
       const data = await response.json();
       if (data.success) {
         alert("Partner resumed");
@@ -624,7 +626,7 @@ function SettingsTab({ partner, onUpdate }: { partner: Partner; onUpdate: () => 
     if (!reason) return;
     
     try {
-      const response = await fetch(`/api/admin/partners/${partner.id}/remove`, {
+      const response = await fetchWithAuth(`/api/admin/partners/${partner.id}/remove`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
@@ -655,7 +657,7 @@ function SettingsTab({ partner, onUpdate }: { partner: Partner; onUpdate: () => 
     setAdjustingSplit(true);
     try {
       const reason = prompt("Enter reason for revenue split change (optional):") || "No reason provided";
-      const response = await fetch(`/api/admin/partners/${partner.id}/revenue-split`, {
+      const response = await fetchWithAuth(`/api/admin/partners/${partner.id}/revenue-split`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

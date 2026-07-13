@@ -1,6 +1,8 @@
 // components/AdminDashboard/EmployeeApplications.tsx
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState, useEffect } from "react";
 
 interface EmployeeApplication {
@@ -36,7 +38,7 @@ export function EmployeeApplications() {
     try {
       setLoading(true);
       const params = filterStatus ? `?status=${filterStatus}` : "";
-      const response = await fetch(`/api/admin/employees/applications${params}`);
+      const response = await fetchWithAuth(`/api/admin/employees/applications${params}`);
       const data = await response.json();
 
       if (data.success) {
@@ -56,7 +58,7 @@ export function EmployeeApplications() {
       setProcessing(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/employees/applications/${selectedApplication.id}`, {
+      const response = await fetchWithAuth(`/api/admin/employees/applications/${selectedApplication.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

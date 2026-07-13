@@ -1,6 +1,8 @@
 // components/OwnerDashboard/CustomerManagement.tsx
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useEffect, useState } from "react";
 
 interface CustomerManagementProps {
@@ -52,7 +54,7 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
     async function loadCustomers() {
       try {
         setLoadError(null);
-        const response = await fetch("/api/admin/customers");
+        const response = await fetchWithAuth("/api/admin/customers");
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.error || "Failed to load customers");
@@ -110,7 +112,7 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
       setGeocodingCustomers(true);
       setGeocodeMessage(null);
 
-      const response = await fetch("/api/admin/customers/geocode", {
+      const response = await fetchWithAuth("/api/admin/customers/geocode", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),

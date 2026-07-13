@@ -468,6 +468,16 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
           }).catch((emailErr) => {
             console.error("[ScheduleCleaningForm] Failed to send confirmation email:", emailErr);
           });
+
+          const { requestCleaningSmsNotification } = await import("@/lib/cleaning-notification-client");
+          requestCleaningSmsNotification({
+            userId,
+            scheduledDate,
+            scheduledTime: selectedTime,
+            addressLine1,
+            city,
+            state,
+          });
         } catch (emailErr) {
           console.error("[ScheduleCleaningForm] Error sending confirmation email:", emailErr);
         }
@@ -548,6 +558,16 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
             binsCount: Number(binsCount) || 1,
           }).catch((emailErr) => {
             console.error("[ScheduleCleaningForm] Failed to send confirmation email:", emailErr);
+          });
+
+          const { requestCleaningSmsNotification } = await import("@/lib/cleaning-notification-client");
+          requestCleaningSmsNotification({
+            userId,
+            scheduledDate,
+            scheduledTime: selectedTime,
+            addressLine1,
+            city,
+            state,
           });
         } catch (emailErr) {
           console.error("[ScheduleCleaningForm] Error sending confirmation email:", emailErr);

@@ -75,6 +75,7 @@ export function SubscriptionManagerStandalone({
   onPlanChanged,
 }: SubscriptionManagerStandaloneProps) {
   const [loading, setLoading] = useState(false);
+  const [billingPortalLoading, setBillingPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedNewPlan, setSelectedNewPlan] = useState<PlanId | null>(null);
   const [showChangeModal, setShowChangeModal] = useState(false);
@@ -195,6 +196,42 @@ export function SubscriptionManagerStandalone({
     }
   };
 
+  const handleBillingPortal = async () => {
+    if (!stripeCustomerId) {
+      setError("No billing account found. Please contact support.");
+      return;
+    }
+
+    setBillingPortalLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/stripe/billing-portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          returnUrl: typeof window !== "undefined" ? `${window.location.origin}/dashboard` : undefined,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to open billing portal");
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to open billing portal");
+    } finally {
+      setBillingPortalLoading(false);
+    }
+  };
+
   const calculateProrationPreview = (newPlanId: PlanId) => {
     if (!billingPeriodEnd) return null;
 
@@ -233,6 +270,22 @@ export function SubscriptionManagerStandalone({
 
   return (
     <>
+      {stripeCustomerId && (
+        <button
+          onClick={handleBillingPortal}
+          disabled={billingPortalLoading}
+          className="btn btn-secondary"
+          style={{
+            marginTop: "1rem",
+            display: "block",
+            width: "100%",
+            maxWidth: "300px",
+          }}
+        >
+          {billingPortalLoading ? "Opening..." : "Manage Billing"}
+        </button>
+      )}
+
       <button
         onClick={() => {
           setModalStep("select");

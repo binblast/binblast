@@ -3,6 +3,8 @@
 
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState, useEffect } from "react";
 import { georgiaCounties } from "@/data/gaCounties";
 import { metroAtlZones } from "@/data/metroAtlZones";
@@ -80,19 +82,19 @@ export function PartnerMiniProfile({
     setLoading(true);
     try {
       if (activeTab === "jobs") {
-        const jobsResponse = await fetch(`/api/admin/partners/${partner.id}/jobs`);
+        const jobsResponse = await fetchWithAuth(`/api/admin/partners/${partner.id}/jobs`);
         const jobsData = await jobsResponse.json();
         if (jobsData.success) {
           setJobs(jobsData.jobs || []);
         }
 
-        const complianceResponse = await fetch(`/api/admin/partners/${partner.id}/photo-compliance?days=30`);
+        const complianceResponse = await fetchWithAuth(`/api/admin/partners/${partner.id}/photo-compliance?days=30`);
         const complianceData = await complianceResponse.json();
         if (complianceData.success) {
           setPhotoCompliance(complianceData);
         }
       } else if (activeTab === "messages") {
-        const messagesResponse = await fetch(`/api/admin/partners/${partner.id}/messages`);
+        const messagesResponse = await fetchWithAuth(`/api/admin/partners/${partner.id}/messages`);
         const messagesData = await messagesResponse.json();
         if (messagesData.success) {
           setMessages(messagesData.messages || []);
@@ -110,7 +112,7 @@ export function PartnerMiniProfile({
     if (!confirm("Pause this partner? They will not receive new job assignments.")) return;
 
     try {
-      const response = await fetch(`/api/admin/partners/${partner.id}/pause`, { method: "POST" });
+      const response = await fetchWithAuth(`/api/admin/partners/${partner.id}/pause`, { method: "POST" });
       const data = await response.json();
       if (data.success) {
         alert("Partner paused");
@@ -126,7 +128,7 @@ export function PartnerMiniProfile({
   async function handleResume() {
     if (!partner) return;
     try {
-      const response = await fetch(`/api/admin/partners/${partner.id}/resume`, { method: "POST" });
+      const response = await fetchWithAuth(`/api/admin/partners/${partner.id}/resume`, { method: "POST" });
       const data = await response.json();
       if (data.success) {
         alert("Partner resumed");
@@ -145,7 +147,7 @@ export function PartnerMiniProfile({
     if (!reason) return;
 
     try {
-      const response = await fetch(`/api/admin/partners/${partner.id}/remove`, {
+      const response = await fetchWithAuth(`/api/admin/partners/${partner.id}/remove`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
@@ -824,7 +826,7 @@ function MessagesTab({
     if (!messageText.trim()) return;
 
     try {
-      const response = await fetch(`/api/admin/partners/${partnerId}/messages`, {
+      const response = await fetchWithAuth(`/api/admin/partners/${partnerId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

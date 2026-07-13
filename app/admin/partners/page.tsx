@@ -1,6 +1,8 @@
 // app/admin/partners/page.tsx
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -165,7 +167,7 @@ export default function AdminPartnersPage() {
 
   async function updatePartnerStatus(partnerId: string, newStatus: "pending" | "approved" | "suspended") {
     try {
-      const response = await fetch("/api/admin/partners/update-status", {
+      const response = await fetchWithAuth("/api/admin/partners/update-status", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -190,7 +192,7 @@ export default function AdminPartnersPage() {
 
   async function updateRevenueShare(partnerId: string, partnerShare: number, platformShare: number) {
     try {
-      const response = await fetch("/api/admin/partners/update-revenue-share", {
+      const response = await fetchWithAuth("/api/admin/partners/update-revenue-share", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -223,7 +225,7 @@ export default function AdminPartnersPage() {
 
     setAssigningUser(true);
     try {
-      const response = await fetch("/api/admin/partners/assign-user", {
+      const response = await fetchWithAuth("/api/admin/partners/assign-user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

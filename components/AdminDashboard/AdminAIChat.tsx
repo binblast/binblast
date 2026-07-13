@@ -1,6 +1,8 @@
 // components/AdminDashboard/AdminAIChat.tsx
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState, useRef, useEffect } from "react";
 
 interface Message {
@@ -64,7 +66,7 @@ export function AdminAIChat({ adminStats, chartData }: AdminAIChatProps) {
     setIsTyping(true);
 
     try {
-      const response = await fetch("/api/admin/ai-chat", {
+      const response = await fetchWithAuth("/api/admin/ai-chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

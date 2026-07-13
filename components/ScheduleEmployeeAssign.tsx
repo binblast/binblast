@@ -1,5 +1,8 @@
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
+
 import { useEffect, useState } from "react";
 
 export interface ScheduleStaffMember {
@@ -81,7 +84,7 @@ export function ScheduleEmployeeAssign({
     setFeedback(null);
 
     try {
-      const response = await fetch(`/api/admin/schedule/${jobId}`, {
+      const response = await fetchWithAuth(`/api/admin/schedule/${jobId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -120,7 +123,7 @@ export function ScheduleEmployeeAssign({
     setFeedback(null);
 
     try {
-      const response = await fetch(`/api/admin/schedule/${jobId}`, {
+      const response = await fetchWithAuth(`/api/admin/schedule/${jobId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clearAssignment: true }),

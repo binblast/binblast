@@ -1,5 +1,8 @@
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
+
 import { useEffect, useMemo, useState } from "react";
 import type { CompensationPayModel, CompensationSettings, CommercialBonusType } from "@/lib/employee-compensation";
 import { COMMERCIAL_BONUS_LABELS } from "@/lib/employee-compensation";
@@ -134,7 +137,7 @@ export function EmployeeCompensationSettings() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch("/api/admin/compensation-settings");
+      const response = await fetchWithAuth("/api/admin/compensation-settings");
       const data = await response.json();
 
       if (!response.ok) {
@@ -311,7 +314,7 @@ export function EmployeeCompensationSettings() {
       setError(null);
       setMessage(null);
 
-      const response = await fetch("/api/admin/compensation-settings", {
+      const response = await fetchWithAuth("/api/admin/compensation-settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ settings: nextSettings }),

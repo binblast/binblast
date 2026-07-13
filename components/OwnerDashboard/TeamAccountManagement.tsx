@@ -1,5 +1,8 @@
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
+
 import { useEffect, useMemo, useState } from "react";
 
 type StaffRole = "employee" | "operator";
@@ -68,7 +71,7 @@ export function TeamAccountManagement({ initialPanel = "create" }: TeamAccountMa
       setLoadingAccounts(true);
       const params = new URLSearchParams();
       if (query.trim()) params.set("query", query.trim());
-      const response = await fetch(`/api/admin/team-accounts?${params.toString()}`);
+      const response = await fetchWithAuth(`/api/admin/team-accounts?${params.toString()}`);
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Failed to load accounts");
@@ -93,7 +96,7 @@ export function TeamAccountManagement({ initialPanel = "create" }: TeamAccountMa
         ? formData.serviceArea.split(",").map((area) => area.trim()).filter(Boolean)
         : [];
 
-      const response = await fetch("/api/admin/team-accounts", {
+      const response = await fetchWithAuth("/api/admin/team-accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -138,7 +141,7 @@ export function TeamAccountManagement({ initialPanel = "create" }: TeamAccountMa
     try {
       setResettingEmail(email);
       setActionMessage(null);
-      const response = await fetch("/api/admin/team-accounts/reset-password", {
+      const response = await fetchWithAuth("/api/admin/team-accounts/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

@@ -1,6 +1,8 @@
 // components/AdminDashboard/EmployeeScheduling.tsx
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState, useEffect } from "react";
 
 interface EmployeeSchedulingProps {
@@ -40,7 +42,7 @@ export function EmployeeScheduling({ employeeId }: EmployeeSchedulingProps) {
   async function loadSchedule(weekStart: string) {
     try {
       setLoading(true);
-      const response = await fetch(`/api/admin/employees/${employeeId}/schedule?weekStartDate=${weekStart}`);
+      const response = await fetchWithAuth(`/api/admin/employees/${employeeId}/schedule?weekStartDate=${weekStart}`);
       const data = await response.json();
 
       if (data.success) {
@@ -91,7 +93,7 @@ export function EmployeeScheduling({ employeeId }: EmployeeSchedulingProps) {
       setError(null);
       setSuccess(false);
 
-      const response = await fetch(`/api/admin/employees/${employeeId}/schedule`, {
+      const response = await fetchWithAuth(`/api/admin/employees/${employeeId}/schedule`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

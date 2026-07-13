@@ -2,6 +2,8 @@
 // Full-featured Partner Program Management Control Center
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { georgiaCounties } from "@/data/gaCounties";
@@ -127,14 +129,14 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       setLoading(true);
       
       // Load applications
-      const appsResponse = await fetch("/api/admin/partners/applications");
+      const appsResponse = await fetchWithAuth("/api/admin/partners/applications");
       const appsData = await appsResponse.json();
       if (appsData.success) {
         setApplications(appsData.applications || []);
       }
       
       // Load partners with stats
-      const partnersResponse = await fetch("/api/admin/partners/list");
+      const partnersResponse = await fetchWithAuth("/api/admin/partners/list");
       const partnersData = await partnersResponse.json();
       if (partnersData.success) {
         setPartners(partnersData.partners || []);
@@ -161,7 +163,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
     }
     
     try {
-      const response = await fetch(`/api/admin/partners/applications/${applicationId}/approve`, {
+      const response = await fetchWithAuth(`/api/admin/partners/applications/${applicationId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -187,7 +189,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
 
   async function handleReject(applicationId: string, reason: string) {
     try {
-      const response = await fetch(`/api/admin/partners/applications/${applicationId}/reject`, {
+      const response = await fetchWithAuth(`/api/admin/partners/applications/${applicationId}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
@@ -209,7 +211,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
 
   async function handleHold(applicationId: string, notes: string) {
     try {
-      const response = await fetch(`/api/admin/partners/applications/${applicationId}/hold`, {
+      const response = await fetchWithAuth(`/api/admin/partners/applications/${applicationId}/hold`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notes }),
@@ -233,7 +235,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
     if (!confirm("Pause this partner? They will not receive new job assignments.")) return;
     
     try {
-      const response = await fetch(`/api/admin/partners/${partnerId}/pause`, {
+      const response = await fetchWithAuth(`/api/admin/partners/${partnerId}/pause`, {
         method: "POST",
       });
       
@@ -251,7 +253,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
 
   async function handleResumePartner(partnerId: string) {
     try {
-      const response = await fetch(`/api/admin/partners/${partnerId}/resume`, {
+      const response = await fetchWithAuth(`/api/admin/partners/${partnerId}/resume`, {
         method: "POST",
       });
       
@@ -280,7 +282,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
     }
     
     try {
-      const response = await fetch(`/api/admin/partners/${partnerId}/remove`, {
+      const response = await fetchWithAuth(`/api/admin/partners/${partnerId}/remove`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
@@ -537,7 +539,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                                   if (app.linkedPartnerId) {
                                     // Try to load partner, but fall back to application data if not found
                                     try {
-                                      const partnerResponse = await fetch(`/api/admin/partners/${app.linkedPartnerId}`);
+                                      const partnerResponse = await fetchWithAuth(`/api/admin/partners/${app.linkedPartnerId}`);
                                       const partnerData = await partnerResponse.json();
                                       
                                       if (partnerResponse.ok && partnerData.success && partnerData.partner) {

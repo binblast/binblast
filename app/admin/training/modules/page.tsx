@@ -3,6 +3,8 @@
 
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PDFUploader } from "@/components/Admin/PDFUploader";
@@ -54,7 +56,7 @@ export default function AdminTrainingModulesPage() {
 
   const handleVerifyAll = async () => {
     try {
-      const response = await fetch("/api/admin/training/verify-pdfs");
+      const response = await fetchWithAuth("/api/admin/training/verify-pdfs");
       if (response.ok) {
         const results = await response.json();
         // Display verification results

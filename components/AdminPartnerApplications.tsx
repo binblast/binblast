@@ -1,6 +1,8 @@
 // components/AdminPartnerApplications.tsx
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState, useEffect } from "react";
 
 const ADMIN_EMAIL = "binblastcompany@gmail.com";
@@ -35,7 +37,7 @@ export function AdminPartnerApplications() {
 
   async function loadApplications() {
     try {
-      const response = await fetch("/api/admin/partners/applications");
+      const response = await fetchWithAuth("/api/admin/partners/applications");
       const data = await response.json();
       if (data.success) {
         setApplications(data.applications || []);
@@ -54,7 +56,7 @@ export function AdminPartnerApplications() {
 
     setProcessing(applicationId);
     try {
-      const response = await fetch(`/api/admin/partners/applications/${applicationId}/approve`, {
+      const response = await fetchWithAuth(`/api/admin/partners/applications/${applicationId}/approve`, {
         method: "POST",
       });
       const data = await response.json();
@@ -88,7 +90,7 @@ export function AdminPartnerApplications() {
 
     setProcessing(applicationId);
     try {
-      const response = await fetch(`/api/admin/partners/applications/${applicationId}/reject`, {
+      const response = await fetchWithAuth(`/api/admin/partners/applications/${applicationId}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: reason || undefined }),

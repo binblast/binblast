@@ -1,6 +1,8 @@
 // components/AdminDashboard/JobAssignmentPanel.tsx
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState, useEffect } from "react";
 
 interface JobAssignmentPanelProps {
@@ -99,7 +101,7 @@ export function JobAssignmentPanel({ employeeId }: JobAssignmentPanelProps) {
       setError(null);
       setSuccess(false);
 
-      const response = await fetch(`/api/admin/employees/${employeeId}/assign-jobs`, {
+      const response = await fetchWithAuth(`/api/admin/employees/${employeeId}/assign-jobs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

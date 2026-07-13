@@ -1,5 +1,8 @@
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ScheduleJob,
@@ -61,7 +64,7 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
       else setLoading(true);
       setError(null);
 
-      const response = await fetch("/api/admin/schedule");
+      const response = await fetchWithAuth("/api/admin/schedule");
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Failed to load schedule");
@@ -183,7 +186,7 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
   }, [filteredJobs]);
 
   async function updateJob(jobId: string, updates: Record<string, unknown>) {
-    const response = await fetch(`/api/admin/schedule/${jobId}`, {
+    const response = await fetchWithAuth(`/api/admin/schedule/${jobId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
@@ -213,7 +216,7 @@ export function CleaningScheduleBoard({ userId }: CleaningScheduleBoardProps) {
       setError(null);
 
       const employee = staff.find((member) => member.id === bulkEmployeeId);
-      const response = await fetch("/api/admin/schedule/bulk", {
+      const response = await fetchWithAuth("/api/admin/schedule/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,5 +1,8 @@
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface SiteLead {
@@ -55,7 +58,7 @@ export function SiteLeadsManagement() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch("/api/admin/site-leads");
+      const response = await fetchWithAuth("/api/admin/site-leads");
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Failed to load site leads");
@@ -171,7 +174,7 @@ export function SiteLeadsManagement() {
     setActionError(null);
     setBusyIds((current) => new Set(current).add(id));
     try {
-      const response = await fetch(`/api/admin/site-leads/${id}`, {
+      const response = await fetchWithAuth(`/api/admin/site-leads/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -202,7 +205,7 @@ export function SiteLeadsManagement() {
     setActionError(null);
     setBusyIds((current) => new Set(current).add(id));
     try {
-      const response = await fetch(`/api/admin/site-leads/${id}`, { method: "DELETE" });
+      const response = await fetchWithAuth(`/api/admin/site-leads/${id}`, { method: "DELETE" });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Failed to delete lead");
@@ -237,7 +240,7 @@ export function SiteLeadsManagement() {
     setActionError(null);
     setBulkBusy(true);
     try {
-      const response = await fetch("/api/admin/site-leads/bulk", {
+      const response = await fetchWithAuth("/api/admin/site-leads/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, ids, status }),

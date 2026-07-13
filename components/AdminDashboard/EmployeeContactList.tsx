@@ -1,6 +1,8 @@
 // components/AdminDashboard/EmployeeContactList.tsx
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -44,7 +46,7 @@ export function EmployeeContactList({ onEmployeeSelect }: EmployeeContactListPro
       if (filterTaxInfo) params.append("taxInfoComplete", filterTaxInfo);
       if (filterServiceArea) params.append("serviceArea", filterServiceArea);
 
-      const response = await fetch(`/api/admin/employees?${params.toString()}`);
+      const response = await fetchWithAuth(`/api/admin/employees?${params.toString()}`);
       const data = await response.json();
 
       if (data.success) {

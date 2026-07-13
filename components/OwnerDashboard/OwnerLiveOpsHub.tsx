@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { FleetPayrollPanel } from "@/components/OperatorDashboard/FleetPayrollPanel";
@@ -73,7 +75,7 @@ export function OwnerLiveOpsHub({
       const [fleetRes, payrollRes, compensationRes] = await Promise.all([
         fetch("/api/operator/fleet/live", { cache: "no-store" }),
         fetch("/api/operator/fleet/payroll", { cache: "no-store" }),
-        fetch("/api/admin/compensation-settings", { cache: "no-store" }),
+        fetchWithAuth("/api/admin/compensation-settings", { cache: "no-store" }),
       ]);
 
       const [fleetData, payrollData, compensationData] = await Promise.all([

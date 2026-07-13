@@ -128,6 +128,16 @@ export function CleaningDateConfirmationModal({
         }).catch((emailErr) => {
           console.error("[CleaningDateConfirmationModal] Failed to send confirmation email:", emailErr);
         });
+
+        const { requestCleaningSmsNotification } = await import("@/lib/cleaning-notification-client");
+        requestCleaningSmsNotification({
+          userId,
+          scheduledDate: preferredDate.toISOString().split("T")[0],
+          scheduledTime: pendingCleaningData.preferredTimeWindow,
+          addressLine1: pendingCleaningData.addressLine1,
+          city: pendingCleaningData.city,
+          state: pendingCleaningData.state,
+        });
       } catch (emailErr) {
         console.error("[CleaningDateConfirmationModal] Error sending confirmation email:", emailErr);
       }

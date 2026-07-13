@@ -1,6 +1,8 @@
 // components/AdminDashboard/EmployeeDetail.tsx
 "use client";
 
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
+
 import { useState, useEffect } from "react";
 import { EmployeeTaxInfo } from "./EmployeeTaxInfo";
 import { EmployeeScheduling } from "./EmployeeScheduling";
@@ -27,7 +29,7 @@ export function EmployeeDetail({ employeeId }: EmployeeDetailProps) {
   async function loadEmployee() {
     try {
       setLoading(true);
-      const response = await fetch(`/api/admin/employees/${employeeId}`);
+      const response = await fetchWithAuth(`/api/admin/employees/${employeeId}`);
       const data = await response.json();
 
       if (data.success) {
@@ -54,7 +56,7 @@ export function EmployeeDetail({ employeeId }: EmployeeDetailProps) {
       setError(null);
       setSuccess(false);
 
-      const response = await fetch(`/api/admin/employees/${employeeId}`, {
+      const response = await fetchWithAuth(`/api/admin/employees/${employeeId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
