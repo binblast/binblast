@@ -44,10 +44,12 @@ const baseButtonStyle: CSSProperties = {
   gap: "0.35rem",
   borderRadius: "10px",
   fontWeight: 600,
-  lineHeight: 1.2,
+  lineHeight: 1.3,
   cursor: "pointer",
   transition: "transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
   whiteSpace: "nowrap",
+  touchAction: "manipulation",
+  WebkitTapHighlightColor: "transparent",
 };
 
 export const operatorActionLayouts = {
@@ -61,7 +63,8 @@ export const operatorActionLayouts = {
     display: "flex",
     flexDirection: "column",
     gap: "0.5rem",
-    minWidth: "210px",
+    minWidth: 0,
+    width: "100%",
   } satisfies CSSProperties,
   stopActionsRow: {
     display: "flex",
@@ -89,18 +92,20 @@ export function OperatorActionButton({
 }: OperatorActionButtonProps) {
   const sizeStyle: CSSProperties =
     size === "sm"
-      ? { padding: "0.42rem 0.7rem", fontSize: "0.75rem", minHeight: "32px" }
-      : { padding: "0.7rem 1rem", fontSize: "0.8125rem", minHeight: "42px" };
+      ? { padding: "0.5rem 0.75rem", fontSize: "0.8125rem", minHeight: "44px" }
+      : { padding: "0.7rem 1rem", fontSize: "0.875rem", minHeight: "44px" };
 
   return (
     <button
       type="button"
       disabled={disabled}
+      className={`operator-action-btn${fullWidth ? " operator-action-btn--full" : ""}`}
       style={{
         ...baseButtonStyle,
         ...sizeStyle,
         ...variantStyles[variant],
         width: fullWidth ? "100%" : undefined,
+        whiteSpace: fullWidth ? "normal" : baseButtonStyle.whiteSpace,
         opacity: disabled ? 0.65 : 1,
         cursor: disabled ? "not-allowed" : "pointer",
         ...style,
@@ -124,8 +129,8 @@ export function OperatorPrioritySelect({
   return (
     <select
       style={{
-        minHeight: "32px",
-        padding: "0.42rem 0.65rem",
+        minHeight: "44px",
+        padding: "0.5rem 0.75rem",
         borderRadius: "10px",
         border: "1px solid #d1d5db",
         background: "#ffffff",

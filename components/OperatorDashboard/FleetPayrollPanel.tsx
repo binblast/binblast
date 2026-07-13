@@ -179,6 +179,7 @@ export function FleetPayrollPanel() {
   return (
     <div>
       <div
+        className="mobile-stack-header"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -200,7 +201,7 @@ export function FleetPayrollPanel() {
             {lastSync ? ` · Updated ${lastSync.toLocaleTimeString()}` : ""}
           </div>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        <div className="action-button-row" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <OperatorActionButton variant="neutral" size="sm" onClick={exportCsv}>
             Export CSV
           </OperatorActionButton>
@@ -268,7 +269,7 @@ export function FleetPayrollPanel() {
           overflow: "hidden",
         }}
       >
-        <div style={{ overflowX: "auto" }}>
+        <div className="table-responsive" style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "980px" }}>
             <thead>
               <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
@@ -414,7 +415,7 @@ export function FleetPayrollPanel() {
               overflow: "hidden",
             }}
           >
-            <div style={{ overflowX: "auto" }}>
+            <div className="table-responsive" style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "720px" }}>
                 <thead>
                   <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>

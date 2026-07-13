@@ -169,7 +169,7 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
           No referrals yet. Share your link to start earning $10 per friend.
         </p>
       ) : (
-        <div style={{ overflowX: "auto" }}>
+          <div className="table-responsive" style={{ overflowX: "auto" }}>
           <table
             style={{
               width: "100%",

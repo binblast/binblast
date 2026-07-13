@@ -1481,7 +1481,7 @@ function DashboardPageContent() {
     return (
       <>
         <Navbar />
-        <main style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
+        <main className="page-main dashboard-shell" style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", padding: "3rem 0" }}>
             <p style={{ color: "#6b7280" }}>Loading dashboard...</p>
           </div>
@@ -1502,6 +1502,7 @@ function DashboardPageContent() {
               
               {/* Operator Header */}
               <div
+                className="mobile-stack-header"
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
@@ -1649,7 +1650,7 @@ function DashboardPageContent() {
               {/* Sticky Tab Navigation */}
               <div
                 data-operator-tour="tabs"
-                className="tab-navigation"
+                className="hide-scrollbar tab-navigation"
                 style={{
                 position: "sticky",
                 top: "80px",
@@ -1661,7 +1662,11 @@ function DashboardPageContent() {
                 border: "1px solid #e5e7eb",
                 zIndex: 100,
                 display: "flex",
-                gap: "0.5rem"
+                gap: "0.5rem",
+                overflowX: "auto",
+                WebkitOverflowScrolling: "touch",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
               }}>
                     <button
                       onClick={() => setOperatorActiveTab("overview")}
@@ -1756,10 +1761,10 @@ function DashboardPageContent() {
                   </div>
 
                   {/* Unified Card Container */}
-                  <div style={{
+                  <div className="dashboard-panel" style={{
                     background: "#ffffff",
                     borderRadius: "20px",
-                    padding: "2rem",
+                    padding: "clamp(1.25rem, 4vw, 2rem)",
                     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                     border: "1px solid #e5e7eb"
                   }}>
@@ -2855,7 +2860,7 @@ function DashboardPageContent() {
                   </div>
 
                   {/* Unified Card Container */}
-                  <div style={{
+                  <div className="dashboard-panel" style={{
                     background: "#ffffff",
                     borderRadius: "20px",
                     padding: "clamp(1rem, 4vw, 2rem)",
@@ -3321,7 +3326,7 @@ function DashboardPageContent() {
                         )}
 
                         {/* Filters */}
-                  <div style={{
+                  <div className="mobile-filter-row" style={{
                     display: "flex",
                     gap: "1rem",
                     marginBottom: "1.5rem",

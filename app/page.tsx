@@ -301,7 +301,7 @@ export default function HomePage() {
         </section>
 
         {/* Your Bin Blast Dashboard Section */}
-        <section id="dashboard" className="account-section" style={{ padding: "5rem 0", background: "#f9fafb" }}>
+        <section id="dashboard" className="account-section" style={{ padding: "clamp(3rem, 8vw, 5rem) 0", background: "#f9fafb" }}>
           <div className="container">
             <h2 className="section-title" style={{ textAlign: "center" }}>Your Bin Blast Dashboards</h2>
             <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem" }}>

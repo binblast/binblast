@@ -245,6 +245,7 @@ export function PayrollSummary() {
       )}
 
       <div
+        className="action-button-row"
         style={{
           display: "flex",
           gap: "0.75rem",
@@ -375,7 +376,7 @@ export function PayrollSummary() {
             ))}
           </div>
 
-          <div style={{ overflowX: "auto" }}>
+          <div className="table-responsive" style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
               <thead>
                 <tr style={{ background: "#f9fafb", textAlign: "left" }}>
@@ -484,7 +485,7 @@ export function PayrollSummary() {
                   No operator clock records for this pay period.
                 </p>
               ) : (
-                <div style={{ overflowX: "auto" }}>
+                <div className="table-responsive" style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
                     <thead>
                       <tr style={{ background: "#f0fdf4", textAlign: "left" }}>

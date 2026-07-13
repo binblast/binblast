@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { OperatorActionButton } from "@/components/OperatorDashboard/operator-ui";
-import { formatClockRange, formatHours } from "@/lib/operator-fleet-payroll";
+import { formatHours } from "@/lib/operator-fleet-payroll";
 
 type OperatorListItem = {
   id: string;
@@ -34,6 +34,15 @@ interface OperatorSelfClockPanelProps {
   operatorName?: string;
 }
 
+const cardStyle = {
+  marginBottom: "1.5rem",
+  background: "#ffffff",
+  borderRadius: "14px",
+  border: "1px solid #e5e7eb",
+  boxShadow: "0 2px 10px rgba(0, 0, 0, 0.04)",
+  overflow: "hidden" as const,
+};
+
 export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSelfClockPanelProps) {
   const [operators, setOperators] = useState<OperatorListItem[]>([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState(operatorId);
@@ -41,7 +50,7 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState<"in" | "out" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [lastShiftHours, setLastShiftHours] = useState<number | null>(null);
 
   const isSelfSelected = selectedOperatorId === operatorId;
   const isOnShift = Boolean(timecard?.isClockedIn && isSelfSelected);
@@ -89,16 +98,16 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
   }, [loadTimecard]);
 
   useEffect(() => {
-    if (timecard?.isClockedIn && isSelfSelected) {
-      setMessage(null);
-    }
-  }, [timecard?.isClockedIn, isSelfSelected]);
+    if (!lastShiftHours) return;
+    const timer = window.setTimeout(() => setLastShiftHours(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [lastShiftHours]);
 
   async function handleClockIn() {
     if (!isSelfSelected) return;
     setWorking("in");
     setError(null);
-    setMessage(null);
+    setLastShiftHours(null);
 
     try {
       const response = await fetch("/api/operator/self/clock-in", {
@@ -123,7 +132,6 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
     if (!isSelfSelected) return;
     setWorking("out");
     setError(null);
-    setMessage(null);
 
     try {
       const response = await fetch("/api/operator/self/clock-out", {
@@ -136,7 +144,7 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
         throw new Error(data.error || "Failed to clock out");
       }
       setTimecard(data.timecard || null);
-      setMessage(`Clocked out · ${formatHours(data.hoursWorked || 0)} worked`);
+      setLastShiftHours(data.hoursWorked || 0);
     } catch (clockOutError: unknown) {
       setError(clockOutError instanceof Error ? clockOutError.message : "Failed to clock out");
     } finally {
@@ -149,18 +157,8 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
 
   if (loading && !timecard) {
     return (
-      <div
-        style={{
-          marginBottom: "1.5rem",
-          padding: "1rem 1.25rem",
-          background: "#ffffff",
-          borderRadius: "12px",
-          border: "1px solid #e5e7eb",
-          color: "#6b7280",
-          fontSize: "0.875rem",
-        }}
-      >
-        Loading your shift...
+      <div style={{ ...cardStyle, padding: "1rem 1.25rem", color: "#6b7280", fontSize: "0.875rem" }}>
+        Loading shift...
       </div>
     );
   }
@@ -169,117 +167,81 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
     return (
       <div
         style={{
-          marginBottom: "1.5rem",
-          background: "#ffffff",
-          borderRadius: "12px",
+          ...cardStyle,
           border: "1px solid #bbf7d0",
-          boxShadow: "0 2px 8px rgba(22, 163, 74, 0.08)",
-          overflow: "hidden",
+          boxShadow: "0 2px 12px rgba(22, 163, 74, 0.1)",
         }}
       >
-        <div
-          style={{
-            padding: "1rem 1.25rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "1rem",
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", flexWrap: "wrap" }}>
-            <div>
-              <div style={{ fontSize: "0.7rem", fontWeight: "700", color: "#6b7280", letterSpacing: "0.04em" }}>
-                STATUS
-              </div>
-              <div style={{ fontSize: "1rem", fontWeight: "700", color: "#16a34a" }}>On Shift</div>
-            </div>
-            <div style={{ width: "1px", height: "36px", background: "#e5e7eb" }} />
-            <div>
-              <div style={{ fontSize: "0.7rem", fontWeight: "700", color: "#6b7280", letterSpacing: "0.04em" }}>
-                HOURS TODAY
-              </div>
-              <div style={{ fontSize: "1rem", fontWeight: "700", color: "#2563eb" }}>
-                {formatHours(timecard.todayHours)}
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <OperatorActionButton
-              variant="danger"
-              disabled={working !== null}
-              onClick={handleClockOut}
-            >
-              {working === "out" ? "Clocking Out..." : "Clock Out"}
-            </OperatorActionButton>
-            <OperatorActionButton variant="neutral" size="sm" onClick={() => loadTimecard(true)}>
-              Refresh
-            </OperatorActionButton>
-          </div>
-        </div>
-
-        <details
-          style={{
-            borderTop: "1px solid #f0fdf4",
-            background: "#f9fafb",
-          }}
-        >
-          <summary
-            style={{
-              padding: "0.55rem 1.25rem",
-              fontSize: "0.75rem",
-              fontWeight: "600",
-              color: "#6b7280",
-              cursor: "pointer",
-              listStyle: "none",
-              userSelect: "none",
-            }}
-          >
-            Shift details ▾
-          </summary>
-          <div style={{ padding: "0 1.25rem 0.875rem", fontSize: "0.8125rem", color: "#6b7280" }}>
-            {displayName} ·{" "}
-            {formatClockRange(timecard.clockInTime, timecard.clockOutTime, timecard.isClockedIn)}
-          </div>
-        </details>
-
-        {error && (
+        <div style={{ padding: "1.25rem 1.5rem" }}>
           <div
             style={{
-              margin: "0 1.25rem 1rem",
-              padding: "0.75rem 1rem",
-              background: "#fef2f2",
-              border: "1px solid #fecaca",
-              borderRadius: "8px",
-              color: "#dc2626",
-              fontSize: "0.8125rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "0.75rem",
+              marginBottom: "1rem",
+              flexWrap: "wrap",
             }}
           >
-            {error}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span
+                style={{
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "50%",
+                  background: "#16a34a",
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: "1rem", fontWeight: "700", color: "#16a34a" }}>On Shift</span>
+            </div>
+            <span style={{ fontSize: "0.875rem", color: "#6b7280", fontWeight: "500" }}>{displayName}</span>
           </div>
-        )}
+
+          <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
+            <div
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: "600",
+                color: "#6b7280",
+                letterSpacing: "0.04em",
+                marginBottom: "0.25rem",
+              }}
+            >
+              HOURS TODAY
+            </div>
+            <div style={{ fontSize: "clamp(2rem, 8vw, 2.5rem)", fontWeight: "800", color: "#111827", lineHeight: 1.1 }}>
+              {formatHours(timecard.todayHours)}
+            </div>
+          </div>
+
+          <OperatorActionButton
+            variant="danger"
+            fullWidth
+            disabled={working !== null}
+            onClick={handleClockOut}
+          >
+            {working === "out" ? "Clocking Out..." : "Clock Out"}
+          </OperatorActionButton>
+
+          {error && (
+            <p style={{ margin: "0.75rem 0 0", color: "#dc2626", fontSize: "0.8125rem", textAlign: "center" }}>
+              {error}
+            </p>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        marginBottom: "1.5rem",
-        background: "#ffffff",
-        borderRadius: "16px",
-        border: "1px solid #e5e7eb",
-        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.05)",
-        overflow: "hidden",
-      }}
-    >
+    <div style={cardStyle}>
       <div style={{ padding: "1.25rem 1.5rem" }}>
-        <h2 style={{ margin: "0 0 0.35rem", fontSize: "1.125rem", fontWeight: "700", color: "#111827" }}>
+        <h2 style={{ margin: "0 0 0.25rem", fontSize: "1.125rem", fontWeight: "700", color: "#111827" }}>
           Clock In
         </h2>
-        <p style={{ margin: "0 0 1rem", fontSize: "0.875rem", color: "#6b7280" }}>
-          Select your name and clock in to start your shift.
+        <p style={{ margin: "0 0 1rem", fontSize: "0.875rem", color: "#6b7280", lineHeight: 1.5 }}>
+          Pick your name and tap Clock In.
         </p>
 
         <label
@@ -289,7 +251,7 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
             fontSize: "0.75rem",
             fontWeight: "700",
             color: "#6b7280",
-            marginBottom: "0.5rem",
+            marginBottom: "0.4rem",
             letterSpacing: "0.04em",
           }}
         >
@@ -305,11 +267,12 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
             borderRadius: "10px",
             border: "1px solid #d1d5db",
             background: "#ffffff",
-            fontSize: "0.9rem",
+            fontSize: "1rem",
             fontWeight: "600",
             color: "#111827",
-            marginBottom: "1rem",
+            marginBottom: "0.75rem",
             cursor: "pointer",
+            minHeight: "44px",
           }}
         >
           {operators.length === 0 ? (
@@ -325,80 +288,32 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
         </select>
 
         {!isSelfSelected && (
-          <div
-            style={{
-              marginBottom: "1rem",
-              padding: "0.75rem 1rem",
-              background: "#fffbeb",
-              border: "1px solid #fde68a",
-              borderRadius: "10px",
-              color: "#92400e",
-              fontSize: "0.8125rem",
-            }}
-          >
-            Sign in as this operator to clock in. Only your account can start a shift.
-          </div>
+          <p style={{ margin: "0 0 0.75rem", fontSize: "0.8125rem", color: "#92400e", lineHeight: 1.45 }}>
+            Switch to your account to clock in.
+          </p>
         )}
 
-        {timecard && !timecard.isClockedIn && (
-          <div
-            style={{
-              display: "flex",
-              gap: "1rem",
-              marginBottom: "1rem",
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: "0.7rem", fontWeight: "700", color: "#6b7280" }}>STATUS</div>
-              <div style={{ fontSize: "0.95rem", fontWeight: "700", color: "#6b7280" }}>Off Shift</div>
-            </div>
-            {timecard.todayHours > 0 && (
-              <div>
-                <div style={{ fontSize: "0.7rem", fontWeight: "700", color: "#6b7280" }}>HOURS TODAY</div>
-                <div style={{ fontSize: "0.95rem", fontWeight: "700", color: "#2563eb" }}>
-                  {formatHours(timecard.todayHours)}
-                </div>
-              </div>
-            )}
-          </div>
+        {lastShiftHours !== null && (
+          <p style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", color: "#166534", fontWeight: "600", textAlign: "center" }}>
+            Shift complete · {formatHours(lastShiftHours)} worked
+          </p>
+        )}
+
+        {timecard && timecard.todayHours > 0 && lastShiftHours === null && (
+          <p style={{ margin: "0 0 0.75rem", fontSize: "0.8125rem", color: "#6b7280", textAlign: "center" }}>
+            Today so far: {formatHours(timecard.todayHours)}
+          </p>
         )}
 
         {error && (
-          <div
-            style={{
-              marginBottom: "1rem",
-              padding: "0.75rem 1rem",
-              background: "#fef2f2",
-              border: "1px solid #fecaca",
-              borderRadius: "10px",
-              color: "#dc2626",
-              fontSize: "0.875rem",
-            }}
-          >
+          <p style={{ margin: "0 0 0.75rem", color: "#dc2626", fontSize: "0.8125rem", textAlign: "center" }}>
             {error}
-          </div>
-        )}
-
-        {message && (
-          <div
-            style={{
-              marginBottom: "1rem",
-              padding: "0.75rem 1rem",
-              background: "#ecfdf5",
-              border: "1px solid #bbf7d0",
-              borderRadius: "10px",
-              color: "#166534",
-              fontSize: "0.875rem",
-              fontWeight: "600",
-            }}
-          >
-            {message}
-          </div>
+          </p>
         )}
 
         <OperatorActionButton
           variant="success"
+          fullWidth
           disabled={!isSelfSelected || working !== null}
           onClick={handleClockIn}
         >

@@ -6,6 +6,7 @@
 @import '../styles.css';
 @import './employee-dashboard-mobile.css';
 @import './site-mobile.css';
+@import './dashboard-mobile.css';
 
 /* Ensure full screen coverage */
 html {
@@ -21,6 +22,10 @@ body {
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh; /* Dynamic viewport height for mobile */
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 #__next {
@@ -297,10 +302,12 @@ main {
   }
   
   /* Touch-friendly buttons */
-  button, .btn, a.btn {
+  button:not(.tab-navigation button),
+  .btn,
+  a.btn {
     min-height: 44px;
-    min-width: 44px;
     padding: 0.75rem 1.5rem;
+    text-align: center;
   }
   
   /* Prevent horizontal scroll */
@@ -432,9 +439,12 @@ main {
 /* Touch device optimizations */
 @media (hover: none) and (pointer: coarse) {
   /* Increase touch targets */
-  button, .btn, a.btn, input[type="button"], input[type="submit"] {
+  button:not(.tab-navigation button),
+  .btn,
+  a.btn,
+  input[type="button"],
+  input[type="submit"] {
     min-height: 48px;
-    min-width: 48px;
   }
   
   /* Remove hover effects on touch devices */

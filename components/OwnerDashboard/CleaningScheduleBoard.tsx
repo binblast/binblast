@@ -679,7 +679,7 @@ function JobDetailModal({
           <Field label="Address Line 2">
             <input value={formData.addressLine2} onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })} style={inputStyle} />
           </Field>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
+          <div className="mobile-address-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
             <Field label="City"><input value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} style={inputStyle} /></Field>
             <Field label="State"><input value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} style={inputStyle} /></Field>
             <Field label="ZIP"><input value={formData.zipCode} onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })} style={inputStyle} /></Field>
@@ -692,7 +692,7 @@ function JobDetailModal({
           </Field>
         </div>
 
-        <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem" }}>
+        <div className="mobile-modal-actions" style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem" }}>
           <button type="button" onClick={onClose} style={{ ...toolbarButtonStyle, flex: 1 }}>Cancel</button>
           <button type="button" disabled={saving} onClick={handleSubmit} style={{ ...primaryButtonStyle, flex: 1 }}>
             {saving ? "Saving..." : "Save Changes"}

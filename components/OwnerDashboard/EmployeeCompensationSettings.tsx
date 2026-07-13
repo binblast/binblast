@@ -379,6 +379,7 @@ export function EmployeeCompensationSettings() {
       )}
 
       <div
+        className="compensation-layout"
         style={{
           display: "grid",
           gridTemplateColumns: "minmax(0, 1.4fr) minmax(280px, 0.8fr)",

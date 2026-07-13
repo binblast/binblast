@@ -82,8 +82,19 @@ body.nav-menu-open {
 
   /* Force single-column grids with large min widths on small screens */
   [style*="minmax(400px"],
-  [style*="minmax(300px"] {
+  [style*="minmax(300px"],
+  [style*="minmax(280px"],
+  [style*="minmax(250px"],
+  [style*="minmax(220px"],
+  [style*="minmax(200px"],
+  [style*="minmax(150px"] {
     grid-template-columns: 1fr !important;
+  }
+
+  /* Dashboard content panels */
+  .dashboard-panel {
+    padding: clamp(1rem, 4vw, 1.5rem) !important;
+    border-radius: 16px !important;
   }
 
   .container {
@@ -118,7 +129,7 @@ body.nav-menu-open {
 
   /* Dashboard cards & sections */
   .dashboard-shell .dashboard-card,
-  .dashboard-shell [style*="borderRadius: \"20px\""] {
+  .dashboard-shell .dashboard-panel {
     padding: clamp(1rem, 4vw, 1.5rem) !important;
     border-radius: 16px !important;
   }
@@ -258,6 +269,13 @@ body.nav-menu-open {
   /* Portal / auth pages */
   .portal-login-shell .section-title {
     font-size: clamp(1.5rem, 5vw, 2.25rem) !important;
+  }
+
+  .portal-login-shell a[href] {
+    min-height: var(--touch-min);
+    display: flex !important;
+    align-items: center !important;
+    text-align: left !important;
   }
 
   /* Modals - bottom sheet feel on phones */

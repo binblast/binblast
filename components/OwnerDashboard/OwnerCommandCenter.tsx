@@ -349,6 +349,7 @@ export function OwnerCommandCenter({
 
       {/* Content */}
       <div
+        className="dashboard-panel"
         style={{
           background: "#ffffff",
           borderRadius: "20px",

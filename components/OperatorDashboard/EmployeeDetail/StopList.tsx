@@ -202,7 +202,7 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
     const busy = workingStopId === stop.id;
 
     return (
-      <div style={operatorActionLayouts.stopActions}>
+      <div className="operator-stop-actions" style={operatorActionLayouts.stopActions}>
         <div style={operatorActionLayouts.stopActionsRow}>
           {isActive && (
             <OperatorActionButton
@@ -309,7 +309,7 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
             No stops scheduled for today
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="table-responsive" style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
@@ -370,7 +370,7 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
             No upcoming stops scheduled
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="table-responsive" style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>

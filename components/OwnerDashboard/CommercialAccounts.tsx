@@ -95,7 +95,7 @@ export function CommercialAccounts({ userId }: CommercialAccountsProps) {
         border: "1px solid #e5e7eb",
         overflow: "hidden"
       }}>
-        <div style={{ overflowX: "auto" }}>
+        <div className="table-responsive" style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>

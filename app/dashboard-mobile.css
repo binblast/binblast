@@ -1,0 +1,193 @@
+/* Dashboard-wide mobile optimizations (owner, operator, admin, customer) */
+
+@media (max-width: 767px) {
+  .dashboard-shell {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .dashboard-shell .container {
+    padding-left: clamp(0.875rem, 4vw, 1.25rem) !important;
+    padding-right: clamp(0.875rem, 4vw, 1.25rem) !important;
+  }
+
+  /* Content panels */
+  .dashboard-panel {
+    padding: clamp(1rem, 4vw, 1.5rem) !important;
+    border-radius: 16px !important;
+  }
+
+  /* Tab bars — scroll horizontally, don't squash labels */
+  .dashboard-shell .tab-navigation {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .dashboard-shell .tab-navigation > button,
+  .dashboard-shell .tab-navigation > a {
+    flex: 0 0 auto !important;
+    min-width: max(96px, fit-content) !important;
+    min-height: 44px !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+
+  .dashboard-shell .tab-navigation > a[href] {
+    display: inline-flex !important;
+    align-items: center !important;
+    width: auto !important;
+  }
+
+  /* Header rows with title + actions */
+  .mobile-stack-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Export / filter / toolbar button rows */
+  .action-button-row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+  }
+
+  .action-button-row > button,
+  .action-button-row > a,
+  .action-button-row .operator-action-btn {
+    width: 100% !important;
+    min-height: 44px !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  /* Filter toolbars */
+  .mobile-filter-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.625rem !important;
+  }
+
+  .mobile-filter-row input,
+  .mobile-filter-row select {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: none !important;
+  }
+
+  /* Stack multi-column grids on phones */
+  .mobile-stack-grid,
+  .responsive-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .mobile-address-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .compensation-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tables inside dashboard */
+  .dashboard-shell .table-responsive,
+  .dashboard-shell [style*="overflow-x: auto"] {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -0.25rem;
+    padding: 0 0.25rem;
+  }
+
+  .dashboard-shell table {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  .dashboard-shell th,
+  .dashboard-shell td {
+    padding: 0.625rem 0.5rem !important;
+    vertical-align: top;
+  }
+
+  /* Modal footers */
+  .mobile-modal-actions {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .mobile-modal-actions > button {
+    width: 100% !important;
+    min-height: 44px !important;
+    flex: none !important;
+  }
+
+  /* Operator action buttons */
+  .operator-action-btn {
+    min-height: 44px !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .operator-action-btn--full {
+    white-space: normal !important;
+    text-align: center !important;
+  }
+
+  .operator-stop-actions {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Typography spacing */
+  .dashboard-shell h1,
+  .dashboard-shell h2,
+  .dashboard-shell h3 {
+    line-height: 1.25 !important;
+    letter-spacing: -0.01em;
+  }
+
+  .dashboard-shell p {
+    line-height: 1.55 !important;
+  }
+
+  /* Centered empty/loading states */
+  .dashboard-shell [style*="textAlign: \"center\""],
+  .dashboard-shell [style*="text-align: center"] {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .action-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+  }
+
+  .action-button-row > button,
+  .action-button-row > a {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-shell .tab-navigation > button,
+  .dashboard-shell .tab-navigation > a {
+    min-width: 88px !important;
+    padding: 0.625rem 0.75rem !important;
+    font-size: 0.8125rem !important;
+  }
+}

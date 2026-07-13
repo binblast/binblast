@@ -497,7 +497,7 @@ export function SiteLeadsManagement() {
       ) : filteredLeads.length === 0 ? (
         <p style={{ color: "#6b7280" }}>No leads match your filters.</p>
       ) : (
-        <div style={{ overflowX: "auto" }}>
+        <div className="table-responsive" style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "1100px" }}>
             <thead>
               <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
