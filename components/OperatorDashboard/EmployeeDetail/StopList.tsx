@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 import { OperatorJobResolveModal } from "./OperatorJobResolveModal";
+import { CommercialCompensationModal } from "./CommercialCompensationModal";
 import { AddNoteModal } from "./AddNoteModal";
 import { ViewProofModal } from "./ViewProofModal";
 import {
@@ -31,6 +32,21 @@ interface Stop {
   flags?: string[];
   needsOperatorReview?: boolean;
   priority?: string;
+  planType?: string;
+  isCommercial?: boolean;
+  commercialType?: string;
+}
+
+function isCommercialStop(stop: Stop): boolean {
+  const planType = String(stop.planType || "").toLowerCase();
+  const commercialType = String(stop.commercialType || "").toLowerCase();
+  return (
+    stop.isCommercial === true ||
+    planType.includes("commercial") ||
+    planType.includes("hoa") ||
+    commercialType.includes("commercial") ||
+    commercialType.includes("hoa")
+  );
 }
 
 interface StopListProps {
@@ -44,6 +60,7 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
   const [upcomingStops, setUpcomingStops] = useState<Stop[]>([]);
   const [loading, setLoading] = useState(true);
   const [showResolveModal, setShowResolveModal] = useState(false);
+  const [showCompensationModal, setShowCompensationModal] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showPhotosModal, setShowPhotosModal] = useState(false);
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
@@ -128,6 +145,11 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
     setShowPhotosModal(true);
   };
 
+  const openCompensation = (stopId: string) => {
+    setSelectedStopId(stopId);
+    setShowCompensationModal(true);
+  };
+
   const handleMarkComplete = async (stopId: string) => {
     setWorkingStopId(stopId);
     try {
@@ -208,6 +230,11 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
           )}
         </div>
         <div style={operatorActionLayouts.stopActionsRow}>
+          {isCommercialStop(stop) && (
+            <OperatorActionButton size="sm" variant="neutral" onClick={() => openCompensation(stop.id)}>
+              Adjust Pay
+            </OperatorActionButton>
+          )}
           <OperatorActionButton size="sm" variant="ghost" onClick={() => openNote(stop.id)}>
             Add Note
           </OperatorActionButton>
@@ -411,6 +438,22 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
         employeeId={employeeId}
         initialStopId={selectedStopId}
       />
+      {selectedStopId && (
+        <CommercialCompensationModal
+          isOpen={showCompensationModal}
+          onClose={() => {
+            setShowCompensationModal(false);
+            setSelectedStopId(null);
+          }}
+          jobId={selectedStopId}
+          operatorId={managerId}
+          onSaved={() => {
+            setShowCompensationModal(false);
+            setSelectedStopId(null);
+            loadStops();
+          }}
+        />
+      )}
     </div>
   );
 }

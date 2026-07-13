@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { CompensationPayModel, CompensationSettings } from "@/lib/employee-compensation";
+import type { CompensationPayModel, CompensationSettings, CommercialBonusType } from "@/lib/employee-compensation";
+import { COMMERCIAL_BONUS_LABELS } from "@/lib/employee-compensation";
 
 type PreviewRow = { bins: number; amount: number };
+type CommercialPreviewRow = { containers: number; amount: number };
+
+const COMMERCIAL_BONUS_TYPES = Object.keys(COMMERCIAL_BONUS_LABELS) as CommercialBonusType[];
 
 const PAY_MODEL_LABELS: Record<CompensationPayModel, string> = {
   per_bin: "Per Bin (Active)",
@@ -17,7 +21,7 @@ const FIELD_GROUPS: Array<{
   title: string;
   description: string;
   fields: Array<{
-    key: keyof CompensationSettings;
+    key: string;
     label: string;
     helper?: string;
     future?: boolean;
@@ -33,11 +37,36 @@ const FIELD_GROUPS: Array<{
     ],
   },
   {
+    title: "Commercial & HOA Pay",
+    description: "Same per-container model as residential: $8 first + $2 each additional.",
+    fields: [
+      { key: "commercialFirstContainerPay", label: "First Container Pay" },
+      { key: "commercialAdditionalContainerPay", label: "Additional Container Pay" },
+    ],
+  },
+  {
     title: "Other Job Types",
     description: "Separate from customer pricing — employee pay only.",
+    fields: [{ key: "dumpsterPay", label: "Dumpster Pay" }],
+  },
+  {
+    title: "Commercial Bonus Defaults",
+    description: "Default bonus amounts managers can apply to commercial/HOA jobs.",
+    fields: COMMERCIAL_BONUS_TYPES.map((type) => ({
+      key: `bonus_${type}`,
+      label: COMMERCIAL_BONUS_LABELS[type],
+    })),
+  },
+  {
+    title: "Commercial Controls",
+    description: "Limits and approval rules for commercial compensation.",
     fields: [
-      { key: "commercialBinPay", label: "Commercial Bin Pay" },
-      { key: "dumpsterPay", label: "Dumpster Pay" },
+      { key: "maxCommercialJobBonus", label: "Maximum Bonus Per Job" },
+      {
+        key: "commercialManagerApprovalRequired",
+        label: "Manager Approval Required (Commercial)",
+        type: "boolean",
+      },
     ],
   },
   {
@@ -86,6 +115,7 @@ export function EmployeeCompensationSettings() {
   const [settings, setSettings] = useState<CompensationSettings | null>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<PreviewRow[]>([]);
+  const [commercialPreview, setCommercialPreview] = useState<CommercialPreviewRow[]>([]);
   const [payModels, setPayModels] = useState<CompensationPayModel[]>(["per_bin"]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -109,6 +139,7 @@ export function EmployeeCompensationSettings() {
 
       setSettings(data.settings);
       setPreview(data.preview || []);
+      setCommercialPreview(data.commercialPreview || []);
       setPayModels(data.payModels || ["per_bin"]);
       setDraft(settingsToDraft(data.settings));
     } catch (loadError: unknown) {
@@ -122,11 +153,18 @@ export function EmployeeCompensationSettings() {
     const nextDraft: Record<string, string> = {};
     for (const group of FIELD_GROUPS) {
       for (const field of group.fields) {
-        const value = nextSettings[field.key];
+        const key = String(field.key);
+        if (key.startsWith("bonus_")) {
+          const bonusType = key.replace("bonus_", "") as CommercialBonusType;
+          nextDraft[key] = String(nextSettings.commercialBonusDefaults[bonusType] ?? 0);
+          continue;
+        }
+
+        const value = nextSettings[field.key as keyof CompensationSettings];
         if (typeof value === "boolean") {
-          nextDraft[field.key] = value ? "true" : "false";
+          nextDraft[key] = value ? "true" : "false";
         } else if (typeof value === "number") {
-          nextDraft[field.key] = String(value);
+          nextDraft[key] = String(value);
         }
       }
     }
@@ -148,6 +186,23 @@ export function EmployeeCompensationSettings() {
     });
   }, [draft.residentialAdditionalBinPay, draft.residentialFirstBinPay, preview]);
 
+  const liveCommercialPreview = useMemo(() => {
+    const first = Number(draft.commercialFirstContainerPay);
+    const additional = Number(draft.commercialAdditionalContainerPay);
+    if (!Number.isFinite(first) || !Number.isFinite(additional) || first <= 0 || additional < 0) {
+      return commercialPreview;
+    }
+
+    return [1, 2, 3, 5, 10, 20, 50].map((containers) => ({
+      containers,
+      amount: Math.round((first + Math.max(0, containers - 1) * additional) * 100) / 100,
+    }));
+  }, [
+    commercialPreview,
+    draft.commercialAdditionalContainerPay,
+    draft.commercialFirstContainerPay,
+  ]);
+
   function updateDraft(key: string, value: string) {
     setDraft((current) => ({ ...current, [key]: value }));
   }
@@ -155,20 +210,35 @@ export function EmployeeCompensationSettings() {
   function buildSettingsFromDraft(): CompensationSettings | null {
     if (!settings) return null;
 
-    const next: CompensationSettings = { ...settings };
+    const next: CompensationSettings = {
+      ...settings,
+      commercialBonusDefaults: { ...settings.commercialBonusDefaults },
+    };
 
     for (const group of FIELD_GROUPS) {
       for (const field of group.fields) {
+        const key = String(field.key);
+
+        if (key.startsWith("bonus_")) {
+          const bonusType = key.replace("bonus_", "") as CommercialBonusType;
+          const parsed = Number(draft[key]);
+          if (!Number.isFinite(parsed) || parsed < 0) return null;
+          next.commercialBonusDefaults[bonusType] = parsed;
+          continue;
+        }
+
         if (field.type === "boolean") {
           if (field.key === "customerSignatureRequired") {
-            next.customerSignatureRequired = draft[field.key] === "true";
+            next.customerSignatureRequired = draft[key] === "true";
           } else if (field.key === "managerApprovalRequired") {
-            next.managerApprovalRequired = draft[field.key] === "true";
+            next.managerApprovalRequired = draft[key] === "true";
+          } else if (field.key === "commercialManagerApprovalRequired") {
+            next.commercialManagerApprovalRequired = draft[key] === "true";
           }
           continue;
         }
 
-        const parsed = Number(draft[field.key]);
+        const parsed = Number(draft[key]);
         if (!Number.isFinite(parsed) || parsed < 0) {
           return null;
         }
@@ -180,8 +250,11 @@ export function EmployeeCompensationSettings() {
           case "residentialAdditionalBinPay":
             next.residentialAdditionalBinPay = parsed;
             break;
-          case "commercialBinPay":
-            next.commercialBinPay = parsed;
+          case "commercialFirstContainerPay":
+            next.commercialFirstContainerPay = parsed;
+            break;
+          case "commercialAdditionalContainerPay":
+            next.commercialAdditionalContainerPay = parsed;
             break;
           case "dumpsterPay":
             next.dumpsterPay = parsed;
@@ -209,6 +282,9 @@ export function EmployeeCompensationSettings() {
             break;
           case "maxDailyBonus":
             next.maxDailyBonus = parsed;
+            break;
+          case "maxCommercialJobBonus":
+            next.maxCommercialJobBonus = parsed;
             break;
         }
       }
@@ -244,6 +320,7 @@ export function EmployeeCompensationSettings() {
 
       setSettings(data.settings);
       setPreview(data.preview || []);
+      setCommercialPreview(data.commercialPreview || []);
       setDraft(settingsToDraft(data.settings));
       setMessage(data.message || "Compensation settings saved.");
     } catch (saveError: unknown) {
@@ -434,55 +511,93 @@ export function EmployeeCompensationSettings() {
           </button>
         </div>
 
-        <div
-          style={{
-            position: "sticky",
-            top: "1rem",
-            padding: "1.25rem",
-            background: "#111827",
-            color: "#ffffff",
-            borderRadius: "12px",
-          }}
-        >
-          <div style={{ fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.25rem" }}>
-            Employee Compensation Preview
-          </div>
-          <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginBottom: "1rem" }}>
-            Residential per-bin model (updates live)
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div
+            style={{
+              position: "sticky",
+              top: "1rem",
+              padding: "1.25rem",
+              background: "#111827",
+              color: "#ffffff",
+              borderRadius: "12px",
+            }}
+          >
+            <div style={{ fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.25rem" }}>
+              Residential Preview
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginBottom: "1rem" }}>
+              Per-bin model (updates live)
+            </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {livePreview.map((row) => (
-              <div
-                key={row.bins}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "0.5rem 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.08)",
-                  fontSize: "0.9375rem",
-                }}
-              >
-                <span>
-                  {row.bins} Bin{row.bins === 1 ? "" : "s"}
-                </span>
-                <span style={{ fontWeight: "700", color: "#4ade80" }}>{formatCurrency(row.amount)}</span>
-              </div>
-            ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {livePreview.map((row) => (
+                <div
+                  key={row.bins}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "0.5rem 0",
+                    borderBottom: "1px solid rgba(255,255,255,0.08)",
+                    fontSize: "0.9375rem",
+                  }}
+                >
+                  <span>
+                    {row.bins} Bin{row.bins === 1 ? "" : "s"}
+                  </span>
+                  <span style={{ fontWeight: "700", color: "#4ade80" }}>{formatCurrency(row.amount)}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div
             style={{
-              marginTop: "1rem",
-              paddingTop: "1rem",
-              borderTop: "1px solid rgba(255,255,255,0.12)",
-              fontSize: "0.75rem",
-              color: "#9ca3af",
-              lineHeight: 1.5,
+              padding: "1.25rem",
+              background: "#1e3a5f",
+              color: "#ffffff",
+              borderRadius: "12px",
             }}
           >
-            Formula: First Bin + ((Total Bins − 1) × Additional Bin). Customer pricing is never used
-            for employee pay.
+            <div style={{ fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.25rem" }}>
+              Commercial & HOA Preview
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "#bfdbfe", marginBottom: "1rem" }}>
+              Per-container model (updates live)
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {liveCommercialPreview.map((row) => (
+                <div
+                  key={row.containers}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "0.5rem 0",
+                    borderBottom: "1px solid rgba(255,255,255,0.08)",
+                    fontSize: "0.9375rem",
+                  }}
+                >
+                  <span>
+                    {row.containers} Container{row.containers === 1 ? "" : "s"}
+                  </span>
+                  <span style={{ fontWeight: "700", color: "#93c5fd" }}>{formatCurrency(row.amount)}</span>
+                </div>
+              ))}
+            </div>
+
+            <div
+              style={{
+                marginTop: "1rem",
+                paddingTop: "1rem",
+                borderTop: "1px solid rgba(255,255,255,0.12)",
+                fontSize: "0.75rem",
+                color: "#bfdbfe",
+                lineHeight: 1.5,
+              }}
+            >
+              Formula: First Container + ((Total Containers − 1) × Additional Container). Never tied
+              to customer pricing.
+            </div>
           </div>
         </div>
       </div>
@@ -490,6 +605,24 @@ export function EmployeeCompensationSettings() {
       <div
         style={{
           marginTop: "2rem",
+          padding: "1rem",
+          background: "#f9fafb",
+          borderRadius: "8px",
+          border: "1px dashed #d1d5db",
+        }}
+      >
+        <div style={{ fontWeight: "600", marginBottom: "0.5rem" }}>
+          Commercial Compensation Profiles (Coming Soon)
+        </div>
+        <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7280", lineHeight: 1.5 }}>
+          Future profiles for Commercial Standard, HOA Communities, Apartment Complexes, Dumpster
+          Cleaning, Municipal Contracts, and Industrial Facilities will plug into the same engine.
+        </p>
+      </div>
+
+      <div
+        style={{
+          marginTop: "1rem",
           padding: "1rem",
           background: "#f9fafb",
           borderRadius: "8px",

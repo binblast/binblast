@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkAdminAccess, logAdminAction } from "@/lib/admin-auth";
 import {
   buildCompensationPreview,
+  buildCommercialCompensationPreview,
   COMPENSATION_PAY_MODELS,
   DEFAULT_COMPENSATION_SETTINGS,
   loadCompensationSettings,
@@ -32,6 +33,14 @@ function sanitizeSettingsInput(input: unknown): { settings: CompensationSettings
     return { settings, error: "Residential additional bin pay cannot be negative" };
   }
 
+  if (settings.commercialFirstContainerPay <= 0) {
+    return { settings, error: "Commercial first container pay must be greater than 0" };
+  }
+
+  if (settings.commercialAdditionalContainerPay < 0) {
+    return { settings, error: "Commercial additional container pay cannot be negative" };
+  }
+
   return { settings };
 }
 
@@ -39,11 +48,13 @@ export async function GET() {
   try {
     const settings = await loadCompensationSettings();
     const preview = buildCompensationPreview(settings);
+    const commercialPreview = buildCommercialCompensationPreview(settings);
 
     return NextResponse.json({
       success: true,
       settings,
       preview,
+      commercialPreview,
       payModels: COMPENSATION_PAY_MODELS,
       defaults: DEFAULT_COMPENSATION_SETTINGS,
     });
@@ -70,17 +81,21 @@ export async function PUT(req: NextRequest) {
 
     const savedSettings = await saveCompensationSettings(settings, userId || "owner");
     const preview = buildCompensationPreview(savedSettings);
+    const commercialPreview = buildCommercialCompensationPreview(savedSettings);
 
     await logAdminAction("update_compensation_settings", userId || "owner", {
       payModel: savedSettings.payModel,
       residentialFirstBinPay: savedSettings.residentialFirstBinPay,
       residentialAdditionalBinPay: savedSettings.residentialAdditionalBinPay,
+      commercialFirstContainerPay: savedSettings.commercialFirstContainerPay,
+      commercialAdditionalContainerPay: savedSettings.commercialAdditionalContainerPay,
     });
 
     return NextResponse.json({
       success: true,
       settings: savedSettings,
       preview,
+      commercialPreview,
       message:
         "Employee compensation updated. New rates apply to future completed jobs immediately.",
     });
