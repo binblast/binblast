@@ -388,22 +388,21 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
           gap: "0.75rem",
           marginTop: "0.5rem",
         }}
       >
-        <div style={{ gridColumn: "1 / -1" }}>
-          <ManagerClockControls
-            employeeId={employeeId}
-            employeeName={employeeName}
-            isClockedIn={displayStatus.shiftStatus === "clocked_in"}
-            managerId={managerId}
-            managerEmail={managerEmail}
-            managerRole={managerRole}
-            onUpdated={handleRefresh}
-          />
-        </div>
+        <ManagerClockControls
+          employeeId={employeeId}
+          employeeName={employeeName}
+          isClockedIn={displayStatus.shiftStatus === "clocked_in"}
+          managerId={managerId}
+          managerEmail={managerEmail}
+          managerRole={managerRole}
+          onUpdated={handleRefresh}
+          inline
+        />
 
         <button
           onClick={() => {
@@ -418,21 +417,21 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
         <button
           onClick={() => {
             setSelectedStopId(null);
-            setShowViewProofModal(true);
-          }}
-          style={{ ...actionButtonStyle, background: "#6b7280", color: "#ffffff" }}
-        >
-          View Cleaning Photos
-        </button>
-
-        <button
-          onClick={() => {
-            setSelectedStopId(null);
             setShowAddNoteModal(true);
           }}
           style={{ ...actionButtonStyle, background: "#3b82f6", color: "#ffffff" }}
         >
           Add Note
+        </button>
+
+        <button
+          onClick={() => {
+            setSelectedStopId(null);
+            setShowViewProofModal(true);
+          }}
+          style={{ ...actionButtonStyle, background: "#6b7280", color: "#ffffff" }}
+        >
+          View Cleaning Photos
         </button>
       </div>
 

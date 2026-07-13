@@ -10,12 +10,11 @@ if (typeof window !== "undefined") {
   require("leaflet/dist/leaflet.css");
 }
 
-// Dynamically import Leaflet to avoid SSR issues
-const MapContainer = dynamic(() => import("react-leaflet").then(mod => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import("react-leaflet").then(mod => mod.TileLayer), { ssr: false });
-const CircleMarker = dynamic(() => import("react-leaflet").then(mod => mod.CircleMarker), { ssr: false });
-const Popup = dynamic(() => import("react-leaflet").then(mod => mod.Popup), { ssr: false });
-const Polyline = dynamic(() => import("react-leaflet").then(mod => mod.Polyline), { ssr: false });
+// Dynamically import Leaflet map layer to avoid SSR issues
+const OperatorRouteMapInner = dynamic(
+  () => import("./OperatorRouteMapInner").then((mod) => mod.OperatorRouteMapInner),
+  { ssr: false }
+);
 
 interface Stop {
   id: string;
@@ -221,24 +220,6 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
     else setMapZoom(13);
   }, [stopsWithCoords, employeeLocation]);
 
-  const getRoutePolyline = (): [number, number][] => {
-    return stopsWithCoords.map(
-      (stop) => [stop.latitude!, stop.longitude!] as [number, number]
-    );
-  };
-
-  const getStopColor = (stop: Stop) => {
-    const status = stop.status || stop.jobStatus || "pending";
-    if (status === "completed") return "#16a34a";
-    if (status === "in_progress") return "#3b82f6";
-    if (status === "cancelled") return "#9ca3af";
-    return "#f59e0b";
-  };
-
-  const formatAddress = (stop: Stop): string => {
-    return buildStopAddress(stop) || "Address not available";
-  };
-
   if (!mapReady) {
     return (
       <div style={{
@@ -316,92 +297,14 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
       </div>
 
       <div style={{ height: "500px", borderRadius: "8px", overflow: "hidden", border: "1px solid #e5e7eb", position: "relative" }}>
-        {typeof window !== "undefined" && MapContainer && TileLayer && Popup ? (
-          <MapContainer
-            center={mapCenter}
-            zoom={mapZoom}
-            style={{ height: "100%", width: "100%" }}
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            />
-
-            {showRouteLines && Polyline && getRoutePolyline().length > 1 && (
-              <Polyline
-                positions={getRoutePolyline()}
-                color="#3b82f6"
-                weight={4}
-                opacity={0.7}
-              />
-            )}
-
-            {employeeLocation && CircleMarker && (
-              <CircleMarker
-                center={[employeeLocation.latitude, employeeLocation.longitude]}
-                radius={11}
-                pathOptions={{
-                  color: "#111827",
-                  fillColor: "#16a34a",
-                  fillOpacity: 0.95,
-                  weight: 3,
-                }}
-              >
-                <Popup>
-                  <div>
-                    <strong>Employee Location</strong>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            )}
-
-            {stopsWithCoords.map((stop, index) => {
-              const color = getStopColor(stop);
-              const order = stop.routeSequence ?? index + 1;
-
-              if (!CircleMarker) return null;
-
-              return (
-                <CircleMarker
-                  key={stop.id}
-                  center={[stop.latitude!, stop.longitude!]}
-                  radius={10}
-                  pathOptions={{
-                    color: "#111827",
-                    fillColor: color,
-                    fillOpacity: 0.92,
-                    weight: 2,
-                  }}
-                >
-                  <Popup>
-                    <div style={{ minWidth: "200px" }}>
-                      <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: "0.5rem", color: "#111827" }}>
-                        Stop {order}
-                      </div>
-                      {stop.customerName && (
-                        <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
-                          <strong>Customer:</strong> {stop.customerName}
-                        </div>
-                      )}
-                      <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
-                        <strong>Address:</strong> {formatAddress(stop)}
-                      </div>
-                      {stop.scheduledTime && (
-                        <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
-                          <strong>Time:</strong> {stop.scheduledTime}
-                        </div>
-                      )}
-                      {stop.county && (
-                        <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.5rem" }}>
-                          {stop.county}
-                        </div>
-                      )}
-                    </div>
-                  </Popup>
-                </CircleMarker>
-              );
-            })}
-          </MapContainer>
+        {typeof window !== "undefined" && OperatorRouteMapInner ? (
+          <OperatorRouteMapInner
+            mapCenter={mapCenter}
+            mapZoom={mapZoom}
+            stops={stopsWithCoords}
+            employeeLocation={employeeLocation}
+            showRouteLines={showRouteLines}
+          />
         ) : (
           <div style={{
             height: "100%",

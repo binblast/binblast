@@ -11,6 +11,7 @@ interface ManagerClockControlsProps {
   managerRole?: string;
   onUpdated?: () => void;
   compact?: boolean;
+  inline?: boolean;
 }
 
 export function ManagerClockControls({
@@ -22,6 +23,7 @@ export function ManagerClockControls({
   managerRole,
   onUpdated,
   compact = false,
+  inline = false,
 }: ManagerClockControlsProps) {
   const [working, setWorking] = useState<"in" | "out" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -86,8 +88,8 @@ export function ManagerClockControls({
   }
 
   return (
-    <div onClick={(event) => event.stopPropagation()}>
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: compact ? "0.5rem" : "0" }}>
+    <div onClick={(event) => event.stopPropagation()} style={{ width: inline ? "100%" : undefined }}>
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: compact && !inline ? "0.5rem" : "0" }}>
         {!isClockedIn ? (
           <button
             type="button"
@@ -102,11 +104,11 @@ export function ManagerClockControls({
               fontSize: compact ? "0.75rem" : "0.875rem",
               fontWeight: "600",
               cursor: working !== null ? "not-allowed" : "pointer",
-              width: compact ? "auto" : "100%",
+              width: inline || !compact ? "100%" : "auto",
               minHeight: "44px",
             }}
           >
-            {working === "in" ? "Clocking In..." : "Clock In"}
+            {working === "in" ? "Clocking In..." : inline ? "Clock In Employee" : "Clock In"}
           </button>
         ) : (
           <button
@@ -122,11 +124,11 @@ export function ManagerClockControls({
               fontSize: compact ? "0.75rem" : "0.875rem",
               fontWeight: "600",
               cursor: working !== null ? "not-allowed" : "pointer",
-              width: compact ? "auto" : "100%",
+              width: inline || !compact ? "100%" : "auto",
               minHeight: "44px",
             }}
           >
-            {working === "out" ? "Clocking Out..." : "Clock Out"}
+            {working === "out" ? "Clocking Out..." : inline ? "Clock Out Employee" : "Clock Out"}
           </button>
         )}
       </div>
