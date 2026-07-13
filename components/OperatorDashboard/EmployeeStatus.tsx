@@ -131,8 +131,10 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
   }
 
   return (
-    <div style={{ marginBottom: "2rem" }}>
-      <EmployeeViewToggle view={employeeView} onViewChange={setEmployeeView} />
+    <div data-operator-tour="fleet-status" style={{ marginBottom: "2rem" }}>
+      <div data-operator-tour="employee-view-toggle">
+        <EmployeeViewToggle view={employeeView} onViewChange={setEmployeeView} />
+      </div>
       <div
         style={{
           display: "flex",
@@ -214,7 +216,9 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
         ))}
       </div>
 
-      <OpenFlagsPanel />
+      <div data-operator-tour="open-flags">
+        <OpenFlagsPanel />
+      </div>
 
       <div style={{ fontSize: "0.875rem", color: "#6b7280", margin: "1rem 0" }}>
         Showing {visibleEmployees.length} of {employees.length} employees
@@ -235,6 +239,7 @@ export function EmployeeStatus({ userId }: EmployeeStatusProps) {
         </div>
       ) : (
         <div
+          data-operator-tour="employee-cards"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",

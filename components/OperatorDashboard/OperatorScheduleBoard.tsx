@@ -222,7 +222,7 @@ export function OperatorScheduleBoard({
   }
 
   return (
-    <div>
+    <div data-operator-tour="schedule-board">
       <div
         style={{
           display: "flex",
@@ -294,7 +294,7 @@ export function OperatorScheduleBoard({
           marginBottom: "1rem",
         }}
       >
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+        <div data-operator-tour="schedule-filters" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
           {[
             { id: "week" as QuickFilter, label: "This Week" },
             { id: "today" as QuickFilter, label: "Today" },

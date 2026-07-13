@@ -66,6 +66,14 @@ const OperatorCustomersHub = dynamic(
   { loading: () => <p style={{ color: "#6b7280", padding: "2rem 0", textAlign: "center" }}>Loading customers...</p> }
 );
 
+const OperatorDashboardTour = dynamic(
+  () =>
+    import("@/components/OperatorDashboard/OperatorDashboardTour").then(
+      (mod) => mod.OperatorDashboardTour
+    ),
+  { ssr: false }
+);
+
 const CustomQuotesManagement = dynamic(
   () => import("@/components/AdminDashboard/CustomQuotesManagement").then((mod) => mod.CustomQuotesManagement),
   { loading: () => <p style={{ color: "#6b7280", padding: "1rem 0" }}>Loading quotes...</p> }
@@ -1485,22 +1493,38 @@ function DashboardPageContent() {
             <div className="dashboard-shell" style={{ maxWidth: "1400px", margin: "0 auto" }}>
               
               {/* Operator Header */}
-              <div style={{ marginBottom: "2rem" }}>
-                <h1 style={{ 
-                  fontSize: "clamp(2rem, 5vw, 2.5rem)", 
-                  fontWeight: "700", 
-                  color: "var(--text-dark)",
-                  marginBottom: "0.5rem"
-                }}>
-                  Operator Dashboard
-                </h1>
-                <p style={{ 
-                  fontSize: "1rem", 
-                  color: "#6b7280", 
-                  marginBottom: "1.5rem"
-                }}>
-                  Day-to-day operations and customer management
-                </p>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: "1rem",
+                  flexWrap: "wrap",
+                  marginBottom: "2rem",
+                }}
+              >
+                <div>
+                  <h1 style={{ 
+                    fontSize: "clamp(2rem, 5vw, 2.5rem)", 
+                    fontWeight: "700", 
+                    color: "var(--text-dark)",
+                    marginBottom: "0.5rem"
+                  }}>
+                    Operator Dashboard
+                  </h1>
+                  <p style={{ 
+                    fontSize: "1rem", 
+                    color: "#6b7280", 
+                    marginBottom: 0
+                  }}>
+                    Day-to-day operations and customer management
+                  </p>
+                </div>
+                <OperatorDashboardTour
+                  activeTab={operatorActiveTab}
+                  onTabChange={setOperatorActiveTab}
+                  onCustomerSubTabChange={setOperatorCustomerSubTab}
+                />
               </div>
 
               {/* New Quotes Notification Banner for Operators */}
@@ -1606,7 +1630,10 @@ function DashboardPageContent() {
               )}
 
               {/* Sticky Tab Navigation */}
-              <div className="tab-navigation" style={{
+              <div
+                data-operator-tour="tabs"
+                className="tab-navigation"
+                style={{
                 position: "sticky",
                 top: "80px",
                 background: "#ffffff",
@@ -1734,11 +1761,13 @@ function DashboardPageContent() {
                       Operations Overview
                     </h2>
 
-                    <div style={{ marginBottom: "2rem" }}>
+                    <div data-operator-tour="live-map" style={{ marginBottom: "2rem" }}>
                       <OperatorLiveMap operatorId={userId} />
                     </div>
 
-                    <div style={{ 
+                    <div
+                      data-operator-tour="overview-stats"
+                      style={{ 
                       display: "grid", 
                       gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", 
                       gap: "1.5rem",
@@ -2106,7 +2135,7 @@ function DashboardPageContent() {
 
                     {/* TAB: Messages */}
                     {operatorActiveTab === "messages" && (
-                      <div>
+                      <div data-operator-tour="messages-panel">
                         <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem", color: "var(--text-dark)" }}>
                           Team Messages
                         </h2>

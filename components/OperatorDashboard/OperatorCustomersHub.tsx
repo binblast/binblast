@@ -132,7 +132,7 @@ export function OperatorCustomersHub({
   }
 
   return (
-    <div>
+    <div data-operator-tour="customers-hub">
       <div style={{ marginBottom: "1.25rem" }}>
         <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "#111827", margin: 0 }}>
           Customers
@@ -149,6 +149,7 @@ export function OperatorCustomersHub({
       />
 
       <div
+        data-operator-tour="customers-tabs"
         style={{
           display: "flex",
           gap: "0.5rem",
