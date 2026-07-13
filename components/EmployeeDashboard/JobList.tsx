@@ -1,12 +1,22 @@
 // components/EmployeeDashboard/JobList.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
+import { EmployeeRouteMap } from "@/components/EmployeeDashboard/EmployeeRouteMap";
+import { RouteClusters } from "@/components/EmployeeDashboard/RouteClusters";
 import {
   formatCleanDateTime,
   parseFirestoreTimestamp,
 } from "@/lib/employee-utils";
+import {
+  buildRouteClusters,
+  formatDistanceMiles,
+  getDistanceMiles,
+  getOptimizedActiveStops,
+  jobToRouteStop,
+  resolveRouteStops,
+} from "@/lib/employee-route";
 
 interface Job {
   id: string;
@@ -61,6 +71,28 @@ export function JobList({
   payRatePerJob = 0,
 }: JobListProps) {
   const [routeTab, setRouteTab] = useState<"active" | "closed">("active");
+  const [routeView, setRouteView] = useState<"list" | "map">("list");
+  const [resolvedStops, setResolvedStops] = useState(
+    jobs.map((job) => jobToRouteStop(job))
+  );
+
+  useEffect(() => {
+    if (!isClockedIn || jobs.length === 0) {
+      setResolvedStops(jobs.map((job) => jobToRouteStop(job)));
+      return;
+    }
+
+    let cancelled = false;
+    resolveRouteStops(jobs.map((job) => jobToRouteStop(job))).then((stops) => {
+      if (!cancelled) {
+        setResolvedStops(stops);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [jobs, isClockedIn]);
 
   const formatJobDate = (date?: string) => {
     if (!date) return "Date TBD";
@@ -233,6 +265,41 @@ export function JobList({
   const nextJob = jobs.find((j) => j.jobStatus === "pending" || !j.jobStatus);
   const currentStopIndex = jobs.findIndex((j) => j.jobStatus === "pending" || !j.jobStatus);
   const currentStopNumber = currentStopIndex >= 0 ? currentStopIndex + 1 : completedCount + 1;
+
+  const routeClusters = useMemo(
+    () => buildRouteClusters(resolvedStops),
+    [resolvedStops]
+  );
+
+  const orderedJobs = useMemo(() => {
+    const optimized = getOptimizedActiveStops(resolvedStops);
+    if (optimized.length === 0) {
+      return jobs;
+    }
+    return optimized
+      .map((stop) => jobs.find((job) => job.id === stop.id))
+      .filter((job): job is Job => Boolean(job));
+  }, [resolvedStops, jobs]);
+
+  const distanceFromPrevious = useMemo(() => {
+    const optimized = getOptimizedActiveStops(resolvedStops);
+    const distances = new Map<string, string>();
+    for (let i = 1; i < optimized.length; i++) {
+      const miles = getDistanceMiles(optimized[i - 1], optimized[i]);
+      const label = formatDistanceMiles(miles);
+      if (label) {
+        distances.set(optimized[i].id, label);
+      }
+    }
+    return distances;
+  }, [resolvedStops]);
+
+  const handleRouteStopClick = (stopId: string) => {
+    const job = jobs.find((item) => item.id === stopId);
+    if (job) {
+      onJobClick(job);
+    }
+  };
 
   const sortedClosedJobs = [...completedJobs].sort((a, b) => {
     const aTime = parseFirestoreTimestamp(a.completedAt)?.getTime() ?? 0;
@@ -424,7 +491,45 @@ export function JobList({
           </div>
         )}
       </div>
-      </>
+
+      {jobs.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            marginBottom: "1rem",
+          }}
+        >
+          <button
+            onClick={() => setRouteView("list")}
+            style={tabButtonStyle(routeView === "list", "#111827")}
+          >
+            List
+          </button>
+          <button
+            onClick={() => setRouteView("map")}
+            style={tabButtonStyle(routeView === "map", "#111827")}
+          >
+            Map
+          </button>
+        </div>
+      )}
+
+      {jobs.length > 0 && (
+        <RouteClusters
+          clusters={routeClusters}
+          nextStopId={nextJob?.id}
+          onStopClick={handleRouteStopClick}
+        />
+      )}
+
+      {routeView === "map" && jobs.length > 0 && (
+        <EmployeeRouteMap
+          stops={resolvedStops}
+          clusters={routeClusters}
+          nextStopId={nextJob?.id}
+          onStopClick={(stop) => handleRouteStopClick(stop.id)}
+        />
       )}
 
       {routeTab === "active" && jobs.length === 0 && (
@@ -443,7 +548,7 @@ export function JobList({
         </div>
       )}
 
-      {routeTab === "active" && (
+      {routeTab === "active" && routeView === "list" && (
       <>
       {/* Load Board Grid */}
       <div
@@ -454,7 +559,7 @@ export function JobList({
           gap: "clamp(0.75rem, 3vw, 1rem)",
         }}
       >
-        {jobs.map((job) => {
+        {orderedJobs.map((job) => {
         const statusColors = getStatusColor(job.jobStatus);
         const fullAddress = `${job.addressLine1}${
           job.addressLine2 ? `, ${job.addressLine2}` : ""
@@ -537,6 +642,18 @@ export function JobList({
               >
                 {fullAddress}
               </div>
+              {distanceFromPrevious.get(job.id) && (
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "#6b7280",
+                    marginTop: "0.35rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  {distanceFromPrevious.get(job.id)} from previous stop
+                </div>
+              )}
             </div>
 
             {/* Quick Info Grid */}
@@ -752,6 +869,8 @@ export function JobList({
         );
       })}
       </div>
+      </>
+      )}
       </>
       )}
 
