@@ -302,7 +302,7 @@ main {
   }
   
   /* Touch-friendly buttons */
-  button:not(.tab-navigation button),
+  button:not(.tab-navigation button):not(.nav-pill),
   .btn,
   a.btn {
     min-height: 44px;
@@ -316,9 +316,9 @@ main {
   }
   
   /* Mobile dropdown alignment */
-  .nav-links li button {
-    text-align: left !important;
-    justify-content: space-between !important;
+  .nav-links li button.nav-pill {
+    text-align: center !important;
+    justify-content: center !important;
     width: 100% !important;
   }
   
@@ -439,7 +439,7 @@ main {
 /* Touch device optimizations */
 @media (hover: none) and (pointer: coarse) {
   /* Increase touch targets */
-  button:not(.tab-navigation button),
+  button:not(.tab-navigation button):not(.nav-pill),
   .btn,
   a.btn,
   input[type="button"],

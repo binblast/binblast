@@ -95,6 +95,11 @@ export function EmployeeRouteMap({
     [resolvedStops]
   );
 
+  const approximateCount = useMemo(
+    () => stopsWithCoords.filter((stop) => stop.geocodePrecision === "approximate").length,
+    [stopsWithCoords]
+  );
+
   useEffect(() => {
     if (stopsWithCoords.length === 0) {
       return;
@@ -196,12 +201,14 @@ export function EmployeeRouteMap({
               <Polyline positions={polyline} color="#2563eb" weight={3} opacity={0.65} />
             )}
 
-            {stopsWithCoords.map((stop, index) => {
+            {stopsWithCoords.map((stop) => {
               const isNext = stop.id === nextStopId;
+              const isApproximate = stop.geocodePrecision === "approximate";
               const clusterColor =
                 getStopClusterColor(stop.id, clusters) || "#16a34a";
               const orderIndex =
                 orderedStops.findIndex((ordered) => ordered.id === stop.id) + 1;
+              const pinColor = isApproximate ? "#d97706" : isNext ? "#16a34a" : clusterColor;
 
               if (CircleMarker) {
                 return (
@@ -210,10 +217,11 @@ export function EmployeeRouteMap({
                     center={[stop.latitude!, stop.longitude!]}
                     radius={isNext ? 12 : 9}
                     pathOptions={{
-                      color: isNext ? "#111827" : clusterColor,
-                      fillColor: isNext ? "#16a34a" : clusterColor,
-                      fillOpacity: 0.9,
-                      weight: isNext ? 3 : 2,
+                      color: isNext ? "#111827" : pinColor,
+                      fillColor: pinColor,
+                      fillOpacity: isApproximate ? 0.55 : 0.9,
+                      weight: isNext ? 3 : isApproximate ? 2 : 2,
+                      dashArray: isApproximate ? "4 3" : undefined,
                     }}
                     eventHandlers={{
                       click: () => onStopClick?.(stop),
@@ -238,6 +246,18 @@ export function EmployeeRouteMap({
                             }}
                           >
                             Next stop
+                          </div>
+                        )}
+                        {isApproximate && (
+                          <div
+                            style={{
+                              marginTop: "0.35rem",
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
+                              color: "#b45309",
+                            }}
+                          >
+                            Approximate area — use Open Maps for exact directions
                           </div>
                         )}
                       </div>
@@ -302,15 +322,18 @@ export function EmployeeRouteMap({
           style={{
             padding: "0.75rem",
             fontSize: "0.8125rem",
-            color: "#166534",
+            color: approximateCount > 0 ? "#92400e" : "#166534",
             fontWeight: 600,
             textAlign: "center",
             borderTop: "1px solid #e5e7eb",
-            background: "#f0fdf4",
+            background: approximateCount > 0 ? "#fffbeb" : "#f0fdf4",
           }}
         >
           {stopsWithCoords.length} pinned · {clusters.length} area
-          {clusters.length === 1 ? "" : "s"} · blue line = suggested drive order
+          {clusters.length === 1 ? "" : "s"}
+          {approximateCount === 0
+            ? " · blue line = suggested drive order"
+            : ` · ${approximateCount} approximate (zip/city area)`}
         </div>
       )}
 
@@ -324,7 +347,7 @@ export function EmployeeRouteMap({
             borderTop: "1px solid #e5e7eb",
           }}
         >
-          Could not map these addresses. Use the list view or open maps from each stop.
+          Could not map these addresses. Use list view or tap Open Maps on each stop.
         </div>
       )}
     </div>

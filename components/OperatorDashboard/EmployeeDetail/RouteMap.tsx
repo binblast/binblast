@@ -51,7 +51,15 @@ async function geocodeStopAddress(stop: Stop): Promise<Stop> {
   }
 
   try {
-    const response = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
+    const params = new URLSearchParams();
+    if (stop.addressLine1) params.set("addressLine1", stop.addressLine1);
+    if (stop.addressLine2) params.set("addressLine2", stop.addressLine2);
+    if (stop.city) params.set("city", stop.city);
+    if (stop.state) params.set("state", stop.state);
+    if (stop.zipCode) params.set("zipCode", stop.zipCode);
+    if (!stop.addressLine1 && address) params.set("address", address);
+
+    const response = await fetch(`/api/geocode?${params.toString()}`);
     if (!response.ok) {
       return stop;
     }

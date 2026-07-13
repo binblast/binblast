@@ -22,6 +22,7 @@ export interface RouteStop {
   jobStatus?: "pending" | "in_progress" | "completed";
   latitude?: number;
   longitude?: number;
+  geocodePrecision?: "exact" | "approximate";
 }
 
 export interface RouteCluster {
@@ -80,12 +81,20 @@ export async function geocodeRouteStop(stop: RouteStop): Promise<RouteStop> {
   }
 
   const address = buildStopAddress(stop);
-  if (!address) {
+  if (!address && !stop.addressLine1) {
     return stop;
   }
 
   try {
-    const response = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
+    const params = new URLSearchParams();
+    if (stop.addressLine1) params.set("addressLine1", stop.addressLine1);
+    if (stop.addressLine2) params.set("addressLine2", stop.addressLine2);
+    if (stop.city) params.set("city", stop.city);
+    if (stop.state) params.set("state", stop.state);
+    if (stop.zipCode) params.set("zipCode", stop.zipCode);
+    if (!stop.addressLine1 && address) params.set("address", address);
+
+    const response = await fetch(`/api/geocode?${params.toString()}`);
     if (!response.ok) {
       return stop;
     }
@@ -99,6 +108,7 @@ export async function geocodeRouteStop(stop: RouteStop): Promise<RouteStop> {
       ...stop,
       latitude: data.latitude,
       longitude: data.longitude,
+      geocodePrecision: data.precision === "approximate" ? "approximate" : "exact",
     };
   } catch {
     return stop;

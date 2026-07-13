@@ -103,8 +103,8 @@ export function JobList({
   );
 
   useEffect(() => {
-    if (!isClockedIn || jobs.length === 0) {
-      setResolvedStops(jobs.map((job) => jobToRouteStop(job)));
+    if (jobs.length === 0) {
+      setResolvedStops([]);
       return;
     }
 
@@ -118,7 +118,7 @@ export function JobList({
     return () => {
       cancelled = true;
     };
-  }, [jobs, isClockedIn]);
+  }, [jobs]);
 
   const routeClusters = useMemo(
     () => buildRouteClusters(resolvedStops),

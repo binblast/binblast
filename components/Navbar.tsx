@@ -477,6 +477,16 @@ export function Navbar() {
     setIsSignInOpen((prev) => !prev);
   };
 
+  const isHomeActive = pathname === "/";
+  const isDashboardActive =
+    pathname === accountUrl ||
+    (pathname === "/dashboard" && isLoggedIn) ||
+    (pathname === "/employee/dashboard" && isEmployee) ||
+    (pathname === "/partners/dashboard" && isLoggedIn && !isStandardCustomer);
+
+  const navPillClass = (active: boolean, extra = "") =>
+    `nav-pill${active ? " nav-pill--active" : ""}${extra ? ` ${extra}` : ""}`;
+
   const handleLogout = async () => {
     try {
       const { signOut } = await import("@/lib/firebase");
@@ -535,24 +545,32 @@ export function Navbar() {
             </div>
           )}
         </Link>
-        <ul className={`nav-links ${isMenuOpen ? "active" : ""}`}>
+        <ul className={`nav-links nav-links--segmented ${isMenuOpen ? "active" : ""}`}>
           <li>
             {isLoggedIn ? (
-              <Link href="/">Home</Link>
+              <Link href="/" className={navPillClass(isHomeActive)}>
+                Home
+              </Link>
             ) : (
-              <Link href={getHomeSectionHref("home")}>Home</Link>
+              <Link href={getHomeSectionHref("home")} className={navPillClass(isHomeActive)}>
+                Home
+              </Link>
             )}
           </li>
           <li>
             {isLoggedIn ? (
-              <Link href="/#pricing">Services</Link>
+              <Link href="/#pricing" className={navPillClass(false)}>
+                Services
+              </Link>
             ) : (
-              <Link href={getHomeSectionHref("pricing")}>Services</Link>
+              <Link href={getHomeSectionHref("pricing")} className={navPillClass(false)}>
+                Services
+              </Link>
             )}
           </li>
           <li
             ref={signInRef}
-            style={{ position: "relative", width: "100%" }}
+            style={{ position: "relative", width: isMenuOpen ? "100%" : "auto" }}
             onMouseEnter={() => {
               if (!isMenuOpen) {
                 setIsSignInOpen(true);
@@ -572,33 +590,10 @@ export function Navbar() {
               aria-expanded={isSignInOpen}
               aria-controls="sign-in-menu"
               id="sign-in-button"
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--text-dark)",
-                fontWeight: "500",
-                padding: isMenuOpen ? "1.25rem" : "0.5rem 1rem",
-                cursor: "pointer",
-                fontSize: "inherit",
-                fontFamily: "inherit",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "0.5rem",
-                width: "100%",
-                textAlign: "left",
-                borderRadius: "6px",
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.outline = "2px solid #16a34a";
-                e.currentTarget.style.outlineOffset = "2px";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.outline = "none";
-              }}
+              className={navPillClass(isSignInOpen && isMenuOpen, "nav-pill--ghost")}
             >
               <span>Sign In</span>
-              <span style={{ fontSize: "0.75rem", flexShrink: 0 }} aria-hidden="true">
+              <span className="nav-pill__chevron" aria-hidden="true">
                 {isSignInOpen ? "▲" : "▼"}
               </span>
             </button>
@@ -643,32 +638,14 @@ export function Navbar() {
           </li>
           {!loading && isLoggedIn && dashboardNavLabel && (
             <li>
-              <Link href={accountUrl}>{dashboardNavLabel}</Link>
+              <Link href={accountUrl} className={navPillClass(isDashboardActive)}>
+                {dashboardNavLabel}
+              </Link>
             </li>
           )}
           {!loading && isLoggedIn && (
             <li>
-              <button
-                onClick={handleLogout}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-dark)",
-                  fontWeight: "500",
-                  padding: "0.5rem 1rem",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  fontSize: "inherit",
-                  fontFamily: "inherit",
-                  transition: "color 0.3s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "var(--primary-color)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "var(--text-dark)";
-                }}
-              >
+              <button type="button" onClick={handleLogout} className="nav-pill nav-pill--ghost">
                 Logout
               </button>
             </li>
