@@ -5,6 +5,11 @@ import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 import { OperatorJobResolveModal } from "./OperatorJobResolveModal";
 import { AddNoteModal } from "./AddNoteModal";
 import { ViewProofModal } from "./ViewProofModal";
+import {
+  OperatorActionButton,
+  OperatorPrioritySelect,
+  operatorActionLayouts,
+} from "@/components/OperatorDashboard/operator-ui";
 
 interface Stop {
   id: string;
@@ -33,16 +38,6 @@ interface StopListProps {
   refreshKey?: number;
   managerId?: string;
 }
-
-const actionBtn = {
-  padding: "0.3rem 0.55rem",
-  border: "none",
-  borderRadius: "4px",
-  fontSize: "0.7rem",
-  fontWeight: "600" as const,
-  cursor: "pointer",
-  whiteSpace: "nowrap" as const,
-};
 
 export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProps) {
   const [todayStops, setTodayStops] = useState<Stop[]>([]);
@@ -90,6 +85,7 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
       completed: { bg: "#d1fae5", color: "#065f46" },
       in_progress: { bg: "#dbeafe", color: "#1e40af" },
       pending: { bg: "#fef3c7", color: "#92400e" },
+      upcoming: { bg: "#fef3c7", color: "#92400e" },
       failed: { bg: "#fee2e2", color: "#991b1b" },
       cancelled: { bg: "#f3f4f6", color: "#6b7280" },
     };
@@ -179,70 +175,54 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
 
   const renderActions = (stop: Stop) => {
     const status = stop.status || stop.jobStatus || "pending";
-    const isActive = status === "pending" || status === "in_progress";
+    const isActive = status === "pending" || status === "in_progress" || status === "upcoming";
     const isCompleted = status === "completed";
     const busy = workingStopId === stop.id;
 
     return (
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", minWidth: "220px" }}>
-        {isActive && (
-          <button
-            onClick={() => openResolve(stop.id)}
-            style={{
-              ...actionBtn,
-              background: stop.needsOperatorReview ? "#f59e0b" : "#16a34a",
-              color: "#ffffff",
-            }}
-          >
-            Resolve
-          </button>
-        )}
-        {isCompleted && (
-          <button
-            onClick={() => openPhotos(stop.id)}
-            style={{ ...actionBtn, background: "#6b7280", color: "#ffffff" }}
-          >
-            Photos
-          </button>
-        )}
-        <button
-          onClick={() => openNote(stop.id)}
-          style={{ ...actionBtn, background: "#3b82f6", color: "#ffffff" }}
-        >
-          Note
-        </button>
-        {isActive && (
-          <button
-            onClick={() => handleMarkComplete(stop.id)}
-            disabled={busy}
-            style={{
-              ...actionBtn,
-              background: busy ? "#9ca3af" : "#111827",
-              color: "#ffffff",
-              cursor: busy ? "not-allowed" : "pointer",
-            }}
-          >
-            {busy ? "..." : "Complete"}
-          </button>
-        )}
-        {isActive && (
-          <select
-            value={stop.priority || "normal"}
-            disabled={busy}
-            onChange={(e) => handlePriorityChange(stop.id, e.target.value)}
-            style={{
-              padding: "0.3rem 0.4rem",
-              borderRadius: "4px",
-              border: "1px solid #e5e7eb",
-              fontSize: "0.7rem",
-              background: "#ffffff",
-            }}
-          >
-            <option value="normal">Normal</option>
-            <option value="high">High Priority</option>
-            <option value="low">Low Priority</option>
-          </select>
-        )}
+      <div style={operatorActionLayouts.stopActions}>
+        <div style={operatorActionLayouts.stopActionsRow}>
+          {isActive && (
+            <OperatorActionButton
+              size="sm"
+              variant={stop.needsOperatorReview ? "danger" : "success"}
+              onClick={() => openResolve(stop.id)}
+            >
+              Resolve
+            </OperatorActionButton>
+          )}
+          {isCompleted && (
+            <OperatorActionButton size="sm" variant="neutral" onClick={() => openPhotos(stop.id)}>
+              Photos
+            </OperatorActionButton>
+          )}
+          {isActive && (
+            <OperatorActionButton
+              size="sm"
+              variant="neutral"
+              disabled={busy}
+              onClick={() => handleMarkComplete(stop.id)}
+            >
+              {busy ? "Saving..." : "Complete"}
+            </OperatorActionButton>
+          )}
+        </div>
+        <div style={operatorActionLayouts.stopActionsRow}>
+          <OperatorActionButton size="sm" variant="ghost" onClick={() => openNote(stop.id)}>
+            Add Note
+          </OperatorActionButton>
+          {isActive && (
+            <OperatorPrioritySelect
+              value={stop.priority || "normal"}
+              disabled={busy}
+              onChange={(e) => handlePriorityChange(stop.id, e.target.value)}
+            >
+              <option value="normal">Normal</option>
+              <option value="high">High Priority</option>
+              <option value="low">Low Priority</option>
+            </OperatorPrioritySelect>
+          )}
+        </div>
       </div>
     );
   };
@@ -311,7 +291,9 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Address</th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Bins</th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Status</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Operator Actions</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", minWidth: "230px" }}>
+                    Operator Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -369,7 +351,7 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Date</th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Bins</th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Status</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem" }}>Actions</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", minWidth: "230px" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>

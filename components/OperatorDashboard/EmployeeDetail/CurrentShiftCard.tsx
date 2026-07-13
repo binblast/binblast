@@ -6,6 +6,10 @@ import { OperatorJobResolveModal } from "./OperatorJobResolveModal";
 import { AddNoteModal } from "./AddNoteModal";
 import { ViewProofModal } from "./ViewProofModal";
 import { ManagerClockControls } from "@/components/OperatorDashboard/ManagerClockControls";
+import {
+  OperatorActionButton,
+  OperatorActionToolbar,
+} from "@/components/OperatorDashboard/operator-ui";
 import { parseFirestoreTimestamp } from "@/lib/employee-utils";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
@@ -160,17 +164,6 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
     const date = parseFirestoreTimestamp(timestamp);
     if (!date) return "N/A";
     return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-  };
-
-  const actionButtonStyle = {
-    padding: "0.625rem 1rem",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "0.875rem",
-    fontWeight: "600" as const,
-    cursor: "pointer",
-    width: "100%",
-    minHeight: "44px",
   };
 
   if (loading) {
@@ -385,14 +378,7 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
         </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-          gap: "0.75rem",
-          marginTop: "0.5rem",
-        }}
-      >
+      <OperatorActionToolbar>
         <ManagerClockControls
           employeeId={employeeId}
           employeeName={employeeName}
@@ -404,36 +390,39 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
           inline
         />
 
-        <button
+        <OperatorActionButton
+          variant="success"
+          fullWidth
           onClick={() => {
             setSelectedStopId(null);
             setShowResolveModal(true);
           }}
-          style={{ ...actionButtonStyle, background: "#16a34a", color: "#ffffff" }}
         >
-          Resolve Job Issues
-        </button>
+          Resolve Issues
+        </OperatorActionButton>
 
-        <button
+        <OperatorActionButton
+          variant="primary"
+          fullWidth
           onClick={() => {
             setSelectedStopId(null);
             setShowAddNoteModal(true);
           }}
-          style={{ ...actionButtonStyle, background: "#3b82f6", color: "#ffffff" }}
         >
           Add Note
-        </button>
+        </OperatorActionButton>
 
-        <button
+        <OperatorActionButton
+          variant="neutral"
+          fullWidth
           onClick={() => {
             setSelectedStopId(null);
             setShowViewProofModal(true);
           }}
-          style={{ ...actionButtonStyle, background: "#6b7280", color: "#ffffff" }}
         >
-          View Cleaning Photos
-        </button>
-      </div>
+          View Photos
+        </OperatorActionButton>
+      </OperatorActionToolbar>
 
       <OperatorJobResolveModal
         isOpen={showResolveModal}
