@@ -37,6 +37,11 @@ export async function POST(
       jobStatus: "completed",
       status: "completed",
       completedAt: admin.firestore.FieldValue.serverTimestamp(),
+      operatorSkipPhotos: true,
+      proofOperatorOverride: true,
+      hasRequiredPhotos: true,
+      photoDocumentationStatus: "operator_override",
+      employeeCanProceed: true,
     };
 
     if (notes) {

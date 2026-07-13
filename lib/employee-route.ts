@@ -207,6 +207,18 @@ export function buildRouteClusters(
 }
 
 export function getOptimizedActiveStops(stops: RouteStop[]): RouteStop[] {
+  const withSequence = stops.filter(
+    (stop) => typeof (stop as RouteStop & { routeSequence?: number }).routeSequence === "number"
+  );
+
+  if (withSequence.length === stops.length && stops.length > 0) {
+    return [...stops].sort(
+      (a, b) =>
+        ((a as RouteStop & { routeSequence?: number }).routeSequence || 0) -
+        ((b as RouteStop & { routeSequence?: number }).routeSequence || 0)
+    );
+  }
+
   return optimizeStopOrder(stops);
 }
 

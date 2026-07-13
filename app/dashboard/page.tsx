@@ -43,6 +43,11 @@ const EmployeeStatus = dynamic(
   { loading: () => <p style={{ color: "#6b7280", padding: "1rem 0" }}>Loading employees...</p> }
 );
 
+const OperatorLiveMap = dynamic(
+  () => import("@/components/OperatorDashboard/OperatorLiveMap").then((mod) => mod.OperatorLiveMap),
+  { loading: () => <p style={{ color: "#6b7280", padding: "2rem 0", textAlign: "center" }}>Loading live map...</p> }
+);
+
 const CustomQuotesManagement = dynamic(
   () => import("@/components/AdminDashboard/CustomQuotesManagement").then((mod) => mod.CustomQuotesManagement),
   { loading: () => <p style={{ color: "#6b7280", padding: "1rem 0" }}>Loading quotes...</p> }
@@ -1787,6 +1792,11 @@ function DashboardPageContent() {
                         <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem", color: "var(--text-dark)" }}>
                       Operations Overview
                     </h2>
+
+                    <div style={{ marginBottom: "2rem" }}>
+                      <OperatorLiveMap operatorId={userId} />
+                    </div>
+
                     <div style={{ 
                       display: "grid", 
                       gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", 

@@ -26,6 +26,7 @@ import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getAuthInstance } from "@/lib/firebase";
 import { isActiveCleaningStatus, isCleaningCompleted } from "@/lib/cleaning-status";
+import { useEmployeeLocationTracking } from "@/hooks/useEmployeeLocationTracking";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
   ssr: false,
@@ -57,6 +58,9 @@ interface Job {
   insidePhotoUrl?: string;
   outsidePhotoUrl?: string;
   stickerStatus?: "existing" | "placed" | "none";
+  routeSequence?: number;
+  operatorSkipPhotos?: boolean;
+  employeeCanProceed?: boolean;
 }
 
 type DashboardTab = "home" | "training" | "equipment" | "messages";
@@ -87,6 +91,11 @@ export default function EmployeeDashboardPage() {
     routeName?: string;
     estimatedTime?: string;
   } | null>(null);
+
+  useEmployeeLocationTracking({
+    employeeId: employee?.id,
+    enabled: clockInStatus?.isActive === true,
+  });
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -268,7 +277,13 @@ export default function EmployeeDashboardPage() {
           .map((job) => ({
             ...job,
             binCount: job.binCount ?? job.binsCount ?? 1,
-          }));
+          }))
+          .sort((a, b) => {
+            if (typeof a.routeSequence === "number" && typeof b.routeSequence === "number") {
+              return a.routeSequence - b.routeSequence;
+            }
+            return (a.scheduledTime || "").localeCompare(b.scheduledTime || "");
+          });
 
         const todayCompletedJobs = allJobs
           .filter(

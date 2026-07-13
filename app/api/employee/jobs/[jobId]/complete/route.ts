@@ -48,6 +48,18 @@ export async function POST(
       );
     }
 
+    if (
+      jobData.status === "completed" ||
+      jobData.jobStatus === "completed" ||
+      jobData.operatorSkipPhotos === true ||
+      jobData.employeeCanProceed === true
+    ) {
+      return NextResponse.json(
+        { message: "Job already cleared by operator — no photos needed" },
+        { status: 200 }
+      );
+    }
+
     if (!insidePhotoUrl || !outsidePhotoUrl) {
       return NextResponse.json(
         {

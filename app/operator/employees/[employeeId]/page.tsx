@@ -17,6 +17,10 @@ import { TrainingStatus } from "@/components/OperatorDashboard/EmployeeDetail/Tr
 import { EmployeeIssuesPanel } from "@/components/OperatorDashboard/EmployeeDetail/EmployeeIssuesPanel";
 import { EmployeeTaxDocuments } from "@/components/OperatorDashboard/EmployeeDetail/EmployeeTaxDocuments";
 import { canAccessBusinessCommandCenter } from "@/lib/owner-auth";
+import { getDbInstance } from "@/lib/firebase";
+import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { getTodayDateString } from "@/lib/employee-utils";
+import { parseGeoPoint } from "@/lib/geo-utils";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
   ssr: false,
@@ -69,9 +73,70 @@ export default function EmployeeDetailPage() {
     if (employeeId && userRole) {
       loadEmployeeData();
       loadShiftStatus();
-      loadLocation();
-      loadStops();
     }
+  }, [employeeId, userRole]);
+
+  useEffect(() => {
+    if (!employeeId || !userRole) return;
+
+    let unsubLocation: (() => void) | undefined;
+    let unsubStops: (() => void) | undefined;
+
+    async function setupRealtimeListeners() {
+      const db = await getDbInstance();
+      if (!db) return;
+
+      const firestore = await safeImportFirestore();
+      const { doc, collection, query, where, onSnapshot } = firestore;
+      const today = getTodayDateString();
+
+      unsubLocation = onSnapshot(doc(db, "users", employeeId), (snapshot) => {
+        if (!snapshot.exists()) return;
+        const data = snapshot.data();
+        const location = parseGeoPoint(data.lastKnownLocation);
+        if (location) {
+          setEmployeeLocation(location);
+        }
+      });
+
+      unsubStops = onSnapshot(
+        query(
+          collection(db, "scheduledCleanings"),
+          where("assignedEmployeeId", "==", employeeId),
+          where("scheduledDate", "==", today)
+        ),
+        (snapshot) => {
+          const todayStops = snapshot.docs
+            .map((docSnap) => ({
+              id: docSnap.id,
+              ...docSnap.data(),
+            })) as Array<{
+              id: string;
+              routeSequence?: number;
+              scheduledTime?: string;
+            }>;
+          todayStops.sort((a, b) => {
+            if (typeof a.routeSequence === "number" && typeof b.routeSequence === "number") {
+              return a.routeSequence - b.routeSequence;
+            }
+            return (a.scheduledTime || "").localeCompare(b.scheduledTime || "");
+          });
+          setStops(todayStops);
+        }
+      );
+    }
+
+    setupRealtimeListeners().catch((error) => {
+      console.error("Error setting up realtime listeners:", error);
+    });
+
+    const shiftInterval = setInterval(loadShiftStatus, 30000);
+
+    return () => {
+      if (unsubLocation) unsubLocation();
+      if (unsubStops) unsubStops();
+      clearInterval(shiftInterval);
+    };
   }, [employeeId, userRole]);
 
   const checkAccess = async () => {

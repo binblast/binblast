@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MarkStopCompleteModal } from "./MarkStopCompleteModal";
+import { OperatorJobResolveModal } from "./OperatorJobResolveModal";
 import { AddNoteModal } from "./AddNoteModal";
 import { ViewProofModal } from "./ViewProofModal";
 import { ManagerClockControls } from "@/components/OperatorDashboard/ManagerClockControls";
@@ -46,7 +46,7 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
   const [managerEmail, setManagerEmail] = useState<string | undefined>();
   const [managerRole, setManagerRole] = useState<string | undefined>();
   const [employeeName, setEmployeeName] = useState("Employee");
-  const [showMarkCompleteModal, setShowMarkCompleteModal] = useState(false);
+  const [showResolveModal, setShowResolveModal] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [showViewProofModal, setShowViewProofModal] = useState(false);
 
@@ -393,7 +393,7 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
       {/* Action Buttons */}
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
         <button
-          onClick={() => setShowMarkCompleteModal(true)}
+          onClick={() => setShowResolveModal(true)}
           style={{
             padding: "0.5rem 1rem",
             background: "#16a34a",
@@ -408,7 +408,7 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
           onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
           onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
         >
-          Mark Stop Complete
+          Resolve Job Issues
         </button>
         <button
           onClick={() => setShowAddNoteModal(true)}
@@ -449,11 +449,11 @@ export function CurrentShiftCard({ employeeId, refreshKey = 0, managerId }: Curr
       </div>
 
       {/* Modals */}
-      <MarkStopCompleteModal
-        isOpen={showMarkCompleteModal}
-        onClose={() => setShowMarkCompleteModal(false)}
+      <OperatorJobResolveModal
+        isOpen={showResolveModal}
+        onClose={() => setShowResolveModal(false)}
         employeeId={employeeId}
-        onComplete={handleRefresh}
+        onResolved={handleRefresh}
       />
       <AddNoteModal
         isOpen={showAddNoteModal}

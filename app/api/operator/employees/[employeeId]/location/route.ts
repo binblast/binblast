@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { parseGeoPoint } from "@/lib/geo-utils";
 
 export async function GET(
   req: NextRequest,
@@ -39,11 +40,13 @@ export async function GET(
     }
 
     const employeeData = employeeSnap.data();
-    const lastKnownLocation = employeeData.lastKnownLocation || null;
+    const parsedLocation = parseGeoPoint(employeeData.lastKnownLocation);
 
     return NextResponse.json({
-      location: lastKnownLocation,
-      hasLocation: !!lastKnownLocation,
+      location: parsedLocation,
+      hasLocation: !!parsedLocation,
+      lastLocationUpdate: employeeData.lastLocationUpdate || null,
+      isLocationLive: employeeData.isLocationLive === true,
     });
   } catch (error: any) {
     console.error("Error getting location:", error);

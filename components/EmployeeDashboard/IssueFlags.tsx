@@ -8,6 +8,7 @@ interface IssueFlagsProps {
 }
 
 const FLAG_OPTIONS = [
+  { value: "bins_not_present", label: "Bins Not Present" },
   { value: "missed_bin", label: "Missed Bin" },
   { value: "excessive_dirt", label: "Excessive Dirt" },
   { value: "access_issue", label: "Access Issue" },

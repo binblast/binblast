@@ -8,6 +8,7 @@ const VALID_FLAGS = [
   "excessive_dirt",
   "access_issue",
   "safety_issue",
+  "bins_not_present",
 ];
 
 export async function POST(
@@ -42,7 +43,7 @@ export async function POST(
     }
 
     const firestore = await safeImportFirestore();
-    const { doc, getDoc, updateDoc, arrayUnion } = firestore;
+    const { doc, getDoc, updateDoc, arrayUnion, addDoc, collection, serverTimestamp } = firestore;
 
     // Verify job exists and is assigned to this employee
     const jobRef = doc(db, "scheduledCleanings", jobId);
@@ -68,11 +69,23 @@ export async function POST(
     if (!currentFlags.includes(flag)) {
       await updateDoc(jobRef, {
         flags: arrayUnion(flag),
+        lastEmployeeFlagAt: serverTimestamp(),
+        needsOperatorReview: flag === "bins_not_present" || flag === "access_issue",
       });
     }
 
-    // Note: In a production system, you might want to notify operator/admin here
-    // This could be done via Firestore triggers, email, or push notifications
+    if (flag === "bins_not_present" || flag === "access_issue") {
+      await addDoc(collection(db, "operatorJobEvents"), {
+        jobId,
+        employeeId,
+        flag,
+        type: "employee_flag",
+        createdAt: serverTimestamp(),
+        addressLine1: jobData.addressLine1,
+        city: jobData.city,
+        customerName: jobData.customerName || jobData.userEmail || null,
+      });
+    }
 
     return NextResponse.json(
       { message: "Flag added successfully" },

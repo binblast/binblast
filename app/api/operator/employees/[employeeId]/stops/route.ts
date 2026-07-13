@@ -13,6 +13,26 @@ import { loadEmployeeScheduleForDate } from "@/lib/employee-schedule";
 import {
   enrichStopCoordinates,
 } from "@/lib/stop-coordinates";
+import {
+  orderStopsByNeighborhood,
+  persistRouteSequence,
+} from "@/lib/neighborhood-route";
+
+function sortStopsByRouteSequence<T extends { routeSequence?: number }>(
+  stops: T[],
+  fallbackSort: (a: T, b: T) => number
+): T[] {
+  const hasSequence = stops.some((stop) => typeof stop.routeSequence === "number");
+  if (!hasSequence) {
+    return [...stops].sort(fallbackSort);
+  }
+  return [...stops].sort((a, b) => {
+    const seqA = typeof a.routeSequence === "number" ? a.routeSequence : 9999;
+    const seqB = typeof b.routeSequence === "number" ? b.routeSequence : 9999;
+    if (seqA !== seqB) return seqA - seqB;
+    return fallbackSort(a, b);
+  });
+}
 
 function getDateString(date: Date): string {
   return date.toISOString().split('T')[0];
@@ -176,8 +196,55 @@ export async function GET(
       processStops(upcomingStops),
     ]);
 
-    const finalTodayStops = processedTodayStops;
-    const finalUpcomingStops = processedUpcomingStops;
+    let finalTodayStops = sortStopsByRouteSequence(
+      processedTodayStops,
+      (a: any, b: any) => compareCleaningPriority(a, b)
+    );
+
+    const needsRouteOptimization =
+      finalTodayStops.length > 1 &&
+      !finalTodayStops.some((stop) => typeof stop.routeSequence === "number");
+
+    if (needsRouteOptimization) {
+      try {
+        const employeeRef = doc(db, "users", employeeId);
+        const employeeSnap = await getDoc(employeeRef);
+        const employeeData = employeeSnap.exists() ? employeeSnap.data() : {};
+        const employeeLocation = employeeData.lastKnownLocation;
+        const startLat =
+          typeof employeeLocation?.latitude === "number"
+            ? employeeLocation.latitude
+            : null;
+        const startLon =
+          typeof employeeLocation?.longitude === "number"
+            ? employeeLocation.longitude
+            : null;
+
+        finalTodayStops = orderStopsByNeighborhood(
+          finalTodayStops as Array<Record<string, unknown> & { id: string }>,
+          startLat,
+          startLon
+        );
+        await persistRouteSequence(
+          finalTodayStops.map((stop) => ({
+            id: String(stop.id),
+            routeSequence: stop.routeSequence as number | undefined,
+            neighborhoodKey: stop.neighborhoodKey as string | undefined,
+          }))
+        );
+      } catch (routeError) {
+        console.warn("[Stops] Route optimization skipped:", routeError);
+      }
+    }
+
+    const finalUpcomingStops = sortStopsByRouteSequence(
+      processedUpcomingStops,
+      (a: any, b: any) => {
+        const dateCompare = (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
+        if (dateCompare !== 0) return dateCompare;
+        return compareCleaningPriority(a, b);
+      }
+    );
 
     return NextResponse.json({
       todayStops: finalTodayStops,

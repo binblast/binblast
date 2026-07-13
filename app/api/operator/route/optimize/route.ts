@@ -1,11 +1,14 @@
 // app/api/operator/route/optimize/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { optimizeStopOrder } from "@/lib/proximity-utils";
+import {
+  orderStopsByNeighborhood,
+  persistRouteSequence,
+} from "@/lib/neighborhood-route";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { stops, startLocation } = body;
+    const { stops, startLocation, persist = true } = body;
 
     if (!Array.isArray(stops) || stops.length === 0) {
       return NextResponse.json(
@@ -17,7 +20,17 @@ export async function POST(req: NextRequest) {
     const startLat = startLocation?.latitude ?? null;
     const startLon = startLocation?.longitude ?? null;
 
-    const optimizedStops = optimizeStopOrder(stops, startLat, startLon);
+    const optimizedStops = orderStopsByNeighborhood(stops, startLat, startLon);
+
+    if (persist) {
+      await persistRouteSequence(
+        optimizedStops.map((stop) => ({
+          id: stop.id,
+          routeSequence: stop.routeSequence,
+          neighborhoodKey: stop.neighborhoodKey,
+        }))
+      );
+    }
 
     const stopsWithCoords = optimizedStops.filter(
       (s: { latitude?: number; longitude?: number }) => s.latitude && s.longitude
@@ -27,7 +40,8 @@ export async function POST(req: NextRequest) {
       optimizedStops,
       totalStops: optimizedStops.length,
       stopsWithCoordinates: stopsWithCoords.length,
-      algorithm: "nearest-neighbor",
+      algorithm: "neighborhood-nearest-neighbor",
+      persisted: persist,
     });
   } catch (error: any) {
     console.error("Error optimizing route:", error);

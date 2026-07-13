@@ -27,6 +27,11 @@ interface Job {
   completionPhotoUrl?: string;
   employeeNotes?: string;
   completedAt?: any;
+  operatorResolution?: string;
+  operatorSkipPhotos?: boolean;
+  employeeCanProceed?: boolean;
+  binsSkipped?: boolean;
+  routeSequence?: number;
 }
 
 interface JobDetailModalProps {
@@ -160,6 +165,12 @@ export function JobDetailModal({
   const isCompleted = job.jobStatus === "completed";
   const isInProgress = job.jobStatus === "in_progress";
   const canComplete = isInProgress || isCompleted;
+  const operatorCleared = Boolean(
+    job.operatorSkipPhotos || job.employeeCanProceed || job.binsSkipped
+  );
+  const awaitingOperator =
+    isInProgress &&
+    (job.flags?.includes("bins_not_present") || job.flags?.includes("access_issue"));
 
   const handleInsidePhotoSelect = (file: File, dataUrl: string) => {
     setInsidePhotoFile(file);
@@ -336,6 +347,41 @@ export function JobDetailModal({
             <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
               {fullAddress}
             </div>
+            {operatorCleared && isCompleted && (
+              <div
+                style={{
+                  marginTop: "0.75rem",
+                  padding: "0.75rem",
+                  background: "#ecfdf5",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: "8px",
+                  fontSize: "0.8125rem",
+                  color: "#065f46",
+                  fontWeight: "600",
+                }}
+              >
+                Cleared by operator — no photos required
+                {job.operatorResolution
+                  ? ` (${job.operatorResolution.replace(/_/g, " ")})`
+                  : ""}
+              </div>
+            )}
+            {awaitingOperator && (
+              <div
+                style={{
+                  marginTop: "0.75rem",
+                  padding: "0.75rem",
+                  background: "#fffbeb",
+                  border: "1px solid #fde68a",
+                  borderRadius: "8px",
+                  fontSize: "0.8125rem",
+                  color: "#92400e",
+                  fontWeight: "600",
+                }}
+              >
+                Operator notified — you can move to the next stop once they clear this job
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}

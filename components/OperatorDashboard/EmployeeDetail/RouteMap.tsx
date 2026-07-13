@@ -29,6 +29,7 @@ interface Stop {
   county?: string;
   customerName?: string;
   scheduledTime?: string;
+  routeSequence?: number;
 }
 
 interface RouteMapProps {
@@ -95,10 +96,17 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
         return;
       }
 
+      const sortedStops = [...stops].sort((a, b) => {
+        if (typeof a.routeSequence === "number" && typeof b.routeSequence === "number") {
+          return a.routeSequence - b.routeSequence;
+        }
+        return 0;
+      });
+
       setGeocoding(true);
       const enrichedStops: Stop[] = [];
 
-      for (const stop of stops) {
+      for (const stop of sortedStops) {
         if (cancelled) return;
         enrichedStops.push(await geocodeStopAddress(stop));
       }
@@ -136,6 +144,7 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
         body: JSON.stringify({
           stops: stopsWithCoords,
           startLocation: employeeLocation || null,
+          persist: true,
         }),
       });
 
@@ -144,7 +153,7 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
         setOptimizedStops(data.optimizedStops || resolvedStops);
         setMessage({
           type: "success",
-          text: `Route optimized! ${data.totalStops} stops ordered by closest distance${employeeLocation ? " from employee location" : ""}`,
+          text: `Route optimized and synced! ${data.totalStops} stops ordered by neighborhood proximity`,
         });
         setTimeout(() => setMessage({ type: null, text: "" }), 5000);
       } else {
@@ -332,7 +341,7 @@ export function RouteMap({ employeeId, stops, employeeLocation, refreshKey = 0 }
                 <Popup>
                   <div style={{ minWidth: "200px" }}>
                     <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: "0.5rem", color: "#111827" }}>
-                      Stop {index + 1}
+                      Stop {stop.routeSequence ?? index + 1}
                     </div>
                     {stop.customerName && (
                       <div style={{ marginBottom: "0.25rem", color: "#374151" }}>
