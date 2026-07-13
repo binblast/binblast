@@ -1,13 +1,89 @@
 // app/api/operator/employees/[employeeId]/proof/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
-import { getTodayDateString } from "@/lib/employee-utils";
+import { getAdminFirestore } from "@/lib/firebase-admin";
+import { getTodayDateString, parseFirestoreTimestamp } from "@/lib/employee-utils";
+import { formatCleaningDateForStorage, parseCleaningDate } from "@/lib/cleaning-schedule";
+import { getJobPhotos } from "@/lib/job-photo-upload";
 
 export const dynamic = "force-dynamic";
 
 function isCompletedCleaning(data: Record<string, unknown>): boolean {
   return data.status === "completed" || data.jobStatus === "completed";
+}
+
+function serializeTimestamp(value: unknown): string | null {
+  const date = parseFirestoreTimestamp(value);
+  return date ? date.toISOString() : null;
+}
+
+function serializeScheduledDate(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === "string") {
+    return value.split("T")[0];
+  }
+  try {
+    return formatCleaningDateForStorage(parseCleaningDate(value));
+  } catch {
+    return null;
+  }
+}
+
+function isValidPhotoUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return /^https?:\/\//i.test(url);
+}
+
+async function buildProofRecord(
+  cleaningId: string,
+  data: Record<string, unknown>,
+  includePhotos = true
+) {
+  const photos = includePhotos ? await getJobPhotos(cleaningId) : [];
+  const serializedPhotos = photos.map((photo) => ({
+    id: photo.id,
+    photoType: photo.photoType,
+    storageUrl: photo.storageUrl,
+    timestamp: photo.timestamp.toISOString(),
+    gpsCoordinates: photo.gpsCoordinates || null,
+  }));
+
+  const previewPhotoUrl =
+    serializedPhotos.find((photo) => photo.photoType === "inside")?.storageUrl ||
+    serializedPhotos.find((photo) => photo.photoType === "outside")?.storageUrl ||
+    serializedPhotos[0]?.storageUrl ||
+    (isValidPhotoUrl(data.insidePhotoUrl as string) ? (data.insidePhotoUrl as string) : null) ||
+    (isValidPhotoUrl(data.outsidePhotoUrl as string) ? (data.outsidePhotoUrl as string) : null) ||
+    (isValidPhotoUrl(data.completionPhotoUrl as string) ? (data.completionPhotoUrl as string) : null);
+
+  return {
+    cleaningId,
+    completionPhotoUrl: isValidPhotoUrl(data.completionPhotoUrl as string)
+      ? (data.completionPhotoUrl as string)
+      : null,
+    insidePhotoUrl: isValidPhotoUrl(data.insidePhotoUrl as string)
+      ? (data.insidePhotoUrl as string)
+      : null,
+    outsidePhotoUrl: isValidPhotoUrl(data.outsidePhotoUrl as string)
+      ? (data.outsidePhotoUrl as string)
+      : null,
+    previewPhotoUrl,
+    photos: serializedPhotos,
+    photoCount: serializedPhotos.length,
+    employeeNotes: (data.employeeNotes as string) || null,
+    operatorNotes: (data.operatorNotes as string) || null,
+    flags: Array.isArray(data.flags) ? data.flags : [],
+    completedAt: serializeTimestamp(data.completedAt || data.operatorResolvedAt),
+    scheduledDate: serializeScheduledDate(data.scheduledDate),
+    scheduledTime: (data.scheduledTime as string) || null,
+    customerName: (data.customerName as string) || (data.userEmail as string) || null,
+    addressLine1: (data.addressLine1 as string) || null,
+    addressLine2: (data.addressLine2 as string) || null,
+    city: (data.city as string) || null,
+    state: (data.state as string) || null,
+    zipCode: (data.zipCode as string) || null,
+    status: (data.status as string) || (data.jobStatus as string) || null,
+    operatorSkipPhotos: data.operatorSkipPhotos === true,
+  };
 }
 
 export async function GET(
@@ -21,94 +97,56 @@ export async function GET(
     const todayOnly = searchParams.get("todayOnly") !== "0";
 
     if (!employeeId) {
-      return NextResponse.json(
-        { error: "Missing employeeId" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 500 }
-      );
-    }
-
-    const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs } = firestore;
-    const today = getTodayDateString();
+    const db = await getAdminFirestore();
 
     if (cleaningId) {
-      const { doc, getDoc } = firestore;
-      const cleaningRef = doc(db, "scheduledCleanings", cleaningId);
-      const cleaningSnap = await getDoc(cleaningRef);
+      const cleaningSnap = await db.collection("scheduledCleanings").doc(cleaningId).get();
 
-      if (!cleaningSnap.exists()) {
-        return NextResponse.json(
-          { error: "Cleaning not found" },
-          { status: 404 }
-        );
+      if (!cleaningSnap.exists) {
+        return NextResponse.json({ error: "Cleaning not found" }, { status: 404 });
       }
 
-      const cleaningData = cleaningSnap.data();
-
-      return NextResponse.json({
-        proof: {
-          cleaningId,
-          completionPhotoUrl: cleaningData.completionPhotoUrl || null,
-          insidePhotoUrl: cleaningData.insidePhotoUrl || null,
-          outsidePhotoUrl: cleaningData.outsidePhotoUrl || null,
-          employeeNotes: cleaningData.employeeNotes || null,
-          operatorNotes: cleaningData.operatorNotes || null,
-          flags: cleaningData.flags || [],
-          completedAt: cleaningData.completedAt || cleaningData.operatorResolvedAt || null,
-          customerName: cleaningData.customerName || cleaningData.userEmail || null,
-          addressLine1: cleaningData.addressLine1 || null,
-          city: cleaningData.city || null,
-          operatorSkipPhotos: cleaningData.operatorSkipPhotos === true,
-        },
-      });
+      const proof = await buildProofRecord(cleaningId, cleaningSnap.data() || {});
+      return NextResponse.json({ proof });
     }
 
-    const cleaningsRef = collection(db, "scheduledCleanings");
-    const assignedQuery = query(
-      cleaningsRef,
-      where("assignedEmployeeId", "==", employeeId)
-    );
+    const today = getTodayDateString();
+    const snapshot = await db
+      .collection("scheduledCleanings")
+      .where("assignedEmployeeId", "==", employeeId)
+      .get();
 
-    const snapshot = await getDocs(assignedQuery);
-    const proofs = snapshot.docs
-      .map((docSnap) => {
-        const data = docSnap.data();
-        return {
-          cleaningId: docSnap.id,
-          completionPhotoUrl: data.completionPhotoUrl || null,
-          insidePhotoUrl: data.insidePhotoUrl || null,
-          outsidePhotoUrl: data.outsidePhotoUrl || null,
-          employeeNotes: data.employeeNotes || null,
-          operatorNotes: data.operatorNotes || null,
-          flags: data.flags || [],
-          completedAt: data.completedAt || data.operatorResolvedAt || null,
-          scheduledDate: data.scheduledDate || null,
-          scheduledTime: data.scheduledTime || null,
-          customerName: data.customerName || data.userEmail || null,
-          addressLine1: data.addressLine1 || null,
-          addressLine2: data.addressLine2 || null,
-          city: data.city || null,
-          state: data.state || null,
-          zipCode: data.zipCode || null,
-          status: data.status || data.jobStatus || null,
-          operatorSkipPhotos: data.operatorSkipPhotos === true,
-        };
+    const proofCandidates = snapshot.docs
+      .map((docSnap: FirebaseFirestore.QueryDocumentSnapshot) => ({
+        id: docSnap.id,
+        data: docSnap.data() as Record<string, unknown>,
+      }))
+      .filter(({ data }: { data: Record<string, unknown> }) => isCompletedCleaning(data))
+      .filter(({ data }: { data: Record<string, unknown> }) => {
+        const scheduledDate = serializeScheduledDate(data.scheduledDate);
+        return todayOnly ? scheduledDate === today : true;
       })
-      .filter((proof) => isCompletedCleaning(proof as Record<string, unknown>))
-      .filter((proof) => (todayOnly ? proof.scheduledDate === today : true))
-      .sort((a, b) => {
-        const aTime = a.completedAt?.seconds || a.completedAt?.toDate?.()?.getTime?.() || 0;
-        const bTime = b.completedAt?.seconds || b.completedAt?.toDate?.()?.getTime?.() || 0;
-        return Number(bTime) - Number(aTime);
-      });
+      .sort(
+        (
+          a: { data: Record<string, unknown> },
+          b: { data: Record<string, unknown> }
+        ) => {
+          const aTime =
+            parseFirestoreTimestamp(a.data.completedAt || a.data.operatorResolvedAt)?.getTime() || 0;
+          const bTime =
+            parseFirestoreTimestamp(b.data.completedAt || b.data.operatorResolvedAt)?.getTime() || 0;
+          return bTime - aTime;
+        }
+      );
+
+    const proofs = await Promise.all(
+      proofCandidates.map(({ id, data }: { id: string; data: Record<string, unknown> }) =>
+        buildProofRecord(id, data)
+      )
+    );
 
     return NextResponse.json({ proofs });
   } catch (error: unknown) {
@@ -141,32 +179,20 @@ export async function POST(
       );
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 500 }
-      );
-    }
+    const db = await getAdminFirestore();
+    const admin = await import("firebase-admin");
+    const cleaningRef = db.collection("scheduledCleanings").doc(cleaningId);
+    const cleaningSnap = await cleaningRef.get();
 
-    const firestore = await safeImportFirestore();
-    const { doc, getDoc, updateDoc, serverTimestamp } = firestore;
-
-    const cleaningRef = doc(db, "scheduledCleanings", cleaningId);
-    const cleaningSnap = await getDoc(cleaningRef);
-
-    if (!cleaningSnap.exists()) {
-      return NextResponse.json(
-        { error: "Cleaning not found" },
-        { status: 404 }
-      );
+    if (!cleaningSnap.exists) {
+      return NextResponse.json({ error: "Cleaning not found" }, { status: 404 });
     }
 
     const updateData: Record<string, unknown> = {
-      updatedAt: serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    if (photoUrl) {
+    if (photoUrl && isValidPhotoUrl(photoUrl)) {
       updateData.completionPhotoUrl = photoUrl;
     }
 
@@ -179,7 +205,7 @@ export async function POST(
       }
     }
 
-    await updateDoc(cleaningRef, updateData);
+    await cleaningRef.update(updateData);
 
     return NextResponse.json({
       success: true,
