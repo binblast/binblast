@@ -5,6 +5,7 @@ import {
   QuoActionName,
   executeQuoAction,
 } from "@/lib/quo-platform-actions";
+import { getServiceAreasPayload } from "@/lib/service-areas";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     success: true,
     service: "Bin Blast QUO Platform Actions",
+    website: process.env.NEXT_PUBLIC_APP_URL || "https://www.binblastco.com",
+    serviceAreas: getServiceAreasPayload(),
     actions: QUO_ACTION_DEFINITIONS,
     auth: {
       header: "Authorization",

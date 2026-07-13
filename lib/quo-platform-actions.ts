@@ -1,5 +1,6 @@
 import { getAdminApp, getAdminFirestore } from "@/lib/firebase-admin";
 import { getPlatformPlanConfigs } from "@/lib/platform-pricing";
+import { getServiceAreasPayload } from "@/lib/service-areas";
 import { buildCompletionUpdateData, formatCleaningDateForStorage } from "@/lib/cleaning-schedule";
 import { normalizePhoneNumber, phoneSearchVariants } from "@/lib/quo-auth";
 
@@ -17,6 +18,7 @@ export type QuoActionName =
   | "create_account"
   | "schedule_cleaning"
   | "get_pricing"
+  | "get_service_areas"
   | "pause_service"
   | "get_account_summary";
 
@@ -140,6 +142,8 @@ export async function executeQuoAction(
       return scheduleCleaning(payload);
     case "get_pricing":
       return getPricing();
+    case "get_service_areas":
+      return getServiceAreas();
     case "pause_service":
       return pauseService(payload);
     default:
@@ -454,7 +458,17 @@ async function getPricing() {
       price: plan.price,
       priceSuffix: plan.priceSuffix,
     })),
-    message: "Current Bin Blast platform pricing.",
+    serviceAreas: getServiceAreasPayload(),
+    message: "Current Bin Blast platform pricing and service areas.",
+  };
+}
+
+async function getServiceAreas() {
+  const payload = getServiceAreasPayload();
+  await logQuoAction("get_service_areas", {});
+  return {
+    ...payload,
+    message: payload.summary,
   };
 }
 
@@ -529,7 +543,12 @@ export const QUO_ACTION_DEFINITIONS = [
   },
   {
     action: "get_pricing",
-    description: "Return current platform subscription pricing.",
+    description: "Return current platform subscription pricing and service areas.",
+    required: [],
+  },
+  {
+    action: "get_service_areas",
+    description: "Return the cities Bin Blast Co. currently services on the website.",
     required: [],
   },
   {

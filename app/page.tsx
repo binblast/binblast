@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import Link from "next/link";
+import { SERVICE_AREAS } from "@/lib/service-areas";
 
 // CRITICAL: Dynamically import all components that use Firebase to prevent import-time errors
 // This ensures Firebase is initialized before these components load
@@ -26,14 +27,6 @@ const ChatWidget = dynamic(() => import("@/components/ChatWidget").then(mod => (
   ssr: false,
   loading: () => null,
 });
-
-const SERVICE_AREAS = [
-  "Peachtree City",
-  "Fayetteville",
-  "Tyrone",
-  "Sharpsburg",
-  "Senoia",
-] as const;
 
 export default function HomePage() {
   return (
