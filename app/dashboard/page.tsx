@@ -119,6 +119,7 @@ interface UserData {
   paymentStatus?: string;
   servicePaused?: boolean;
   binsCount?: number;
+  cleaningCredits?: number;
   role?: string; // "admin" | "customer" | "partner"
   createdAt?: any;
   partnerAccepted?: boolean;
@@ -4338,6 +4339,9 @@ function DashboardPageContent() {
                     lastName: user.lastName,
                     selectedPlan: user.selectedPlan,
                     binsCount: user.binsCount || 1,
+                    stripeCustomerId: user.stripeCustomerId || undefined,
+                    stripeSubscriptionId: user.stripeSubscriptionId || undefined,
+                    cleaningCredits: user.cleaningCredits || 0,
                   }}
                   existingCleaning={(() => {
                     // If user has pending cleaning data, use that to pre-fill the form

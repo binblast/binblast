@@ -1,9 +1,10 @@
 // components/ScheduleCleaningForm.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useFirebase } from "@/lib/firebase-context";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
+import { CleaningLimitModal } from "@/components/CleaningLimitModal";
 import { appendStandardPrepNote } from "@/lib/cleaning-readiness";
 
 interface ScheduledCleaning {
@@ -37,6 +38,25 @@ interface ScheduleCleaningFormProps {
     lastName?: string;
     selectedPlan?: string;
     binsCount?: number;
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
+    cleaningCredits?: number;
+  } | null;
+}
+
+interface EligibilityState {
+  planName: string;
+  scheduledCount: number;
+  baseAllowance: number;
+  canScheduleAnother: boolean;
+  oneTimePrice: number;
+  upgradePreview: {
+    newPlanId: string;
+    newPlanName: string;
+    newPlanPrice: number;
+    proratedAmount: number;
+    daysRemaining: number;
+    cleaningCreditsRollover: number;
   } | null;
 }
 
@@ -110,6 +130,54 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
       1
   );
   const [isRescheduling, setIsRescheduling] = useState(!!existingCleaning);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [eligibility, setEligibility] = useState<EligibilityState | null>(null);
+  const [checkingEligibility, setCheckingEligibility] = useState(false);
+
+  const checkScheduleEligibility = useCallback(async (): Promise<EligibilityState | null> => {
+    try {
+      const response = await fetch(
+        `/api/customer/cleaning-schedule-eligibility?userId=${encodeURIComponent(userId)}`
+      );
+      if (!response.ok) {
+        return null;
+      }
+      const data = await response.json();
+      return {
+        planName: data.planName,
+        scheduledCount: data.allocation?.scheduledCount || 0,
+        baseAllowance: data.allocation?.baseAllowance || 0,
+        canScheduleAnother: Boolean(data.allocation?.canScheduleAnother),
+        oneTimePrice: data.options?.oneTimeCleaning?.price || 35,
+        upgradePreview: data.options?.upgradeToBiWeekly || null,
+      };
+    } catch (err) {
+      console.error("[ScheduleCleaningForm] Eligibility check failed:", err);
+      return null;
+    }
+  }, [userId]);
+
+  const handleScheduleAnotherClick = async () => {
+    if (isOpen) {
+      setIsOpen(false);
+      return;
+    }
+
+    if (existingCleaning) {
+      setCheckingEligibility(true);
+      const result = await checkScheduleEligibility();
+      setCheckingEligibility(false);
+
+      if (result && !result.canScheduleAnother) {
+        setEligibility(result);
+        setShowLimitModal(true);
+        return;
+      }
+    }
+
+    setIsRescheduling(false);
+    setIsOpen(true);
+  };
 
   // Update form fields when existingCleaning prop changes (e.g., when pending data is available)
   useEffect(() => {
@@ -303,6 +371,18 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
     setError(null);
 
     try {
+      let eligibilityResult: EligibilityState | null = null;
+
+      if (!isRescheduling) {
+        eligibilityResult = await checkScheduleEligibility();
+        if (eligibilityResult && !eligibilityResult.canScheduleAnother) {
+          setEligibility(eligibilityResult);
+          setShowLimitModal(true);
+          setLoading(false);
+          return;
+        }
+      }
+
       const { getDbInstance } = await import("@/lib/firebase");
       const db = await getDbInstance();
       
@@ -403,6 +483,21 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
         };
 
         await addDoc(collection(db, "scheduledCleanings"), scheduledCleaning);
+
+        if (eligibilityResult && eligibilityResult.scheduledCount >= eligibilityResult.baseAllowance) {
+          try {
+            const userDocRef = doc(db, "users", userId);
+            const currentCredits = userData?.cleaningCredits || 0;
+            if (currentCredits > 0) {
+              await updateDoc(userDocRef, {
+                cleaningCredits: Math.max(0, currentCredits - 1),
+                updatedAt: serverTimestamp(),
+              });
+            }
+          } catch (creditErr) {
+            console.error("[ScheduleCleaningForm] Error decrementing cleaning credit:", creditErr);
+          }
+        }
         
         // Clear pending cleaning confirmation data if it exists (user scheduled via form instead of modal)
         try {
@@ -527,12 +622,35 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, exi
       )}
       
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleScheduleAnotherClick}
         className="btn btn-primary"
         style={{ marginBottom: "1.5rem" }}
+        disabled={checkingEligibility}
       >
-        {isOpen ? "Cancel" : existingCleaning ? "Schedule Another Cleaning" : "Schedule Cleaning"}
+        {checkingEligibility
+          ? "Checking..."
+          : isOpen
+            ? "Cancel"
+            : existingCleaning
+              ? "Schedule Another Cleaning"
+              : "Schedule Cleaning"}
       </button>
+
+      {eligibility && (
+        <CleaningLimitModal
+          isOpen={showLimitModal}
+          onClose={() => setShowLimitModal(false)}
+          planName={eligibility.planName}
+          scheduledCount={eligibility.scheduledCount}
+          baseAllowance={eligibility.baseAllowance}
+          oneTimePrice={eligibility.oneTimePrice}
+          upgradePreview={eligibility.upgradePreview}
+          userId={userId}
+          onPurchaseComplete={() => {
+            setShowLimitModal(false);
+          }}
+        />
+      )}
 
       {isOpen && (
         <div style={{

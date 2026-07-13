@@ -74,6 +74,25 @@ export async function POST(req: NextRequest) {
             console.error("[Webhook] Error processing extra bin payment:", extraBinError);
           }
         }
+
+        if (
+          session.metadata?.type === "one_time_cleaning" &&
+          session.payment_status === "paid" &&
+          session.metadata?.userId
+        ) {
+          try {
+            const { processOneTimeCleaningPurchase } = await import("@/lib/one-time-cleaning-purchase");
+            const result = await processOneTimeCleaningPurchase(session);
+            console.log("[Webhook] One-time cleaning payment processed:", {
+              sessionId: session.id,
+              userId: session.metadata.userId,
+              cleaningCredits: result.cleaningCredits,
+              alreadyProcessed: result.alreadyProcessed,
+            });
+          } catch (oneTimeCleaningError) {
+            console.error("[Webhook] Error processing one-time cleaning payment:", oneTimeCleaningError);
+          }
+        }
         
         // Get customer email from session
         const customerEmail = session.customer_details?.email;
