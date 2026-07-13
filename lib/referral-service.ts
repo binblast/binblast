@@ -598,6 +598,8 @@ export async function awardReferralCreditsForUser(
 
   await db.runTransaction(async (transaction: any) => {
     const freshReferral = await transaction.get(referralDoc.ref);
+    const referrerSnapshot = await transaction.get(referrerRef);
+
     if (!freshReferral.exists || freshReferral.data()?.status !== "PENDING") {
       return;
     }
@@ -630,7 +632,6 @@ export async function awardReferralCreditsForUser(
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    const referrerSnapshot = await transaction.get(referrerRef);
     if (referrerSnapshot.exists) {
       const currentCount = referrerSnapshot.data()?.referralCount || 0;
       transaction.update(referrerRef, {
@@ -664,74 +665,77 @@ export async function syncPendingReferralsForReferrer(referrerId: string): Promi
   let awarded = 0;
 
   for (const referralDoc of pendingReferrals.docs) {
-    const referralData = referralDoc.data();
-    const { referredUserId, referredUserDoc } = await resolveReferredUserForReferral(
-      referralData
-    );
-
-    if (!referredUserId || !referredUserDoc) {
-      const referredUserEmail =
-        typeof referralData.referredUserEmail === "string"
-          ? referralData.referredUserEmail.trim().toLowerCase()
-          : null;
-
-      if (referredUserEmail) {
-        const stripeCheck = await hasStripeCustomerPaid({ email: referredUserEmail });
-        if (!stripeCheck.hasPaid) continue;
-
-        const db = await getAdminFirestore();
-        const byEmail = await db
-          .collection("users")
-          .where("email", "==", referredUserEmail)
-          .limit(1)
-          .get();
-
-        if (byEmail.empty) continue;
-
-        const paymentCheck = await referredUserHasCompletedPayment({
-          referredUserId: byEmail.docs[0].id,
-          referredUserData: byEmail.docs[0].data() || {},
-          referredUserEmail,
-        });
-        if (!paymentCheck.hasPaid) continue;
-
-        const result = await awardReferralCreditsForUser(byEmail.docs[0].id);
-        if (result.awarded) {
-          awarded += 1;
-        }
-      }
-      continue;
-    }
-
-    if (
-      !referralData.referredUserId ||
-      referralData.referredUserId !== referredUserId
-    ) {
-      const admin = await import("firebase-admin");
-      await referralDoc.ref.set(
-        {
-          referredUserId,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true }
+    try {
+      const referralData = referralDoc.data();
+      const { referredUserId, referredUserDoc } = await resolveReferredUserForReferral(
+        referralData
       );
-    }
 
-    const referredUserData = referredUserDoc.data() || {};
-    const paymentCheck = await referredUserHasCompletedPayment({
-      referredUserId,
-      referredUserData,
-      referredUserEmail:
-        typeof referralData.referredUserEmail === "string"
-          ? referralData.referredUserEmail
-          : null,
-    });
+      if (!referredUserId || !referredUserDoc) {
+        const referredUserEmail =
+          typeof referralData.referredUserEmail === "string"
+            ? referralData.referredUserEmail.trim().toLowerCase()
+            : null;
 
-    if (!paymentCheck.hasPaid) continue;
+        if (referredUserEmail) {
+          const stripeCheck = await hasStripeCustomerPaid({ email: referredUserEmail });
+          if (!stripeCheck.hasPaid) continue;
 
-    const result = await awardReferralCreditsForUser(referredUserId);
-    if (result.awarded) {
-      awarded += 1;
+          const byEmail = await db
+            .collection("users")
+            .where("email", "==", referredUserEmail)
+            .limit(1)
+            .get();
+
+          if (byEmail.empty) continue;
+
+          const paymentCheck = await referredUserHasCompletedPayment({
+            referredUserId: byEmail.docs[0].id,
+            referredUserData: byEmail.docs[0].data() || {},
+            referredUserEmail,
+          });
+          if (!paymentCheck.hasPaid) continue;
+
+          const result = await awardReferralCreditsForUser(byEmail.docs[0].id);
+          if (result.awarded) {
+            awarded += 1;
+          }
+        }
+        continue;
+      }
+
+      if (
+        !referralData.referredUserId ||
+        referralData.referredUserId !== referredUserId
+      ) {
+        const admin = await import("firebase-admin");
+        await referralDoc.ref.set(
+          {
+            referredUserId,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+
+      const referredUserData = referredUserDoc.data() || {};
+      const paymentCheck = await referredUserHasCompletedPayment({
+        referredUserId,
+        referredUserData,
+        referredUserEmail:
+          typeof referralData.referredUserEmail === "string"
+            ? referralData.referredUserEmail
+            : null,
+      });
+
+      if (!paymentCheck.hasPaid) continue;
+
+      const result = await awardReferralCreditsForUser(referredUserId);
+      if (result.awarded) {
+        awarded += 1;
+      }
+    } catch (referralError) {
+      console.error("[Sync Pending Referrals] Failed for referral:", referralDoc.id, referralError);
     }
   }
 
