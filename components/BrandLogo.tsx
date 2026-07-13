@@ -1,0 +1,57 @@
+import Image from "next/image";
+import Link from "next/link";
+
+type BrandLogoVariant = "nav" | "hero" | "footer" | "sidebar";
+type BrandLogoTone = "light" | "dark";
+
+interface BrandLogoProps {
+  variant?: BrandLogoVariant;
+  tone?: BrandLogoTone;
+  href?: string;
+  className?: string;
+  priority?: boolean;
+}
+
+const VARIANTS: Record<
+  BrandLogoVariant,
+  { width: number; height: number; className: string }
+> = {
+  nav: { width: 48, height: 48, className: "brand-logo brand-logo--nav" },
+  hero: { width: 112, height: 112, className: "brand-logo brand-logo--hero" },
+  footer: { width: 128, height: 128, className: "brand-logo brand-logo--footer" },
+  sidebar: { width: 80, height: 80, className: "brand-logo brand-logo--sidebar" },
+};
+
+export function BrandLogo({
+  variant = "nav",
+  tone = "dark",
+  href,
+  className = "",
+  priority = false,
+}: BrandLogoProps) {
+  const config = VARIANTS[variant];
+  const toneClass = tone === "light" ? "brand-logo--on-light" : "brand-logo--on-dark";
+
+  const image = (
+    <span className={`${config.className} ${toneClass} ${className}`.trim()}>
+      <Image
+        src="/bin-blast-mascot.png"
+        alt="Bin Blast Co. mascot logo"
+        width={config.width}
+        height={config.height}
+        priority={priority}
+        className="brand-logo__image"
+      />
+    </span>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className="brand-logo__link" aria-label="Bin Blast Co. home">
+        {image}
+      </Link>
+    );
+  }
+
+  return image;
+}

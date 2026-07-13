@@ -1,4 +1,5 @@
 import { LegalPageLayout } from "@/components/LegalPageLayout";
+import { LegalContactBox, LegalSection } from "@/components/LegalSection";
 
 export const metadata = {
   title: "Privacy Policy | Bin Blast Co.",
@@ -7,59 +8,50 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPageLayout title="Privacy Policy" lastUpdated="July 13, 2026">
-      <section style={{ marginBottom: "2rem" }}>
-        <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.75rem" }}>Information We Collect</h2>
+    <LegalPageLayout title="Privacy Policy" lastUpdated="July 13, 2026" activePath="/privacy">
+      <LegalSection title="Information We Collect">
         <p>
           We collect information you provide when signing up or scheduling service, including name, email, phone number,
           service address, payment details (processed by Stripe), and communication preferences.
         </p>
-      </section>
+      </LegalSection>
 
-      <section style={{ marginBottom: "2rem" }}>
-        <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.75rem" }}>How We Use Information</h2>
-        <ul style={{ paddingLeft: "1.25rem" }}>
+      <LegalSection title="How We Use Information">
+        <ul>
           <li>Provide and schedule bin cleaning services</li>
           <li>Process payments and manage subscriptions</li>
           <li>Send service confirmations, reminders, and account updates</li>
           <li>Improve operations, support, and customer experience</li>
         </ul>
-      </section>
+      </LegalSection>
 
-      <section style={{ marginBottom: "2rem" }}>
-        <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.75rem" }}>Sharing</h2>
+      <LegalSection title="Sharing">
         <p>
           We do not sell your personal information. We share data only with service providers needed to operate our
           business (for example, payment processing, email delivery, and SMS notifications) and when required by law.
         </p>
-      </section>
+      </LegalSection>
 
-      <section style={{ marginBottom: "2rem" }}>
-        <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.75rem" }}>Security &amp; Retention</h2>
+      <LegalSection title="Security & Retention">
         <p>
           We use industry-standard safeguards to protect account data. We retain information as long as needed to provide
           services, meet legal obligations, and resolve disputes.
         </p>
-      </section>
+      </LegalSection>
 
-      <section style={{ marginBottom: "2rem" }}>
-        <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.75rem" }}>Your Choices</h2>
+      <LegalSection title="Your Choices">
         <p>
           You may update account details in your dashboard or contact us to request access, correction, or deletion of
           personal information, subject to legal and operational requirements.
         </p>
-      </section>
+      </LegalSection>
 
-      <section style={{ marginBottom: "2rem" }}>
-        <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.75rem" }}>Contact</h2>
-        <p>
-          Privacy questions:{" "}
-          <a href="mailto:support@binblastco.com" style={{ color: "inherit" }}>
-            support@binblastco.com
-          </a>
-          .
-        </p>
-      </section>
+      <LegalSection title="Contact">
+        <p>Have a privacy question or data request? Contact us directly.</p>
+        <LegalContactBox title="Privacy requests">
+          Email us for access, correction, or deletion requests related to your personal information.
+        </LegalContactBox>
+      </LegalSection>
     </LegalPageLayout>
   );
 }

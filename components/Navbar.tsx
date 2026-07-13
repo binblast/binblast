@@ -2,11 +2,11 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useFirebase } from "@/lib/firebase-context";
 import { PORTAL_INFO } from "@/lib/user-portal";
+import { BrandLogo } from "@/components/BrandLogo";
 
 type PortalIconType = "customer" | "partner" | "employee" | "command";
 
@@ -486,7 +486,7 @@ export function Navbar() {
         />
       )}
       <div className="nav-container">
-        <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", height: "40px" }}>
+        <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", height: "48px" }}>
           {showTextLogo ? (
             <span
               style={{
@@ -499,33 +499,7 @@ export function Navbar() {
               Bin Blast Co.
             </span>
           ) : (
-            <div
-              style={{
-                width: "100px",
-                height: "40px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                overflow: "hidden",
-                position: "relative",
-                padding: "2px 0",
-              }}
-            >
-              <Image
-                src="/logo.png"
-                alt="Bin Blast Co. Logo"
-                width={100}
-                height={40}
-                style={{
-                  objectFit: "contain",
-                  objectPosition: "left center",
-                  width: "auto",
-                  height: "100%",
-                  maxWidth: "100%",
-                }}
-                priority
-              />
-            </div>
+            <BrandLogo variant="nav" tone="light" />
           )}
         </Link>
         <ul className={`nav-links nav-links--segmented${isMenuOpen ? " active nav-mobile-menu" : ""}`}>

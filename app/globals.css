@@ -8,6 +8,7 @@
 @import './site-mobile.css';
 @import './dashboard-mobile.css';
 @import './messaging-mobile.css';
+@import './legal-pages.css';
 
 /* Ensure full screen coverage */
 html {

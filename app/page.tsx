@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import Link from "next/link";
 import { SERVICE_AREAS } from "@/lib/service-areas";
+import { BrandLogo } from "@/components/BrandLogo";
 
 // CRITICAL: Dynamically import all components that use Firebase to prevent import-time errors
 // This ensures Firebase is initialized before these components load
@@ -532,7 +533,9 @@ export default function HomePage() {
           <div className="container">
             <div className="footer-content">
               <div className="footer-cta">
-                <div className="footer-logo">BIN BLAST CO.</div>
+                <div className="footer-brand-logo">
+                  <BrandLogo variant="footer" tone="dark" href="/" />
+                </div>
                 <h2 className="footer-title">Ready to Get Started?</h2>
                 <p className="footer-description">Book your bin cleaning service today and experience the difference of professionally cleaned bins!</p>
                 <Link href="#pricing" className="btn btn-primary btn-large">Book Your Cleaning Now</Link>

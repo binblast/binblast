@@ -1,49 +1,120 @@
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { BrandLogo } from "@/components/BrandLogo";
+
+const Navbar = dynamic(() => import("@/components/Navbar").then((mod) => mod.Navbar), {
+  ssr: false,
+  loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
+});
+
+const LEGAL_PAGES = [
+  { href: "/terms", label: "Terms of Service" },
+  { href: "/privacy", label: "Privacy Policy" },
+  { href: "/cancellation", label: "Cancellation & Refunds" },
+] as const;
 
 interface LegalPageLayoutProps {
   title: string;
   lastUpdated?: string;
+  activePath: "/terms" | "/privacy" | "/cancellation";
   children: ReactNode;
 }
 
-export function LegalPageLayout({ title, lastUpdated, children }: LegalPageLayoutProps) {
+export function LegalPageLayout({
+  title,
+  lastUpdated,
+  activePath,
+  children,
+}: LegalPageLayoutProps) {
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="container" style={{ maxWidth: "800px", padding: "3rem 1.5rem 4rem" }}>
-        <Link
-          href="/"
-          style={{
-            display: "inline-block",
-            marginBottom: "2rem",
-            color: "var(--primary-color, #2563eb)",
-            textDecoration: "none",
-            fontWeight: 600,
-          }}
-        >
-          ← Back to Bin Blast Co.
-        </Link>
+    <>
+      <Navbar />
+      <main className="legal-page">
+        <header className="legal-hero">
+          <div className="legal-hero__inner">
+            <Link href="/" className="legal-hero__back">
+              ← Back to home
+            </Link>
 
-        <h1 style={{ fontSize: "2rem", fontWeight: 800, marginBottom: "0.5rem", color: "var(--text-dark, #111827)" }}>
-          {title}
-        </h1>
-        {lastUpdated && (
-          <p style={{ color: "#6b7280", marginBottom: "2rem", fontSize: "0.95rem" }}>
-            Last updated: {lastUpdated}
-          </p>
-        )}
+            <div className="legal-hero__brand-row">
+              <BrandLogo variant="hero" tone="light" href="/" priority />
+              <div className="legal-hero__brand-copy">
+                <span className="legal-hero__eyebrow">Bin Blast Co.</span>
+                <h1 className="legal-hero__title">{title}</h1>
+                {lastUpdated && <p className="legal-hero__meta">Last updated: {lastUpdated}</p>}
+              </div>
+            </div>
+          </div>
+        </header>
 
-        <div
-          className="legal-content"
-          style={{
-            lineHeight: 1.7,
-            color: "#374151",
-            fontSize: "1rem",
-          }}
-        >
-          {children}
+        <div className="legal-page__body">
+          <aside className="legal-sidebar" aria-label="Legal documents">
+            <div className="legal-sidebar__card">
+              <div className="legal-sidebar__brand">
+                <BrandLogo variant="sidebar" tone="light" href="/" />
+              </div>
+              <p className="legal-sidebar__label">Legal documents</p>
+              <nav className="legal-sidebar__nav">
+                {LEGAL_PAGES.map((page) => (
+                  <Link
+                    key={page.href}
+                    href={page.href}
+                    className={`legal-sidebar__link${
+                      activePath === page.href ? " legal-sidebar__link--active" : ""
+                    }`}
+                    aria-current={activePath === page.href ? "page" : undefined}
+                  >
+                    {page.label}
+                  </Link>
+                ))}
+              </nav>
+              <div className="legal-sidebar__cta">
+                <p>Ready to book your next cleaning?</p>
+                <Link href="/#pricing">View plans &amp; pricing</Link>
+              </div>
+            </div>
+          </aside>
+
+          <article className="legal-content-card">
+            <nav className="legal-mobile-nav" aria-label="Legal documents">
+              <div className="legal-mobile-nav__scroll">
+                {LEGAL_PAGES.map((page) => (
+                  <Link
+                    key={page.href}
+                    href={page.href}
+                    className={`legal-mobile-nav__pill${
+                      activePath === page.href ? " legal-mobile-nav__pill--active" : ""
+                    }`}
+                    aria-current={activePath === page.href ? "page" : undefined}
+                  >
+                    {page.label}
+                  </Link>
+                ))}
+              </div>
+            </nav>
+            {children}
+          </article>
         </div>
-      </div>
-    </main>
+
+        <footer className="legal-page-footer">
+          <div className="legal-page-footer__inner">
+            <BrandLogo variant="footer" tone="dark" href="/" />
+            <div className="legal-page-footer__links">
+              {LEGAL_PAGES.map((page) => (
+                <Link key={page.href} href={page.href}>
+                  {page.label}
+                </Link>
+              ))}
+              <Link href="/">Home</Link>
+              <Link href="/#pricing">Pricing</Link>
+            </div>
+            <p className="legal-page-footer__copy">
+              &copy; {new Date().getFullYear()} Bin Blast Co. All rights reserved.
+            </p>
+          </div>
+        </footer>
+      </main>
+    </>
   );
 }

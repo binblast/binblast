@@ -17,8 +17,8 @@ export const metadata: Metadata = {
   title: "Bin Blast Co. - Professional Trash Bin Cleaning Service",
   description: "Professional trash bin cleaning service that keeps your bins fresh, sanitized, and odor-free.",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/bin-blast-mascot.png",
+    apple: "/bin-blast-mascot.png",
   },
 };
 
@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/logo.png" type="image/png" />
+        <link rel="icon" href="/bin-blast-mascot.png" type="image/png" />
       </head>
       <body>
         {/* Error boundary to catch Firebase errors and allow site to render */}
