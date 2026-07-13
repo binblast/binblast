@@ -449,9 +449,13 @@ export default function EmployeeDashboardPage() {
     if (!employee) return;
 
     try {
-      setSelectedJob((prev) =>
-        prev?.id === jobId ? { ...prev, jobStatus: "in_progress" } : prev
-      );
+      setSelectedJob((prev) => {
+        if (prev?.id === jobId) {
+          return { ...prev, jobStatus: "in_progress" };
+        }
+        const match = jobs.find((job) => job.id === jobId);
+        return match ? { ...match, jobStatus: "in_progress" } : prev;
+      });
       setWorkflowStep("photos");
 
       const response = await fetch(`/api/employee/jobs/${jobId}/start`, {
@@ -475,6 +479,7 @@ export default function EmployeeDashboardPage() {
         }
         return { ...prev, jobStatus: "in_progress" };
       });
+      setWorkflowStep("photos");
       setIsModalOpen(true);
     } catch (error: any) {
       setSelectedJob((prev) =>
@@ -487,9 +492,11 @@ export default function EmployeeDashboardPage() {
   const handleSelectJob = (job: Job) => {
     setSelectedJob(job);
     if (job.jobStatus === "in_progress" || job.jobStatus === "completed") {
+      setWorkflowStep(job.jobStatus === "in_progress" ? "photos" : undefined);
       setIsModalOpen(true);
     } else {
       setIsModalOpen(false);
+      setWorkflowStep(undefined);
     }
   };
 
@@ -809,20 +816,19 @@ export default function EmployeeDashboardPage() {
                 onCompleteJob={handleCompleteJob}
                 employeeId={employee.id}
                 onWorkflowStepClick={(stepId, jobId) => {
-                  // Handle workflow step clicks for custom navigation
-                  if (stepId === 'uploadPhotos' && jobId) {
-                    const job = jobs.find(j => j.id === jobId);
-                    if (job) {
+                  if (stepId === "uploadPhotos" && jobId) {
+                    const job = jobs.find((j) => j.id === jobId);
+                    if (job?.jobStatus === "in_progress") {
                       setSelectedJob(job);
+                      setWorkflowStep("photos");
                       setIsModalOpen(true);
-                      // JobDetailModal will handle focusing on photos
                     }
-                  } else if (stepId === 'completeJob' && jobId) {
-                    const job = jobs.find(j => j.id === jobId);
-                    if (job) {
+                  } else if (stepId === "completeJob" && jobId) {
+                    const job = jobs.find((j) => j.id === jobId);
+                    if (job?.jobStatus === "in_progress") {
                       setSelectedJob(job);
+                      setWorkflowStep("complete");
                       setIsModalOpen(true);
-                      // JobDetailModal will handle focusing on completion
                     }
                   }
                 }}
@@ -937,7 +943,6 @@ export default function EmployeeDashboardPage() {
           setSelectedJob(null);
           setWorkflowStep(undefined);
         }}
-        onStartJob={handleStartJob}
         onCompleteJob={handleCompleteJob}
         onFlagJob={handleFlagJob}
         employeeId={employee.id}

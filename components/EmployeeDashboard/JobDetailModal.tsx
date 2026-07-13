@@ -31,15 +31,13 @@ interface JobDetailModalProps {
   job: Job | null;
   isOpen: boolean;
   onClose: () => void;
-  onStartJob: (jobId: string) => Promise<void>;
-        onCompleteJob: (
+  onCompleteJob: (
     jobId: string,
     data: {
       completionPhotoUrl?: string;
       insidePhotoUrl?: string;
       outsidePhotoUrl?: string;
       employeeNotes?: string;
-      binCount?: number;
       stickerStatus?: StickerStatus;
       stickerPlaced?: boolean;
     }
@@ -54,7 +52,6 @@ export function JobDetailModal({
   job,
   isOpen,
   onClose,
-  onStartJob,
   onCompleteJob,
   onFlagJob,
   employeeId,
@@ -151,32 +148,16 @@ export function JobDetailModal({
 
   if (!isOpen || !job) return null;
 
+  const isPending = !job.jobStatus || job.jobStatus === "pending";
+  if (isPending) return null;
+
   const fullAddress = `${job.addressLine1}${
     job.addressLine2 ? `, ${job.addressLine2}` : ""
   }, ${job.city}, ${job.state} ${job.zipCode}`;
 
   const isCompleted = job.jobStatus === "completed";
   const isInProgress = job.jobStatus === "in_progress";
-  const canStart = job.jobStatus === "pending" || !job.jobStatus;
   const canComplete = isInProgress || isCompleted;
-
-  const handleStartJob = async () => {
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      await onStartJob(job.id);
-      if (onStepComplete) {
-        onStepComplete("startJob");
-      }
-      setTimeout(() => {
-        photoSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 150);
-    } catch (err: any) {
-      setError(err.message || "Failed to start job");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleInsidePhotoSelect = (file: File, dataUrl: string) => {
     setInsidePhotoFile(file);
@@ -630,23 +611,6 @@ export function JobDetailModal({
           </>
         )}
 
-        {/* Pending job instructions */}
-        {!isCompleted && canStart && (
-          <div
-            style={{
-              marginBottom: "1rem",
-              padding: "0.75rem",
-              background: "#eff6ff",
-              borderRadius: "8px",
-              fontSize: "0.875rem",
-              color: "#1d4ed8",
-              lineHeight: 1.5,
-            }}
-          >
-            Go to this address, then press <strong>Start Job</strong> when you arrive. Bin count is set by the customer&apos;s plan ({assignedBinCount} bin{assignedBinCount === 1 ? "" : "s"}).
-          </div>
-        )}
-
         {/* Display uploaded photo if completed */}
         {isCompleted && job.completionPhotoUrl && (
           <div style={{ marginBottom: "1rem" }}>
@@ -674,8 +638,8 @@ export function JobDetailModal({
           </div>
         )}
 
-        {/* Issue Flags */}
-        {!isCompleted && (
+        {/* Issue Flags - only while job is in progress */}
+        {isInProgress && (
           <IssueFlags
             jobId={job.id}
             currentFlags={job.flags || []}
@@ -708,40 +672,6 @@ export function JobDetailModal({
             marginTop: "1.5rem",
           }}
         >
-          {canStart && (
-            <button
-              onClick={handleStartJob}
-              disabled={isSubmitting}
-              style={{
-                flex: 1,
-                minHeight: "48px",
-                padding: "0.75rem 1rem",
-                borderRadius: "8px",
-                border: "none",
-                fontSize: "1rem",
-                fontWeight: "700",
-                color: "#ffffff",
-                background: "#2563eb",
-                cursor: isSubmitting ? "not-allowed" : "pointer",
-                opacity: isSubmitting ? 0.6 : 1,
-                transition: "opacity 0.2s, transform 0.1s",
-              }}
-              onMouseDown={(e) => {
-                if (!isSubmitting) {
-                  e.currentTarget.style.transform = "scale(0.98)";
-                }
-              }}
-              onMouseUp={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-              }}
-            >
-              {isSubmitting ? "Starting..." : "Start Job"}
-            </button>
-          )}
-
           {canComplete && !isCompleted && isInProgress && (
             <button
               onClick={handleCompleteJob}
