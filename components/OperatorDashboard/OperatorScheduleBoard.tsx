@@ -190,10 +190,26 @@ export function OperatorScheduleBoard({
       if (!response.ok) {
         throw new Error(data.error || "Failed to update status");
       }
-      setMessage(`Updated ${job.customerName} to ${status}`);
+      setMessage(`✓ ${job.customerName} marked as ${status}`);
+      window.setTimeout(() => setMessage(null), 5000);
       await onRefresh();
     } catch (statusError: unknown) {
       setError(statusError instanceof Error ? statusError.message : "Failed to update status");
+    }
+  }
+
+  async function handleAssigned(job: ScheduleJob, result?: { employeeName: string; action: "assign" | "unassign" }) {
+    if (result?.action === "assign") {
+      setMessage(`✓ ${job.customerName} assigned to ${result.employeeName}`);
+    } else if (result?.action === "unassign") {
+      setMessage(`✓ ${job.customerName} unassigned`);
+    }
+    setError(null);
+    window.setTimeout(() => setMessage(null), 5000);
+    try {
+      await onRefresh();
+    } catch (refreshError: unknown) {
+      setError(refreshError instanceof Error ? refreshError.message : "Assignment saved, but refresh failed");
     }
   }
 
@@ -441,7 +457,7 @@ export function OperatorScheduleBoard({
                     job={job}
                     staff={staff}
                     onQuickStatus={handleQuickStatus}
-                    onAssigned={onRefresh}
+                    onAssigned={(result) => handleAssigned(job, result)}
                   />
                 ))}
               </div>
@@ -500,7 +516,7 @@ function JobCard({
   job: ScheduleJob;
   staff: ScheduleStaffMember[];
   onQuickStatus: (job: ScheduleJob, status: string) => void;
-  onAssigned: () => void;
+  onAssigned: (result?: { employeeName: string; action: "assign" | "unassign" }) => void;
 }) {
   const status = normalizeJobStatus(job.status, job.jobStatus);
   const isCancelled = status === "cancelled";
@@ -621,6 +637,7 @@ function JobCard({
             staff={staff}
             assignedEmployeeId={job.assignedEmployeeId}
             assignedEmployeeName={job.assignedEmployeeName}
+            customerLabel={job.customerName}
             onAssigned={onAssigned}
           />
         )}
