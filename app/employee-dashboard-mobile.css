@@ -248,11 +248,3 @@
   }
 }
 
-/* Landscape orientation optimizations */
-@media (max-width: 768px) and (orientation: landscape) {
-  .employee-dashboard .daily-mission-card {
-    position: relative !important;
-    top: 0 !important;
-  }
-}
-

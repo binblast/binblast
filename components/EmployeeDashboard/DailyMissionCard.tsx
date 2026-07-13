@@ -63,9 +63,6 @@ export function DailyMissionCard({
         boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
         border: "2px solid #e5e7eb",
         marginBottom: "1.5rem",
-        position: "sticky",
-        top: 0,
-        zIndex: 100,
       }}
     >
       {/* Header */}
