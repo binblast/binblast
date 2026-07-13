@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { OperatorActionButton } from "@/components/OperatorDashboard/operator-ui";
-import { formatClockRange, formatCurrency, formatHours } from "@/lib/operator-fleet-payroll";
+import { formatClockRange, formatHours } from "@/lib/operator-fleet-payroll";
 
 type OperatorListItem = {
   id: string;
@@ -172,7 +172,7 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
               My Shift — Clock In / Out
             </h2>
             <p style={{ margin: "0.35rem 0 0", fontSize: "0.875rem", color: "#6b7280", lineHeight: 1.5 }}>
-              Select your name, then clock in or out. Hours and pay are locked to your clock records — you cannot edit them.
+              Select your name, then clock in or out.
             </p>
             {lastSync && (
               <div style={{ marginTop: "0.35rem", fontSize: "0.75rem", color: "#9ca3af" }}>
@@ -285,8 +285,7 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
                   fontSize: "0.8125rem",
                 }}
               >
-                Sign in as this operator to clock yourself in or out. You can view their locked hours, but only your
-                account can start or end a shift.
+                Sign in as this operator to clock yourself in or out. Only your account can start or end a shift.
               </div>
             )}
 
@@ -309,32 +308,6 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
                     label: "Hours Today",
                     value: formatHours(timecard.todayHours),
                     color: "#2563eb",
-                  },
-                  {
-                    label: "Pay Today",
-                    value:
-                      timecard.hourlyRate > 0
-                        ? formatCurrency(timecard.todayPay)
-                        : "Rate pending",
-                    color: "#15803d",
-                  },
-                  {
-                    label: "Hours This Week",
-                    value: formatHours(timecard.weekHours),
-                    color: "#111827",
-                  },
-                  {
-                    label: "Pay This Week",
-                    value:
-                      timecard.hourlyRate > 0
-                        ? formatCurrency(timecard.weekPay)
-                        : "Rate pending",
-                    color: "#15803d",
-                  },
-                  {
-                    label: "Hourly Rate",
-                    value: timecard.hourlyRate > 0 ? formatCurrency(timecard.hourlyRate) : "Set by owner",
-                    color: "#7c3aed",
                   },
                 ].map((item) => (
                   <div
@@ -359,14 +332,6 @@ export function OperatorSelfClockPanel({ operatorId, operatorName }: OperatorSel
                 <strong style={{ color: "#374151" }}>
                   {formatClockRange(timecard.clockInTime, timecard.clockOutTime, timecard.isClockedIn)}
                 </strong>
-                {timecard.hourlyRate > 0 ? (
-                  <>
-                    {" "}
-                    · Pay calculated at {formatCurrency(timecard.hourlyRate)}/hr (locked)
-                  </>
-                ) : (
-                  <> · Owner must set operator hourly rate in compensation settings</>
-                )}
               </div>
             )}
 
