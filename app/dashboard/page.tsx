@@ -33,6 +33,7 @@ import {
 } from "@/lib/cleaning-readiness";
 import type { ScheduleJob, ScheduleStaffMember } from "@/lib/schedule-board";
 import type { CustomerSubTab } from "@/lib/operator-customers";
+import { PortalBrandHeader } from "@/components/PortalBrandHeader";
 
 const OwnerCommandCenter = dynamic(
   () => import("@/components/OwnerDashboard/OwnerCommandCenter").then((m) => m.OwnerCommandCenter),
@@ -1496,35 +1497,21 @@ function DashboardPageContent() {
           <div className="container">
             <div className="dashboard-shell" style={{ maxWidth: "1400px", margin: "0 auto" }}>
               
-              {/* Operator Header */}
+              <PortalBrandHeader
+                portalTitle="Operator Dashboard"
+                subtitle="Day-to-day operations and customer management"
+              />
               <div
                 className="mobile-stack-header"
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent: "flex-end",
                   alignItems: "flex-start",
                   gap: "1rem",
                   flexWrap: "wrap",
                   marginBottom: "2rem",
                 }}
               >
-                <div>
-                  <h1 style={{ 
-                    fontSize: "clamp(2rem, 5vw, 2.5rem)", 
-                    fontWeight: "700", 
-                    color: "var(--text-dark)",
-                    marginBottom: "0.5rem"
-                  }}>
-                    Operator Dashboard
-                  </h1>
-                  <p style={{ 
-                    fontSize: "1rem", 
-                    color: "#6b7280", 
-                    marginBottom: 0
-                  }}>
-                    Day-to-day operations and customer management
-                  </p>
-                </div>
                 <OperatorDashboardTour
                   activeTab={operatorActiveTab}
                   onTabChange={setOperatorActiveTab}
@@ -2491,26 +2478,22 @@ function DashboardPageContent() {
               marginBottom: "2rem",
               animation: "fadeInUp 0.6s ease-out"
             }}>
-              <h1 style={{ 
-                fontSize: "clamp(2rem, 5vw, 2.5rem)", 
-                fontWeight: "800", 
-                color: "var(--text-dark)",
-                marginBottom: "0.75rem",
-                background: "linear-gradient(135deg, #1f2937 0%, #374151 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text"
-              }}>
-                Welcome Back, {user.firstName || "Bin Blast"}!
-            </h1>
-              <p style={{ 
-                fontSize: "1.125rem", 
-                color: "#6b7280", 
-                marginBottom: "1.5rem",
-                fontWeight: "500"
-              }}>
-                {isOwner ? "Owner Dashboard - Complete business control center" : isAdmin ? "Admin Dashboard - Manage your business operations" : "Here's a quick look at your bin cleaning status."}
-              </p>
+              <PortalBrandHeader
+                portalTitle={
+                  isOwner
+                    ? "Owner Dashboard"
+                    : isAdmin
+                      ? "Admin Dashboard"
+                      : "Customer Dashboard"
+                }
+                subtitle={
+                  isOwner
+                    ? "Complete business control center"
+                    : isAdmin
+                      ? "Manage your business operations"
+                      : `Welcome back, ${user.firstName || "Bin Blast"}! Here's a quick look at your bin cleaning status.`
+                }
+              />
 
               {/* Admin Tab Navigation */}
               {isAdmin && !isOwner && (

@@ -18,6 +18,7 @@ import { EquipmentChecklist } from "@/components/EmployeeDashboard/EquipmentChec
 import { InteractiveWorkflow } from "@/components/EmployeeDashboard/InteractiveWorkflow";
 import { EmployeeEarningsPanel } from "@/components/EmployeeDashboard/EmployeeEarningsPanel";
 import { MessagingCenter } from "@/components/AdminDashboard/MessagingCenter";
+import { PortalBrandHeader } from "@/components/PortalBrandHeader";
 import {
   getEmployeeData,
   ClockInRecord,
@@ -688,6 +689,11 @@ export default function EmployeeDashboardPage() {
           width: "100%",
           boxSizing: "border-box"
         }}>
+          <PortalBrandHeader
+            portalTitle="Employee Dashboard"
+            subtitle={`Welcome back, ${employee.firstName} ${employee.lastName}.`}
+            compact
+          />
           {/* Certification Warning Banner */}
           {certificationStatus && !certificationStatus.isCertified && (
             <div

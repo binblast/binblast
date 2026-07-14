@@ -11,6 +11,7 @@ import {
   buildPartnerTeamLoginLink,
   resolvePartnerCode,
 } from "@/lib/partner-links";
+import { PortalBrandHeader } from "@/components/PortalBrandHeader";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
   ssr: false,
@@ -1002,12 +1003,14 @@ export default function PartnerDashboardPage() {
           }}></div>
           <div className="container" style={{ position: "relative", zIndex: 10 }}>
             <div style={{ maxWidth: "900px" }}>
-              <h1 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: "700", marginBottom: "1rem", letterSpacing: "-0.02em" }}>
-                Welcome Back, {partnerData.businessName}
-              </h1>
-              <p className="partners-hero-subtitle" style={{ fontSize: "1.25rem", color: "#bfdbfe", marginBottom: "1.5rem" }}>
-                Here's how your Bin Blast Co. partnership is performing.
-              </p>
+              <div style={{ marginBottom: "1.5rem" }}>
+              <PortalBrandHeader
+                portalTitle={`Welcome Back, ${partnerData.businessName}`}
+                subtitle="Here's how your Bin Blast Co. partnership is performing."
+                compact
+                onDark
+              />
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
                 <div style={{
                   display: "flex",

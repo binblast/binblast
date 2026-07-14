@@ -93,6 +93,7 @@ html, body {
     text-decoration: none;
     letter-spacing: 0.05em;
     transition: opacity 0.3s;
+    flex-shrink: 0;
 }
 
 .nav-logo:hover {

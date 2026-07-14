@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { PORTAL_INFO } from "@/lib/user-portal";
+import { PortalBrandMark } from "@/components/PortalBrandHeader";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
   ssr: false,
@@ -25,6 +26,9 @@ function LoginForm() {
       <main className="page-main portal-login-shell" style={{ background: "var(--bg-white)" }}>
         <div className="container">
           <div style={{ maxWidth: "720px", margin: "0 auto" }}>
+            <div className="portal-login-brand">
+              <PortalBrandMark />
+            </div>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
               Sign In
             </h1>

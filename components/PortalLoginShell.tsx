@@ -4,6 +4,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { PortalLoginForm } from "@/components/PortalLoginForm";
+import { PortalBrandMark } from "@/components/PortalBrandHeader";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
   ssr: false,
@@ -31,6 +32,9 @@ export function PortalLoginShell({
       <main className="page-main portal-login-shell" style={{ background: "#f9fafb" }}>
         <div className="container">
           <div style={{ maxWidth: "560px", margin: "0 auto" }}>
+            <div className="portal-login-brand">
+              <PortalBrandMark />
+            </div>
             <h1
               className="section-title"
               style={{ textAlign: "center", marginBottom: "0.75rem", fontSize: "clamp(1.75rem, 4vw, 2.25rem)" }}

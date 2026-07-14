@@ -14,6 +14,7 @@ import { OwnerFinancialsHub } from "@/components/OwnerDashboard/OwnerFinancialsH
 import { OwnerTrainingOverview } from "@/components/OwnerDashboard/OwnerTrainingOverview";
 import { OwnerPhotosOverview } from "@/components/OwnerDashboard/OwnerPhotosOverview";
 import { SiteLeadsManagement } from "@/components/OwnerDashboard/SiteLeadsManagement";
+import { PortalBrandHeader } from "@/components/PortalBrandHeader";
 
 const EmployeeStatus = dynamic(
   () => import("@/components/OperatorDashboard/EmployeeStatus").then((m) => m.EmployeeStatus),
@@ -225,25 +226,10 @@ export function OwnerCommandCenter({
   return (
     <div className="owner-command-center">
       {/* Header */}
-      <div style={{ marginBottom: "1.5rem" }}>
-        <h1
-          style={{
-            fontSize: "clamp(1.75rem, 5vw, 2.5rem)",
-            fontWeight: "800",
-            color: "var(--text-dark)",
-            marginBottom: "0.5rem",
-            background: "linear-gradient(135deg, #1f2937 0%, #374151 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          Blast Command Center
-        </h1>
-        <p style={{ fontSize: "1rem", color: "#6b7280", margin: 0 }}>
-          Welcome back, {userName}. Everything your business needs — in one place.
-        </p>
-      </div>
+      <PortalBrandHeader
+        portalTitle="Blast Command Center"
+        subtitle={`Welcome back, ${userName}. Everything your business needs — in one place.`}
+      />
 
       {/* Alert banners */}
       {(unseenQuotesCount > 0 || unseenPartnerCount > 0) && (

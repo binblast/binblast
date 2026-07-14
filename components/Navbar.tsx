@@ -497,6 +497,7 @@ export function Navbar() {
             textDecoration: "none",
             height: isHomePage ? "68px" : "52px",
             minWidth: isHomePage ? "68px" : "52px",
+            flexShrink: 0,
           }}
         >
           <BrandLogo
