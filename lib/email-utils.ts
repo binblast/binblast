@@ -4,9 +4,10 @@ import { CURB_PLACEMENT_MESSAGE } from "@/lib/cleaning-readiness";
 export const EMAIL_LOGO_URL =
   process.env.NEXT_PUBLIC_EMAIL_LOGO_URL || "https://www.binblastco.com/bin-blast-email-logo.png";
 
+export const PARTNER_APPROVAL_TEMPLATE_ID = "template_lm4wzqr";
+
 export const PARTNER_APPROVAL_TEMPLATE_FALLBACKS = [
-  "template_lm4wzqr",
-  "template_t2vtftu",
+  PARTNER_APPROVAL_TEMPLATE_ID,
 ] as const;
 
 export function getPartnerApprovalTemplateCandidates(): string[] {
