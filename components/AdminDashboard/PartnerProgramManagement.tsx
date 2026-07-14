@@ -4,7 +4,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { georgiaCounties } from "@/data/gaCounties";
 import { metroAtlZones } from "@/data/metroAtlZones";
 import { PartnerMiniProfile } from "./PartnerMiniProfile";
@@ -162,11 +162,26 @@ interface PartnerProgramManagementProps {
   userId: string;
 }
 
+function formatLastUpdated(date: Date | null): string {
+  if (!date) return "Not synced yet";
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 10) return "Updated just now";
+  if (seconds < 60) return `Updated ${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `Updated ${minutes}m ago`;
+  return `Updated at ${date.toLocaleTimeString()}`;
+}
+
 export function PartnerProgramManagement({ userId }: PartnerProgramManagementProps) {
   const { toasts, notify, removeToast } = useAdminToast();
   const [applications, setApplications] = useState<PartnerApplication[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [liveConnected, setLiveConnected] = useState(false);
+  const initialSnapshotRef = useRef(true);
+  const knownQueueIdsRef = useRef<Set<string>>(new Set());
   const [activeView, setActiveView] = useState<PartnerViewTab>("queue");
   
   // Filters and search
@@ -248,9 +263,132 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
     }
   }, []);
 
+  const loadData = useCallback(async (options?: { silent?: boolean }) => {
+    try {
+      if (options?.silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
+      const appsResponse = await fetchWithAuth("/api/admin/partners/applications");
+      const appsData = await appsResponse.json();
+      if (appsData.success) {
+        const normalized = (appsData.applications || []).map(normalizeApplication);
+        setApplications(normalized);
+        knownQueueIdsRef.current = new Set(
+          normalized
+            .filter((app: PartnerApplication) => {
+              const status = getApplicationDisplayStatus(app);
+              return status === "pending" || status === "hold";
+            })
+            .map((app: PartnerApplication) => app.id)
+        );
+      }
+      
+      const partnersResponse = await fetchWithAuth("/api/admin/partners/list");
+      const partnersData = await partnersResponse.json();
+      if (partnersData.success) {
+        setPartners(partnersData.partners || []);
+      }
+
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error("Error loading partner data:", err);
+      notify("Failed to refresh partner data", "error");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [notify]);
+
+  async function handleRefresh() {
+    await loadData({ silent: true });
+    notify("Partner program refreshed", "success");
+  }
+
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
+
+  // Real-time updates when new partner applications are submitted
+  useEffect(() => {
+    let mounted = true;
+    let unsubscribe: (() => void) | undefined;
+
+    async function setupRealtimeListener() {
+      try {
+        const { getDbInstance } = await import("@/lib/firebase");
+        const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+        const firestore = await safeImportFirestore();
+        const { collection, query, onSnapshot } = firestore;
+        const db = await getDbInstance();
+        if (!db || !mounted) return;
+
+        const applicationsQuery = query(collection(db, "partnerApplications"));
+        unsubscribe = onSnapshot(
+          applicationsQuery,
+          (snapshot) => {
+            if (!mounted) return;
+
+            const queueIds = new Set(
+              snapshot.docs
+                .filter((doc) => {
+                  const status = doc.data().status || "pending";
+                  return status === "pending" || status === "hold";
+                })
+                .map((doc) => doc.id)
+            );
+
+            if (initialSnapshotRef.current) {
+              initialSnapshotRef.current = false;
+              knownQueueIdsRef.current = queueIds;
+              setLiveConnected(true);
+              return;
+            }
+
+            let hasNewSubmission = false;
+            queueIds.forEach((id) => {
+              if (!knownQueueIdsRef.current.has(id)) {
+                hasNewSubmission = true;
+              }
+            });
+
+            knownQueueIdsRef.current = queueIds;
+            setLiveConnected(true);
+            loadData({ silent: true });
+
+            if (hasNewSubmission) {
+              notify("New partner application submitted — added to your review queue", "info");
+              setActiveView("queue");
+            }
+          },
+          (error) => {
+            console.error("[Partner Program] Realtime listener error:", error);
+            if (mounted) setLiveConnected(false);
+          }
+        );
+      } catch (error) {
+        console.error("[Partner Program] Failed to start realtime listener:", error);
+        if (mounted) setLiveConnected(false);
+      }
+    }
+
+    setupRealtimeListener();
+
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+      setLiveConnected(false);
+    };
+  }, [loadData, notify]);
+
+  // Keep "Updated Xm ago" label fresh
+  useEffect(() => {
+    if (!lastUpdated) return;
+    const timer = setInterval(() => setLastUpdated((prev) => (prev ? new Date(prev.getTime()) : prev)), 15000);
+    return () => clearInterval(timer);
+  }, [lastUpdated]);
 
   // Listen for approve requests from mini profile
   useEffect(() => {
@@ -318,31 +456,6 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       window.removeEventListener("partnerPauseRequest", handlePauseRequest as EventListener);
     };
   }, [applications, partners]);
-
-  async function loadData() {
-    try {
-      setLoading(true);
-      
-      // Load applications
-      const appsResponse = await fetchWithAuth("/api/admin/partners/applications");
-      const appsData = await appsResponse.json();
-      if (appsData.success) {
-        setApplications((appsData.applications || []).map(normalizeApplication));
-      }
-      
-      // Load partners with stats
-      const partnersResponse = await fetchWithAuth("/api/admin/partners/list");
-      const partnersData = await partnersResponse.json();
-      if (partnersData.success) {
-        setPartners(partnersData.partners || []);
-      }
-      
-      setLoading(false);
-    } catch (err) {
-      console.error("Error loading partner data:", err);
-      setLoading(false);
-    }
-  }
 
   async function handleApprove(applicationId: string) {
     if (!selectedApplication) return;
@@ -677,6 +790,19 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
               : setApplicationSearch(e.target.value)
           }
         />
+        <div className="pp-sync-controls">
+          <span className={`pp-live-dot ${liveConnected ? "connected" : ""}`} title={liveConnected ? "Live updates on" : "Live updates off"} />
+          <span className="pp-last-updated">{formatLastUpdated(lastUpdated)}</span>
+          <button
+            type="button"
+            className={`pp-refresh-btn ${refreshing ? "spinning" : ""}`}
+            onClick={handleRefresh}
+            disabled={refreshing || loading}
+            title="Refresh partner program data"
+          >
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
       </div>
 
       {activeView === "all" && (

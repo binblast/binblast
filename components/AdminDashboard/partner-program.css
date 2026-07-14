@@ -355,6 +355,65 @@
   margin: 0;
 }
 
+.pp-sync-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
+.pp-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d1d5db;
+  flex-shrink: 0;
+}
+
+.pp-live-dot.connected {
+  background: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+  animation: ppPulse 2s infinite;
+}
+
+.pp-last-updated {
+  font-size: 0.72rem;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.pp-refresh-btn {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.pp-refresh-btn:hover:not(:disabled) {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.pp-refresh-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.pp-refresh-btn.spinning {
+  color: #16a34a;
+}
+
+@keyframes ppPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 .pp-export-btn {
   border: none;
   background: #111827;
@@ -538,6 +597,11 @@
   .pp-command-bar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .pp-sync-controls {
+    justify-content: space-between;
+    width: 100%;
   }
 
   .pp-search {
