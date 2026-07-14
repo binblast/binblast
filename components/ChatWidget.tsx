@@ -19,6 +19,16 @@ function getResponseDelay(text: string): number {
   return Math.min(1200, Math.max(450, text.length * 18));
 }
 
+function isMobileViewport(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 768px)").matches;
+}
+
+function isTouchDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+}
+
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -57,9 +67,37 @@ export function ChatWidget() {
 
   useEffect(() => {
     if (isOpen) {
-      const timer = window.setTimeout(() => inputRef.current?.focus(), 180);
-      return () => window.clearTimeout(timer);
+      if (!isTouchDevice()) {
+        const timer = window.setTimeout(() => inputRef.current?.focus(), 180);
+        return () => window.clearTimeout(timer);
+      }
     }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !isMobileViewport()) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const viewport = window.visualViewport;
+    const syncViewport = () => {
+      if (!viewport) return;
+      document.documentElement.style.setProperty("--chat-vv-height", `${viewport.height}px`);
+      document.documentElement.style.setProperty("--chat-vv-offset", `${viewport.offsetTop}px`);
+    };
+
+    syncViewport();
+    viewport?.addEventListener("resize", syncViewport);
+    viewport?.addEventListener("scroll", syncViewport);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.documentElement.style.removeProperty("--chat-vv-height");
+      document.documentElement.style.removeProperty("--chat-vv-offset");
+      viewport?.removeEventListener("resize", syncViewport);
+      viewport?.removeEventListener("scroll", syncViewport);
+    };
   }, [isOpen]);
 
   const runQuickReply = (reply: string) => {
@@ -171,7 +209,19 @@ export function ChatWidget() {
       )}
 
       {isOpen && (
-        <div className="chat-widget-panel" role="dialog" aria-label="Bin Blast Assistant chat">
+        <>
+          <button
+            type="button"
+            className="chat-widget-backdrop"
+            aria-label="Close chat"
+            onClick={() => setIsOpen(false)}
+          />
+          <div
+            className="chat-widget-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Bin Blast Assistant chat"
+          >
           <header className="chat-widget-header">
             <div className="chat-widget-header__brand">
               <h3 className="chat-widget-header__title">Bin Blast Assistant</h3>
@@ -274,11 +324,28 @@ export function ChatWidget() {
               onClick={() => handleSendMessage()}
               disabled={!inputValue.trim() || isTyping}
               className="chat-widget-send"
+              aria-label="Send message"
             >
-              Send
+              <span className="chat-widget-send__label">Send</span>
+              <svg
+                className="chat-widget-send__icon"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
             </button>
           </div>
         </div>
+        </>
       )}
     </>
   );
