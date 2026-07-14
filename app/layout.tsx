@@ -13,6 +13,11 @@ const SiteLeadCaptureGate = dynamic(
   { ssr: false }
 );
 
+const AttributionBootstrap = dynamic(
+  () => import("@/components/AttributionBootstrap").then((mod) => mod.AttributionBootstrap),
+  { ssr: false }
+);
+
 export const metadata: Metadata = {
   title: "Bin Blast Co. - Professional Trash Bin Cleaning Service",
   description: "Professional trash bin cleaning service that keeps your bins fresh, sanitized, and odor-free.",
@@ -43,6 +48,7 @@ export default function RootLayout({
         <FirebaseErrorBoundary>
           <FirebaseGate>
             {children}
+            <AttributionBootstrap />
             <SiteLeadCaptureGate />
           </FirebaseGate>
         </FirebaseErrorBoundary>

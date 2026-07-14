@@ -6,6 +6,7 @@ import { LeadCaptureModal } from "@/components/LeadCaptureModal";
 import {
   hasDismissedSiteLeadCapture,
   hasSubmittedSiteLeadCapture,
+  persistAttributionFromLocation,
   shouldShowSiteLeadCapture,
 } from "@/lib/site-leads";
 
@@ -17,6 +18,11 @@ export function SiteLeadCaptureGate() {
   useEffect(() => {
     setReady(true);
   }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    persistAttributionFromLocation();
+  }, [ready]);
 
   useEffect(() => {
     if (!ready || !pathname) return;

@@ -93,3 +93,24 @@ export function capturePartnerCodeFromLocation(location?: Location): string {
   }
   return code;
 }
+
+/** Build a query string from stored partner/referral codes for link preservation. */
+export function getStoredAttributionQuery(): string {
+  const partner = getCapturedPartnerCode();
+  const ref = getCapturedReferralCode();
+  const params = new URLSearchParams();
+  if (partner) {
+    params.set("partner", partner);
+  } else if (ref) {
+    params.set("ref", ref);
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+/** Home/pricing links that keep partner or referral attribution in the URL. */
+export function buildAttributedHomeHref(sectionId?: string): string {
+  const query = getStoredAttributionQuery();
+  const hash = sectionId ? `#${sectionId}` : "";
+  return `/${query}${hash}`;
+}

@@ -8,12 +8,10 @@ import { CustomQuoteWizard } from "./CustomQuoteWizard";
 import { CustomerOnboardingWizard } from "./CustomerOnboardingWizard";
 import { usePlatformPricing } from "@/hooks/usePlatformPricing";
 import { useFirebase } from "@/lib/firebase-context";
-import { getCapturedReferralCode } from "@/lib/site-leads";
+import { getCapturedReferralCode, getCapturedPartnerCode, persistSiteLeadProfile } from "@/lib/site-leads";
 import {
   captureReferralCodeFromLocation,
   capturePartnerCodeFromLocation,
-  getPartnerCodeFromLocation,
-  getReferralCodeFromLocation,
 } from "@/lib/referral-attribution";
 
 
@@ -129,7 +127,7 @@ export function PricingSection() {
       const referralCode = captureReferralCodeFromLocation();
       const partnerCode = capturePartnerCodeFromLocation();
       setReferralCodeFromUrl(referralCode || getCapturedReferralCode());
-      setPartnerCodeFromUrl(partnerCode);
+      setPartnerCodeFromUrl(partnerCode || getCapturedPartnerCode());
     };
 
     syncAttributionFromLocation();
@@ -248,6 +246,11 @@ export function PricingSection() {
     console.log("[PricingSection] Onboarding completed:", data);
     setOnboardingData(data);
     setShowOnboardingWizard(false);
+    persistSiteLeadProfile({
+      name: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
+      email: data.email || "",
+      phone: data.phone || "",
+    });
   };
 
   const handleConfirmCheckout = async (

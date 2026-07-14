@@ -6,6 +6,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useFirebase } from "@/lib/firebase-context";
 import { PORTAL_INFO } from "@/lib/user-portal";
+import { buildAttributedHomeHref } from "@/lib/referral-attribution";
 import { BrandLogo } from "@/components/BrandLogo";
 
 type PortalIconType = "customer" | "partner" | "employee" | "command";
@@ -352,8 +353,10 @@ export function Navbar() {
   }, []);
 
   const getHomeSectionHref = (sectionId: string) => {
-    return isHomePage ? `#${sectionId}` : `/#${sectionId}`;
+    return isHomePage ? `#${sectionId}` : buildAttributedHomeHref(sectionId);
   };
+
+  const homeRootHref = isHomePage ? "/" : buildAttributedHomeHref();
 
   useEffect(() => {
     const handleAnchorClick = (e: MouseEvent) => {
@@ -488,7 +491,7 @@ export function Navbar() {
       )}
       <div className="nav-container">
         <Link
-          href="/"
+          href={homeRootHref}
           className={`nav-logo${isHomePage ? " nav-logo--home" : ""}`}
           style={{
             display: "flex",
@@ -521,7 +524,7 @@ export function Navbar() {
         <ul className={`nav-links nav-links--segmented${isMenuOpen ? " active nav-mobile-menu" : ""}`}>
           <li>
             {isLoggedIn ? (
-              <Link href="/" className={navPillClass(isHomeActive)}>
+              <Link href={homeRootHref} className={navPillClass(isHomeActive)}>
                 Home
               </Link>
             ) : (
@@ -532,7 +535,7 @@ export function Navbar() {
           </li>
           <li>
             {isLoggedIn ? (
-              <Link href="/#pricing" className={navPillClass(false)}>
+              <Link href={buildAttributedHomeHref("pricing")} className={navPillClass(false)}>
                 Services
               </Link>
             ) : (

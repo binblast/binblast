@@ -6,9 +6,11 @@ import {
   getSiteLeadAttribution,
   markSiteLeadCaptureDismissed,
   markSiteLeadCaptureSubmitted,
-  persistCapturedReferralCode,
+  persistAttributionFromLocation,
+  persistSiteLeadProfile,
   validateSiteLeadCapture,
 } from "@/lib/site-leads";
+import { persistCapturedPartnerCode, persistCapturedReferralCode } from "@/lib/referral-attribution";
 
 interface LeadCaptureModalProps {
   isOpen: boolean;
@@ -26,7 +28,7 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
 
   const attribution = useMemo(() => {
     if (typeof window === "undefined") return getSiteLeadAttribution("");
-    return getSiteLeadAttribution(window.location.search);
+    return persistAttributionFromLocation();
   }, [isOpen]);
 
   useEffect(() => {
@@ -38,19 +40,43 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen || !attribution.referralCode) return;
-    persistCapturedReferralCode(attribution.referralCode);
-    setReferredBy((current) => current || attribution.referralCode);
-  }, [isOpen, attribution.referralCode]);
+    if (!isOpen) return;
 
-  useEffect(() => {
-    if (!isOpen || !attribution.partnerCode) return;
-    setReferredBy((current) => current || attribution.partnerCode);
-  }, [isOpen, attribution.partnerCode]);
+    if (attribution.referralCode) {
+      persistCapturedReferralCode(attribution.referralCode);
+      setReferredBy((current) => current || attribution.referralCode);
+    }
+
+    if (attribution.partnerCode) {
+      persistCapturedPartnerCode(attribution.partnerCode);
+      setReferredBy((current) => current || attribution.partnerCode);
+      setHeardAboutUs((current) => current || "Business or Partner Referral");
+    }
+  }, [isOpen, attribution.referralCode, attribution.partnerCode]);
 
   if (!isOpen) return null;
 
+  function persistCodesFromAttribution() {
+    persistAttributionFromLocation();
+    if (attribution.partnerCode) {
+      persistCapturedPartnerCode(attribution.partnerCode);
+    }
+    if (attribution.referralCode) {
+      persistCapturedReferralCode(attribution.referralCode);
+    }
+  }
+
   function handleDismiss() {
+    persistCodesFromAttribution();
+    if (name.trim() || email.trim() || phone.trim()) {
+      persistSiteLeadProfile({
+        name,
+        email,
+        phone,
+        heardAboutUs,
+        referredBy,
+      });
+    }
     markSiteLeadCaptureDismissed();
     onClose();
   }
@@ -86,10 +112,15 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
         throw new Error(data.error || "Failed to save your information");
       }
 
+      persistCodesFromAttribution();
+      persistSiteLeadProfile({
+        name,
+        email,
+        phone,
+        heardAboutUs,
+        referredBy,
+      });
       markSiteLeadCaptureSubmitted();
-      if (attribution.referralCode) {
-        persistCapturedReferralCode(attribution.referralCode);
-      }
       onClose();
     } catch (submitError: unknown) {
       setError(submitError instanceof Error ? submitError.message : "Something went wrong");
@@ -97,6 +128,8 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
       setLoading(false);
     }
   }
+
+  const detectedCode = attribution.partnerCode || attribution.referralCode;
 
   return (
     <div className="lead-capture-overlay" onClick={handleDismiss}>
@@ -209,9 +242,9 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
                 />
               </div>
 
-              {(attribution.referralCode || attribution.partnerCode) && (
+              {detectedCode && (
                 <div className="lead-capture-referral">
-                  Referral detected: {attribution.referralCode || attribution.partnerCode}
+                  {attribution.partnerCode ? "Partner" : "Referral"} detected: {detectedCode}
                 </div>
               )}
 

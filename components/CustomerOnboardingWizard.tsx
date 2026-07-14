@@ -1,7 +1,8 @@
 // components/CustomerOnboardingWizard.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getSiteLeadProfile, splitFullName } from "@/lib/site-leads";
 
 interface OnboardingData {
   firstName: string;
@@ -51,6 +52,22 @@ export function CustomerOnboardingWizard({
     notes: "",
   });
   const [errors, setErrors] = useState<Partial<Record<keyof OnboardingData, string>>>({});
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const profile = getSiteLeadProfile();
+    if (!profile) return;
+
+    const { firstName, lastName } = splitFullName(profile.name);
+    setFormData((prev) => ({
+      ...prev,
+      firstName: prev.firstName || firstName,
+      lastName: prev.lastName || lastName,
+      email: prev.email || profile.email,
+      phone: prev.phone || profile.phone,
+    }));
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
