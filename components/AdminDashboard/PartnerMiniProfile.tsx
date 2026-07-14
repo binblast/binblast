@@ -377,6 +377,7 @@ export function PartnerMiniProfile({
               <option value="paused">Paused</option>
               <option value="removed">Removed</option>
             </select>
+            {partner.status !== "removed" && (
             <button
               onClick={() => {
                 setActiveTab("messages");
@@ -401,6 +402,7 @@ export function PartnerMiniProfile({
             >
               Send Message
             </button>
+            )}
             {partner.status === "active" && (
               <button
                 onClick={handlePause}
@@ -452,7 +454,7 @@ export function PartnerMiniProfile({
                 Remove Partner
               </button>
             )}
-            {applicationId && activePartnerId && (
+            {applicationId && activePartnerId && partner.status !== "removed" && (
               <button
                 onClick={handleApprove}
                 style={{

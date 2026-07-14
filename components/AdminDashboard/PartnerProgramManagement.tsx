@@ -545,13 +545,18 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
   const displayApplications = activeView === "queue" ? queueApplications : filteredApplications;
 
   // Filter partners
+  const activePartnerCount = partners.filter((partner) => partner.status !== "removed").length;
+
   const filteredPartners = partners.filter(partner => {
     const matchesSearch = !partnerSearch ||
       partner.businessName.toLowerCase().includes(partnerSearch.toLowerCase()) ||
       partner.ownerName.toLowerCase().includes(partnerSearch.toLowerCase()) ||
       partner.email.toLowerCase().includes(partnerSearch.toLowerCase());
     
-    const matchesStatus = partnerStatusFilter === "all" || partner.status === partnerStatusFilter;
+    const matchesStatus =
+      partnerStatusFilter === "all"
+        ? partner.status !== "removed"
+        : partner.status === partnerStatusFilter;
     
     const matchesServiceArea = partnerServiceAreaFilter === "all" || 
       partner.serviceAreas?.some(area => area.toLowerCase().includes(partnerServiceAreaFilter.toLowerCase()));
@@ -635,7 +640,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
             onClick={() => setActiveView("partners")}
           >
             Active Partners
-            <span className="pp-tab-badge">{filteredPartners.length}</span>
+            <span className="pp-tab-badge">{activePartnerCount}</span>
           </button>
           <button
             type="button"

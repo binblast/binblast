@@ -76,6 +76,23 @@ export async function POST(
       updatedAt: serverTimestamp(),
     });
 
+    // Sync linked application(s) so they no longer show as approved
+    const applicationsQuery = query(
+      collection(db, "partnerApplications"),
+      where("linkedPartnerId", "==", partnerId)
+    );
+    const applicationsSnapshot = await getDocs(applicationsQuery);
+    await Promise.all(
+      applicationsSnapshot.docs.map((applicationDoc) =>
+        updateDoc(applicationDoc.ref, {
+          status: "rejected",
+          rejectionReason: `Partner removed by admin: ${reason}`,
+          linkedPartnerId: null,
+          updatedAt: serverTimestamp(),
+        })
+      )
+    );
+
     // Log audit event
     await logPartnerAuditEvent(
       "partner_remove",

@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const { getDbInstance } = await import("@/lib/firebase");
     const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
     const firestore = await safeImportFirestore();
-    const { collection, query, getDocs, orderBy } = firestore;
+    const { collection, query, getDocs, orderBy, doc, getDoc, updateDoc, serverTimestamp } = firestore;
 
     const db = await getDbInstance();
     if (!db) {
@@ -48,9 +48,47 @@ export async function GET(req: NextRequest) {
       ...doc.data(),
     }));
 
+    // Reconcile applications linked to removed partners
+    const reconciledApplications = await Promise.all(
+      applications.map(async (app: Record<string, unknown> & { id: string; linkedPartnerId?: string; status?: string }) => {
+        if (!app.linkedPartnerId || app.status !== "approved") {
+          return app;
+        }
+
+        const linkedPartnerRef = doc(db, "partners", app.linkedPartnerId);
+        const linkedPartnerDoc = await getDoc(linkedPartnerRef);
+
+        const linkedPartner = linkedPartnerDoc.exists() ? linkedPartnerDoc.data() : null;
+        if (linkedPartner?.status === "removed") {
+          const rejectionReason =
+            (app.rejectionReason as string | undefined) ||
+            (linkedPartner.removalReason
+              ? `Partner removed by admin: ${linkedPartner.removalReason}`
+              : "Partner removed by admin");
+
+          // Persist fix for stale application records
+          await updateDoc(doc(db, "partnerApplications", app.id), {
+            status: "rejected",
+            rejectionReason,
+            linkedPartnerId: null,
+            updatedAt: serverTimestamp(),
+          });
+
+          return {
+            ...app,
+            status: "rejected",
+            rejectionReason,
+            linkedPartnerId: null,
+          };
+        }
+
+        return app;
+      })
+    );
+
     return NextResponse.json({
       success: true,
-      applications,
+      applications: reconciledApplications,
     });
   } catch (err: any) {
     console.error("Error fetching partner applications:", err);
