@@ -185,6 +185,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [showMiniProfile, setShowMiniProfile] = useState(false);
   const [miniProfileApplicationId, setMiniProfileApplicationId] = useState<string | undefined>();
+  const [miniProfileApplicationStatus, setMiniProfileApplicationStatus] = useState<ApplicationStatus | undefined>();
   const [selectedPartnerRecordId, setSelectedPartnerRecordId] = useState<string | null>(null);
   
   // Approve modal state
@@ -210,6 +211,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
           if (partnerResponse.ok && partnerData.success && partnerData.partner) {
             setSelectedPartner(partnerData.partner);
             setMiniProfileApplicationId(app.id);
+            setMiniProfileApplicationStatus(getApplicationDisplayStatus(app));
             setSelectedPartnerRecordId(app.linkedPartnerId);
             setShowMiniProfile(true);
             return;
@@ -221,6 +223,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
 
       setSelectedPartner(convertApplicationToPartner(app));
       setMiniProfileApplicationId(app.id);
+      setMiniProfileApplicationStatus(getApplicationDisplayStatus(app));
       setSelectedPartnerRecordId(app.linkedPartnerId || null);
       setShowMiniProfile(true);
     } catch (error: unknown) {
@@ -235,6 +238,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
   const openPartnerProfile = useCallback((partner: Partner, tab?: "messages") => {
     setSelectedPartner(partner);
     setMiniProfileApplicationId(undefined);
+    setMiniProfileApplicationStatus(undefined);
     setSelectedPartnerRecordId(partner.id);
     setShowMiniProfile(true);
     if (tab === "messages") {
@@ -276,6 +280,10 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       const applicationId = e.detail?.applicationId;
       const app = applications.find((a) => a.id === applicationId);
       if (app) {
+        if (getApplicationDisplayStatus(app) === "rejected") {
+          notify("This application was already rejected", "info");
+          return;
+        }
         setSelectedApplication(app);
         setShowRejectModal(true);
       }
@@ -368,6 +376,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
         setShowMiniProfile(false);
         setSelectedPartner(null);
         setMiniProfileApplicationId(undefined);
+        setMiniProfileApplicationStatus(undefined);
         setSelectedPartnerRecordId(null);
         loadData();
       } else {
@@ -388,12 +397,13 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       
       const data = await response.json();
       if (data.success) {
-        notify("Application rejected");
+        notify(data.alreadyRejected ? "This application was already rejected" : "Application rejected", data.alreadyRejected ? "info" : "success");
         setShowRejectModal(false);
         setSelectedApplication(null);
         setShowMiniProfile(false);
         setSelectedPartner(null);
         setMiniProfileApplicationId(undefined);
+        setMiniProfileApplicationStatus(undefined);
         setSelectedPartnerRecordId(null);
         loadData();
       } else {
@@ -476,6 +486,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
         setShowMiniProfile(false);
         setSelectedPartner(null);
         setMiniProfileApplicationId(undefined);
+        setMiniProfileApplicationStatus(undefined);
         setSelectedPartnerRecordId(null);
         loadData();
       } else {
@@ -878,11 +889,13 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
             setShowMiniProfile(false);
             setSelectedPartner(null);
             setMiniProfileApplicationId(undefined);
+            setMiniProfileApplicationStatus(undefined);
             setSelectedPartnerRecordId(null);
           }}
           onUpdate={loadData}
           onNotify={notify}
           applicationId={miniProfileApplicationId}
+          applicationStatus={miniProfileApplicationStatus}
           partnerRecordId={selectedPartnerRecordId}
         />
       )}

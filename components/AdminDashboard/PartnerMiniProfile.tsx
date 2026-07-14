@@ -41,6 +41,7 @@ interface PartnerMiniProfileProps {
   onNotify?: (message: string, type?: "success" | "error" | "info") => void;
   onApprove?: (applicationId: string) => void;
   applicationId?: string;
+  applicationStatus?: "pending" | "approved" | "rejected" | "hold";
   partnerRecordId?: string | null;
 }
 
@@ -54,9 +55,12 @@ export function PartnerMiniProfile({
   onNotify,
   onApprove,
   applicationId,
+  applicationStatus,
   partnerRecordId = null,
 }: PartnerMiniProfileProps) {
   const isApplicationOnly = Boolean(applicationId && !partnerRecordId);
+  const isRejectedApplication = applicationStatus === "rejected";
+  const canReviewApplication = isApplicationOnly && !isRejectedApplication;
   const activePartnerId = partnerRecordId || null;
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [initialTab, setInitialTab] = useState<Tab | null>(null);
@@ -147,7 +151,7 @@ export function PartnerMiniProfile({
   }
 
   function handleRejectApplication() {
-    if (!applicationId) return;
+    if (!applicationId || isRejectedApplication) return;
     window.dispatchEvent(new CustomEvent("partnerRejectRequest", { detail: { applicationId } }));
   }
 
@@ -275,7 +279,7 @@ export function PartnerMiniProfile({
             </div>
           </div>
 
-          {isApplicationOnly && (
+          {canReviewApplication && (
             <div style={{
               marginBottom: "1rem",
               padding: "0.85rem 1rem",
@@ -286,13 +290,28 @@ export function PartnerMiniProfile({
               fontSize: "0.875rem",
               fontWeight: "600",
             }}>
-              Partner application — needs your review. Open this profile to approve, reject, hold, or message.
+              Partner application — needs your review. Approve, reject, or hold from here.
+            </div>
+          )}
+
+          {isRejectedApplication && (
+            <div style={{
+              marginBottom: "1rem",
+              padding: "0.85rem 1rem",
+              borderRadius: "10px",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              color: "#991b1b",
+              fontSize: "0.875rem",
+              fontWeight: "600",
+            }}>
+              This application has already been rejected and is no longer active in the partner program.
             </div>
           )}
 
           {/* Status & Actions */}
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-            {isApplicationOnly ? (
+            {canReviewApplication ? (
               <>
                 <span style={{
                   padding: "0.5rem 0.75rem",
@@ -353,6 +372,8 @@ export function PartnerMiniProfile({
                   Reject Application
                 </button>
               </>
+            ) : isRejectedApplication ? (
+              <span className="pp-status-pill rejected">Rejected</span>
             ) : (
               <>
             <select

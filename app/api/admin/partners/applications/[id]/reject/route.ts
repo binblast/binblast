@@ -47,10 +47,11 @@ export async function POST(
     const applicationData = applicationDoc.data();
 
     if (applicationData.status === "rejected") {
-      return NextResponse.json(
-        { error: "Application already rejected" },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: true,
+        message: "Application already rejected",
+        alreadyRejected: true,
+      });
     }
 
     // Update application status
