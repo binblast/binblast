@@ -1,5 +1,10 @@
 import emailjs from "@emailjs/browser";
-import { EMAIL_LOGO_URL } from "@/lib/email-utils";
+import {
+  EMAIL_LOGO_URL,
+  getPartnerApprovalTemplateCandidates,
+} from "@/lib/email-utils";
+
+export { getPartnerApprovalTemplateCandidates, PARTNER_APPROVAL_TEMPLATE_FALLBACKS } from "@/lib/email-utils";
 
 export function buildPartnerSignupLink(input: {
   email: string;
@@ -37,13 +42,19 @@ function formatSharePercent(value: number): string {
 }
 
 export function getPartnerApprovalEmailConfig() {
+  const templateIds = getPartnerApprovalTemplateCandidates();
   return {
     serviceId: process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || "service_rok6u9h",
-    templateId:
-      process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPROVAL || "template_t2vtftu",
+    templateId: templateIds[0],
+    templateIds,
     publicKey: process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY || "",
     configured: Boolean(process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY),
   };
+}
+
+function isTemplateNotFoundError(error: unknown): boolean {
+  const message = formatEmailJSError(error).toLowerCase();
+  return message.includes("template") && message.includes("not found");
 }
 
 function formatEmailJSError(error: unknown): string {
@@ -63,7 +74,7 @@ function formatEmailJSError(error: unknown): string {
 export async function sendPartnerApprovalEmailClient(
   params: PartnerApprovalEmailParams
 ): Promise<{ success: boolean; error?: string }> {
-  const { serviceId, templateId, publicKey, configured } = getPartnerApprovalEmailConfig();
+  const { serviceId, templateIds, publicKey, configured } = getPartnerApprovalEmailConfig();
 
   if (!configured) {
     return {
@@ -73,30 +84,40 @@ export async function sendPartnerApprovalEmailClient(
     };
   }
 
-  try {
-    await emailjs.send(
-      serviceId,
-      templateId,
-      {
-        to_email: params.email,
-        email: params.email,
-        ownerName: params.ownerName,
-        businessName: params.businessName,
-        referralCode: params.referralCode,
-        serviceAreas: params.serviceAreas,
-        revenueSharePartner: formatSharePercent(params.revenueSharePartner),
-        revenueSharePlatform: formatSharePercent(params.revenueSharePlatform),
-        signupLink: params.signupLink,
-        partnerId: params.partnerId || "",
-        logoUrl: EMAIL_LOGO_URL,
-      },
-      { publicKey }
-    );
+  const templateParams = {
+    to_email: params.email,
+    email: params.email,
+    ownerName: params.ownerName,
+    businessName: params.businessName,
+    referralCode: params.referralCode,
+    serviceAreas: params.serviceAreas,
+    revenueSharePartner: formatSharePercent(params.revenueSharePartner),
+    revenueSharePlatform: formatSharePercent(params.revenueSharePlatform),
+    signupLink: params.signupLink,
+    partnerId: params.partnerId || "",
+    logoUrl: EMAIL_LOGO_URL,
+  };
 
-    return { success: true };
-  } catch (error: unknown) {
-    return { success: false, error: formatEmailJSError(error) };
+  let lastError = "Failed to send approval email";
+
+  for (const templateId of templateIds) {
+    try {
+      await emailjs.send(serviceId, templateId, templateParams, { publicKey });
+      return { success: true };
+    } catch (error: unknown) {
+      lastError = formatEmailJSError(error);
+      console.warn("[Partner Approval Email] Template failed:", templateId, lastError);
+      if (!isTemplateNotFoundError(error)) {
+        return { success: false, error: `${lastError} (template: ${templateId})` };
+      }
+    }
   }
+
+  return {
+    success: false,
+    error:
+      `${lastError} Tried: ${templateIds.join(", ")}. Copy your real Template ID from https://dashboard.emailjs.com/admin/templates and set NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPROVAL in Vercel, then redeploy.`,
+  };
 }
 
 export function buildPartnerApprovalEmailParams(input: {

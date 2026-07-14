@@ -4,6 +4,16 @@ import { CURB_PLACEMENT_MESSAGE } from "@/lib/cleaning-readiness";
 export const EMAIL_LOGO_URL =
   process.env.NEXT_PUBLIC_EMAIL_LOGO_URL || "https://www.binblastco.com/bin-blast-email-logo.png";
 
+export const PARTNER_APPROVAL_TEMPLATE_FALLBACKS = [
+  "template_lm4wzqr",
+  "template_t2vtftu",
+] as const;
+
+export function getPartnerApprovalTemplateCandidates(): string[] {
+  const envId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPROVAL?.trim();
+  return [...new Set([...(envId ? [envId] : []), ...PARTNER_APPROVAL_TEMPLATE_FALLBACKS])];
+}
+
 export interface EmailParams {
   to_email: string;
   [key: string]: any;
@@ -107,10 +117,7 @@ export async function notifyPartnerApproval(partnerData: {
   signupLink: string;
   partnerId?: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const templateId =
-    process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPROVAL || "template_t2vtftu";
-
-  const result = await sendEmailJS(templateId, {
+  const templateParams = {
     to_email: partnerData.email,
     email: partnerData.email,
     ownerName: partnerData.ownerName,
@@ -122,13 +129,29 @@ export async function notifyPartnerApproval(partnerData: {
     signupLink: partnerData.signupLink,
     partnerId: partnerData.partnerId || "",
     logoUrl: EMAIL_LOGO_URL,
-  });
+  };
 
-  if (!result.success) {
-    console.error("[Notify Partner] Failed to send approval email:", result.error);
+  let lastError = "Failed to send approval email";
+  for (const templateId of getPartnerApprovalTemplateCandidates()) {
+    const result = await sendEmailJS(templateId, templateParams);
+    if (result.success) {
+      return result;
+    }
+
+    lastError = result.error || lastError;
+    const normalized = lastError.toLowerCase();
+    if (!(normalized.includes("template") && normalized.includes("not found"))) {
+      console.error("[Notify Partner] Failed to send approval email:", lastError);
+      return result;
+    }
+    console.warn("[Notify Partner] Template not found, trying next:", templateId);
   }
 
-  return result;
+  console.error("[Notify Partner] Failed to send approval email:", lastError);
+  return {
+    success: false,
+    error: `${lastError} Set NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPROVAL in Vercel to your EmailJS template ID.`,
+  };
 }
 
 /**
