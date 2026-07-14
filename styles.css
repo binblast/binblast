@@ -1273,9 +1273,11 @@ section {
 }
 
 .card-cta--starter {
-    background: #ffffff;
-    border: 2px solid #3b82f6;
-    color: #1d4ed8;
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 55%, #2563eb 100%);
+    border: none;
+    color: #ffffff;
+    box-shadow: 0 10px 24px rgba(59, 130, 246, 0.32);
+    font-weight: 800;
 }
 
 .card-cta--featured {
@@ -1312,9 +1314,7 @@ section {
 }
 
 .pricing-card--starter:hover .card-cta--starter {
-    background: #3b82f6;
-    color: #ffffff;
-    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.28);
+    box-shadow: 0 14px 30px rgba(59, 130, 246, 0.42);
 }
 
 .pricing-card--featured:hover .card-cta--featured {
