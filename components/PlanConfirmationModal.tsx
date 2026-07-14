@@ -13,7 +13,7 @@ interface PlanConfirmationModalProps {
   planId: PlanId;
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (applyCredit: boolean, referralCode?: string) => void;
+  onConfirm: (applyCredit: boolean, referralCode?: string, partnerCode?: string) => void;
   userId: string | null;
   availableCredit: number;
   loading?: boolean;
@@ -690,10 +690,15 @@ export function PlanConfirmationModal({
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(
-              applyCredit,
-              referralCodeValid && appliedReferralCode ? appliedReferralCode : undefined
-            )}
+            onClick={() =>
+              onConfirm(
+                applyCredit,
+                referralCodeValid && appliedReferralCode && !isPartnerCode
+                  ? appliedReferralCode
+                  : undefined,
+                isPartnerCode && appliedReferralCode ? appliedReferralCode : undefined
+              )
+            }
             disabled={loading}
             style={{
               flex: 1,

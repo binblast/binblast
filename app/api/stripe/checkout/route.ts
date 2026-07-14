@@ -112,15 +112,23 @@ export async function POST(req: NextRequest) {
 
         const validation = await validateReferralCode(normalizedCode);
         if (!validation.valid) {
-          return NextResponse.json(
-            { error: validation.error || "Invalid referral code" },
-            { status: 400 }
-          );
-        }
+          const partnerMatches =
+            typeof partnerCode === "string" &&
+            normalizeReferralCode(partnerCode) === normalizedCode;
 
-        referralCodeDiscount = REFERRAL_DISCOUNT_AMOUNT;
-        referralCodeToProcess = validation.matchedCode || normalizedCode;
-        console.log("[Checkout] Valid referral code provided:", referralCodeToProcess);
+          if (!partnerMatches) {
+            return NextResponse.json(
+              { error: validation.error || "Invalid referral code" },
+              { status: 400 }
+            );
+          }
+
+          console.log("[Checkout] Skipping referral discount for partner code:", normalizedCode);
+        } else {
+          referralCodeDiscount = REFERRAL_DISCOUNT_AMOUNT;
+          referralCodeToProcess = validation.matchedCode || normalizedCode;
+          console.log("[Checkout] Valid referral code provided:", referralCodeToProcess);
+        }
       } catch (referralError) {
         console.error("[Checkout] Error validating referral code:", referralError);
         return NextResponse.json(

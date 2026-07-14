@@ -250,14 +250,24 @@ export function PricingSection() {
     setShowOnboardingWizard(false);
   };
 
-  const handleConfirmCheckout = async (applyCredit: boolean, referralCode?: string) => {
+  const handleConfirmCheckout = async (
+    applyCredit: boolean,
+    referralCode?: string,
+    partnerCode?: string
+  ) => {
     if (!selectedPlanId) return;
 
     setLoadingPlanId(selectedPlanId);
     setLoadingCredit(true);
 
     try {
-      // Create Stripe checkout session with userId, applyCredit flag, referral code, partner code, and onboarding data
+      const resolvedPartnerCode = partnerCode || partnerCodeFromUrl || undefined;
+      const resolvedReferralCode =
+        referralCode ||
+        (referralCodeFromUrl && referralCodeFromUrl !== resolvedPartnerCode
+          ? referralCodeFromUrl
+          : undefined);
+
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: {
@@ -266,10 +276,10 @@ export function PricingSection() {
         body: JSON.stringify({ 
           planId: selectedPlanId,
           userId: userId || undefined,
-          applyCredit: applyCredit && availableCredit > 0, // Only apply if user selected it and has credit
-          referralCode: referralCode || referralCodeFromUrl || undefined, // Pass referral code if provided
-          partnerCode: partnerCodeFromUrl || undefined, // Pass partner code from URL if present
-          onboardingData: onboardingData || undefined, // Pass onboarding data if available
+          applyCredit: applyCredit && availableCredit > 0,
+          referralCode: resolvedReferralCode,
+          partnerCode: resolvedPartnerCode,
+          onboardingData: onboardingData || undefined,
         }),
       });
 
