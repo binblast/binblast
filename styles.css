@@ -468,6 +468,206 @@ html, body {
     min-height: 44px;
 }
 
+.service-areas-explorer {
+    max-width: 920px;
+    margin: 0 auto;
+}
+
+.service-areas-explorer__hint {
+    text-align: center;
+    margin: 0 auto 1rem;
+    color: #047857;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.service-area-chip--interactive {
+    cursor: pointer;
+    font-family: inherit;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.service-area-chip--interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(22, 163, 74, 0.18);
+    background: #f0fdf4;
+}
+
+.service-area-chip--interactive.active {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    color: #ffffff;
+    border-color: #15803d;
+    box-shadow: 0 10px 24px rgba(22, 163, 74, 0.28);
+}
+
+.service-area-panel {
+    margin: 1.75rem auto 0;
+    padding: clamp(1.25rem, 4vw, 1.75rem);
+    background: #ffffff;
+    border: 1px solid #bbf7d0;
+    border-radius: 20px;
+    box-shadow: 0 16px 40px rgba(22, 163, 74, 0.12);
+    text-align: left;
+    animation: serviceAreaPanelIn 0.35s ease;
+}
+
+@keyframes serviceAreaPanelIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.service-area-panel__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.service-area-panel__county {
+    margin: 0 0 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #16a34a;
+}
+
+.service-area-panel__title {
+    margin: 0 0 0.35rem;
+    font-size: clamp(1.35rem, 4vw, 1.75rem);
+    font-weight: 800;
+    color: #111827;
+}
+
+.service-area-panel__tagline {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.55;
+    font-size: 0.95rem;
+}
+
+.service-area-panel__close {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    background: #f9fafb;
+    color: #374151;
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.service-area-panel__section-title {
+    margin: 0 0 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #111827;
+}
+
+.service-area-timeline {
+    margin-bottom: 1.25rem;
+}
+
+.service-area-timeline__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-left: 2px solid #bbf7d0;
+}
+
+.service-area-timeline__item {
+    position: relative;
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 0.75rem 1rem;
+    padding: 0 0 1.1rem 1rem;
+}
+
+.service-area-timeline__item::before {
+    content: "";
+    position: absolute;
+    left: -6px;
+    top: 0.35rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #16a34a;
+    box-shadow: 0 0 0 3px #ecfdf5;
+}
+
+.service-area-timeline__year {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #15803d;
+    letter-spacing: 0.04em;
+}
+
+.service-area-timeline__content strong {
+    display: block;
+    color: #111827;
+    margin-bottom: 0.25rem;
+    font-size: 0.95rem;
+}
+
+.service-area-timeline__content p {
+    margin: 0;
+    color: #374151;
+    line-height: 1.55;
+    font-size: 0.92rem;
+}
+
+.service-area-facts__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.65rem;
+}
+
+.service-area-facts__list li {
+    position: relative;
+    padding: 0.75rem 0.9rem 0.75rem 2rem;
+    background: #f0fdf4;
+    border: 1px solid #dcfce7;
+    border-radius: 12px;
+    color: #1f2937;
+    line-height: 1.5;
+    font-size: 0.92rem;
+}
+
+.service-area-facts__list li::before {
+    content: "★";
+    position: absolute;
+    left: 0.75rem;
+    top: 0.78rem;
+    color: #16a34a;
+    font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+    .service-area-timeline__item {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+    }
+}
+
 .service-areas-note {
     text-align: center;
     margin: clamp(1.5rem, 4vw, 2rem) auto 0;

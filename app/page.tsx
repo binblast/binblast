@@ -29,6 +29,22 @@ const ChatWidget = dynamic(() => import("@/components/ChatWidget").then(mod => (
   loading: () => null,
 });
 
+const ServiceAreasExplorer = dynamic(
+  () => import("@/components/ServiceAreasExplorer").then((mod) => mod.ServiceAreasExplorer),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="service-areas-grid">
+        {SERVICE_AREAS.map((area) => (
+          <span key={area} className="service-area-chip">
+            {area}
+          </span>
+        ))}
+      </div>
+    ),
+  }
+);
+
 export default function HomePage() {
   return (
     <>
@@ -58,13 +74,7 @@ export default function HomePage() {
             <p className="section-subtitle service-areas-subtitle">
               Bin Blast Co. provides professional curbside bin cleaning across south metro Atlanta. If you live or work in one of these communities, we&apos;ve got you covered.
             </p>
-            <div className="service-areas-grid">
-              {SERVICE_AREAS.map((area) => (
-                <span key={area} className="service-area-chip">
-                  {area}
-                </span>
-              ))}
-            </div>
+            <ServiceAreasExplorer />
             <p className="service-areas-note">
               Don&apos;t see your city?{" "}
               <Link href="#pricing">Book a cleaning</Link> or contact us — we&apos;re expanding and may already be in your neighborhood.
