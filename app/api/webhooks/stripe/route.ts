@@ -656,11 +656,35 @@ export async function POST(req: NextRequest) {
 
             if (!usersSnapshot.empty) {
               const userDoc = usersSnapshot.docs[0];
+              const userData = userDoc.data();
               await updateDoc(userDoc.ref, {
                 paymentStatus: "failed",
                 servicePaused: true,
                 updatedAt: serverTimestamp(),
               });
+
+              const amountDue = invoice.amount_due
+                ? `$${(invoice.amount_due / 100).toFixed(2)}`
+                : "your plan amount";
+
+              const customerEmail =
+                (typeof userData.email === "string" && userData.email) ||
+                (typeof invoice.customer_email === "string" ? invoice.customer_email : "");
+
+              if (customerEmail) {
+                try {
+                  const { notifyPaymentFailed } = await import("@/lib/email-utils");
+                  await notifyPaymentFailed({
+                    email: customerEmail,
+                    firstName: userData.firstName || "there",
+                    lastName: userData.lastName || "",
+                    planName: userData.selectedPlan || userData.planName || "Your plan",
+                    amountDue,
+                  });
+                } catch (paymentEmailError) {
+                  console.error("[Webhook] Failed to send payment failed email:", paymentEmailError);
+                }
+              }
 
               console.log("Invoice payment failed - user updated:", {
                 invoiceId: invoice.id,

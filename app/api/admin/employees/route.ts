@@ -199,7 +199,21 @@ export async function POST(req: NextRequest) {
       lastName,
     });
 
-    // TODO: Send invitation email with temporary password
+    // Send invitation email with temporary password
+    try {
+      const { notifyBinBlastStaffInvitation } = await import("@/lib/email-utils");
+      await notifyBinBlastStaffInvitation({
+        email,
+        firstName,
+        lastName,
+        tempPassword,
+        role: "employee",
+        serviceAreas: Array.isArray(serviceArea) ? serviceArea : serviceArea ? [serviceArea] : [],
+        payRatePerJob: payRatePerJob ? parseFloat(payRatePerJob) : undefined,
+      });
+    } catch (emailError) {
+      console.error("[Admin Employees] Failed to send invitation email:", emailError);
+    }
 
     return NextResponse.json({
       success: true,

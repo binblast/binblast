@@ -147,8 +147,9 @@ export async function POST(
       console.error("Error recording job compensation:", compensationError);
     }
 
+    let nextCleaningId: string | null = null;
     try {
-      await scheduleNextCleaningIfNeeded({
+      nextCleaningId = await scheduleNextCleaningIfNeeded({
         id: jobId,
         userId: jobData.userId,
         userEmail: jobData.userEmail,
@@ -168,6 +169,18 @@ export async function POST(
       });
     } catch (scheduleError: unknown) {
       console.error("Error scheduling next cleaning after completion:", scheduleError);
+    }
+
+    try {
+      const { notifyCleaningCompleteForJob } = await import("@/lib/email-utils");
+      await notifyCleaningCompleteForJob({
+        userId: jobData.userId,
+        userEmail: jobData.userEmail,
+        completedDate: jobData.scheduledDate,
+        nextCleaningId,
+      });
+    } catch (emailError: unknown) {
+      console.error("Error sending cleaning complete email:", emailError);
     }
 
     return NextResponse.json(

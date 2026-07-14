@@ -62,6 +62,20 @@ export async function POST(
     });
 
     // TODO: Send rejection email to applicant
+    try {
+      const { notifyPartnerRejection } = await import("@/lib/email-utils");
+      if (applicationData.email) {
+        await notifyPartnerRejection({
+          email: applicationData.email,
+          ownerName: applicationData.ownerName || applicationData.contactName || "there",
+          businessName: applicationData.businessName || "your business",
+          reason: reason || null,
+        });
+      }
+    } catch (emailError) {
+      console.error("[Admin] Failed to send partner rejection email:", emailError);
+    }
+
     console.log("[Admin] Partner application rejected:", {
       applicationId,
       email: applicationData.email,

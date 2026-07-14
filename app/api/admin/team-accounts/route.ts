@@ -306,6 +306,21 @@ export async function POST(req: NextRequest) {
       upgradedFromRole,
     });
 
+    try {
+      const { notifyBinBlastStaffInvitation } = await import("@/lib/email-utils");
+      await notifyBinBlastStaffInvitation({
+        email: normalizedEmail,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        tempPassword,
+        role,
+        serviceAreas: parsedServiceAreas,
+        payRatePerJob: payRatePerJob ? Number(payRatePerJob) : undefined,
+      });
+    } catch (emailError) {
+      console.error("[Team Accounts] Failed to send invitation email:", emailError);
+    }
+
     const successMessage = linkedExistingLogin
       ? upgradedFromRole
         ? `${role === "operator" ? "Operator" : "Employee"} access added to existing ${upgradedFromRole} account`
