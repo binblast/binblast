@@ -125,7 +125,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
   
   // Filters and search
   const [applicationSearch, setApplicationSearch] = useState("");
-  const [applicationStatusFilter, setApplicationStatusFilter] = useState<string>("pending");
+  const [applicationStatusFilter, setApplicationStatusFilter] = useState<string>("all");
   const [partnerSearch, setPartnerSearch] = useState("");
   const [partnerStatusFilter, setPartnerStatusFilter] = useState<string>("all");
   const [partnerServiceAreaFilter, setPartnerServiceAreaFilter] = useState<string>("all");
@@ -259,6 +259,57 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       }
     } catch (err: any) {
       alert(`Error: ${err.message}`);
+    }
+  }
+
+  async function handleApplicationStatusChange(app: PartnerApplication, newStatus: ApplicationStatus) {
+    const currentStatus = getApplicationDisplayStatus(app);
+    if (newStatus === currentStatus) return;
+
+    if (newStatus === "approved") {
+      setSelectedApplication(app);
+      const areas = app.serviceArea ? app.serviceArea.split(",").map((s) => s.trim()).filter(Boolean) : [];
+      setApproveServiceAreas(areas);
+      setApprovePartnerShare(60);
+      setApprovePlatformShare(40);
+      setShowApproveModal(true);
+      return;
+    }
+
+    if (newStatus === "rejected") {
+      setSelectedApplication(app);
+      setShowRejectModal(true);
+      return;
+    }
+
+    if (newStatus === "hold") {
+      setSelectedApplication(app);
+      setShowHoldModal(true);
+      return;
+    }
+
+    if (newStatus === "pending") {
+      if (app.linkedPartnerId) {
+        alert("This application is already linked to a partner account. Manage it under Active Partners.");
+        return;
+      }
+      if (!confirm(`Move "${app.businessName}" back to Needs Review?`)) return;
+
+      try {
+        const response = await fetchWithAuth(`/api/admin/partners/applications/${app.id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "pending" }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          loadData();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } catch (err: unknown) {
+        alert(`Error: ${err instanceof Error ? err.message : "Failed to update status"}`);
+      }
     }
   }
 
@@ -560,18 +611,24 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.serviceArea}</td>
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.serviceType}</td>
                         <td style={{ padding: "0.75rem" }}>
-                          <span
+                          <select
+                            value={getApplicationDisplayStatus(app)}
+                            onChange={(e) => handleApplicationStatusChange(app, e.target.value as ApplicationStatus)}
                             style={{
-                              display: "inline-block",
-                              padding: "0.45rem 0.75rem",
+                              padding: "0.45rem 0.65rem",
                               borderRadius: "8px",
                               fontSize: "0.78rem",
                               fontWeight: "600",
+                              cursor: "pointer",
+                              minWidth: "150px",
                               ...applicationStatusStyle(app),
                             }}
                           >
-                            {getApplicationStatusLabel(app)}
-                          </span>
+                            <option value="pending">Needs Review</option>
+                            <option value="hold">On Hold</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
                           {app.linkedPartnerId && (
                             <div style={{ fontSize: "0.7rem", color: "#16a34a", marginTop: "0.35rem", fontWeight: "600" }}>
                               Partner account created
