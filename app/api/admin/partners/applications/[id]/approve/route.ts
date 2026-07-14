@@ -221,7 +221,7 @@ export async function POST(
     }
 
     // Generate registration link for partner signup
-    const baseUrl = req.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "https://binblast.vercel.app";
+    const baseUrl = req.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "https://www.binblastco.com";
     const signupLink = `${baseUrl}/register?partner=true`;
     
     console.log("[Admin] Partner approved. Registration link:", signupLink);
@@ -230,7 +230,7 @@ export async function POST(
     (async () => {
       try {
         const { notifyPartnerApproval } = await import("@/lib/email-utils");
-        await notifyPartnerApproval({
+        const emailResult = await notifyPartnerApproval({
           email: applicationData.email,
           ownerName: applicationData.ownerName,
           businessName: applicationData.businessName,
@@ -239,7 +239,11 @@ export async function POST(
           revenueSharePartner: partnerShare,
           revenueSharePlatform: platformShare,
           signupLink,
+          partnerId: partnerRef.id,
         });
+        if (emailResult.success) {
+          console.log("[Admin] Partner approval email sent to:", applicationData.email);
+        }
       } catch (emailError: any) {
         console.error("[Admin] Failed to send approval email:", emailError?.message || emailError);
         // Don't fail the approval if email fails

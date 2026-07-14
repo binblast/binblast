@@ -96,22 +96,29 @@ export async function notifyPartnerApproval(partnerData: {
   revenueSharePartner: number;
   revenueSharePlatform: number;
   signupLink: string;
-}): Promise<void> {
-  // Hardcoded template ID for partner approval email
-  const templateId = "template_lm4wzqr";
+  partnerId?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const templateId =
+    process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPROVAL || "template_t2vtftu";
 
-  // Try to send email (non-blocking)
-  try {
-    await sendEmailJS(templateId, {
-      to_email: partnerData.email,
-      ...partnerData,
-      revenueSharePartner: `${(partnerData.revenueSharePartner * 100).toFixed(0)}`,
-      revenueSharePlatform: `${(partnerData.revenueSharePlatform * 100).toFixed(0)}`,
-    });
-  } catch (error: any) {
-    console.error("[Notify Partner] Failed to send approval email:", error?.message || error);
-    // Don't throw - email failure shouldn't block approval
+  const result = await sendEmailJS(templateId, {
+    to_email: partnerData.email,
+    email: partnerData.email,
+    ownerName: partnerData.ownerName,
+    businessName: partnerData.businessName,
+    referralCode: partnerData.referralCode,
+    serviceAreas: partnerData.serviceAreas,
+    revenueSharePartner: `${(partnerData.revenueSharePartner * 100).toFixed(0)}`,
+    revenueSharePlatform: `${(partnerData.revenueSharePlatform * 100).toFixed(0)}`,
+    signupLink: partnerData.signupLink,
+    partnerId: partnerData.partnerId || "",
+  });
+
+  if (!result.success) {
+    console.error("[Notify Partner] Failed to send approval email:", result.error);
   }
+
+  return result;
 }
 
 /**
