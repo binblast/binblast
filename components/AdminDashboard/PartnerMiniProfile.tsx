@@ -4,6 +4,10 @@
 "use client";
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import {
+  buildPartnerApprovalEmailParams,
+  sendPartnerApprovalEmailClient,
+} from "@/lib/partner-approval-email";
 
 import { useState, useEffect } from "react";
 import { georgiaCounties } from "@/data/gaCounties";
@@ -69,6 +73,7 @@ export function PartnerMiniProfile({
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [resendingApprovalEmail, setResendingApprovalEmail] = useState(false);
 
   const toast = (message: string, type: "success" | "error" | "info" = "success") => {
     if (onNotify) onNotify(message, type);
@@ -165,6 +170,36 @@ export function PartnerMiniProfile({
     onClose();
     const event = new CustomEvent("partnerApproveRequest", { detail: { applicationId } });
     window.dispatchEvent(event);
+  }
+
+  async function handleResendApprovalEmail() {
+    if (!partner) return;
+
+    setResendingApprovalEmail(true);
+    try {
+      const result = await sendPartnerApprovalEmailClient(
+        buildPartnerApprovalEmailParams({
+          email: partner.email,
+          ownerName: partner.ownerName,
+          businessName: partner.businessName,
+          referralCode: partner.partnerCode,
+          serviceAreas: partner.serviceAreas,
+          revenueSharePartner: partner.revenueSharePartner,
+          revenueSharePlatform: partner.revenueSharePlatform,
+          partnerId: activePartnerId || partner.id,
+        })
+      );
+
+      if (result.success) {
+        toast(`Approval email sent to ${partner.email}`);
+      } else {
+        toast(result.error || "Failed to resend approval email", "error");
+      }
+    } catch (error: unknown) {
+      toast(error instanceof Error ? error.message : "Failed to resend approval email", "error");
+    } finally {
+      setResendingApprovalEmail(false);
+    }
   }
 
   if (!isOpen || !partner) return null;
@@ -423,6 +458,26 @@ export function PartnerMiniProfile({
             >
               Send Message
             </button>
+            )}
+            {partner.status === "active" && (
+              <button
+                type="button"
+                onClick={handleResendApprovalEmail}
+                disabled={resendingApprovalEmail}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: "#7c3aed",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "6px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: resendingApprovalEmail ? "not-allowed" : "pointer",
+                  opacity: resendingApprovalEmail ? 0.7 : 1,
+                }}
+              >
+                {resendingApprovalEmail ? "Sending..." : "Resend Approval Email"}
+              </button>
             )}
             {partner.status === "active" && (
               <button

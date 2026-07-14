@@ -3,7 +3,10 @@
 "use client";
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
-import { sendPartnerApprovalEmailClient } from "@/lib/partner-approval-email";
+import {
+  buildPartnerApprovalEmailParams,
+  sendPartnerApprovalEmailClient,
+} from "@/lib/partner-approval-email";
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { georgiaCounties } from "@/data/gaCounties";
@@ -486,30 +489,25 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       
       const data = await response.json();
       if (data.success) {
-        let emailSent = data.emailSent === true;
-        if (!emailSent) {
-          const clientEmailResult = await sendPartnerApprovalEmailClient({
+        const clientEmailResult = await sendPartnerApprovalEmailClient(
+          buildPartnerApprovalEmailParams({
             email: application.email,
             ownerName: application.ownerName,
             businessName: application.businessName,
             referralCode: data.referralCode,
-            serviceAreas: approveServiceAreas.join(", "),
+            serviceAreas: approveServiceAreas,
             revenueSharePartner: approvePartnerShare,
             revenueSharePlatform: approvePlatformShare,
             signupLink: data.signupLink,
             partnerId: data.partnerId,
-          });
-          emailSent = clientEmailResult.success;
-          if (!emailSent) {
-            console.error("[Partner Program] Client approval email failed:", clientEmailResult.error);
-          }
-        }
+          })
+        );
 
         notify(
-          emailSent
+          clientEmailResult.success
             ? "Partner approved and approval email sent!"
-            : "Partner approved, but the approval email could not be sent. Check EmailJS settings.",
-          emailSent ? "success" : "error"
+            : `Partner approved, but email failed: ${clientEmailResult.error || "Unknown EmailJS error"}`,
+          clientEmailResult.success ? "success" : "error"
         );
         setShowApproveModal(false);
         setSelectedApplication(null);

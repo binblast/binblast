@@ -18,6 +18,7 @@ export async function sendEmailJS(
   try {
     const emailjsServiceId = serviceId || process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || "service_rok6u9h";
     const emailjsPublicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
+    const emailjsPrivateKey = process.env.EMAILJS_PRIVATE_KEY;
 
     if (!emailjsPublicKey) {
       console.warn("[EmailJS] Public key not configured");
@@ -25,17 +26,22 @@ export async function sendEmailJS(
     }
 
     const emailjsUrl = "https://api.emailjs.com/api/v1.0/email/send";
-    const emailPayload = {
+    const emailPayload: Record<string, unknown> = {
       service_id: emailjsServiceId,
       template_id: templateId,
       user_id: emailjsPublicKey,
       template_params: templateParams,
     };
 
+    if (emailjsPrivateKey) {
+      emailPayload.accessToken = emailjsPrivateKey;
+    }
+
     const response = await fetch(emailjsUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Origin: process.env.NEXT_PUBLIC_BASE_URL || "https://www.binblastco.com",
       },
       body: JSON.stringify(emailPayload),
     });
