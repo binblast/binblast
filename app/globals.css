@@ -9,6 +9,7 @@
 @import './dashboard-mobile.css';
 @import './messaging-mobile.css';
 @import './legal-pages.css';
+@import './chat-widget.css';
 
 /* Ensure full screen coverage */
 html {
