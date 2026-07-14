@@ -981,45 +981,65 @@ section {
 
 /* STARTER — Monthly entry */
 .pricing-card--starter {
-    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-    border-color: #dbeafe;
-    box-shadow: 0 12px 32px rgba(59, 130, 246, 0.08);
+    background: linear-gradient(165deg, #bfdbfe 0%, #dbeafe 42%, #eff6ff 100%);
+    border: 2px solid #60a5fa;
+    box-shadow:
+        0 14px 36px rgba(59, 130, 246, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .pricing-card--starter:hover {
-    border-color: #93c5fd;
-    box-shadow: 0 18px 40px rgba(59, 130, 246, 0.14);
+    border-color: #3b82f6;
+    box-shadow:
+        0 20px 44px rgba(59, 130, 246, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .pricing-tier-badge--starter {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border: 1px solid #bfdbfe;
+    background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    color: #ffffff;
+    border: 1px solid #93c5fd;
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+}
+
+.pricing-card--starter .plan-name {
+    color: #1e3a8a;
 }
 
 .pricing-card--starter .price-big {
     color: #1d4ed8;
 }
 
+.pricing-card--starter .price-sub,
+.pricing-card--starter .price-extra {
+    color: #1e40af;
+}
+
+.pricing-card--starter .pricing-list li {
+    color: #1e3a8a;
+}
+
 .pricing-card--starter .pricing-list li::before {
-    color: #3b82f6;
+    color: #2563eb;
 }
 
 /* FEATURED — Bi-Weekly hero */
 .pricing-card--featured {
-    background: linear-gradient(165deg, #ecfdf5 0%, #ffffff 48%, #f0fdf4 100%);
-    border: 2px solid #22c55e;
+    background: linear-gradient(165deg, #86efac 0%, #bbf7d0 38%, #dcfce7 72%, #ecfdf5 100%);
+    border: 2px solid #16a34a;
     box-shadow:
-        0 22px 50px rgba(22, 163, 74, 0.18),
-        0 0 0 1px rgba(34, 197, 94, 0.08);
+        0 22px 50px rgba(22, 163, 74, 0.24),
+        0 0 0 1px rgba(34, 197, 94, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.55);
     z-index: 2;
 }
 
 .pricing-card--featured:hover {
-    border-color: #16a34a;
+    border-color: #15803d;
     box-shadow:
-        0 28px 56px rgba(22, 163, 74, 0.24),
-        0 0 0 1px rgba(34, 197, 94, 0.12);
+        0 28px 56px rgba(22, 163, 74, 0.32),
+        0 0 0 1px rgba(34, 197, 94, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .pricing-card--featured.popular {
@@ -1033,8 +1053,21 @@ section {
     box-shadow: 0 8px 20px rgba(22, 163, 74, 0.35);
 }
 
+.pricing-card--featured .plan-name {
+    color: #14532d;
+}
+
 .pricing-card--featured .price-big {
     color: #15803d;
+}
+
+.pricing-card--featured .price-sub,
+.pricing-card--featured .price-extra {
+    color: #166534;
+}
+
+.pricing-card--featured .pricing-list li {
+    color: #14532d;
 }
 
 .pricing-card--featured .pricing-list li::before {
@@ -1043,19 +1076,21 @@ section {
 
 /* ELITE — Commercial / highest earning */
 .pricing-card--elite {
-    background: linear-gradient(145deg, #1e293b 0%, #0f172a 55%, #111827 100%);
-    border: 1px solid rgba(251, 191, 36, 0.35);
+    background:
+        radial-gradient(ellipse 130% 90% at 50% -15%, rgba(251, 191, 36, 0.28) 0%, transparent 58%),
+        linear-gradient(145deg, #475569 0%, #1e293b 48%, #0f172a 100%);
+    border: 2px solid rgba(251, 191, 36, 0.55);
     box-shadow:
-        0 20px 48px rgba(15, 23, 42, 0.35),
-        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        0 20px 48px rgba(15, 23, 42, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
     color: #f8fafc;
 }
 
 .pricing-card--elite:hover {
-    border-color: rgba(251, 191, 36, 0.65);
+    border-color: rgba(251, 191, 36, 0.85);
     box-shadow:
-        0 26px 54px rgba(15, 23, 42, 0.42),
-        0 0 24px rgba(251, 191, 36, 0.12);
+        0 26px 54px rgba(15, 23, 42, 0.48),
+        0 0 28px rgba(251, 191, 36, 0.18);
 }
 
 .pricing-tier-badge--elite {
@@ -1086,14 +1121,18 @@ section {
 
 /* VALUE — Bi-monthly yearly */
 .pricing-card--value {
-    background: linear-gradient(180deg, #ecfeff 0%, #ffffff 72%);
-    border: 1px solid #67e8f9;
-    box-shadow: 0 14px 36px rgba(6, 182, 212, 0.12);
+    background: linear-gradient(165deg, #67e8f9 0%, #a5f3fc 40%, #cffafe 78%, #ecfeff 100%);
+    border: 2px solid #06b6d4;
+    box-shadow:
+        0 14px 36px rgba(6, 182, 212, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .pricing-card--value:hover {
-    border-color: #22d3ee;
-    box-shadow: 0 20px 44px rgba(6, 182, 212, 0.18);
+    border-color: #0891b2;
+    box-shadow:
+        0 20px 44px rgba(6, 182, 212, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .pricing-tier-badge--value {
@@ -1103,8 +1142,21 @@ section {
     box-shadow: 0 6px 16px rgba(6, 182, 212, 0.28);
 }
 
+.pricing-card--value .plan-name {
+    color: #164e63;
+}
+
 .pricing-card--value .price-big {
     color: #0e7490;
+}
+
+.pricing-card--value .price-sub,
+.pricing-card--value .price-extra {
+    color: #155e75;
+}
+
+.pricing-card--value .pricing-list li {
+    color: #164e63;
 }
 
 .pricing-card--value .pricing-list li::before {
@@ -1113,14 +1165,18 @@ section {
 
 /* ESSENTIAL — Quarterly yearly */
 .pricing-card--essential {
-    background: linear-gradient(180deg, #fffbeb 0%, #ffffff 72%);
-    border: 1px solid #fcd34d;
-    box-shadow: 0 14px 36px rgba(245, 158, 11, 0.1);
+    background: linear-gradient(165deg, #fcd34d 0%, #fde68a 40%, #fef3c7 78%, #fffbeb 100%);
+    border: 2px solid #f59e0b;
+    box-shadow:
+        0 14px 36px rgba(245, 158, 11, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .pricing-card--essential:hover {
-    border-color: #fbbf24;
-    box-shadow: 0 20px 44px rgba(245, 158, 11, 0.16);
+    border-color: #d97706;
+    box-shadow:
+        0 20px 44px rgba(245, 158, 11, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .pricing-tier-badge--essential {
@@ -1130,8 +1186,21 @@ section {
     box-shadow: 0 6px 16px rgba(217, 119, 6, 0.25);
 }
 
+.pricing-card--essential .plan-name {
+    color: #92400e;
+}
+
 .pricing-card--essential .price-big {
     color: #b45309;
+}
+
+.pricing-card--essential .price-sub,
+.pricing-card--essential .price-extra {
+    color: #a16207;
+}
+
+.pricing-card--essential .pricing-list li {
+    color: #78350f;
 }
 
 .pricing-card--essential .pricing-list li::before {
