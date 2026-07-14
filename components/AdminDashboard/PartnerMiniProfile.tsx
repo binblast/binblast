@@ -38,6 +38,7 @@ interface PartnerMiniProfileProps {
   onUpdate: () => void;
   onApprove?: (applicationId: string) => void;
   applicationId?: string;
+  partnerRecordId?: string | null;
 }
 
 type Tab = "overview" | "jobs" | "performance" | "messages";
@@ -49,7 +50,10 @@ export function PartnerMiniProfile({
   onUpdate,
   onApprove,
   applicationId,
+  partnerRecordId = null,
 }: PartnerMiniProfileProps) {
+  const isApplicationOnly = Boolean(applicationId && !partnerRecordId);
+  const activePartnerId = partnerRecordId || null;
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [initialTab, setInitialTab] = useState<Tab | null>(null);
   const [jobs, setJobs] = useState<any[]>([]);
@@ -77,24 +81,24 @@ export function PartnerMiniProfile({
   }, []);
 
   async function loadTabData() {
-    if (!partner) return;
+    if (!partner || !activePartnerId) return;
 
     setLoading(true);
     try {
       if (activeTab === "jobs") {
-        const jobsResponse = await fetchWithAuth(`/api/admin/partners/${partner.id}/jobs`);
+        const jobsResponse = await fetchWithAuth(`/api/admin/partners/${activePartnerId}/jobs`);
         const jobsData = await jobsResponse.json();
         if (jobsData.success) {
           setJobs(jobsData.jobs || []);
         }
 
-        const complianceResponse = await fetchWithAuth(`/api/admin/partners/${partner.id}/photo-compliance?days=30`);
+        const complianceResponse = await fetchWithAuth(`/api/admin/partners/${activePartnerId}/photo-compliance?days=30`);
         const complianceData = await complianceResponse.json();
         if (complianceData.success) {
           setPhotoCompliance(complianceData);
         }
       } else if (activeTab === "messages") {
-        const messagesResponse = await fetchWithAuth(`/api/admin/partners/${partner.id}/messages`);
+        const messagesResponse = await fetchWithAuth(`/api/admin/partners/${activePartnerId}/messages`);
         const messagesData = await messagesResponse.json();
         if (messagesData.success) {
           setMessages(messagesData.messages || []);
@@ -108,11 +112,11 @@ export function PartnerMiniProfile({
   }
 
   async function handlePause() {
-    if (!partner) return;
+    if (!partner || !activePartnerId) return;
     if (!confirm("Pause this partner? They will not receive new job assignments.")) return;
 
     try {
-      const response = await fetchWithAuth(`/api/admin/partners/${partner.id}/pause`, { method: "POST" });
+      const response = await fetchWithAuth(`/api/admin/partners/${activePartnerId}/pause`, { method: "POST" });
       const data = await response.json();
       if (data.success) {
         alert("Partner paused");
@@ -126,9 +130,9 @@ export function PartnerMiniProfile({
   }
 
   async function handleResume() {
-    if (!partner) return;
+    if (!partner || !activePartnerId) return;
     try {
-      const response = await fetchWithAuth(`/api/admin/partners/${partner.id}/resume`, { method: "POST" });
+      const response = await fetchWithAuth(`/api/admin/partners/${activePartnerId}/resume`, { method: "POST" });
       const data = await response.json();
       if (data.success) {
         alert("Partner resumed");
@@ -142,12 +146,12 @@ export function PartnerMiniProfile({
   }
 
   async function handleRemove() {
-    if (!partner) return;
+    if (!partner || !activePartnerId) return;
     const reason = prompt("Enter removal reason:");
-    if (!reason) return;
+    if (!reason?.trim()) return;
 
     try {
-      const response = await fetchWithAuth(`/api/admin/partners/${partner.id}/remove`, {
+      const response = await fetchWithAuth(`/api/admin/partners/${activePartnerId}/remove`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
@@ -166,13 +170,57 @@ export function PartnerMiniProfile({
     }
   }
 
+  async function handleRejectApplication() {
+    if (!applicationId) return;
+    const reason = prompt("Enter rejection reason:");
+    if (!reason?.trim()) return;
+
+    try {
+      const response = await fetchWithAuth(`/api/admin/partners/applications/${applicationId}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert("Application rejected");
+        onClose();
+        onUpdate();
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (err: unknown) {
+      alert(`Error: ${err instanceof Error ? err.message : "Failed to reject application"}`);
+    }
+  }
+
+  async function handleHoldApplication() {
+    if (!applicationId) return;
+    const notes = prompt("Add hold notes (optional):") || "";
+
+    try {
+      const response = await fetchWithAuth(`/api/admin/partners/applications/${applicationId}/hold`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert("Application marked as Hold / Needs Review");
+        onClose();
+        onUpdate();
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (err: unknown) {
+      alert(`Error: ${err instanceof Error ? err.message : "Failed to update application"}`);
+    }
+  }
+
   async function handleApprove() {
     if (!partner || !applicationId) return;
-    // For applications, we need to show approve modal from parent
-    // This will be handled by opening the approve modal in the parent component
     onClose();
-    // Trigger approve modal in parent
-    const event = new CustomEvent('partnerApproveRequest', { detail: { applicationId } });
+    const event = new CustomEvent("partnerApproveRequest", { detail: { applicationId } });
     window.dispatchEvent(event);
   }
 
@@ -273,8 +321,86 @@ export function PartnerMiniProfile({
             </div>
           </div>
 
+          {isApplicationOnly && (
+            <div style={{
+              marginBottom: "1rem",
+              padding: "0.85rem 1rem",
+              borderRadius: "10px",
+              background: "#eef2ff",
+              border: "1px solid #c7d2fe",
+              color: "#3730a3",
+              fontSize: "0.875rem",
+              fontWeight: "600",
+            }}>
+              Partner application — needs your review. Open this profile to approve, reject, hold, or message.
+            </div>
+          )}
+
           {/* Status & Actions */}
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+            {isApplicationOnly ? (
+              <>
+                <span style={{
+                  padding: "0.5rem 0.75rem",
+                  borderRadius: "6px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  background: "#e0e7ff",
+                  color: "#4338ca",
+                }}>
+                  Needs Review
+                </span>
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    background: "#16a34a",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  Approve Partner
+                </button>
+                <button
+                  type="button"
+                  onClick={handleHoldApplication}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    background: "#f59e0b",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  Hold Application
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRejectApplication}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    background: "#dc2626",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  Reject Application
+                </button>
+              </>
+            ) : (
+              <>
             <select
               value={partner.status}
               onChange={async (e) => {
@@ -372,7 +498,7 @@ export function PartnerMiniProfile({
                 Remove Partner
               </button>
             )}
-            {applicationId && (
+            {applicationId && activePartnerId && (
               <button
                 onClick={handleApprove}
                 style={{
@@ -389,6 +515,8 @@ export function PartnerMiniProfile({
                 Approve Partner
               </button>
             )}
+              </>
+            )}
           </div>
         </div>
 
@@ -396,9 +524,11 @@ export function PartnerMiniProfile({
         <div style={{ display: "flex", borderBottom: "1px solid #e5e7eb", background: "#ffffff" }}>
           {[
             { id: "overview", label: "Overview" },
-            { id: "jobs", label: "Jobs & Proof" },
-            { id: "performance", label: "Performance & Money" },
-            { id: "messages", label: "Messages" },
+            ...(isApplicationOnly ? [] : [
+              { id: "jobs", label: "Jobs & Proof" },
+              { id: "performance", label: "Performance & Money" },
+              { id: "messages", label: "Messages" },
+            ]),
           ].map((tab) => (
             <button
               key={tab.id}
@@ -423,16 +553,18 @@ export function PartnerMiniProfile({
         {/* Tab Content */}
         <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem" }}>
           {activeTab === "overview" && <OverviewTab partner={partner} />}
-          {activeTab === "jobs" && (
+          {activeTab === "jobs" && activePartnerId && (
             <JobsTab
-              partnerId={partner.id}
+              partnerId={activePartnerId}
               jobs={jobs}
               photoCompliance={photoCompliance}
               loading={loading}
             />
           )}
-          {activeTab === "performance" && <PerformanceTab partner={partner} />}
-          {activeTab === "messages" && <MessagesTab partnerId={partner.id} messages={messages} loading={loading} onUpdate={loadTabData} />}
+          {activeTab === "performance" && !isApplicationOnly && <PerformanceTab partner={partner} />}
+          {activeTab === "messages" && activePartnerId && (
+            <MessagesTab partnerId={activePartnerId} messages={messages} loading={loading} onUpdate={loadTabData} />
+          )}
         </div>
       </div>
     </>

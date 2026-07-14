@@ -64,23 +64,44 @@ interface Partner {
 type ApplicationStatus = PartnerApplication["status"];
 
 function normalizeApplication(app: PartnerApplication): PartnerApplication {
+  const status = (app.status || "pending") as ApplicationStatus;
   return {
     ...app,
-    status: (app.status || "pending") as ApplicationStatus,
+    status: status === "approved" && !app.linkedPartnerId ? "pending" : status,
   };
+}
+
+function getApplicationDisplayStatus(app: PartnerApplication): ApplicationStatus {
+  if (app.linkedPartnerId && app.status === "approved") return "approved";
+  if (app.status === "rejected") return "rejected";
+  if (app.status === "hold") return "hold";
+  return "pending";
+}
+
+function getApplicationStatusLabel(app: PartnerApplication): string {
+  switch (getApplicationDisplayStatus(app)) {
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
+    case "hold":
+      return "On Hold";
+    default:
+      return "Needs Review";
+  }
 }
 
 function getApplicationStats(applications: PartnerApplication[]) {
   return {
-    pending: applications.filter((app) => (app.status || "pending") === "pending").length,
-    hold: applications.filter((app) => app.status === "hold").length,
-    approved: applications.filter((app) => app.status === "approved").length,
-    rejected: applications.filter((app) => app.status === "rejected").length,
+    pending: applications.filter((app) => getApplicationDisplayStatus(app) === "pending").length,
+    hold: applications.filter((app) => getApplicationDisplayStatus(app) === "hold").length,
+    approved: applications.filter((app) => getApplicationDisplayStatus(app) === "approved").length,
+    rejected: applications.filter((app) => getApplicationDisplayStatus(app) === "rejected").length,
   };
 }
 
-function applicationStatusStyle(status: string) {
-  switch (status) {
+function applicationStatusStyle(app: PartnerApplication) {
+  switch (getApplicationDisplayStatus(app)) {
     case "approved":
       return { background: "#dcfce7", color: "#16a34a", border: "1px solid #86efac" };
     case "rejected":
@@ -118,6 +139,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [showMiniProfile, setShowMiniProfile] = useState(false);
   const [miniProfileApplicationId, setMiniProfileApplicationId] = useState<string | undefined>();
+  const [selectedPartnerRecordId, setSelectedPartnerRecordId] = useState<string | null>(null);
   
   // Approve modal state
   const [approveServiceAreas, setApproveServiceAreas] = useState<string[]>([]);
@@ -240,66 +262,6 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
     }
   }
 
-  async function handleApplicationStatusChange(app: PartnerApplication, newStatus: ApplicationStatus) {
-    const currentStatus = app.status || "pending";
-    if (newStatus === currentStatus) return;
-
-    if (newStatus === "approved") {
-      setSelectedApplication(app);
-      const areas = app.serviceArea ? app.serviceArea.split(",").map((s) => s.trim()).filter(Boolean) : [];
-      setApproveServiceAreas(areas);
-      setApprovePartnerShare(60);
-      setApprovePlatformShare(40);
-      setShowApproveModal(true);
-      return;
-    }
-
-    if (newStatus === "rejected") {
-      setSelectedApplication(app);
-      setShowRejectModal(true);
-      return;
-    }
-
-    if (newStatus === "hold") {
-      setSelectedApplication(app);
-      setShowHoldModal(true);
-      return;
-    }
-
-    if (newStatus === "pending") {
-      if (app.linkedPartnerId) {
-        alert("This application is already linked to a partner account. Manage it under Active Partners.");
-        return;
-      }
-      if (!confirm(`Move "${app.businessName}" back to Pending Review?`)) return;
-
-      try {
-        const response = await fetchWithAuth(`/api/admin/partners/applications/${app.id}/status`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "pending" }),
-        });
-        const data = await response.json();
-        if (data.success) {
-          loadData();
-        } else {
-          alert(`Error: ${data.error}`);
-        }
-      } catch (err: unknown) {
-        alert(`Error: ${err instanceof Error ? err.message : "Failed to update status"}`);
-      }
-    }
-  }
-
-  function openApproveModal(app: PartnerApplication) {
-    setSelectedApplication(app);
-    const areas = app.serviceArea ? app.serviceArea.split(",").map((s) => s.trim()).filter(Boolean) : [];
-    setApproveServiceAreas(areas);
-    setApprovePartnerShare(60);
-    setApprovePlatformShare(40);
-    setShowApproveModal(true);
-  }
-
   async function handleHold(applicationId: string, notes: string) {
     try {
       const response = await fetchWithAuth(`/api/admin/partners/applications/${applicationId}/hold`, {
@@ -398,7 +360,9 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       app.ownerName.toLowerCase().includes(applicationSearch.toLowerCase()) ||
       app.email.toLowerCase().includes(applicationSearch.toLowerCase());
     
-    const matchesStatus = applicationStatusFilter === "all" || app.status === applicationStatusFilter;
+    const matchesStatus =
+      applicationStatusFilter === "all" ||
+      getApplicationDisplayStatus(app) === applicationStatusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -446,7 +410,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
         marginBottom: "1.5rem",
       }}>
         {[
-          { label: "Pending Review", value: applicationStats.pending, color: "#4338ca", bg: "#eef2ff" },
+          { label: "Needs Review", value: applicationStats.pending, color: "#4338ca", bg: "#eef2ff" },
           { label: "On Hold", value: applicationStats.hold, color: "#d97706", bg: "#fffbeb" },
           { label: "Approved", value: applicationStats.approved, color: "#16a34a", bg: "#ecfdf5" },
           { label: "Rejected", value: applicationStats.rejected, color: "#dc2626", bg: "#fef2f2" },
@@ -455,7 +419,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
             key={stat.label}
             type="button"
             onClick={() => setApplicationStatusFilter(
-              stat.label === "Pending Review" ? "pending" :
+              stat.label === "Needs Review" ? "pending" :
               stat.label === "On Hold" ? "hold" :
               stat.label === "Approved" ? "approved" : "rejected"
             )}
@@ -505,45 +469,13 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
               }}
             >
               <option value="all">All Status</option>
-              <option value="pending">Pending</option>
+              <option value="pending">Needs Review</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
-              <option value="hold">Hold/Needs Review</option>
+              <option value="hold">On Hold</option>
             </select>
             {selectedApplicationIds.size > 0 && (
               <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                  onClick={async () => {
-                    if (confirm(`Approve ${selectedApplicationIds.size} selected applications?`)) {
-                      // Bulk approve
-                      const idsArray = Array.from(selectedApplicationIds);
-                      for (const id of idsArray) {
-                        const app = applications.find(a => a.id === id);
-                        if (app && app.status === "pending") {
-                          setSelectedApplication(app);
-                          setApproveServiceAreas([app.serviceArea]);
-                          setApprovePartnerShare(60);
-                          setApprovePlatformShare(40);
-                          await handleApprove(id);
-                        }
-                      }
-                      setSelectedApplicationIds(new Set());
-                      loadData();
-                    }
-                  }}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    background: "#16a34a",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
-                >
-                  Approve Selected ({selectedApplicationIds.size})
-                </button>
                 <button
                   onClick={() => setSelectedApplicationIds(new Set())}
                   style={{
@@ -628,24 +560,18 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.serviceArea}</td>
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.serviceType}</td>
                         <td style={{ padding: "0.75rem" }}>
-                          <select
-                            value={app.status || "pending"}
-                            onChange={(e) => handleApplicationStatusChange(app, e.target.value as ApplicationStatus)}
+                          <span
                             style={{
-                              padding: "0.45rem 0.65rem",
+                              display: "inline-block",
+                              padding: "0.45rem 0.75rem",
                               borderRadius: "8px",
                               fontSize: "0.78rem",
                               fontWeight: "600",
-                              cursor: "pointer",
-                              minWidth: "150px",
-                              ...applicationStatusStyle(app.status || "pending"),
+                              ...applicationStatusStyle(app),
                             }}
                           >
-                            <option value="pending">Pending Review</option>
-                            <option value="hold">Hold / Needs Review</option>
-                            <option value="approved">Approve Partner</option>
-                            <option value="rejected">Reject</option>
-                          </select>
+                            {getApplicationStatusLabel(app)}
+                          </span>
                           {app.linkedPartnerId && (
                             <div style={{ fontSize: "0.7rem", color: "#16a34a", marginTop: "0.35rem", fontWeight: "600" }}>
                               Partner account created
@@ -667,7 +593,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                                     phone: application.phone,
                                     serviceAreas: application.serviceArea ? [application.serviceArea] : [],
                                     serviceType: application.serviceType,
-                                    status: application.status === "approved" ? "active" : "paused",
+                                    status: "paused",
                                     revenueSharePartner: 0.6,
                                     revenueSharePlatform: 0.4,
                                     partnerCode: "",
@@ -683,37 +609,38 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                                       const partnerData = await partnerResponse.json();
                                       
                                       if (partnerResponse.ok && partnerData.success && partnerData.partner) {
-                                        // Partner found, use partner data
                                         setSelectedPartner(partnerData.partner);
+                                        setMiniProfileApplicationId(app.id);
+                                        setSelectedPartnerRecordId(app.linkedPartnerId);
                                         setShowMiniProfile(true);
                                       } else if (partnerResponse.status === 404) {
-                                        // Partner not found, fall back to application data
                                         console.warn(`Partner ${app.linkedPartnerId} not found, showing application data instead`);
                                         const applicationAsPartner = convertApplicationToPartner(app);
                                         setSelectedPartner(applicationAsPartner);
                                         setMiniProfileApplicationId(app.id);
+                                        setSelectedPartnerRecordId(null);
                                         setShowMiniProfile(true);
                                       } else {
-                                        // Other error, try to show application data anyway
                                         console.error(`Failed to load partner: ${partnerData.error || "Unknown error"}`);
                                         const applicationAsPartner = convertApplicationToPartner(app);
                                         setSelectedPartner(applicationAsPartner);
                                         setMiniProfileApplicationId(app.id);
+                                        setSelectedPartnerRecordId(null);
                                         setShowMiniProfile(true);
                                       }
                                     } catch (fetchError: any) {
-                                      // Network or other fetch error, fall back to application data
                                       console.error("[View Profile] Fetch error:", fetchError);
                                       const applicationAsPartner = convertApplicationToPartner(app);
                                       setSelectedPartner(applicationAsPartner);
                                       setMiniProfileApplicationId(app.id);
+                                      setSelectedPartnerRecordId(null);
                                       setShowMiniProfile(true);
                                     }
                                   } else {
-                                    // No linked partner, show application data
                                     const applicationAsPartner = convertApplicationToPartner(app);
                                     setSelectedPartner(applicationAsPartner);
                                     setMiniProfileApplicationId(app.id);
+                                    setSelectedPartnerRecordId(null);
                                     setShowMiniProfile(true);
                                   }
                                 } catch (error: any) {
@@ -733,22 +660,6 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                             >
                               View Profile
                             </button>
-                            {(app.status === "pending" || app.status === "hold" || app.status === "rejected") && !app.linkedPartnerId && (
-                              <button
-                                onClick={() => openApproveModal(app)}
-                                style={{
-                                  padding: "0.25rem 0.5rem",
-                                  background: "#16a34a",
-                                  color: "#ffffff",
-                                  border: "none",
-                                  borderRadius: "4px",
-                                  fontSize: "0.75rem",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                Approve
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -1006,6 +917,8 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                               onClick={() => {
                                 try {
                                   setSelectedPartner(partner);
+                                  setMiniProfileApplicationId(undefined);
+                                  setSelectedPartnerRecordId(partner.id);
                                   setShowMiniProfile(true);
                                 } catch (error: any) {
                                   console.error("[View Profile] Error:", error);
@@ -1028,8 +941,9 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                               onClick={() => {
                                 try {
                                   setSelectedPartner(partner);
+                                  setMiniProfileApplicationId(undefined);
+                                  setSelectedPartnerRecordId(partner.id);
                                   setShowMiniProfile(true);
-                                  // Set initial tab to messages
                                   setTimeout(() => {
                                     const event = new CustomEvent('partnerMiniProfileOpen', { detail: { tab: 'messages' } });
                                     window.dispatchEvent(event);
@@ -1114,9 +1028,11 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
             setShowMiniProfile(false);
             setSelectedPartner(null);
             setMiniProfileApplicationId(undefined);
+            setSelectedPartnerRecordId(null);
           }}
           onUpdate={loadData}
           applicationId={miniProfileApplicationId}
+          partnerRecordId={selectedPartnerRecordId}
         />
       )}
     </div>
@@ -1711,14 +1627,9 @@ function ViewApplicationModal({
               borderRadius: "12px",
               fontSize: "0.75rem",
               fontWeight: "600",
-              background: application.status === "approved" ? "#dcfce7" : 
-                         application.status === "rejected" ? "#fee2e2" : 
-                         application.status === "hold" ? "#fef3c7" : "#e0e7ff",
-              color: application.status === "approved" ? "#16a34a" : 
-                    application.status === "rejected" ? "#dc2626" : 
-                    application.status === "hold" ? "#d97706" : "#6366f1"
+              ...applicationStatusStyle(application),
             }}>
-              {application.status || "pending"}
+              {getApplicationStatusLabel(application)}
             </span>
           </div>
           {application.rejectionReason && (
