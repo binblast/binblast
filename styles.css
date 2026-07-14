@@ -1002,21 +1002,50 @@ section {
     box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
 }
 
-.pricing-card--starter .plan-name {
-    color: #1e3a8a;
+.pricing-card--starter .plan-name,
+.pricing-card--starter .price-big,
+.pricing-card--featured .plan-name,
+.pricing-card--featured .price-big,
+.pricing-card--elite .plan-name,
+.pricing-card--elite .price-big,
+.pricing-card--elite .price-big.custom,
+.pricing-card--value .plan-name,
+.pricing-card--value .price-big,
+.pricing-card--essential .plan-name,
+.pricing-card--essential .price-big {
+    color: #111827;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
-.pricing-card--starter .price-big {
-    color: #1d4ed8;
+.pricing-card--starter .price-small,
+.pricing-card--featured .price-small,
+.pricing-card--elite .price-small,
+.pricing-card--value .price-small,
+.pricing-card--essential .price-small {
+    color: #374151;
+    font-weight: 600;
 }
 
 .pricing-card--starter .price-sub,
-.pricing-card--starter .price-extra {
-    color: #1e40af;
+.pricing-card--starter .price-extra,
+.pricing-card--featured .price-sub,
+.pricing-card--featured .price-extra,
+.pricing-card--elite .price-sub,
+.pricing-card--elite .price-extra,
+.pricing-card--value .price-sub,
+.pricing-card--value .price-extra,
+.pricing-card--essential .price-sub,
+.pricing-card--essential .price-extra {
+    color: #374151;
 }
 
-.pricing-card--starter .pricing-list li {
-    color: #1e3a8a;
+.pricing-card--starter .pricing-list li,
+.pricing-card--featured .pricing-list li,
+.pricing-card--elite .pricing-list li,
+.pricing-card--value .pricing-list li,
+.pricing-card--essential .pricing-list li {
+    color: #1f2937;
+    font-weight: 500;
 }
 
 .pricing-card--starter .pricing-list li::before {
@@ -1053,70 +1082,42 @@ section {
     box-shadow: 0 8px 20px rgba(22, 163, 74, 0.35);
 }
 
-.pricing-card--featured .plan-name {
-    color: #14532d;
-}
-
-.pricing-card--featured .price-big {
-    color: #15803d;
-}
-
-.pricing-card--featured .price-sub,
-.pricing-card--featured .price-extra {
-    color: #166534;
-}
-
-.pricing-card--featured .pricing-list li {
-    color: #14532d;
-}
-
 .pricing-card--featured .pricing-list li::before {
     color: #16a34a;
 }
 
 /* ELITE — Commercial / highest earning */
 .pricing-card--elite {
-    background:
-        radial-gradient(ellipse 130% 90% at 50% -15%, rgba(251, 191, 36, 0.28) 0%, transparent 58%),
-        linear-gradient(145deg, #475569 0%, #1e293b 48%, #0f172a 100%);
-    border: 2px solid rgba(251, 191, 36, 0.55);
+    background: linear-gradient(165deg, #fcd34d 0%, #fde68a 36%, #fff7ed 78%, #ffffff 100%);
+    border: 2px solid #f59e0b;
     box-shadow:
-        0 20px 48px rgba(15, 23, 42, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    color: #f8fafc;
+        0 18px 44px rgba(245, 158, 11, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    color: #111827;
 }
 
 .pricing-card--elite:hover {
-    border-color: rgba(251, 191, 36, 0.85);
+    border-color: #d97706;
     box-shadow:
-        0 26px 54px rgba(15, 23, 42, 0.48),
-        0 0 28px rgba(251, 191, 36, 0.18);
+        0 24px 50px rgba(245, 158, 11, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .pricing-tier-badge--elite {
     background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-    color: #1f2937;
+    color: #111827;
     border: 1px solid #fde68a;
     box-shadow: 0 8px 20px rgba(245, 158, 11, 0.35);
 }
 
-.pricing-card--elite .plan-name,
-.pricing-card--elite .price-big,
 .pricing-card--elite .price-big.custom {
-    color: #fbbf24;
-}
-
-.pricing-card--elite .price-sub,
-.pricing-card--elite .price-extra {
-    color: #cbd5e1;
-}
-
-.pricing-card--elite .pricing-list li {
-    color: #e2e8f0;
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
 }
 
 .pricing-card--elite .pricing-list li::before {
-    color: #fbbf24;
+    color: #d97706;
 }
 
 /* VALUE — Bi-monthly yearly */
@@ -1140,23 +1141,6 @@ section {
     color: #ffffff;
     border: 1px solid #a5f3fc;
     box-shadow: 0 6px 16px rgba(6, 182, 212, 0.28);
-}
-
-.pricing-card--value .plan-name {
-    color: #164e63;
-}
-
-.pricing-card--value .price-big {
-    color: #0e7490;
-}
-
-.pricing-card--value .price-sub,
-.pricing-card--value .price-extra {
-    color: #155e75;
-}
-
-.pricing-card--value .pricing-list li {
-    color: #164e63;
 }
 
 .pricing-card--value .pricing-list li::before {
@@ -1186,23 +1170,6 @@ section {
     box-shadow: 0 6px 16px rgba(217, 119, 6, 0.25);
 }
 
-.pricing-card--essential .plan-name {
-    color: #92400e;
-}
-
-.pricing-card--essential .price-big {
-    color: #b45309;
-}
-
-.pricing-card--essential .price-sub,
-.pricing-card--essential .price-extra {
-    color: #a16207;
-}
-
-.pricing-card--essential .pricing-list li {
-    color: #78350f;
-}
-
 .pricing-card--essential .pricing-list li::before {
     color: #d97706;
 }
@@ -1210,23 +1177,27 @@ section {
 /* Plan name */
 .plan-name {
     font-size: 1.1rem;
-    font-weight: 700;
+    font-weight: 800;
     text-align: center;
     margin-bottom: 0.75rem;
+    color: #111827;
+    letter-spacing: -0.01em;
 }
 
 /* Big price */
 .price-big {
     font-size: 2.7rem;
-    font-weight: 800;
-    color: #16a34a;
+    font-weight: 900;
+    color: #111827;
     text-align: center;
     margin: 0.1rem 0 0.25rem 0;
     line-height: 1.1;
+    letter-spacing: -0.03em;
 }
 
 .price-big.custom {
-    font-size: 2.1rem;
+    font-size: 2rem;
+    font-weight: 900;
 }
 
 .price-small {
@@ -1237,20 +1208,21 @@ section {
 
 .price-sub {
     font-size: 0.8rem;
-    color: #6b7280;
+    color: #374151;
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-weight: 600;
+    font-weight: 700;
     margin-top: 0.4rem;
     margin-bottom: 0.1rem;
 }
 
 .price-extra {
     font-size: 0.85rem;
-    color: #6b7280;
+    color: #374151;
     text-align: center;
     margin-bottom: 1.2rem;
+    line-height: 1.5;
 }
 
 /* Bullet list inside pricing cards */
@@ -1266,7 +1238,8 @@ section {
     padding-left: 1.4rem;
     margin-bottom: 0.65rem;
     font-size: 0.96rem;
-    color: #374151;
+    color: #1f2937;
+    line-height: 1.45;
 }
 
 .pricing-list li::before {
@@ -1315,8 +1288,9 @@ section {
 .card-cta--elite {
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 55%, #d97706 100%);
     border: none;
-    color: #1f2937;
+    color: #111827;
     box-shadow: 0 10px 24px rgba(245, 158, 11, 0.35);
+    font-weight: 800;
 }
 
 .card-cta--value {
