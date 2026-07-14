@@ -37,13 +37,13 @@ export function ChatWidget() {
       const welcomeMessage: Message = {
         id: "welcome",
         text:
-          "Hi! I'm your Bin Blast Co. assistant — here to help you get started, manage your account, answer questions about pricing and service, and point you in the right direction.\n\nWhat can I help you with?",
+          "Hi! I'm your Bin Blast Co. assistant — I know this site inside and out. I can help you sign up, use your dashboard, add bins, schedule cleanings, manage billing, referrals, and more.\n\nWhat do you need help with?",
         sender: "assistant",
         timestamp: new Date(),
         quickReplies: [
-          "What are your prices?",
-          "Schedule a cleaning",
-          "How do I cancel?",
+          "How do I sign up?",
+          "How do I add a bin?",
+          "Go to my dashboard",
           "Contact support",
         ],
       };
@@ -175,9 +175,9 @@ export function ChatWidget() {
           <header className="chat-widget-header">
             <div className="chat-widget-header__brand">
               <h3 className="chat-widget-header__title">Bin Blast Assistant</h3>
-              <p className="chat-widget-header__subtitle">
-                Ask about pricing, booking, billing, or anything you need to get started.
-              </p>
+                <p className="chat-widget-header__subtitle">
+                  Your guide for booking, your dashboard, billing, and everything on the site.
+                </p>
             </div>
             <button
               type="button"
