@@ -27,17 +27,20 @@ export default function PartnerSlugPage() {
         const partnersQuery = query(
           collection(db, "partners"),
           where("partnerSlug", "==", slug),
-          where("partnerStatus", "==", "approved")
+          where("status", "==", "active")
         );
         const partnersSnapshot = await getDocs(partnersQuery);
 
         if (!partnersSnapshot.empty) {
           const partnerDoc = partnersSnapshot.docs[0];
           const partnerData = partnerDoc.data();
-          const partnerCode = partnerData.partnerCode;
+          const partnerCode = partnerData.partnerCode || partnerData.referralCode;
           
-          // Redirect to pricing page with partner code
-          router.push(`/#pricing?partner=${partnerCode}`);
+          if (partnerCode) {
+            router.push(`/?partner=${encodeURIComponent(String(partnerCode).toUpperCase())}#pricing`);
+          } else {
+            router.push("/#pricing");
+          }
         } else {
           // Partner not found or not approved, redirect to pricing without partner code
           router.push("/#pricing");

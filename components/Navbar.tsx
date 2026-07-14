@@ -387,7 +387,8 @@ export function Navbar() {
       const hash = window.location.hash;
       if (hash) {
         const scrollToSection = () => {
-          const targetId = hash.slice(1);
+          const hashValue = hash.slice(1);
+          const targetId = hashValue.split("?")[0];
           const targetElement = document.getElementById(targetId);
           if (targetElement) {
             const offsetTop = targetElement.offsetTop - 80;

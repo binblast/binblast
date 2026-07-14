@@ -1,8 +1,21 @@
 import { normalizeReferralCode } from "@/lib/referral-code-format";
 
 export const REFERRAL_CODE_STORAGE_KEY = "siteLeadReferralCode";
+export const PARTNER_CODE_STORAGE_KEY = "siteLeadPartnerCode";
 
 export { normalizeReferralCode };
+
+export function persistCapturedPartnerCode(code: string): void {
+  if (typeof window === "undefined") return;
+  const normalized = String(code).trim().toUpperCase();
+  if (!normalized) return;
+  sessionStorage.setItem(PARTNER_CODE_STORAGE_KEY, normalized);
+}
+
+export function getCapturedPartnerCode(): string {
+  if (typeof window === "undefined") return "";
+  return sessionStorage.getItem(PARTNER_CODE_STORAGE_KEY) || "";
+}
 
 export function persistCapturedReferralCode(code: string): void {
   if (typeof window === "undefined") return;
@@ -67,8 +80,16 @@ export function getPartnerCodeFromLocation(location?: Location): string {
   for (const source of sources) {
     const params = new URLSearchParams(source.startsWith("?") ? source.slice(1) : source);
     const partner = params.get("partner")?.trim();
-    if (partner) return partner;
+    if (partner) return partner.toUpperCase();
   }
 
-  return "";
+  return getCapturedPartnerCode();
+}
+
+export function capturePartnerCodeFromLocation(location?: Location): string {
+  const code = getPartnerCodeFromLocation(location);
+  if (code) {
+    persistCapturedPartnerCode(code);
+  }
+  return code;
 }

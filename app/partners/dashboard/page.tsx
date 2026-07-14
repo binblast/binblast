@@ -6,6 +6,11 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { AddTeamMemberModal } from "@/components/PartnerDashboard/AddTeamMemberModal";
 import { PartnerPayroll } from "@/components/PartnerDashboard/PartnerPayroll";
+import {
+  buildPartnerBookingLink,
+  buildPartnerTeamLoginLink,
+  resolvePartnerCode,
+} from "@/lib/partner-links";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
   ssr: false,
@@ -408,9 +413,12 @@ export default function PartnerDashboardPage() {
       const data = partnerDoc.data();
       
       if (data && partnerDoc.id) {
+        const partnerCode = resolvePartnerCode(data);
         setPartnerData({
           id: partnerDoc.id,
           ...data,
+          referralCode: data.referralCode || data.partnerCode || partnerCode,
+          partnerCode: data.partnerCode || data.referralCode || partnerCode,
         } as PartnerData);
       } else {
         setLoading(false);
@@ -646,13 +654,14 @@ export default function PartnerDashboardPage() {
     }
   }
 
-  const partnerLink = typeof window !== "undefined" 
-    ? `${window.location.origin}/#pricing?partner=${partnerData?.referralCode || partnerData?.partnerCode || ""}`
-    : "";
+  const partnerCode = resolvePartnerCode(partnerData);
+  const partnerLink =
+    typeof window !== "undefined" && partnerCode
+      ? buildPartnerBookingLink(window.location.origin, partnerCode)
+      : "";
 
-  const partnerSignupLink = typeof window !== "undefined" && partnerData
-    ? `${window.location.origin}/partner?partnerId=${partnerData.id}`
-    : "";
+  const partnerSignupLink =
+    typeof window !== "undefined" ? buildPartnerTeamLoginLink(window.location.origin) : "";
 
   const handleCopy = async () => {
     if (partnerLink) {
@@ -1279,6 +1288,7 @@ export default function PartnerDashboardPage() {
                   />
                   <button
                     onClick={handleCopy}
+                    disabled={!partnerLink}
                     style={{
                       padding: "0.75rem 1.5rem",
                       background: copied ? "#16a34a" : "#2563eb",
@@ -1301,7 +1311,32 @@ export default function PartnerDashboardPage() {
                   >
                     {copied ? "✓ Copied" : "Copy"}
                   </button>
+                  {partnerLink && (
+                    <a
+                      href={partnerLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        padding: "0.75rem 1.5rem",
+                        background: "#ffffff",
+                        color: "#2563eb",
+                        border: "2px solid #2563eb",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Open
+                    </a>
+                  )}
                 </div>
+                {!partnerLink && (
+                  <p style={{ fontSize: "0.75rem", color: "#b91c1c", marginBottom: "1rem" }}>
+                    Partner code missing. Contact Bin Blast support to restore your booking link.
+                  </p>
+                )}
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
                   <button
                     onClick={generateQRCode}
@@ -1353,7 +1388,7 @@ export default function PartnerDashboardPage() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
                   <div>
                     <h2 style={{ fontSize: "1.25rem", fontWeight: "700", color: "#111827", marginBottom: "0.25rem" }}>Team Growth</h2>
-                    <p style={{ fontSize: "0.875rem", color: "#78350f" }}>Partner Signup Link</p>
+                    <p style={{ fontSize: "0.875rem", color: "#78350f" }}>Team Member Login Link</p>
                   </div>
                   <div style={{ padding: "0.5rem", background: "#fde68a", borderRadius: "8px" }}>
                     <svg style={{ width: "20px", height: "20px", color: "#d97706" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1402,9 +1437,29 @@ export default function PartnerDashboardPage() {
                   >
                     {copiedSignupLink ? "✓ Copied" : "Copy"}
                   </button>
+                  {partnerSignupLink && (
+                    <a
+                      href={partnerSignupLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        padding: "0.75rem 1.5rem",
+                        background: "#ffffff",
+                        color: "#d97706",
+                        border: "2px solid #d97706",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Open
+                    </a>
+                  )}
                 </div>
                 <p style={{ fontSize: "0.75rem", color: "#78350f" }}>
-                  Share this link with team members who need partner access. They'll be able to sign up and join your team.
+                  Share this link with team members after you add them from the Team section. They log in with the credentials you create for them.
                 </p>
               </div>
             </div>

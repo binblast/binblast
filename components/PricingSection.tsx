@@ -11,6 +11,7 @@ import { useFirebase } from "@/lib/firebase-context";
 import { getCapturedReferralCode } from "@/lib/site-leads";
 import {
   captureReferralCodeFromLocation,
+  capturePartnerCodeFromLocation,
   getPartnerCodeFromLocation,
   getReferralCodeFromLocation,
 } from "@/lib/referral-attribution";
@@ -124,10 +125,16 @@ export function PricingSection() {
   const [partnerCodeFromUrl, setPartnerCodeFromUrl] = useState("");
 
   useEffect(() => {
-    const referralCode = captureReferralCodeFromLocation();
-    const partnerCode = getPartnerCodeFromLocation();
-    setReferralCodeFromUrl(referralCode || getCapturedReferralCode());
-    setPartnerCodeFromUrl(partnerCode);
+    const syncAttributionFromLocation = () => {
+      const referralCode = captureReferralCodeFromLocation();
+      const partnerCode = capturePartnerCodeFromLocation();
+      setReferralCodeFromUrl(referralCode || getCapturedReferralCode());
+      setPartnerCodeFromUrl(partnerCode);
+    };
+
+    syncAttributionFromLocation();
+    window.addEventListener("hashchange", syncAttributionFromLocation);
+    return () => window.removeEventListener("hashchange", syncAttributionFromLocation);
   }, [searchParams]);
 
   const { isReady: firebaseReady } = useFirebase();
