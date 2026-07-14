@@ -325,6 +325,7 @@ export function PricingSection() {
           availableCredit={availableCredit}
           loading={loadingCredit}
           initialReferralCode={referralCodeFromUrl}
+          initialPartnerCode={partnerCodeFromUrl}
         />
       )}
       <CustomQuoteWizard

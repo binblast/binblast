@@ -17,7 +17,8 @@ interface PlanConfirmationModalProps {
   userId: string | null;
   availableCredit: number;
   loading?: boolean;
-  initialReferralCode?: string; // Referral code from URL
+  initialReferralCode?: string; // Referral code from URL (?ref=)
+  initialPartnerCode?: string; // Partner code from URL (?partner=)
 }
 
 export function PlanConfirmationModal({
@@ -29,6 +30,7 @@ export function PlanConfirmationModal({
   availableCredit,
   loading = false,
   initialReferralCode = "",
+  initialPartnerCode = "",
 }: PlanConfirmationModalProps) {
   const [applyCredit, setApplyCredit] = useState(false);
   const [referralCode, setReferralCode] = useState("");
@@ -37,6 +39,9 @@ export function PlanConfirmationModal({
   const [validatingCode, setValidatingCode] = useState(false);
   const [referralError, setReferralError] = useState<string | null>(null);
   const [appliedReferralCode, setAppliedReferralCode] = useState("");
+  const [isPartnerCode, setIsPartnerCode] = useState(false);
+  const [partnerBusinessName, setPartnerBusinessName] = useState("");
+  const [partnerSuccessMessage, setPartnerSuccessMessage] = useState("");
 
   const { plans: platformPlans } = usePlatformPricing();
 
@@ -48,48 +53,86 @@ export function PlanConfirmationModal({
     return null;
   }
 
-  // Reset state when modal opens/closes and auto-validate referral code from URL
+  // Reset state when modal opens/closes and auto-validate code from URL
   useEffect(() => {
     if (isOpen) {
-      // Default to applying credit if user has credit available
       setApplyCredit(availableCredit > 0);
-      
-      // If there's a referral code from URL, populate and validate it automatically
-      if (initialReferralCode && initialReferralCode.trim()) {
-        const normalizedCode = normalizeReferralCode(initialReferralCode);
-        setReferralCode(normalizedCode);
+
+      const autoPartnerCode = initialPartnerCode.trim()
+        ? normalizeReferralCode(initialPartnerCode)
+        : "";
+      const autoReferralCode =
+        !autoPartnerCode && initialReferralCode.trim()
+          ? normalizeReferralCode(initialReferralCode)
+          : "";
+
+      const codeToApply = autoPartnerCode || autoReferralCode;
+
+      if (codeToApply) {
+        setReferralCode(codeToApply);
         setAppliedReferralCode("");
-        
-        // Auto-validate the referral code
+        setIsPartnerCode(Boolean(autoPartnerCode));
+
         (async () => {
           setValidatingCode(true);
           setReferralError(null);
 
           try {
-            const response = await fetch("/api/referral/validate-code", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ referralCode: normalizedCode }),
-            });
+            if (autoPartnerCode) {
+              const response = await fetch("/api/partners/validate-code", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ partnerCode: autoPartnerCode }),
+              });
+              const data = await response.json();
 
-            const data = await response.json();
-
-            if (data.valid) {
-              const matchedCode = normalizeReferralCode(data.matchedCode || normalizedCode);
-              setReferralCodeValid(true);
-              setReferralDiscount(data.discountAmount || 10.00);
-              setReferralError(null);
-              setAppliedReferralCode(matchedCode);
-              setReferralCode(matchedCode);
+              if (data.valid) {
+                const matchedCode = normalizeReferralCode(data.matchedCode || autoPartnerCode);
+                setReferralCodeValid(true);
+                setReferralDiscount(0);
+                setReferralError(null);
+                setAppliedReferralCode(matchedCode);
+                setReferralCode(matchedCode);
+                setPartnerBusinessName(data.businessName || "Partner");
+                setPartnerSuccessMessage(
+                  data.message ||
+                    `Partner code applied! Your booking supports ${data.businessName || "this partner"}.`
+                );
+              } else {
+                setReferralCodeValid(false);
+                setReferralDiscount(0);
+                setReferralError(data.error || "Invalid partner code");
+                setAppliedReferralCode("");
+                setIsPartnerCode(false);
+                setPartnerBusinessName("");
+                setPartnerSuccessMessage("");
+              }
             } else {
-              setReferralCodeValid(false);
-              setReferralDiscount(0);
-              setReferralError(data.error || "Invalid referral code");
-              setAppliedReferralCode("");
+              const response = await fetch("/api/referral/validate-code", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ referralCode: autoReferralCode }),
+              });
+              const data = await response.json();
+
+              if (data.valid) {
+                const matchedCode = normalizeReferralCode(data.matchedCode || autoReferralCode);
+                setReferralCodeValid(true);
+                setReferralDiscount(data.discountAmount || 10.0);
+                setReferralError(null);
+                setAppliedReferralCode(matchedCode);
+                setReferralCode(matchedCode);
+                setIsPartnerCode(false);
+                setPartnerBusinessName("");
+                setPartnerSuccessMessage("");
+              } else {
+                setReferralCodeValid(false);
+                setReferralDiscount(0);
+                setReferralError(data.error || "Invalid referral code");
+                setAppliedReferralCode("");
+              }
             }
-          } catch (err: any) {
+          } catch {
             setReferralCodeValid(false);
             setReferralDiscount(0);
             setReferralError("Failed to validate code. Please try again.");
@@ -103,6 +146,9 @@ export function PlanConfirmationModal({
         setReferralDiscount(0);
         setReferralError(null);
         setAppliedReferralCode("");
+        setIsPartnerCode(false);
+        setPartnerBusinessName("");
+        setPartnerSuccessMessage("");
       }
     } else {
       setApplyCredit(false);
@@ -111,15 +157,20 @@ export function PlanConfirmationModal({
       setReferralDiscount(0);
       setReferralError(null);
       setAppliedReferralCode("");
+      setIsPartnerCode(false);
+      setPartnerBusinessName("");
+      setPartnerSuccessMessage("");
     }
-  }, [isOpen, availableCredit, initialReferralCode]);
+  }, [isOpen, availableCredit, initialReferralCode, initialPartnerCode]);
 
-  // Validate referral code when user enters it
   const handleValidateReferralCode = async () => {
     if (!referralCode.trim()) {
       setReferralCodeValid(null);
       setReferralDiscount(0);
       setReferralError(null);
+      setIsPartnerCode(false);
+      setPartnerBusinessName("");
+      setPartnerSuccessMessage("");
       return;
     }
 
@@ -129,7 +180,7 @@ export function PlanConfirmationModal({
     const normalizedCode = normalizeReferralCode(referralCode);
 
     try {
-      const response = await fetch("/api/referral/validate-code", {
+      const referralResponse = await fetch("/api/referral/validate-code", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -137,25 +188,57 @@ export function PlanConfirmationModal({
         body: JSON.stringify({ referralCode: normalizedCode }),
       });
 
-      const data = await response.json();
+      const referralData = await referralResponse.json();
 
-      if (data.valid) {
-        const matchedCode = normalizeReferralCode(data.matchedCode || normalizedCode);
+      if (referralData.valid) {
+        const matchedCode = normalizeReferralCode(referralData.matchedCode || normalizedCode);
         setReferralCodeValid(true);
-        setReferralDiscount(data.discountAmount || 10.00);
+        setReferralDiscount(referralData.discountAmount || 10.0);
         setReferralError(null);
         setAppliedReferralCode(matchedCode);
         setReferralCode(matchedCode);
+        setIsPartnerCode(false);
+        setPartnerBusinessName("");
+        setPartnerSuccessMessage("");
+        return;
+      }
+
+      const partnerResponse = await fetch("/api/partners/validate-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partnerCode: normalizedCode }),
+      });
+      const partnerData = await partnerResponse.json();
+
+      if (partnerData.valid) {
+        const matchedCode = normalizeReferralCode(partnerData.matchedCode || normalizedCode);
+        setReferralCodeValid(true);
+        setReferralDiscount(0);
+        setReferralError(null);
+        setAppliedReferralCode(matchedCode);
+        setReferralCode(matchedCode);
+        setIsPartnerCode(true);
+        setPartnerBusinessName(partnerData.businessName || "Partner");
+        setPartnerSuccessMessage(
+          partnerData.message ||
+            `Partner code applied! Your booking supports ${partnerData.businessName || "this partner"}.`
+        );
       } else {
         setReferralCodeValid(false);
         setReferralDiscount(0);
-        setReferralError(data.error || "Invalid referral code");
+        setReferralError(referralData.error || partnerData.error || "Invalid code");
         setAppliedReferralCode("");
+        setIsPartnerCode(false);
+        setPartnerBusinessName("");
+        setPartnerSuccessMessage("");
       }
-    } catch (err: any) {
+    } catch {
       setReferralCodeValid(false);
       setReferralDiscount(0);
       setReferralError("Failed to validate code. Please try again.");
+      setIsPartnerCode(false);
+      setPartnerBusinessName("");
+      setPartnerSuccessMessage("");
     } finally {
       setValidatingCode(false);
     }
@@ -284,6 +367,9 @@ export function PlanConfirmationModal({
                   setReferralCodeValid(null);
                   setReferralDiscount(0);
                   setReferralError(null);
+                  setIsPartnerCode(false);
+                  setPartnerBusinessName("");
+                  setPartnerSuccessMessage("");
                 }}
                 placeholder="Enter referral code (dashes optional)"
                 style={{
@@ -342,7 +428,9 @@ export function PlanConfirmationModal({
                     marginBottom: "0.35rem",
                   }}
                 >
-                  ✓ Referral code applied! You'll get ${referralDiscount.toFixed(2)} off.
+                  ✓ {isPartnerCode
+                    ? partnerSuccessMessage || `Partner code applied! Your booking supports ${partnerBusinessName}.`
+                    : `Referral code applied! You'll get $${referralDiscount.toFixed(2)} off.`}
                 </div>
                 <ReferralCodeDisplay code={appliedReferralCode} size="md" showLegend grouped />
               </div>
