@@ -1,4 +1,5 @@
 import emailjs from "@emailjs/browser";
+import { EMAIL_LOGO_URL } from "@/lib/email-utils";
 
 export interface PartnerApprovalEmailParams {
   email: string;
@@ -69,6 +70,7 @@ export async function sendPartnerApprovalEmailClient(
         revenueSharePlatform: formatSharePercent(params.revenueSharePlatform),
         signupLink: params.signupLink,
         partnerId: params.partnerId || "",
+        logoUrl: EMAIL_LOGO_URL,
       },
       { publicKey }
     );

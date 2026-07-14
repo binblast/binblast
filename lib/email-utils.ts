@@ -1,6 +1,9 @@
 import { CURB_PLACEMENT_MESSAGE } from "@/lib/cleaning-readiness";
 // Helper functions for sending emails via EmailJS
 
+export const EMAIL_LOGO_URL =
+  process.env.NEXT_PUBLIC_EMAIL_LOGO_URL || "https://www.binblastco.com/bin-blast-email-logo.png";
+
 export interface EmailParams {
   to_email: string;
   [key: string]: any;
@@ -118,6 +121,7 @@ export async function notifyPartnerApproval(partnerData: {
     revenueSharePlatform: `${(partnerData.revenueSharePlatform * 100).toFixed(0)}`,
     signupLink: partnerData.signupLink,
     partnerId: partnerData.partnerId || "",
+    logoUrl: EMAIL_LOGO_URL,
   });
 
   if (!result.success) {

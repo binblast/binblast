@@ -35,6 +35,12 @@ Set the **To Email** field to:
 {{to_email}}
 ```
 
+### Logo image
+In the template HTML, set the logo `<img>` source to:
+```
+{{logoUrl}}
+```
+
 **Important**: EmailJS uses `{{variableName}}` syntax for template variables. Make sure all variables match exactly.
 
 ## Step 5: Template Variables
@@ -50,7 +56,8 @@ The template uses these variables (all must be provided by your API):
 | `{{serviceAreas}}` | Service areas (comma-separated) | `Atlanta, Marietta, Roswell` |
 | `{{revenueSharePartner}}` | Partner revenue share % | `60` |
 | `{{revenueSharePlatform}}` | Platform revenue share % | `40` |
-| `{{signupLink}}` | Partner signup URL | `https://binblast.vercel.app/partner?partnerId=abc123` |
+| `{{signupLink}}` | Partner signup URL | `https://www.binblastco.com/register?partner=true` |
+| `{{logoUrl}}` | Logo image URL (email-optimized) | `https://www.binblastco.com/bin-blast-email-logo.png` |
 
 ## Step 6: Test Template
 
