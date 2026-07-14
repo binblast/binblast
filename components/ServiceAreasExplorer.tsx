@@ -15,26 +15,41 @@ export function ServiceAreasExplorer() {
   return (
     <div className="service-areas-explorer">
       <p className="service-areas-explorer__hint">
-        Tap a city to explore local history &amp; fun facts
+        <span className="service-areas-explorer__hint-badge">Explore our communities</span>
+        Tap a city for local history &amp; fun facts
       </p>
 
-      <div className="service-areas-grid" role="tablist" aria-label="Service area cities">
-        {SERVICE_AREAS.map((area) => {
-          const isActive = activeArea?.name === area;
-          return (
-            <button
-              key={area}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              aria-controls={`service-area-panel-${area.replace(/\s+/g, "-").toLowerCase()}`}
-              className={`service-area-chip service-area-chip--interactive${isActive ? " active" : ""}`}
-              onClick={() => handleSelect(area)}
-            >
-              {area}
-            </button>
-          );
-        })}
+      <div className="service-areas-explorer__chips">
+        <div className="service-areas-grid service-areas-grid--premium" role="tablist" aria-label="Service area cities">
+          {SERVICE_AREAS.map((area) => {
+            const isActive = activeArea?.name === area;
+            return (
+              <button
+                key={area}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`service-area-panel-${area.replace(/\s+/g, "-").toLowerCase()}`}
+                className={`service-area-chip service-area-chip--interactive${isActive ? " active" : ""}`}
+                onClick={() => handleSelect(area)}
+              >
+                <span className="service-area-chip__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M12 21s6-5.686 6-10a6 6 0 1 0-12 0c0 4.314 6 10 6 10Z"
+                      stroke="currentColor"
+                      strokeWidth="1.75"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="12" cy="11" r="2.25" stroke="currentColor" strokeWidth="1.75" />
+                  </svg>
+                </span>
+                <span className="service-area-chip__label">{area}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {activeArea && (
