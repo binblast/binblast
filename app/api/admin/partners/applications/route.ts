@@ -86,9 +86,13 @@ export async function GET(req: NextRequest) {
       })
     );
 
+    const activeApplications = reconciledApplications.filter(
+      (app: { status?: string }) => app.status !== "rejected"
+    );
+
     return NextResponse.json({
       success: true,
-      applications: reconciledApplications,
+      applications: activeApplications,
     });
   } catch (err: any) {
     console.error("Error fetching partner applications:", err);

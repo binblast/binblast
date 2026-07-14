@@ -137,11 +137,11 @@ function getApplicationStatusLabel(app: PartnerApplication): string {
 }
 
 function getApplicationStats(applications: PartnerApplication[]) {
+  const visible = applications.filter((app) => getApplicationDisplayStatus(app) !== "rejected");
   return {
-    pending: applications.filter((app) => getApplicationDisplayStatus(app) === "pending").length,
-    hold: applications.filter((app) => getApplicationDisplayStatus(app) === "hold").length,
-    approved: applications.filter((app) => getApplicationDisplayStatus(app) === "approved").length,
-    rejected: applications.filter((app) => getApplicationDisplayStatus(app) === "rejected").length,
+    pending: visible.filter((app) => getApplicationDisplayStatus(app) === "pending").length,
+    hold: visible.filter((app) => getApplicationDisplayStatus(app) === "hold").length,
+    approved: visible.filter((app) => getApplicationDisplayStatus(app) === "approved").length,
   };
 }
 
@@ -281,7 +281,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       const app = applications.find((a) => a.id === applicationId);
       if (app) {
         if (getApplicationDisplayStatus(app) === "rejected") {
-          notify("This application was already rejected", "info");
+          notify("This application was already removed from the partner program", "info");
           return;
         }
         setSelectedApplication(app);
@@ -397,7 +397,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       
       const data = await response.json();
       if (data.success) {
-        notify(data.alreadyRejected ? "This application was already rejected" : "Application rejected", data.alreadyRejected ? "info" : "success");
+        notify(data.alreadyRejected ? "This application was already removed" : "Application rejected and removed from partner program", data.alreadyRejected ? "info" : "success");
         setShowRejectModal(false);
         setSelectedApplication(null);
         setShowMiniProfile(false);
@@ -537,15 +537,19 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       return bTime - aTime;
     });
 
+  const visibleApplications = applications.filter(
+    (app) => getApplicationDisplayStatus(app) !== "rejected"
+  );
+
   const queueApplications = sortApplications(
-    applications.filter((app) => {
+    visibleApplications.filter((app) => {
       const status = getApplicationDisplayStatus(app);
       return (status === "pending" || status === "hold") && matchesApplicationSearch(app);
     })
   );
 
   const filteredApplications = sortApplications(
-    applications.filter((app) => {
+    visibleApplications.filter((app) => {
       const matchesStatus =
         applicationStatusFilter === "all" ||
         getApplicationDisplayStatus(app) === applicationStatusFilter;
@@ -596,7 +600,6 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
     { id: "pending", label: "Needs Review" },
     { id: "hold", label: "On Hold" },
     { id: "approved", label: "Approved" },
-    { id: "rejected", label: "Rejected" },
   ];
 
   return (
@@ -615,7 +618,6 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
           { label: "Needs Review", value: applicationStats.pending, color: "#4338ca", bg: "#eef2ff", filter: "pending" as const },
           { label: "On Hold", value: applicationStats.hold, color: "#d97706", bg: "#fffbeb", filter: "hold" as const },
           { label: "Approved", value: applicationStats.approved, color: "#16a34a", bg: "#ecfdf5", filter: "approved" as const },
-          { label: "Rejected", value: applicationStats.rejected, color: "#dc2626", bg: "#fef2f2", filter: "rejected" as const },
         ].map((stat) => (
           <button
             key={stat.label}
