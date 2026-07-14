@@ -18,16 +18,20 @@ import {
 
 type PlanId = "one-time" | "twice-month" | "commercial" | "bi-monthly" | "quarterly";
 
+type PricingTier = "starter" | "featured" | "elite" | "value" | "essential";
+
 type PricingPlan = {
   id: PlanId;
   name: string;
-  price: number | string; // Can be number or "Custom Quote"
+  price: number | string;
   priceSuffix?: "/clean" | "/month" | "/year";
-  priceRange?: string; // e.g. "$60–$65"
+  priceRange?: string;
   highlight?: boolean;
-  binInfo: string; // e.g. "FOR UP TO 2 BINS"
-  additionalInfo?: string; // e.g. "Additional bins: +$10 each"
-  features: string[]; // Array of feature strings
+  tier: PricingTier;
+  tierLabel?: string;
+  binInfo: string;
+  additionalInfo?: string;
+  features: string[];
   buttonText: string;
 };
 
@@ -37,6 +41,8 @@ const PLANS: PricingPlan[] = [
     name: "Monthly Clean",
     price: 35,
     priceSuffix: "/month",
+    tier: "starter",
+    tierLabel: "Starter",
     binInfo: "FOR UP TO 1 BIN",
     additionalInfo: "Additional bins: +$10 each",
     features: [
@@ -52,6 +58,8 @@ const PLANS: PricingPlan[] = [
     price: 65,
     priceSuffix: "/month",
     highlight: true,
+    tier: "featured",
+    tierLabel: "Most Popular",
     binInfo: "FOR UP TO 1 BIN",
     additionalInfo: "Additional bins: +$10 each",
     features: [
@@ -65,6 +73,8 @@ const PLANS: PricingPlan[] = [
     id: "commercial",
     name: "Commercial & HOA Plans",
     price: "Custom Quote",
+    tier: "elite",
+    tierLabel: "Top Earner",
     binInfo: "BUILT FOR MULTI-BIN PROPERTIES",
     features: [
       "Apartments & community bins",
@@ -82,6 +92,8 @@ const ADDITIONAL_PLANS: PricingPlan[] = [
     name: "Bi-Monthly Plan – Yearly Package",
     price: 210,
     priceSuffix: "/year",
+    tier: "value",
+    tierLabel: "Best Annual Value",
     binInfo: "6 CLEANS PER YEAR (EVERY 2 MONTHS)",
     additionalInfo: "1 bin included · +10 FREE heavy-duty odor-control bags every clean · +$10 per extra bin per cleaning",
     features: [
@@ -96,6 +108,8 @@ const ADDITIONAL_PLANS: PricingPlan[] = [
     name: "Quarterly Plan – Yearly Package",
     price: 160,
     priceSuffix: "/year",
+    tier: "essential",
+    tierLabel: "Smart Saver",
     binInfo: "4 CLEANS PER YEAR (EVERY 3 MONTHS)",
     additionalInfo: "1 bin included · +10 FREE heavy-duty odor-control bags every clean · +$10 per extra bin per cleaning",
     features: [
@@ -313,6 +327,45 @@ export function PricingSection() {
     }
   };
 
+  const renderPricingCard = (plan: PricingPlan) => (
+    <button
+      key={plan.id}
+      onClick={() => handlePlanClick(plan.id)}
+      disabled={loadingPlanId === plan.id}
+      className={`pricing-card card-link pricing-card--${plan.tier}${plan.highlight ? " popular" : ""}`}
+      style={{ opacity: loadingPlanId === plan.id ? 0.6 : 1, cursor: loadingPlanId === plan.id ? "wait" : "pointer" }}
+    >
+      {plan.tierLabel && (
+        <div className={`pricing-tier-badge pricing-tier-badge--${plan.tier}`}>
+          {plan.tierLabel}
+        </div>
+      )}
+
+      <h3 className="plan-name">{plan.name}</h3>
+
+      <p className={`price-big ${typeof plan.price === "string" ? "custom" : ""}`}>
+        {typeof plan.price === "number" ? `$${plan.price}` : plan.price}
+        {plan.priceSuffix && typeof plan.price === "number" && (
+          <span className="price-small">{plan.priceSuffix}</span>
+        )}
+      </p>
+
+      <p className="price-sub">{plan.binInfo}</p>
+
+      {plan.additionalInfo && <p className="price-extra">{plan.additionalInfo}</p>}
+
+      <ul className="pricing-list">
+        {plan.features.map((feature, index) => (
+          <li key={index}>{feature}</li>
+        ))}
+      </ul>
+
+      <div className={`card-cta card-cta--${plan.tier}`}>
+        {loadingPlanId === plan.id ? "Processing..." : plan.buttonText}
+      </div>
+    </button>
+  );
+
   return (
     <>
       {showOnboardingWizard && selectedPlanId && selectedPlanId !== "commercial" && (
@@ -374,100 +427,15 @@ export function PricingSection() {
 
 
         <div className="pricing-grid">
-
-          {mainPlans.map((plan) => (
-
-            <button
-
-              key={plan.id}
-
-              onClick={() => handlePlanClick(plan.id)}
-
-              disabled={loadingPlanId === plan.id}
-
-              className={`pricing-card card-link ${plan.highlight ? 'popular' : ''}`}
-
-              style={{ opacity: loadingPlanId === plan.id ? 0.6 : 1, cursor: loadingPlanId === plan.id ? 'wait' : 'pointer' }}
-
-            >
-
-              {plan.highlight && (
-
-                <div className="popular-badge">Most Popular</div>
-
-              )}
-
-
-
-              <h3 className="plan-name">{plan.name}</h3>
-
-              <p className={`price-big ${typeof plan.price === 'string' ? 'custom' : ''}`}>
-
-                {typeof plan.price === 'number' ? `$${plan.price}` : plan.price}
-
-                {plan.priceSuffix && typeof plan.price === 'number' && <span className="price-small">{plan.priceSuffix}</span>}
-
-              </p>
-
-              <p className="price-sub" style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.8rem", fontWeight: "600", color: "#6b7280", marginTop: "0.4rem", marginBottom: "0.1rem" }}>
-
-                {plan.binInfo}
-
-              </p>
-
-              {plan.additionalInfo && (
-
-                <p className="price-extra">{plan.additionalInfo}</p>
-
-              )}
-
-
-
-              <ul className="pricing-list">
-
-                {plan.features.map((feature, index) => (
-
-                  <li key={index}>{feature}</li>
-
-                ))}
-
-              </ul>
-
-
-
-              <div className={`card-cta ${plan.highlight ? 'primary' : ''}`}>
-                {loadingPlanId === plan.id ? "Processing..." : plan.buttonText}
-              </div>
-
-            </button>
-
-          ))}
-
+          {mainPlans.map((plan) => renderPricingCard(plan))}
         </div>
 
         {/* More Services Button */}
-        <div style={{ textAlign: "center", marginTop: "3rem" }}>
+        <div className="pricing-more-services-wrap">
           <button
+            type="button"
+            className="pricing-more-services-btn"
             onClick={() => setShowMoreServices(!showMoreServices)}
-            style={{
-              padding: "0.85rem 2rem",
-              fontSize: "0.98rem",
-              fontWeight: "600",
-              color: "#16a34a",
-              background: "transparent",
-              border: "2px solid #16a34a",
-              borderRadius: "999px",
-              cursor: "pointer",
-              transition: "all 0.2s ease"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#16a34a";
-              e.currentTarget.style.color = "#ffffff";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#16a34a";
-            }}
           >
             {showMoreServices ? "Hide More Services" : "More Services"}
           </button>
@@ -475,36 +443,8 @@ export function PricingSection() {
 
         {/* Additional Plans (Collapsible) */}
         {showMoreServices && (
-          <div className="pricing-grid" style={{ marginTop: "2.5rem" }}>
-            {additionalPlans.map((plan) => (
-              <button
-                key={plan.id}
-                onClick={() => handlePlanClick(plan.id)}
-                disabled={loadingPlanId === plan.id}
-                className="pricing-card card-link"
-                style={{ opacity: loadingPlanId === plan.id ? 0.6 : 1, cursor: loadingPlanId === plan.id ? 'wait' : 'pointer' }}
-              >
-                <h3 className="plan-name">{plan.name}</h3>
-                <p className={`price-big ${typeof plan.price === 'string' ? 'custom' : ''}`}>
-                  {typeof plan.price === 'number' ? `$${plan.price}` : plan.price}
-                  {plan.priceSuffix && typeof plan.price === 'number' && <span className="price-small">{plan.priceSuffix}</span>}
-                </p>
-                <p className="price-sub" style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.8rem", fontWeight: "600", color: "#6b7280", marginTop: "0.4rem", marginBottom: "0.1rem" }}>
-                  {plan.binInfo}
-                </p>
-                {plan.additionalInfo && (
-                  <p className="price-extra">{plan.additionalInfo}</p>
-                )}
-                <ul className="pricing-list">
-                  {plan.features.map((feature, index) => (
-                    <li key={index}>{feature}</li>
-                  ))}
-                </ul>
-                <div className="card-cta">
-                  {loadingPlanId === plan.id ? "Processing..." : plan.buttonText}
-                </div>
-              </button>
-            ))}
+          <div className="pricing-grid pricing-grid--secondary">
+            {additionalPlans.map((plan) => renderPricingCard(plan))}
           </div>
         )}
 
