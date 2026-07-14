@@ -8,6 +8,8 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useState, useEffect } from "react";
 import { georgiaCounties } from "@/data/gaCounties";
 import { metroAtlZones } from "@/data/metroAtlZones";
+import { ReasonDialog } from "./AdminDialog";
+import "./partner-program.css";
 
 interface Partner {
   id: string;
@@ -36,6 +38,7 @@ interface PartnerMiniProfileProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdate: () => void;
+  onNotify?: (message: string, type?: "success" | "error" | "info") => void;
   onApprove?: (applicationId: string) => void;
   applicationId?: string;
   partnerRecordId?: string | null;
@@ -48,6 +51,7 @@ export function PartnerMiniProfile({
   isOpen,
   onClose,
   onUpdate,
+  onNotify,
   onApprove,
   applicationId,
   partnerRecordId = null,
@@ -60,6 +64,11 @@ export function PartnerMiniProfile({
   const [photoCompliance, setPhotoCompliance] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+
+  const toast = (message: string, type: "success" | "error" | "info" = "success") => {
+    if (onNotify) onNotify(message, type);
+  };
 
   useEffect(() => {
     if (isOpen && partner) {
@@ -111,22 +120,9 @@ export function PartnerMiniProfile({
     }
   }
 
-  async function handlePause() {
-    if (!partner || !activePartnerId) return;
-    if (!confirm("Pause this partner? They will not receive new job assignments.")) return;
-
-    try {
-      const response = await fetchWithAuth(`/api/admin/partners/${activePartnerId}/pause`, { method: "POST" });
-      const data = await response.json();
-      if (data.success) {
-        alert("Partner paused");
-        onUpdate();
-      } else {
-        alert(`Error: ${data.error}`);
-      }
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
+  function handlePause() {
+    if (!activePartnerId) return;
+    window.dispatchEvent(new CustomEvent("partnerPauseRequest", { detail: { partnerId: activePartnerId } }));
   }
 
   async function handleResume() {
@@ -135,86 +131,29 @@ export function PartnerMiniProfile({
       const response = await fetchWithAuth(`/api/admin/partners/${activePartnerId}/resume`, { method: "POST" });
       const data = await response.json();
       if (data.success) {
-        alert("Partner resumed");
+        toast("Partner resumed");
         onUpdate();
       } else {
-        alert(`Error: ${data.error}`);
-      }
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
-  }
-
-  async function handleRemove() {
-    if (!partner || !activePartnerId) return;
-    const reason = prompt("Enter removal reason:");
-    if (!reason?.trim()) return;
-
-    try {
-      const response = await fetchWithAuth(`/api/admin/partners/${activePartnerId}/remove`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        alert("Partner removed");
-        onClose();
-        onUpdate();
-      } else {
-        alert(`Error: ${data.error}`);
-      }
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
-  }
-
-  async function handleRejectApplication() {
-    if (!applicationId) return;
-    const reason = prompt("Enter rejection reason:");
-    if (!reason?.trim()) return;
-
-    try {
-      const response = await fetchWithAuth(`/api/admin/partners/applications/${applicationId}/reject`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        alert("Application rejected");
-        onClose();
-        onUpdate();
-      } else {
-        alert(`Error: ${data.error}`);
+        toast(`Error: ${data.error}`, "error");
       }
     } catch (err: unknown) {
-      alert(`Error: ${err instanceof Error ? err.message : "Failed to reject application"}`);
+      toast(`Error: ${err instanceof Error ? err.message : "Resume failed"}`, "error");
     }
   }
 
-  async function handleHoldApplication() {
-    if (!applicationId) return;
-    const notes = prompt("Add hold notes (optional):") || "";
+  function handleRemove() {
+    if (!activePartnerId) return;
+    setShowRemoveDialog(true);
+  }
 
-    try {
-      const response = await fetchWithAuth(`/api/admin/partners/applications/${applicationId}/hold`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        alert("Application marked as Hold / Needs Review");
-        onClose();
-        onUpdate();
-      } else {
-        alert(`Error: ${data.error}`);
-      }
-    } catch (err: unknown) {
-      alert(`Error: ${err instanceof Error ? err.message : "Failed to update application"}`);
-    }
+  function handleRejectApplication() {
+    if (!applicationId) return;
+    window.dispatchEvent(new CustomEvent("partnerRejectRequest", { detail: { applicationId } }));
+  }
+
+  function handleHoldApplication() {
+    if (!applicationId) return;
+    window.dispatchEvent(new CustomEvent("partnerHoldRequest", { detail: { applicationId } }));
   }
 
   async function handleApprove() {
@@ -228,6 +167,21 @@ export function PartnerMiniProfile({
 
   return (
     <>
+      {showRemoveDialog && activePartnerId && (
+        <ReasonDialog
+          title={`Remove ${partner.businessName}?`}
+          description="This blocks future jobs and portal access."
+          placeholder="Enter removal reason..."
+          confirmLabel="Continue"
+          variant="danger"
+          onSubmit={(reason) => {
+            window.dispatchEvent(
+              new CustomEvent("partnerRemoveRequest", { detail: { partnerId: activePartnerId, reason } })
+            );
+          }}
+          onClose={() => setShowRemoveDialog(false)}
+        />
+      )}
       {/* Backdrop */}
       <div
         onClick={onClose}
@@ -563,7 +517,7 @@ export function PartnerMiniProfile({
           )}
           {activeTab === "performance" && !isApplicationOnly && <PerformanceTab partner={partner} />}
           {activeTab === "messages" && activePartnerId && (
-            <MessagesTab partnerId={activePartnerId} messages={messages} loading={loading} onUpdate={loadTabData} />
+            <MessagesTab partnerId={activePartnerId} messages={messages} loading={loading} onUpdate={loadTabData} onNotify={onNotify} />
           )}
         </div>
       </div>
@@ -945,11 +899,13 @@ function MessagesTab({
   messages,
   loading,
   onUpdate,
+  onNotify,
 }: {
   partnerId: string;
   messages: any[];
   loading: boolean;
   onUpdate: () => void;
+  onNotify?: (message: string, type?: "success" | "error" | "info") => void;
 }) {
   const [messageText, setMessageText] = useState("");
   const [messageType, setMessageType] = useState<"praise" | "request" | "warning">("request");
@@ -975,14 +931,15 @@ function MessagesTab({
       
       if (data.success) {
         setMessageText("");
+        onNotify?.("Message sent", "success");
         onUpdate();
       } else {
         throw new Error(data.error || "Failed to send message");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[Send Message] Error:", err);
-      const errorMsg = err.message || "An unexpected error occurred";
-      alert(`Failed to send message: ${errorMsg}`);
+      const errorMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+      onNotify?.(`Failed to send message: ${errorMsg}`, "error");
     }
   }
 

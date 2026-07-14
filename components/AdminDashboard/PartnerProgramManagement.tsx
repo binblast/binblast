@@ -4,11 +4,14 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
 import { georgiaCounties } from "@/data/gaCounties";
 import { metroAtlZones } from "@/data/metroAtlZones";
 import { PartnerMiniProfile } from "./PartnerMiniProfile";
+import { ToastContainer } from "@/components/EmployeeDashboard/Toast";
+import { useAdminToast } from "./useAdminToast";
+import { ConfirmDialog } from "./AdminDialog";
+import "./partner-program.css";
 
 interface PartnerApplication {
   id: string;
@@ -62,6 +65,48 @@ interface Partner {
 }
 
 type ApplicationStatus = PartnerApplication["status"];
+type PartnerViewTab = "queue" | "partners" | "all";
+
+function formatRelativeDate(date: unknown): string {
+  const raw = date as { toDate?: () => Date } | string | number | Date | null | undefined;
+  const d = raw && typeof raw === "object" && "toDate" in raw && raw.toDate ? raw.toDate() : raw;
+  if (!d) return "Recently";
+  const ts = new Date(d as string | number | Date).getTime();
+  if (Number.isNaN(ts)) return "Recently";
+  const days = Math.floor((Date.now() - ts) / 86400000);
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(ts).toLocaleDateString();
+}
+
+function convertApplicationToPartner(application: PartnerApplication): Partner {
+  return {
+    id: application.id,
+    userId: application.userId || null,
+    businessName: application.businessName,
+    ownerName: application.ownerName,
+    email: application.email,
+    phone: application.phone,
+    serviceAreas: application.serviceArea ? [application.serviceArea] : [],
+    serviceType: application.serviceType,
+    status: "paused",
+    revenueSharePartner: 0.6,
+    revenueSharePlatform: 0.4,
+    partnerCode: "",
+    partnerSlug: "",
+    createdAt: application.createdAt,
+    updatedAt: application.updatedAt,
+  };
+}
+
+function statusPillClass(app: PartnerApplication): string {
+  return getApplicationDisplayStatus(app);
+}
+
+function partnerStatusPillClass(status: Partner["status"]): string {
+  return status;
+}
 
 function normalizeApplication(app: PartnerApplication): PartnerApplication {
   const status = (app.status || "pending") as ApplicationStatus;
@@ -118,10 +163,11 @@ interface PartnerProgramManagementProps {
 }
 
 export function PartnerProgramManagement({ userId }: PartnerProgramManagementProps) {
-  const router = useRouter();
+  const { toasts, notify, removeToast } = useAdminToast();
   const [applications, setApplications] = useState<PartnerApplication[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeView, setActiveView] = useState<PartnerViewTab>("queue");
   
   // Filters and search
   const [applicationSearch, setApplicationSearch] = useState("");
@@ -145,10 +191,58 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
   const [approveServiceAreas, setApproveServiceAreas] = useState<string[]>([]);
   const [approvePartnerShare, setApprovePartnerShare] = useState(60);
   const [approvePlatformShare, setApprovePlatformShare] = useState(40);
-  
-  // Bulk actions
-  const [selectedApplicationIds, setSelectedApplicationIds] = useState<Set<string>>(new Set());
-  const [selectedPartnerIds, setSelectedPartnerIds] = useState<Set<string>>(new Set());
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    variant: "primary" | "danger" | "warning";
+    onConfirm: () => void;
+  } | null>(null);
+
+  const openApplicationProfile = useCallback(async (app: PartnerApplication) => {
+    try {
+      if (app.linkedPartnerId) {
+        try {
+          const partnerResponse = await fetchWithAuth(`/api/admin/partners/${app.linkedPartnerId}`);
+          const partnerData = await partnerResponse.json();
+
+          if (partnerResponse.ok && partnerData.success && partnerData.partner) {
+            setSelectedPartner(partnerData.partner);
+            setMiniProfileApplicationId(app.id);
+            setSelectedPartnerRecordId(app.linkedPartnerId);
+            setShowMiniProfile(true);
+            return;
+          }
+        } catch (fetchError) {
+          console.error("[View Profile] Fetch error:", fetchError);
+        }
+      }
+
+      setSelectedPartner(convertApplicationToPartner(app));
+      setMiniProfileApplicationId(app.id);
+      setSelectedPartnerRecordId(app.linkedPartnerId || null);
+      setShowMiniProfile(true);
+    } catch (error: unknown) {
+      console.error("[View Profile] Error:", error);
+      notify(
+        `Failed to load profile: ${error instanceof Error ? error.message : "Unknown error"}`,
+        "error"
+      );
+    }
+  }, [notify]);
+
+  const openPartnerProfile = useCallback((partner: Partner, tab?: "messages") => {
+    setSelectedPartner(partner);
+    setMiniProfileApplicationId(undefined);
+    setSelectedPartnerRecordId(partner.id);
+    setShowMiniProfile(true);
+    if (tab === "messages") {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("partnerMiniProfileOpen", { detail: { tab: "messages" } }));
+      }, 100);
+    }
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -176,6 +270,46 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       window.removeEventListener('partnerApproveRequest', handleApproveRequest as EventListener);
     };
   }, [applications]);
+
+  useEffect(() => {
+    const handleRejectRequest = (e: CustomEvent) => {
+      const applicationId = e.detail?.applicationId;
+      const app = applications.find((a) => a.id === applicationId);
+      if (app) {
+        setSelectedApplication(app);
+        setShowRejectModal(true);
+      }
+    };
+    const handleHoldRequest = (e: CustomEvent) => {
+      const applicationId = e.detail?.applicationId;
+      const app = applications.find((a) => a.id === applicationId);
+      if (app) {
+        setSelectedApplication(app);
+        setShowHoldModal(true);
+      }
+    };
+    const handleRemoveRequest = (e: CustomEvent) => {
+      const { partnerId, reason } = e.detail || {};
+      if (partnerId && reason) {
+        requestRemovePartner(partnerId, reason);
+      }
+    };
+    const handlePauseRequest = (e: CustomEvent) => {
+      const partnerId = e.detail?.partnerId;
+      if (partnerId) requestPausePartner(partnerId);
+    };
+
+    window.addEventListener("partnerRejectRequest", handleRejectRequest as EventListener);
+    window.addEventListener("partnerHoldRequest", handleHoldRequest as EventListener);
+    window.addEventListener("partnerRemoveRequest", handleRemoveRequest as EventListener);
+    window.addEventListener("partnerPauseRequest", handlePauseRequest as EventListener);
+    return () => {
+      window.removeEventListener("partnerRejectRequest", handleRejectRequest as EventListener);
+      window.removeEventListener("partnerHoldRequest", handleHoldRequest as EventListener);
+      window.removeEventListener("partnerRemoveRequest", handleRemoveRequest as EventListener);
+      window.removeEventListener("partnerPauseRequest", handlePauseRequest as EventListener);
+    };
+  }, [applications, partners]);
 
   async function loadData() {
     try {
@@ -206,12 +340,12 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
     if (!selectedApplication) return;
     
     if (approveServiceAreas.length === 0) {
-      alert("Please select at least one service area");
+      notify("Please select at least one service area", "error");
       return;
     }
     
     if (approvePartnerShare + approvePlatformShare !== 100) {
-      alert("Revenue shares must total 100%");
+      notify("Revenue shares must total 100%", "error");
       return;
     }
     
@@ -228,15 +362,19 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       
       const data = await response.json();
       if (data.success) {
-        alert("Partner approved successfully!");
+        notify("Partner approved successfully!");
         setShowApproveModal(false);
         setSelectedApplication(null);
+        setShowMiniProfile(false);
+        setSelectedPartner(null);
+        setMiniProfileApplicationId(undefined);
+        setSelectedPartnerRecordId(null);
         loadData();
       } else {
-        alert(`Error: ${data.error}`);
+        notify(`Error: ${data.error}`, "error");
       }
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      notify(`Error: ${err instanceof Error ? err.message : "Approval failed"}`, "error");
     }
   }
 
@@ -250,66 +388,19 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       
       const data = await response.json();
       if (data.success) {
-        alert("Application rejected");
+        notify("Application rejected");
         setShowRejectModal(false);
         setSelectedApplication(null);
+        setShowMiniProfile(false);
+        setSelectedPartner(null);
+        setMiniProfileApplicationId(undefined);
+        setSelectedPartnerRecordId(null);
         loadData();
       } else {
-        alert(`Error: ${data.error}`);
+        notify(`Error: ${data.error}`, "error");
       }
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
-  }
-
-  async function handleApplicationStatusChange(app: PartnerApplication, newStatus: ApplicationStatus) {
-    const currentStatus = getApplicationDisplayStatus(app);
-    if (newStatus === currentStatus) return;
-
-    if (newStatus === "approved") {
-      setSelectedApplication(app);
-      const areas = app.serviceArea ? app.serviceArea.split(",").map((s) => s.trim()).filter(Boolean) : [];
-      setApproveServiceAreas(areas);
-      setApprovePartnerShare(60);
-      setApprovePlatformShare(40);
-      setShowApproveModal(true);
-      return;
-    }
-
-    if (newStatus === "rejected") {
-      setSelectedApplication(app);
-      setShowRejectModal(true);
-      return;
-    }
-
-    if (newStatus === "hold") {
-      setSelectedApplication(app);
-      setShowHoldModal(true);
-      return;
-    }
-
-    if (newStatus === "pending") {
-      if (app.linkedPartnerId) {
-        alert("This application is already linked to a partner account. Manage it under Active Partners.");
-        return;
-      }
-      if (!confirm(`Move "${app.businessName}" back to Needs Review?`)) return;
-
-      try {
-        const response = await fetchWithAuth(`/api/admin/partners/applications/${app.id}/status`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "pending" }),
-        });
-        const data = await response.json();
-        if (data.success) {
-          loadData();
-        } else {
-          alert(`Error: ${data.error}`);
-        }
-      } catch (err: unknown) {
-        alert(`Error: ${err instanceof Error ? err.message : "Failed to update status"}`);
-      }
+    } catch (err: unknown) {
+      notify(`Error: ${err instanceof Error ? err.message : "Rejection failed"}`, "error");
     }
   }
 
@@ -323,21 +414,19 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       
       const data = await response.json();
       if (data.success) {
-        alert("Application marked as 'Hold/Needs Review'");
+        notify("Application placed on hold");
         setShowHoldModal(false);
         setSelectedApplication(null);
         loadData();
       } else {
-        alert(`Error: ${data.error}`);
+        notify(`Error: ${data.error}`, "error");
       }
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      notify(`Error: ${err instanceof Error ? err.message : "Hold failed"}`, "error");
     }
   }
 
   async function handlePausePartner(partnerId: string) {
-    if (!confirm("Pause this partner? They will not receive new job assignments.")) return;
-    
     try {
       const response = await fetchWithAuth(`/api/admin/partners/${partnerId}/pause`, {
         method: "POST",
@@ -345,13 +434,13 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       
       const data = await response.json();
       if (data.success) {
-        alert("Partner paused");
+        notify("Partner paused");
         loadData();
       } else {
-        alert(`Error: ${data.error}`);
+        notify(`Error: ${data.error}`, "error");
       }
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      notify(`Error: ${err instanceof Error ? err.message : "Pause failed"}`, "error");
     }
   }
 
@@ -363,28 +452,17 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       
       const data = await response.json();
       if (data.success) {
-        alert("Partner resumed");
+        notify("Partner resumed");
         loadData();
       } else {
-        alert(`Error: ${data.error}`);
+        notify(`Error: ${data.error}`, "error");
       }
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      notify(`Error: ${err instanceof Error ? err.message : "Resume failed"}`, "error");
     }
   }
 
   async function handleRemovePartner(partnerId: string, reason: string) {
-    const partner = partners.find(p => p.id === partnerId);
-    if (partner && (partner.unpaidBalance || 0) > 0) {
-      if (!confirm(`WARNING: Partner has unpaid balance of $${partner.unpaidBalance?.toFixed(2)}. Remove anyway?`)) {
-        return;
-      }
-    }
-    
-    if (!confirm(`Remove partner "${partner?.businessName}"? This will block future jobs and portal access.`)) {
-      return;
-    }
-    
     try {
       const response = await fetchWithAuth(`/api/admin/partners/${partnerId}/remove`, {
         method: "POST",
@@ -394,29 +472,77 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       
       const data = await response.json();
       if (data.success) {
-        alert("Partner removed");
+        notify("Partner removed");
+        setShowMiniProfile(false);
+        setSelectedPartner(null);
+        setMiniProfileApplicationId(undefined);
+        setSelectedPartnerRecordId(null);
         loadData();
       } else {
-        alert(`Error: ${data.error}`);
+        notify(`Error: ${data.error}`, "error");
       }
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      notify(`Error: ${err instanceof Error ? err.message : "Remove failed"}`, "error");
     }
   }
 
+  function requestPausePartner(partnerId: string) {
+    setConfirmDialog({
+      title: "Pause partner?",
+      message: "They will not receive new job assignments until resumed.",
+      confirmLabel: "Pause Partner",
+      variant: "warning",
+      onConfirm: () => handlePausePartner(partnerId),
+    });
+  }
+
+  function requestRemovePartner(partnerId: string, reason: string) {
+    const partner = partners.find((p) => p.id === partnerId);
+    const unpaid = partner?.unpaidBalance || 0;
+    setConfirmDialog({
+      title: `Remove ${partner?.businessName || "partner"}?`,
+      message:
+        unpaid > 0
+          ? `Warning: unpaid balance of $${unpaid.toLocaleString()}. This blocks future jobs and portal access.`
+          : "This blocks future jobs and portal access.",
+      confirmLabel: "Remove Partner",
+      variant: "danger",
+      onConfirm: () => handleRemovePartner(partnerId, reason),
+    });
+  }
+
   // Filter applications
-  const filteredApplications = applications.filter(app => {
-    const matchesSearch = !applicationSearch || 
-      app.businessName.toLowerCase().includes(applicationSearch.toLowerCase()) ||
-      app.ownerName.toLowerCase().includes(applicationSearch.toLowerCase()) ||
-      app.email.toLowerCase().includes(applicationSearch.toLowerCase());
-    
-    const matchesStatus =
-      applicationStatusFilter === "all" ||
-      getApplicationDisplayStatus(app) === applicationStatusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  const matchesApplicationSearch = (app: PartnerApplication) =>
+    !applicationSearch ||
+    app.businessName.toLowerCase().includes(applicationSearch.toLowerCase()) ||
+    app.ownerName.toLowerCase().includes(applicationSearch.toLowerCase()) ||
+    app.email.toLowerCase().includes(applicationSearch.toLowerCase()) ||
+    app.phone.toLowerCase().includes(applicationSearch.toLowerCase());
+
+  const sortApplications = (list: PartnerApplication[]) =>
+    [...list].sort((a, b) => {
+      const aTime = new Date((a.createdAt as { toDate?: () => Date })?.toDate?.() || a.createdAt || 0).getTime();
+      const bTime = new Date((b.createdAt as { toDate?: () => Date })?.toDate?.() || b.createdAt || 0).getTime();
+      return bTime - aTime;
+    });
+
+  const queueApplications = sortApplications(
+    applications.filter((app) => {
+      const status = getApplicationDisplayStatus(app);
+      return (status === "pending" || status === "hold") && matchesApplicationSearch(app);
+    })
+  );
+
+  const filteredApplications = sortApplications(
+    applications.filter((app) => {
+      const matchesStatus =
+        applicationStatusFilter === "all" ||
+        getApplicationDisplayStatus(app) === applicationStatusFilter;
+      return matchesApplicationSearch(app) && matchesStatus;
+    })
+  );
+
+  const displayApplications = activeView === "queue" ? queueApplications : filteredApplications;
 
   // Filter partners
   const filteredPartners = partners.filter(partner => {
@@ -439,600 +565,262 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
 
   if (loading) {
     return (
-      <div style={{ padding: "2rem", textAlign: "center" }}>
-        <p style={{ color: "#6b7280" }}>Loading partner program data...</p>
+      <div className="pp-root">
+        <div className="pp-list">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="pp-skeleton" />
+          ))}
+        </div>
       </div>
     );
   }
 
-  return (
-    <div style={{ marginBottom: "3rem" }}>
-      <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "0.75rem", color: "#111827" }}>
-        Partner Program Management
-      </h2>
-      <p style={{ color: "#6b7280", marginBottom: "1.25rem", fontSize: "0.95rem" }}>
-        Review new applications before approving. Nothing is approved automatically — you control partner access from here.
-      </p>
+  const statusChips: { id: string; label: string }[] = [
+    { id: "all", label: "All" },
+    { id: "pending", label: "Needs Review" },
+    { id: "hold", label: "On Hold" },
+    { id: "approved", label: "Approved" },
+    { id: "rejected", label: "Rejected" },
+  ];
 
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-        gap: "0.75rem",
-        marginBottom: "1.5rem",
-      }}>
+  return (
+    <div className="pp-root">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+
+      <header className="pp-header">
+        <h2 className="pp-title">Partner Program</h2>
+        <p className="pp-subtitle">
+          Review applications in the queue, then manage active partners — all actions happen in the profile drawer.
+        </p>
+      </header>
+
+      <div className="pp-stat-row">
         {[
-          { label: "Needs Review", value: applicationStats.pending, color: "#4338ca", bg: "#eef2ff" },
-          { label: "On Hold", value: applicationStats.hold, color: "#d97706", bg: "#fffbeb" },
-          { label: "Approved", value: applicationStats.approved, color: "#16a34a", bg: "#ecfdf5" },
-          { label: "Rejected", value: applicationStats.rejected, color: "#dc2626", bg: "#fef2f2" },
+          { label: "Needs Review", value: applicationStats.pending, color: "#4338ca", bg: "#eef2ff", filter: "pending" as const },
+          { label: "On Hold", value: applicationStats.hold, color: "#d97706", bg: "#fffbeb", filter: "hold" as const },
+          { label: "Approved", value: applicationStats.approved, color: "#16a34a", bg: "#ecfdf5", filter: "approved" as const },
+          { label: "Rejected", value: applicationStats.rejected, color: "#dc2626", bg: "#fef2f2", filter: "rejected" as const },
         ].map((stat) => (
           <button
             key={stat.label}
             type="button"
-            onClick={() => setApplicationStatusFilter(
-              stat.label === "Needs Review" ? "pending" :
-              stat.label === "On Hold" ? "hold" :
-              stat.label === "Approved" ? "approved" : "rejected"
-            )}
-            style={{
-              textAlign: "left",
-              padding: "0.9rem 1rem",
-              borderRadius: "12px",
-              border: "1px solid #e5e7eb",
-              background: stat.bg,
-              cursor: "pointer",
+            className="pp-stat-card"
+            style={{ background: stat.bg }}
+            onClick={() => {
+              setActiveView(stat.filter === "pending" || stat.filter === "hold" ? "queue" : "all");
+              setApplicationStatusFilter(stat.filter);
             }}
           >
-            <div style={{ fontSize: "1.4rem", fontWeight: "700", color: stat.color }}>{stat.value}</div>
-            <div style={{ fontSize: "0.78rem", fontWeight: "600", color: "#374151", marginTop: "0.15rem" }}>{stat.label}</div>
+            <div className="pp-stat-value" style={{ color: stat.color }}>{stat.value}</div>
+            <div className="pp-stat-label">{stat.label}</div>
           </button>
         ))}
       </div>
 
-      {/* Partner Applications Section */}
-      <div style={{ marginBottom: "3rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "#111827" }}>
-            Partner Applications ({filteredApplications.length})
-          </h3>
-          <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
-            <input
-              type="text"
-              placeholder="Search applications..."
-              value={applicationSearch}
-              onChange={(e) => setApplicationSearch(e.target.value)}
-              style={{
-                padding: "0.5rem 0.75rem",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-                fontSize: "0.875rem",
-                minWidth: "200px",
-              }}
-            />
-            <select
-              value={applicationStatusFilter}
-              onChange={(e) => setApplicationStatusFilter(e.target.value)}
-              style={{
-                padding: "0.5rem 0.75rem",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-                fontSize: "0.875rem",
-              }}
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Needs Review</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="hold">On Hold</option>
-            </select>
-            {selectedApplicationIds.size > 0 && (
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                  onClick={() => setSelectedApplicationIds(new Set())}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    background: "#e5e7eb",
-                    color: "#111827",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    cursor: "pointer"
-                  }}
-                >
-                  Clear Selection
-                </button>
-              </div>
+      <div className="pp-command-bar">
+        <div className="pp-tabs">
+          <button
+            type="button"
+            className={`pp-tab ${activeView === "queue" ? "active" : ""}`}
+            onClick={() => setActiveView("queue")}
+          >
+            Review Queue
+            {applicationStats.pending + applicationStats.hold > 0 && (
+              <span className="pp-tab-badge">{applicationStats.pending + applicationStats.hold}</span>
             )}
-          </div>
+          </button>
+          <button
+            type="button"
+            className={`pp-tab ${activeView === "partners" ? "active" : ""}`}
+            onClick={() => setActiveView("partners")}
+          >
+            Active Partners
+            <span className="pp-tab-badge">{filteredPartners.length}</span>
+          </button>
+          <button
+            type="button"
+            className={`pp-tab ${activeView === "all" ? "active" : ""}`}
+            onClick={() => {
+              setActiveView("all");
+              setApplicationStatusFilter("all");
+            }}
+          >
+            All Applications
+          </button>
         </div>
-
-        <div style={{
-          background: "#ffffff",
-          borderRadius: "12px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-          border: "1px solid #e5e7eb",
-          overflow: "hidden"
-        }}>
-          {filteredApplications.length === 0 ? (
-            <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
-              No applications found
-            </div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedApplicationIds.size === filteredApplications.length && filteredApplications.length > 0}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedApplicationIds(new Set(filteredApplications.map(a => a.id)));
-                          } else {
-                            setSelectedApplicationIds(new Set());
-                          }
-                        }}
-                      />
-                    </th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Business Name</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Owner</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Email</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Phone</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Service Area</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Services</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Status</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredApplications.map((app) => {
-                    return (
-                      <tr key={app.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                        <td style={{ padding: "0.75rem" }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedApplicationIds.has(app.id)}
-                            onChange={(e) => {
-                              const newSet = new Set(selectedApplicationIds);
-                              if (e.target.checked) {
-                                newSet.add(app.id);
-                              } else {
-                                newSet.delete(app.id);
-                              }
-                              setSelectedApplicationIds(newSet);
-                            }}
-                          />
-                        </td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.businessName}</td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.ownerName}</td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.email}</td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.phone}</td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.serviceArea}</td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.serviceType}</td>
-                        <td style={{ padding: "0.75rem" }}>
-                          <select
-                            value={getApplicationDisplayStatus(app)}
-                            onChange={(e) => handleApplicationStatusChange(app, e.target.value as ApplicationStatus)}
-                            style={{
-                              padding: "0.45rem 0.65rem",
-                              borderRadius: "8px",
-                              fontSize: "0.78rem",
-                              fontWeight: "600",
-                              cursor: "pointer",
-                              minWidth: "150px",
-                              ...applicationStatusStyle(app),
-                            }}
-                          >
-                            <option value="pending">Needs Review</option>
-                            <option value="hold">On Hold</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
-                          </select>
-                          {app.linkedPartnerId && (
-                            <div style={{ fontSize: "0.7rem", color: "#16a34a", marginTop: "0.35rem", fontWeight: "600" }}>
-                              Partner account created
-                            </div>
-                          )}
-                        </td>
-                        <td style={{ padding: "0.75rem" }}>
-                          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  // Helper function to convert application to partner format
-                                  const convertApplicationToPartner = (application: PartnerApplication): Partner => ({
-                                    id: application.id,
-                                    userId: application.userId || null,
-                                    businessName: application.businessName,
-                                    ownerName: application.ownerName,
-                                    email: application.email,
-                                    phone: application.phone,
-                                    serviceAreas: application.serviceArea ? [application.serviceArea] : [],
-                                    serviceType: application.serviceType,
-                                    status: "paused",
-                                    revenueSharePartner: 0.6,
-                                    revenueSharePlatform: 0.4,
-                                    partnerCode: "",
-                                    partnerSlug: "",
-                                    createdAt: application.createdAt,
-                                    updatedAt: application.updatedAt,
-                                  });
-
-                                  if (app.linkedPartnerId) {
-                                    // Try to load partner, but fall back to application data if not found
-                                    try {
-                                      const partnerResponse = await fetchWithAuth(`/api/admin/partners/${app.linkedPartnerId}`);
-                                      const partnerData = await partnerResponse.json();
-                                      
-                                      if (partnerResponse.ok && partnerData.success && partnerData.partner) {
-                                        setSelectedPartner(partnerData.partner);
-                                        setMiniProfileApplicationId(app.id);
-                                        setSelectedPartnerRecordId(app.linkedPartnerId);
-                                        setShowMiniProfile(true);
-                                      } else if (partnerResponse.status === 404) {
-                                        console.warn(`Partner ${app.linkedPartnerId} not found, showing application data instead`);
-                                        const applicationAsPartner = convertApplicationToPartner(app);
-                                        setSelectedPartner(applicationAsPartner);
-                                        setMiniProfileApplicationId(app.id);
-                                        setSelectedPartnerRecordId(null);
-                                        setShowMiniProfile(true);
-                                      } else {
-                                        console.error(`Failed to load partner: ${partnerData.error || "Unknown error"}`);
-                                        const applicationAsPartner = convertApplicationToPartner(app);
-                                        setSelectedPartner(applicationAsPartner);
-                                        setMiniProfileApplicationId(app.id);
-                                        setSelectedPartnerRecordId(null);
-                                        setShowMiniProfile(true);
-                                      }
-                                    } catch (fetchError: any) {
-                                      console.error("[View Profile] Fetch error:", fetchError);
-                                      const applicationAsPartner = convertApplicationToPartner(app);
-                                      setSelectedPartner(applicationAsPartner);
-                                      setMiniProfileApplicationId(app.id);
-                                      setSelectedPartnerRecordId(null);
-                                      setShowMiniProfile(true);
-                                    }
-                                  } else {
-                                    const applicationAsPartner = convertApplicationToPartner(app);
-                                    setSelectedPartner(applicationAsPartner);
-                                    setMiniProfileApplicationId(app.id);
-                                    setSelectedPartnerRecordId(null);
-                                    setShowMiniProfile(true);
-                                  }
-                                } catch (error: any) {
-                                  console.error("[View Profile] Error:", error);
-                                  alert(`Failed to load profile: ${error.message || "Unknown error"}`);
-                                }
-                              }}
-                              style={{
-                                padding: "0.25rem 0.5rem",
-                                background: "#0369a1",
-                                color: "#ffffff",
-                                border: "none",
-                                borderRadius: "4px",
-                                fontSize: "0.75rem",
-                                cursor: "pointer"
-                              }}
-                            >
-                              View Profile
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <input
+          type="text"
+          className="pp-search"
+          placeholder={activeView === "partners" ? "Search partners..." : "Search applications..."}
+          value={activeView === "partners" ? partnerSearch : applicationSearch}
+          onChange={(e) =>
+            activeView === "partners"
+              ? setPartnerSearch(e.target.value)
+              : setApplicationSearch(e.target.value)
+          }
+        />
       </div>
 
-      {/* Active Partners Section */}
-      <div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "#111827" }}>
-            Active Partners ({filteredPartners.length})
-          </h3>
-          <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-            <input
-              type="text"
-              placeholder="Search partners..."
-              value={partnerSearch}
-              onChange={(e) => setPartnerSearch(e.target.value)}
-              style={{
-                padding: "0.5rem 0.75rem",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-                fontSize: "0.875rem",
-                minWidth: "200px",
-              }}
-            />
-            <select
-              value={partnerStatusFilter}
-              onChange={(e) => setPartnerStatusFilter(e.target.value)}
-              style={{
-                padding: "0.5rem 0.75rem",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-                fontSize: "0.875rem",
-              }}
+      {activeView === "all" && (
+        <div className="pp-chips">
+          {statusChips.map((chip) => (
+            <button
+              key={chip.id}
+              type="button"
+              className={`pp-chip ${applicationStatusFilter === chip.id ? "active" : ""}`}
+              onClick={() => setApplicationStatusFilter(chip.id)}
             >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activeView !== "partners" && (
+        <>
+          <div className="pp-section-head">
+            <h3 className="pp-section-title">
+              {activeView === "queue"
+                ? `Review Queue (${displayApplications.length})`
+                : `Applications (${displayApplications.length})`}
+            </h3>
+          </div>
+
+          {displayApplications.length === 0 ? (
+            <div className="pp-empty">
+              <div className="pp-empty-icon">{activeView === "queue" ? "✓" : "📋"}</div>
+              <p className="pp-empty-title">
+                {activeView === "queue" ? "You're all caught up" : "No applications found"}
+              </p>
+              <p className="pp-empty-text">
+                {activeView === "queue"
+                  ? "No partner applications need review right now."
+                  : "Try a different search or status filter."}
+              </p>
+            </div>
+          ) : (
+            <div className="pp-list">
+              {displayApplications.map((app, index) => (
+                <article
+                  key={app.id}
+                  className="pp-card"
+                  style={{ animationDelay: `${index * 0.04}s` }}
+                  onClick={() => openApplicationProfile(app)}
+                >
+                  <div className="pp-card-main">
+                    <h4 className="pp-card-title">{app.businessName}</h4>
+                    <p className="pp-card-meta">
+                      {app.ownerName} · {app.email}
+                    </p>
+                    <p className="pp-card-meta">
+                      {app.serviceType} · {app.serviceArea || "No service area"} · Applied {formatRelativeDate(app.createdAt)}
+                    </p>
+                  </div>
+                  <div className="pp-card-side">
+                    <span className={`pp-status-pill ${statusPillClass(app)}`}>
+                      {getApplicationStatusLabel(app)}
+                    </span>
+                    <button type="button" className="pp-review-btn" onClick={(e) => { e.stopPropagation(); openApplicationProfile(app); }}>
+                      Review
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {activeView === "partners" && (
+        <>
+          <div className="pp-section-head">
+            <h3 className="pp-section-title">Active Partners ({filteredPartners.length})</h3>
+            <button
+              type="button"
+              className="pp-export-btn"
+              onClick={() => downloadCSV(generatePartnersCSV(filteredPartners), "partners.csv")}
+            >
+              Export CSV
+            </button>
+          </div>
+
+          <div className="pp-filters-row">
+            <select className="pp-select" value={partnerStatusFilter} onChange={(e) => setPartnerStatusFilter(e.target.value)}>
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="paused">Paused</option>
               <option value="removed">Removed</option>
             </select>
-            <select
-              value={partnerServiceAreaFilter}
-              onChange={(e) => setPartnerServiceAreaFilter(e.target.value)}
-              style={{
-                padding: "0.5rem 0.75rem",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-                fontSize: "0.875rem",
-              }}
-            >
+            <select className="pp-select" value={partnerServiceAreaFilter} onChange={(e) => setPartnerServiceAreaFilter(e.target.value)}>
               <option value="all">All Service Areas</option>
-              {[...metroAtlZones, ...georgiaCounties.map(c => c.name)].map(area => (
+              {[...metroAtlZones, ...georgiaCounties.map((c) => c.name)].map((area) => (
                 <option key={area} value={area}>{area}</option>
               ))}
             </select>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.84rem", color: "#374151" }}>
               <input
                 type="checkbox"
                 checked={lowPhotoComplianceFilter}
                 onChange={(e) => setLowPhotoComplianceFilter(e.target.checked)}
               />
-              Low Photo Compliance (&lt;90%)
+              Low photo compliance (&lt;90%)
             </label>
-            {selectedPartnerIds.size > 0 && (
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                  onClick={async () => {
-                    if (confirm(`Pause ${selectedPartnerIds.size} selected partners?`)) {
-                      const idsArray = Array.from(selectedPartnerIds);
-                      for (const id of idsArray) {
-                        await handlePausePartner(id);
-                      }
-                      setSelectedPartnerIds(new Set());
-                      loadData();
-                    }
-                  }}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    background: "#f59e0b",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
-                >
-                  Pause Selected ({selectedPartnerIds.size})
-                </button>
-                <button
-                  onClick={() => setSelectedPartnerIds(new Set())}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    background: "#e5e7eb",
-                    color: "#111827",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    cursor: "pointer"
-                  }}
-                >
-                  Clear Selection
-                </button>
-              </div>
-            )}
-            <button
-              onClick={() => {
-                // Export functionality
-                const csv = generatePartnersCSV(filteredPartners);
-                downloadCSV(csv, "partners.csv");
-              }}
-              style={{
-                padding: "0.5rem 1rem",
-                background: "#6366f1",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "6px",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-                cursor: "pointer"
-              }}
-            >
-              Export CSV
-            </button>
           </div>
-        </div>
 
-        <div style={{
-          background: "#ffffff",
-          borderRadius: "12px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-          border: "1px solid #e5e7eb",
-          overflow: "hidden"
-        }}>
           {filteredPartners.length === 0 ? (
-            <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
-              No partners found
+            <div className="pp-empty">
+              <div className="pp-empty-icon">🤝</div>
+              <p className="pp-empty-title">No partners found</p>
+              <p className="pp-empty-text">Approved partners will appear here once applications are accepted.</p>
             </div>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedPartnerIds.size === filteredPartners.length && filteredPartners.length > 0}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedPartnerIds(new Set(filteredPartners.map(p => p.id)));
-                        } else {
-                          setSelectedPartnerIds(new Set());
-                        }
-                      }}
-                    />
-                  </th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Partner Name</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Service Area(s)</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.875rem", fontWeight: "600" }}>Status</th>
-                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Jobs (7d)</th>
-                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Jobs (30d)</th>
-                    <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "600" }}>Photo Compliance</th>
-                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Gross Revenue (30d)</th>
-                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Company Share (30d)</th>
-                    <th style={{ padding: "0.75rem", textAlign: "right", fontSize: "0.875rem", fontWeight: "600" }}>Unpaid</th>
-                    <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "600" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPartners.map((partner) => {
-                    const lastPayout = partner.lastPayoutDate?.toDate?.() || partner.lastPayoutDate;
-                    const payoutStr = lastPayout ? new Date(lastPayout).toLocaleDateString() : "Never";
-                    
-                    return (
-                      <tr key={partner.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                        <td style={{ padding: "0.75rem" }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedPartnerIds.has(partner.id)}
-                            onChange={(e) => {
-                              const newSet = new Set(selectedPartnerIds);
-                              if (e.target.checked) {
-                                newSet.add(partner.id);
-                              } else {
-                                newSet.delete(partner.id);
-                              }
-                              setSelectedPartnerIds(newSet);
-                            }}
-                          />
-                        </td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600" }}>
-                          {partner.businessName}
-                        </td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>
-                          {partner.serviceAreas?.join(", ") || "N/A"}
-                        </td>
-                        <td style={{ padding: "0.75rem" }}>
-                          <select
-                            value={partner.status}
-                            onChange={async (e) => {
-                              const newStatus = e.target.value;
-                              if (newStatus === "paused" && partner.status === "active") {
-                                await handlePausePartner(partner.id);
-                              } else if (newStatus === "active" && partner.status === "paused") {
-                                await handleResumePartner(partner.id);
-                              }
-                            }}
-                            style={{
-                              padding: "0.25rem 0.5rem",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "6px",
-                              fontSize: "0.75rem",
-                              background: "#ffffff",
-                            }}
-                          >
-                            <option value="active">Active</option>
-                            <option value="paused">Paused</option>
-                            <option value="removed">Removed</option>
-                          </select>
-                        </td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem", textAlign: "right" }}>
-                          {partner.jobsThisWeek || 0}
-                        </td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem", textAlign: "right" }}>
-                          {partner.jobsThisMonth || 0}
-                        </td>
-                        <td style={{ padding: "0.75rem", textAlign: "center" }}>
-                          <span style={{
-                            fontSize: "0.875rem",
-                            fontWeight: "600",
-                            color: (partner.photoCompliance30d || 100) >= 90 ? "#16a34a" : "#dc2626"
-                          }}>
-                            {partner.photoCompliance30d || 100}%
-                          </span>
-                        </td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600", color: "#16a34a", textAlign: "right" }}>
-                          ${(partner.grossRevenueMTD || 0).toLocaleString()}
-                        </td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem", textAlign: "right" }}>
-                          ${((partner.grossRevenueMTD || 0) * (partner.revenueSharePlatform || 0)).toLocaleString()}
-                        </td>
-                        <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "600", color: "#dc2626", textAlign: "right" }}>
-                          ${(partner.unpaidBalance || 0).toLocaleString()}
-                        </td>
-                        <td style={{ padding: "0.75rem", textAlign: "center" }}>
-                          <div style={{ display: "flex", gap: "0.25rem", justifyContent: "center", flexWrap: "wrap" }}>
-                            <button
-                              onClick={() => {
-                                try {
-                                  setSelectedPartner(partner);
-                                  setMiniProfileApplicationId(undefined);
-                                  setSelectedPartnerRecordId(partner.id);
-                                  setShowMiniProfile(true);
-                                } catch (error: any) {
-                                  console.error("[View Profile] Error:", error);
-                                  alert(`Failed to open profile: ${error.message || "Unknown error"}`);
-                                }
-                              }}
-                              style={{
-                                padding: "0.25rem 0.5rem",
-                                background: "#0369a1",
-                                color: "#ffffff",
-                                border: "none",
-                                borderRadius: "4px",
-                                fontSize: "0.75rem",
-                                cursor: "pointer"
-                              }}
-                            >
-                              View Profile
-                            </button>
-                            <button
-                              onClick={() => {
-                                try {
-                                  setSelectedPartner(partner);
-                                  setMiniProfileApplicationId(undefined);
-                                  setSelectedPartnerRecordId(partner.id);
-                                  setShowMiniProfile(true);
-                                  setTimeout(() => {
-                                    const event = new CustomEvent('partnerMiniProfileOpen', { detail: { tab: 'messages' } });
-                                    window.dispatchEvent(event);
-                                  }, 100);
-                                } catch (error: any) {
-                                  console.error("[Message] Error:", error);
-                                  alert(`Failed to open messages: ${error.message || "Unknown error"}`);
-                                }
-                              }}
-                              style={{
-                                padding: "0.25rem 0.5rem",
-                                background: "#6366f1",
-                                color: "#ffffff",
-                                border: "none",
-                                borderRadius: "4px",
-                                fontSize: "0.75rem",
-                                cursor: "pointer"
-                              }}
-                            >
-                              Message
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="pp-list">
+              {filteredPartners.map((partner, index) => (
+                <article
+                  key={partner.id}
+                  className="pp-card"
+                  style={{ animationDelay: `${index * 0.04}s` }}
+                  onClick={() => openPartnerProfile(partner)}
+                >
+                  <div className="pp-card-main">
+                    <h4 className="pp-card-title">{partner.businessName}</h4>
+                    <p className="pp-card-meta">{partner.ownerName} · {partner.email}</p>
+                    <p className="pp-card-meta">{partner.serviceAreas?.join(", ") || "No service areas"}</p>
+                    <div className="pp-partner-metrics">
+                      <span className="pp-partner-metric">Jobs 7d: <strong>{partner.jobsThisWeek || 0}</strong></span>
+                      <span className="pp-partner-metric">Revenue 30d: <strong>${(partner.grossRevenueMTD || 0).toLocaleString()}</strong></span>
+                      <span className="pp-partner-metric">Compliance: <strong>{partner.photoCompliance30d || 100}%</strong></span>
+                    </div>
+                  </div>
+                  <div className="pp-card-side">
+                    <span className={`pp-status-pill ${partnerStatusPillClass(partner.status)}`}>
+                      {partner.status.charAt(0).toUpperCase() + partner.status.slice(1)}
+                    </span>
+                    <button
+                      type="button"
+                      className="pp-review-btn"
+                      onClick={(e) => { e.stopPropagation(); openPartnerProfile(partner); }}
+                    >
+                      Manage
+                    </button>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
-        </div>
-      </div>
+        </>
+      )}
+
+      {confirmDialog && (
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          variant={confirmDialog.variant}
+          onConfirm={confirmDialog.onConfirm}
+          onClose={() => setConfirmDialog(null)}
+        />
+      )}
 
       {/* Approve Modal */}
       {showApproveModal && selectedApplication && (
@@ -1088,6 +876,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
             setSelectedPartnerRecordId(null);
           }}
           onUpdate={loadData}
+          onNotify={notify}
           applicationId={miniProfileApplicationId}
           partnerRecordId={selectedPartnerRecordId}
         />
