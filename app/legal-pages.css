@@ -25,6 +25,11 @@
   height: 48px;
 }
 
+.brand-logo--nav-home {
+  width: 56px;
+  height: 56px;
+}
+
 .brand-logo--hero {
   width: clamp(88px, 22vw, 112px);
   height: clamp(88px, 22vw, 112px);
