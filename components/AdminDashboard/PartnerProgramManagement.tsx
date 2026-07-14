@@ -206,6 +206,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
   const [miniProfileApplicationId, setMiniProfileApplicationId] = useState<string | undefined>();
   const [miniProfileApplicationStatus, setMiniProfileApplicationStatus] = useState<ApplicationStatus | undefined>();
   const [selectedPartnerRecordId, setSelectedPartnerRecordId] = useState<string | null>(null);
+  const [resendingApprovalEmailId, setResendingApprovalEmailId] = useState<string | null>(null);
   
   // Approve modal state
   const [approveServiceAreas, setApproveServiceAreas] = useState<string[]>([]);
@@ -219,6 +220,44 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
     variant: "primary" | "danger" | "warning";
     onConfirm: () => void;
   } | null>(null);
+
+  async function handleResendApprovalEmail(input: {
+    recordId: string;
+    email: string;
+    ownerName: string;
+    businessName: string;
+    partnerCode?: string;
+    serviceAreas?: string[] | string;
+    revenueSharePartner?: number;
+    revenueSharePlatform?: number;
+    partnerId?: string;
+  }) {
+    setResendingApprovalEmailId(input.recordId);
+    try {
+      const result = await sendPartnerApprovalEmailClient(
+        buildPartnerApprovalEmailParams({
+          email: input.email,
+          ownerName: input.ownerName,
+          businessName: input.businessName,
+          referralCode: input.partnerCode || "PARTNER",
+          serviceAreas: input.serviceAreas || "",
+          revenueSharePartner: input.revenueSharePartner ?? 60,
+          revenueSharePlatform: input.revenueSharePlatform ?? 40,
+          partnerId: input.partnerId,
+        })
+      );
+
+      if (result.success) {
+        notify(`Approval email sent to ${input.email}`);
+      } else {
+        notify(result.error || "Failed to resend approval email", "error");
+      }
+    } catch (error: unknown) {
+      notify(error instanceof Error ? error.message : "Failed to resend approval email", "error");
+    } finally {
+      setResendingApprovalEmailId(null);
+    }
+  }
 
   const openApplicationProfile = useCallback(async (app: PartnerApplication) => {
     try {
@@ -889,6 +928,30 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                     <span className={`pp-status-pill ${statusPillClass(app)}`}>
                       {getApplicationStatusLabel(app)}
                     </span>
+                    {getApplicationDisplayStatus(app) === "approved" && app.linkedPartnerId && (
+                      <button
+                        type="button"
+                        className="pp-resend-btn"
+                        disabled={resendingApprovalEmailId === app.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const linkedPartner = partners.find((partner) => partner.id === app.linkedPartnerId);
+                          handleResendApprovalEmail({
+                            recordId: app.id,
+                            email: app.email,
+                            ownerName: app.ownerName,
+                            businessName: app.businessName,
+                            partnerCode: linkedPartner?.partnerCode,
+                            serviceAreas: linkedPartner?.serviceAreas || app.serviceArea,
+                            revenueSharePartner: linkedPartner?.revenueSharePartner,
+                            revenueSharePlatform: linkedPartner?.revenueSharePlatform,
+                            partnerId: app.linkedPartnerId,
+                          });
+                        }}
+                      >
+                        {resendingApprovalEmailId === app.id ? "Sending..." : "Resend Email"}
+                      </button>
+                    )}
                     <button type="button" className="pp-review-btn" onClick={(e) => { e.stopPropagation(); openApplicationProfile(app); }}>
                       Review
                     </button>
@@ -904,6 +967,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
         <>
           <div className="pp-section-head">
             <h3 className="pp-section-title">Active Partners ({filteredPartners.length})</h3>
+            <p className="pp-section-hint">Use <strong>Resend Email</strong> to send the approval signup link again.</p>
             <button
               type="button"
               className="pp-export-btn"
@@ -965,6 +1029,29 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                     <span className={`pp-status-pill ${partnerStatusPillClass(partner.status)}`}>
                       {partner.status.charAt(0).toUpperCase() + partner.status.slice(1)}
                     </span>
+                    {partner.status !== "removed" && (
+                      <button
+                        type="button"
+                        className="pp-resend-btn"
+                        disabled={resendingApprovalEmailId === partner.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleResendApprovalEmail({
+                            recordId: partner.id,
+                            email: partner.email,
+                            ownerName: partner.ownerName,
+                            businessName: partner.businessName,
+                            partnerCode: partner.partnerCode,
+                            serviceAreas: partner.serviceAreas,
+                            revenueSharePartner: partner.revenueSharePartner,
+                            revenueSharePlatform: partner.revenueSharePlatform,
+                            partnerId: partner.id,
+                          });
+                        }}
+                      >
+                        {resendingApprovalEmailId === partner.id ? "Sending..." : "Resend Email"}
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="pp-review-btn"

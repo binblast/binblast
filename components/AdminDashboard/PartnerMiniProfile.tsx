@@ -459,7 +459,7 @@ export function PartnerMiniProfile({
               Send Message
             </button>
             )}
-            {partner.status === "active" && (
+            {partner.status !== "removed" && (
               <button
                 type="button"
                 onClick={handleResendApprovalEmail}
