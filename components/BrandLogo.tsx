@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 type BrandLogoVariant = "nav" | "hero" | "footer" | "sidebar";
-type BrandLogoTone = "light" | "dark";
+type BrandLogoTone = "light" | "dark" | "hero" | "none";
 
 interface BrandLogoProps {
   variant?: BrandLogoVariant;
@@ -30,7 +30,14 @@ export function BrandLogo({
   priority = false,
 }: BrandLogoProps) {
   const config = VARIANTS[variant];
-  const toneClass = tone === "light" ? "brand-logo--on-light" : "brand-logo--on-dark";
+  const toneClass =
+    tone === "light"
+      ? "brand-logo--on-light"
+      : tone === "dark"
+        ? "brand-logo--on-dark"
+        : tone === "hero"
+          ? "brand-logo--on-hero"
+          : "brand-logo--plain";
 
   const image = (
     <span className={`${config.className} ${toneClass} ${className}`.trim()}>
@@ -41,6 +48,7 @@ export function BrandLogo({
         height={config.height}
         priority={priority}
         className="brand-logo__image"
+        style={{ background: "transparent" }}
       />
     </span>
   );

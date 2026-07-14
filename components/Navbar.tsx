@@ -499,7 +499,7 @@ export function Navbar() {
               Bin Blast Co.
             </span>
           ) : (
-            <BrandLogo variant="nav" tone="light" />
+            <BrandLogo variant="nav" tone="none" />
           )}
         </Link>
         <ul className={`nav-links nav-links--segmented${isMenuOpen ? " active nav-mobile-menu" : ""}`}>

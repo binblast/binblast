@@ -9,9 +9,9 @@ const Navbar = dynamic(() => import("@/components/Navbar").then((mod) => mod.Nav
 });
 
 const LEGAL_PAGES = [
-  { href: "/terms", label: "Terms of Service" },
-  { href: "/privacy", label: "Privacy Policy" },
-  { href: "/cancellation", label: "Cancellation & Refunds" },
+  { href: "/terms", label: "Terms of Service", shortLabel: "Terms" },
+  { href: "/privacy", label: "Privacy Policy", shortLabel: "Privacy" },
+  { href: "/cancellation", label: "Cancellation & Refunds", shortLabel: "Refunds" },
 ] as const;
 
 interface LegalPageLayoutProps {
@@ -38,7 +38,7 @@ export function LegalPageLayout({
             </Link>
 
             <div className="legal-hero__brand-row">
-              <BrandLogo variant="hero" tone="light" href="/" priority />
+              <BrandLogo variant="hero" tone="hero" href="/" priority />
               <div className="legal-hero__brand-copy">
                 <span className="legal-hero__eyebrow">Bin Blast Co.</span>
                 <h1 className="legal-hero__title">{title}</h1>
@@ -47,6 +47,24 @@ export function LegalPageLayout({
             </div>
           </div>
         </header>
+
+        <nav className="legal-mobile-nav" aria-label="Legal documents">
+          <div className="legal-mobile-nav__inner">
+            {LEGAL_PAGES.map((page) => (
+              <Link
+                key={page.href}
+                href={page.href}
+                className={`legal-mobile-nav__pill${
+                  activePath === page.href ? " legal-mobile-nav__pill--active" : ""
+                }`}
+                aria-current={activePath === page.href ? "page" : undefined}
+              >
+                <span className="legal-mobile-nav__label-full">{page.label}</span>
+                <span className="legal-mobile-nav__label-short">{page.shortLabel}</span>
+              </Link>
+            ))}
+          </div>
+        </nav>
 
         <div className="legal-page__body">
           <aside className="legal-sidebar" aria-label="Legal documents">
@@ -77,22 +95,6 @@ export function LegalPageLayout({
           </aside>
 
           <article className="legal-content-card">
-            <nav className="legal-mobile-nav" aria-label="Legal documents">
-              <div className="legal-mobile-nav__scroll">
-                {LEGAL_PAGES.map((page) => (
-                  <Link
-                    key={page.href}
-                    href={page.href}
-                    className={`legal-mobile-nav__pill${
-                      activePath === page.href ? " legal-mobile-nav__pill--active" : ""
-                    }`}
-                    aria-current={activePath === page.href ? "page" : undefined}
-                  >
-                    {page.label}
-                  </Link>
-                ))}
-              </div>
-            </nav>
             {children}
           </article>
         </div>
