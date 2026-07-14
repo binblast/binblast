@@ -3,12 +3,18 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PDFUploader } from "@/components/Admin/PDFUploader";
 import { useRouter } from "next/navigation";
+
+const Navbar = dynamic(() => import("@/components/Navbar").then((mod) => mod.Navbar), {
+  ssr: false,
+  loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
+});
 
 export default function AdminTrainingModulesPage() {
   const [modules, setModules] = useState<any[]>([]);
@@ -71,13 +77,19 @@ export default function AdminTrainingModulesPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: "2rem", textAlign: "center" }}>
-        Loading modules...
-      </div>
+      <>
+        <Navbar />
+        <main className="page-main" style={{ background: "var(--bg-white)" }}>
+          <div style={{ padding: "2rem", textAlign: "center" }}>Loading modules...</div>
+        </main>
+      </>
     );
   }
 
   return (
+    <>
+      <Navbar />
+      <main className="page-main" style={{ background: "var(--bg-white)" }}>
     <div style={{ padding: "2rem" }}>
       <Link
         href="/dashboard"
@@ -241,5 +253,7 @@ export default function AdminTrainingModulesPage() {
         })}
       </div>
     </div>
+      </main>
+    </>
   );
 }

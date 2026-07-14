@@ -612,6 +612,122 @@
   }
 }
 
+.pp-revenue-panel {
+  margin-top: 0.5rem;
+}
+
+.pp-revenue-loading,
+.pp-revenue-error {
+  padding: 2rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.pp-revenue-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pp-revenue-stat {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pp-revenue-stat-platform {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.pp-revenue-stat-label {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.pp-revenue-stat strong {
+  font-size: 1.25rem;
+  color: #111827;
+}
+
+.pp-revenue-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.pp-revenue-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.pp-revenue-table th,
+.pp-revenue-table td {
+  padding: 0.75rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: top;
+}
+
+.pp-revenue-table th {
+  background: #f9fafb;
+  color: #374151;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pp-revenue-partner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pp-revenue-code {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.pp-revenue-platform-cell {
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.pp-revenue-status {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.pp-revenue-status.transferred,
+.pp-revenue-status.paid,
+.pp-revenue-status.held {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.pp-revenue-status.pending,
+.pp-revenue-status.manual {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.pp-revenue-status.failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 @media (max-width: 640px) {
   .pp-card {
     grid-template-columns: 1fr;

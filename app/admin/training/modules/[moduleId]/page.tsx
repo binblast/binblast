@@ -3,9 +3,15 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PDFUploader } from "@/components/Admin/PDFUploader";
+
+const Navbar = dynamic(() => import("@/components/Navbar").then((mod) => mod.Navbar), {
+  ssr: false,
+  loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
+});
 
 export default function AdminModuleDetailPage() {
   const params = useParams();
@@ -134,36 +140,47 @@ export default function AdminModuleDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: "2rem", textAlign: "center" }}>
-        Loading module...
-      </div>
+      <>
+        <Navbar />
+        <main className="page-main" style={{ background: "var(--bg-white)" }}>
+          <div style={{ padding: "2rem", textAlign: "center" }}>Loading module...</div>
+        </main>
+      </>
     );
   }
 
   if (!module) {
     return (
-      <div style={{ padding: "2rem" }}>
-        <div style={{ color: "#dc2626", marginBottom: "1rem" }}>
-          Module not found
-        </div>
-        <button
-          onClick={() => router.push("/admin/training/modules")}
-          style={{
-            padding: "0.5rem 1rem",
-            background: "#2563eb",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-          }}
-        >
-          Back to Modules
-        </button>
-      </div>
+      <>
+        <Navbar />
+        <main className="page-main" style={{ background: "var(--bg-white)" }}>
+          <div style={{ padding: "2rem" }}>
+            <div style={{ color: "#dc2626", marginBottom: "1rem" }}>
+              Module not found
+            </div>
+            <button
+              onClick={() => router.push("/admin/training/modules")}
+              style={{
+                padding: "0.5rem 1rem",
+                background: "#2563eb",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+              }}
+            >
+              Back to Modules
+            </button>
+          </div>
+        </main>
+      </>
     );
   }
 
   return (
+    <>
+      <Navbar />
+      <main className="page-main" style={{ background: "var(--bg-white)" }}>
     <div style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
       <div style={{ marginBottom: "2rem" }}>
         <button
@@ -563,5 +580,7 @@ export default function AdminModuleDetailPage() {
         </button>
       </div>
     </div>
+      </main>
+    </>
   );
 }

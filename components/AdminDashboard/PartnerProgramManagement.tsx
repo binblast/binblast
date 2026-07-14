@@ -12,6 +12,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { georgiaCounties } from "@/data/gaCounties";
 import { metroAtlZones } from "@/data/metroAtlZones";
 import { PartnerMiniProfile } from "./PartnerMiniProfile";
+import { PlatformRevenuePanel } from "./PlatformRevenuePanel";
 import { ToastContainer } from "@/components/EmployeeDashboard/Toast";
 import { useAdminToast } from "./useAdminToast";
 import { ConfirmDialog } from "./AdminDialog";
@@ -69,7 +70,7 @@ interface Partner {
 }
 
 type ApplicationStatus = PartnerApplication["status"];
-type PartnerViewTab = "queue" | "partners" | "all";
+type PartnerViewTab = "queue" | "partners" | "all" | "revenue";
 
 function formatRelativeDate(date: unknown): string {
   const raw = date as { toDate?: () => Date } | string | number | Date | null | undefined;
@@ -842,18 +843,27 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
           >
             All Applications
           </button>
+          <button
+            type="button"
+            className={`pp-tab ${activeView === "revenue" ? "active" : ""}`}
+            onClick={() => setActiveView("revenue")}
+          >
+            Platform Revenue
+          </button>
         </div>
-        <input
-          type="text"
-          className="pp-search"
-          placeholder={activeView === "partners" ? "Search partners..." : "Search applications..."}
-          value={activeView === "partners" ? partnerSearch : applicationSearch}
-          onChange={(e) =>
-            activeView === "partners"
-              ? setPartnerSearch(e.target.value)
-              : setApplicationSearch(e.target.value)
-          }
-        />
+        {activeView !== "revenue" && (
+          <input
+            type="text"
+            className="pp-search"
+            placeholder={activeView === "partners" ? "Search partners..." : "Search applications..."}
+            value={activeView === "partners" ? partnerSearch : applicationSearch}
+            onChange={(e) =>
+              activeView === "partners"
+                ? setPartnerSearch(e.target.value)
+                : setApplicationSearch(e.target.value)
+            }
+          />
+        )}
         <div className="pp-sync-controls">
           <span className={`pp-live-dot ${liveConnected ? "connected" : ""}`} title={liveConnected ? "Live updates on" : "Live updates off"} />
           <span className="pp-last-updated">{formatLastUpdated(lastUpdated)}</span>
@@ -962,6 +972,8 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
           )}
         </>
       )}
+
+      {activeView === "revenue" && <PlatformRevenuePanel />}
 
       {activeView === "partners" && (
         <>

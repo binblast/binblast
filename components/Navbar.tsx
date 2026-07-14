@@ -140,8 +140,6 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const isHomePage = pathname === "/";
-  const isDashboard = pathname === "/dashboard" || pathname === "/partners/dashboard" || pathname === "/employee/dashboard";
-  const showTextLogo = isDashboard;
   const { isReady: firebaseReady } = useFirebase();
 
   const closeSignIn = useCallback(() => {
@@ -501,25 +499,12 @@ export function Navbar() {
             minWidth: isHomePage ? "68px" : "52px",
           }}
         >
-          {showTextLogo ? (
-            <span
-              style={{
-                fontSize: "1.5rem",
-                fontWeight: "700",
-                color: "var(--text-dark)",
-                letterSpacing: "0.02em",
-              }}
-            >
-              Bin Blast Co.
-            </span>
-          ) : (
-            <BrandLogo
-              variant="nav"
-              tone="none"
-              className={isHomePage ? "brand-logo--nav-home" : ""}
-              priority={isHomePage}
-            />
-          )}
+          <BrandLogo
+            variant="nav"
+            tone="none"
+            className={isHomePage ? "brand-logo--nav-home" : ""}
+            priority={isHomePage}
+          />
         </Link>
         <ul className={`nav-links nav-links--segmented${isMenuOpen ? " active nav-mobile-menu" : ""}`}>
           <li>

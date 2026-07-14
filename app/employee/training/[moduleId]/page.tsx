@@ -3,10 +3,16 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { LessonReader } from "@/components/EmployeeDashboard/LessonReader";
 import { getAuthInstance } from "@/lib/firebase";
+
+const Navbar = dynamic(() => import("@/components/Navbar").then((mod) => mod.Navbar), {
+  ssr: false,
+  loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
+});
 
 export default function TrainingModulePage() {
   const params = useParams();
@@ -36,37 +42,48 @@ export default function TrainingModulePage() {
 
   if (loading) {
     return (
-      <div
-        style={{
-          padding: "2rem",
-          textAlign: "center",
-          color: "#6b7280",
-        }}
-      >
-        Loading...
-      </div>
+      <>
+        <Navbar />
+        <main className="page-main" style={{ background: "var(--bg-white)" }}>
+          <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>
+            Loading...
+          </div>
+        </main>
+      </>
     );
   }
 
   if (!employeeId || !moduleId) {
     return (
-      <div
-        style={{
-          padding: "2rem",
-          background: "#fef2f2",
-          border: "1px solid #fecaca",
-          borderRadius: "8px",
-          color: "#dc2626",
-        }}
-      >
-        Unable to load training module. Please try again.
-      </div>
+      <>
+        <Navbar />
+        <main className="page-main" style={{ background: "var(--bg-white)", padding: "1.5rem" }}>
+          <div
+            style={{
+              maxWidth: "900px",
+              margin: "0 auto",
+              padding: "2rem",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: "8px",
+              color: "#dc2626",
+            }}
+          >
+            Unable to load training module. Please try again.
+          </div>
+        </main>
+      </>
     );
   }
 
   return (
-    <div style={{ padding: "1.5rem", maxWidth: "1400px", margin: "0 auto" }}>
-      <LessonReader moduleId={moduleId} employeeId={employeeId} />
-    </div>
+    <>
+      <Navbar />
+      <main className="page-main" style={{ background: "var(--bg-white)" }}>
+        <div style={{ padding: "1.5rem", maxWidth: "1400px", margin: "0 auto" }}>
+          <LessonReader moduleId={moduleId} employeeId={employeeId} />
+        </div>
+      </main>
+    </>
   );
 }
