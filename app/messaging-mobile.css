@@ -53,14 +53,33 @@
 .messaging-filter-btn {
   padding: 0.45rem 0.75rem;
   border-radius: 999px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
-  text-transform: capitalize;
   min-height: 36px;
   white-space: nowrap;
   touch-action: manipulation;
+  flex: 0 0 auto;
+  line-height: 1.2;
+  box-sizing: border-box;
+}
+
+.messaging-filter-btn--active {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.22);
+}
+
+.messaging-filter-label-short {
+  display: none;
+}
+
+.messaging-filter-label-full {
+  display: inline;
 }
 
 .messaging-conversation-list {
@@ -242,15 +261,30 @@
   }
 
   .messaging-filters {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 0.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    overflow: visible;
+    padding-bottom: 0;
   }
 
-  .messaging-filters::-webkit-scrollbar {
+  .messaging-filter-btn {
+    flex: 1 1 calc(33.333% - 0.3rem);
+    min-width: 4.75rem;
+    min-height: 40px;
+    padding: 0.5rem 0.4rem;
+    font-size: 0.78rem;
+    white-space: normal;
+    text-align: center;
+    border-radius: 10px;
+  }
+
+  .messaging-filter-label-full {
     display: none;
+  }
+
+  .messaging-filter-label-short {
+    display: inline;
   }
 
   .messaging-bubble {

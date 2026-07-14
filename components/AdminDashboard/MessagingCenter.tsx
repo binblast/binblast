@@ -10,6 +10,14 @@ type MessageType = "praise" | "request" | "warning" | "general";
 type PortalMode = "staff" | "employee";
 type ContactFilter = "all" | "employees" | "operators" | "management" | "partners";
 
+const CONTACT_FILTER_LABELS: Record<ContactFilter, { full: string; short: string }> = {
+  all: { full: "All", short: "All" },
+  employees: { full: "Employees", short: "Staff" },
+  operators: { full: "Operators", short: "Ops" },
+  management: { full: "Management", short: "Admin" },
+  partners: { full: "Partners", short: "Partners" },
+};
+
 interface Conversation {
   id: string;
   type: ConversationType;
@@ -296,13 +304,12 @@ export function MessagingCenter({ userId, mode = "staff" }: MessagingCenterProps
                   key={filter}
                   type="button"
                   onClick={() => setContactFilter(filter)}
-                  className="messaging-filter-btn"
-                  style={{
-                    background: contactFilter === filter ? "#16a34a" : "#ffffff",
-                    color: contactFilter === filter ? "#ffffff" : "#374151",
-                  }}
+                  className={`messaging-filter-btn${
+                    contactFilter === filter ? " messaging-filter-btn--active" : ""
+                  }`}
                 >
-                  {filter}
+                  <span className="messaging-filter-label-full">{CONTACT_FILTER_LABELS[filter].full}</span>
+                  <span className="messaging-filter-label-short">{CONTACT_FILTER_LABELS[filter].short}</span>
                 </button>
               ))}
             </div>
