@@ -34,7 +34,7 @@ export async function getPartner(userId: string, userEmail?: string | null): Pro
     if (partnersSnapshot.empty && userEmail) {
       partnersQuery = query(
         collection(db, "partners"),
-        where("email", "==", userEmail)
+        where("email", "==", userEmail.toLowerCase().trim())
       );
       partnersSnapshot = await getDocs(partnersQuery);
     }
@@ -97,11 +97,15 @@ export async function getActivePartner(userId: string): Promise<{
 /**
  * Get the appropriate dashboard URL for a user based on their partner status
  * @param userId Firebase user ID
+ * @param userEmail Optional email to use as fallback if userId lookup fails
  * @returns Dashboard URL path
  */
-export async function getDashboardUrl(userId: string): Promise<string> {
+export async function getDashboardUrl(
+  userId: string,
+  userEmail?: string | null
+): Promise<string> {
   try {
-    const partner = await getPartner(userId);
+    const partner = await getPartner(userId, userEmail);
     
     if (!partner) {
       return "/dashboard";

@@ -41,7 +41,7 @@ export default function PartnersPage() {
           const userPortal = await resolveUserPortal(user.uid, user.email);
 
           if (userPortal === "partner") {
-            const dashboardUrl = await getDashboardUrl(user.uid);
+            const dashboardUrl = await getDashboardUrl(user.uid, user.email);
             router.push(dashboardUrl);
             return;
           }

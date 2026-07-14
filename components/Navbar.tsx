@@ -253,7 +253,7 @@ export function Navbar() {
           setIsOperator(isOperatorRole);
 
           const { getDashboardUrl } = await import("@/lib/partner-auth");
-          const dashboardUrl = await getDashboardUrl(user.uid);
+          const dashboardUrl = await getDashboardUrl(user.uid, userEmail);
           setAccountUrl(isEmployeeRole ? "/employee/dashboard" : dashboardUrl);
 
           const isPartner = dashboardUrl !== "/dashboard" && !isEmployeeRole;

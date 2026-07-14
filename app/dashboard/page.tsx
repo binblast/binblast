@@ -704,7 +704,7 @@ function DashboardPageContent() {
                 if (!redirectingRef.current) {
                   try {
                     const { getDashboardUrl } = await import("@/lib/partner-auth");
-                    const dashboardUrl = await getDashboardUrl(firebaseUser.uid);
+                    const dashboardUrl = await getDashboardUrl(firebaseUser.uid, firebaseUser.email);
                     
                     // If user is a partner and not on admin email, redirect to partner dashboard
                     if (dashboardUrl !== "/dashboard" && firebaseUser.email !== ADMIN_EMAIL) {

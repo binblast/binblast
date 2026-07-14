@@ -101,7 +101,7 @@ export function PortalLoginForm({ expectedRole, redirectPath, portalName }: Port
               }
 
               const { getDashboardUrl } = await import("@/lib/partner-auth");
-              const dashboardUrl = await getDashboardUrl(user.uid);
+              const dashboardUrl = await getDashboardUrl(user.uid, user.email);
               router.push(redirectPath || dashboardUrl);
               return;
             }

@@ -17,6 +17,7 @@ import "./partner-program.css";
 
 interface Partner {
   id: string;
+  userId?: string | null;
   businessName: string;
   ownerName: string;
   email: string;
@@ -74,6 +75,9 @@ export function PartnerMiniProfile({
   const [loading, setLoading] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [resendingApprovalEmail, setResendingApprovalEmail] = useState(false);
+  const [linkingLoginAccount, setLinkingLoginAccount] = useState(false);
+  const [savingServiceAreas, setSavingServiceAreas] = useState(false);
+  const [serviceAreaInput, setServiceAreaInput] = useState("");
 
   const toast = (message: string, type: "success" | "error" | "info" = "success") => {
     if (onNotify) onNotify(message, type);
@@ -81,6 +85,7 @@ export function PartnerMiniProfile({
 
   useEffect(() => {
     if (isOpen && partner) {
+      setServiceAreaInput(partner.serviceAreas?.join(", ") || "");
       loadTabData();
     }
   }, [isOpen, partner, activeTab]);
@@ -199,6 +204,69 @@ export function PartnerMiniProfile({
       toast(error instanceof Error ? error.message : "Failed to resend approval email", "error");
     } finally {
       setResendingApprovalEmail(false);
+    }
+  }
+
+  async function handleLinkLoginAccount() {
+    if (!partner || !activePartnerId) return;
+
+    setLinkingLoginAccount(true);
+    try {
+      const response = await fetchWithAuth("/api/admin/partners/assign-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          partnerId: activePartnerId,
+          userEmail: partner.email,
+        }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        toast(`Linked ${partner.email} to partner login`);
+        onUpdate();
+      } else {
+        toast(data.error || "Failed to link login account", "error");
+      }
+    } catch (error: unknown) {
+      toast(error instanceof Error ? error.message : "Failed to link login account", "error");
+    } finally {
+      setLinkingLoginAccount(false);
+    }
+  }
+
+  async function handleSaveServiceAreas() {
+    if (!partner || !activePartnerId) return;
+
+    const serviceAreas = serviceAreaInput
+      .split(",")
+      .map((area) => area.trim())
+      .filter(Boolean);
+
+    if (serviceAreas.length === 0) {
+      toast("Add at least one service area", "error");
+      return;
+    }
+
+    setSavingServiceAreas(true);
+    try {
+      const response = await fetchWithAuth(`/api/admin/partners/${activePartnerId}/service-areas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serviceAreas }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        toast("Service areas updated");
+        onUpdate();
+      } else {
+        toast(data.error || "Failed to update service areas", "error");
+      }
+    } catch (error: unknown) {
+      toast(error instanceof Error ? error.message : "Failed to update service areas", "error");
+    } finally {
+      setSavingServiceAreas(false);
     }
   }
 
@@ -584,7 +652,17 @@ export function PartnerMiniProfile({
 
         {/* Tab Content */}
         <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem" }}>
-          {activeTab === "overview" && <OverviewTab partner={partner} />}
+          {activeTab === "overview" && (
+            <OverviewTab
+              partner={partner}
+              serviceAreaInput={serviceAreaInput}
+              setServiceAreaInput={setServiceAreaInput}
+              onSaveServiceAreas={handleSaveServiceAreas}
+              savingServiceAreas={savingServiceAreas}
+              onLinkLoginAccount={handleLinkLoginAccount}
+              linkingLoginAccount={linkingLoginAccount}
+            />
+          )}
           {activeTab === "jobs" && activePartnerId && (
             <JobsTab
               partnerId={activePartnerId}
@@ -604,9 +682,54 @@ export function PartnerMiniProfile({
 }
 
 // Tab Components
-function OverviewTab({ partner }: { partner: Partner }) {
+function OverviewTab({
+  partner,
+  serviceAreaInput,
+  setServiceAreaInput,
+  onSaveServiceAreas,
+  savingServiceAreas,
+  onLinkLoginAccount,
+  linkingLoginAccount,
+}: {
+  partner: Partner;
+  serviceAreaInput: string;
+  setServiceAreaInput: (value: string) => void;
+  onSaveServiceAreas: () => void;
+  savingServiceAreas: boolean;
+  onLinkLoginAccount: () => void;
+  linkingLoginAccount: boolean;
+}) {
   return (
     <div>
+      <h3 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "1rem" }}>Account Link</h3>
+      <div style={{ marginBottom: "2rem", padding: "1rem", background: partner.userId ? "#dcfce7" : "#fef3c7", borderRadius: "8px" }}>
+        <div style={{ fontSize: "0.875rem", color: "#374151", marginBottom: "0.75rem" }}>
+          {partner.userId
+            ? "Partner login is linked. They can sign in at /partners with this email."
+            : "No login linked yet. Link their customer account so they can access the Partner Dashboard and Stripe payouts."}
+        </div>
+        {!partner.userId && (
+          <button
+            type="button"
+            onClick={onLinkLoginAccount}
+            disabled={linkingLoginAccount}
+            style={{
+              padding: "0.5rem 1rem",
+              background: "#0369a1",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "6px",
+              fontSize: "0.875rem",
+              fontWeight: "600",
+              cursor: linkingLoginAccount ? "not-allowed" : "pointer",
+              opacity: linkingLoginAccount ? 0.7 : 1,
+            }}
+          >
+            {linkingLoginAccount ? "Linking..." : "Link Login Account"}
+          </button>
+        )}
+      </div>
+
       <h3 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "1rem" }}>Contact Information</h3>
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "2rem" }}>
         <div>
@@ -625,9 +748,39 @@ function OverviewTab({ partner }: { partner: Partner }) {
 
       <h3 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "1rem" }}>Service Areas</h3>
       <div style={{ marginBottom: "2rem" }}>
-        <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-          {partner.serviceAreas?.join(", ") || "None assigned"}
-        </div>
+        <textarea
+          value={serviceAreaInput}
+          onChange={(e) => setServiceAreaInput(e.target.value)}
+          placeholder="South Metro, Peachtree City, Fayetteville, Tyrone, Sharpsburg, Senoia"
+          rows={3}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            fontSize: "0.875rem",
+            marginBottom: "0.75rem",
+            resize: "vertical",
+          }}
+        />
+        <button
+          type="button"
+          onClick={onSaveServiceAreas}
+          disabled={savingServiceAreas}
+          style={{
+            padding: "0.5rem 1rem",
+            background: "#16a34a",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            cursor: savingServiceAreas ? "not-allowed" : "pointer",
+            opacity: savingServiceAreas ? 0.7 : 1,
+          }}
+        >
+          {savingServiceAreas ? "Saving..." : "Save Service Areas"}
+        </button>
       </div>
 
       <h3 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "1rem" }}>Services Offered</h3>

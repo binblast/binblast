@@ -80,7 +80,7 @@ export async function resolveUserPortal(
   }
 
   const { getPartner, getDashboardUrl } = await import("@/lib/partner-auth");
-  const dashboardUrl = await getDashboardUrl(userId);
+  const dashboardUrl = await getDashboardUrl(userId, userEmail);
   const partner = await getPartner(userId, userEmail);
   const isPartner = dashboardUrl !== "/dashboard" || partner !== null;
 
