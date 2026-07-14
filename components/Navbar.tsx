@@ -493,7 +493,8 @@ export function Navbar() {
             display: "flex",
             alignItems: "center",
             textDecoration: "none",
-            height: isHomePage ? "56px" : "48px",
+            height: isHomePage ? "68px" : "52px",
+            minWidth: isHomePage ? "68px" : "52px",
           }}
         >
           {showTextLogo ? (

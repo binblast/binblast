@@ -16,10 +16,10 @@ const VARIANTS: Record<
   BrandLogoVariant,
   { width: number; height: number; className: string }
 > = {
-  nav: { width: 48, height: 48, className: "brand-logo brand-logo--nav" },
-  hero: { width: 112, height: 112, className: "brand-logo brand-logo--hero" },
-  footer: { width: 128, height: 128, className: "brand-logo brand-logo--footer" },
-  sidebar: { width: 80, height: 80, className: "brand-logo brand-logo--sidebar" },
+  nav: { width: 128, height: 128, className: "brand-logo brand-logo--nav" },
+  hero: { width: 256, height: 256, className: "brand-logo brand-logo--hero" },
+  footer: { width: 256, height: 256, className: "brand-logo brand-logo--footer" },
+  sidebar: { width: 160, height: 160, className: "brand-logo brand-logo--sidebar" },
 };
 
 export function BrandLogo({
@@ -47,6 +47,8 @@ export function BrandLogo({
         width={config.width}
         height={config.height}
         priority={priority}
+        quality={100}
+        unoptimized
         className="brand-logo__image"
         style={{ background: "transparent" }}
       />

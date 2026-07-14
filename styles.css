@@ -1667,15 +1667,26 @@ html {
     }
 
     .nav-logo > div {
-        width: 80px !important;
-        height: 32px !important;
+        width: auto !important;
+        height: auto !important;
     }
     
-    .nav-logo img {
+    .nav-logo .brand-logo--nav-home {
+        width: 60px;
+        height: 60px;
+    }
+
+    .nav-logo .brand-logo--nav {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .nav-logo img,
+    .nav-logo .brand-logo__image {
         object-fit: contain !important;
         object-position: left center !important;
+        width: 100% !important;
         height: 100% !important;
-        width: auto !important;
     }
 
     .hero {
@@ -1821,15 +1832,26 @@ html {
 
 @media (max-width: 480px) {
     .nav-logo > div {
-        width: 70px !important;
-        height: 28px !important;
+        width: auto !important;
+        height: auto !important;
+    }
+
+    .nav-logo .brand-logo--nav-home {
+        width: 56px;
+        height: 56px;
+    }
+
+    .nav-logo .brand-logo--nav {
+        width: 44px;
+        height: 44px;
     }
     
-    .nav-logo img {
+    .nav-logo img,
+    .nav-logo .brand-logo__image {
         object-fit: contain !important;
         object-position: left center !important;
+        width: 100% !important;
         height: 100% !important;
-        width: auto !important;
     }
     
     .container {

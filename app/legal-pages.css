@@ -13,7 +13,7 @@
 }
 
 .brand-logo__image {
-  width: auto;
+  width: 100%;
   height: 100%;
   max-width: 100%;
   object-fit: contain;
@@ -21,13 +21,13 @@
 }
 
 .brand-logo--nav {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
 }
 
 .brand-logo--nav-home {
-  width: 56px;
-  height: 56px;
+  width: 68px;
+  height: 68px;
 }
 
 .brand-logo--hero {
