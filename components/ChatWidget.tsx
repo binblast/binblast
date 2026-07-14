@@ -137,6 +137,13 @@ export function ChatWidget() {
     return null;
   }
 
+  const lastAssistantMessageId = [...messages]
+    .reverse()
+    .find((message) => message.sender === "assistant")?.id;
+
+  const showAssistantAvatar = (messageId: string) =>
+    !isTyping && messageId === lastAssistantMessageId;
+
   return (
     <>
       {!isOpen && (
@@ -167,19 +174,10 @@ export function ChatWidget() {
         <div className="chat-widget-panel" role="dialog" aria-label="Bin Blast Assistant chat">
           <header className="chat-widget-header">
             <div className="chat-widget-header__brand">
-              <img
-                src="/bin-blast-mascot.png"
-                alt=""
-                className="chat-widget-avatar"
-                width={42}
-                height={42}
-              />
-              <div>
-                <h3 className="chat-widget-header__title">Bin Blast Assistant</h3>
-                <p className="chat-widget-header__subtitle">
-                  Your on-site helper for pricing, booking, billing &amp; support.
-                </p>
-              </div>
+              <h3 className="chat-widget-header__title">Bin Blast Assistant</h3>
+              <p className="chat-widget-header__subtitle">
+                Ask about pricing, booking, billing, or anything you need to get started.
+              </p>
             </div>
             <button
               type="button"
@@ -210,15 +208,17 @@ export function ChatWidget() {
                 key={message.id}
                 className={`chat-widget-message chat-widget-message--${message.sender}`}
               >
-                {message.sender === "assistant" && (
+                {message.sender === "assistant" && showAssistantAvatar(message.id) ? (
                   <img
                     src="/bin-blast-mascot.png"
-                    alt=""
+                    alt="Bin Blast Assistant"
                     className="chat-widget-message__avatar"
                     width={30}
                     height={30}
                   />
-                )}
+                ) : message.sender === "assistant" ? (
+                  <span className="chat-widget-message__avatar-spacer" aria-hidden="true" />
+                ) : null}
                 <div className="chat-widget-message__content">
                   <div className="chat-widget-bubble">{message.text}</div>
                   {message.quickReplies && message.quickReplies.length > 0 && (
@@ -243,7 +243,7 @@ export function ChatWidget() {
               <div className="chat-widget-typing" aria-live="polite" aria-label="Assistant is typing">
                 <img
                   src="/bin-blast-mascot.png"
-                  alt=""
+                  alt="Bin Blast Assistant"
                   className="chat-widget-message__avatar"
                   width={30}
                   height={30}
