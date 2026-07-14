@@ -1207,9 +1207,35 @@ export default function PartnerDashboardPage() {
                 <div style={{ fontSize: "1.75rem", fontWeight: "700", color: "#991b1b", marginBottom: "0.25rem" }}>
                   ${(stats.pendingCommissions / 100).toFixed(2)}
                 </div>
-                <div style={{ fontSize: "0.875rem", color: "#7f1d1d" }}>Connect Stripe to receive</div>
+                <div style={{ fontSize: "0.875rem", color: "#7f1d1d" }}>
+                  {stats.pendingCommissions > 0
+                    ? stripeConnectStatus?.connected && stripeConnectStatus?.status === "active"
+                      ? "Ready for next payout"
+                      : "Connect Stripe to receive"
+                    : stats.totalCustomers === 0
+                      ? "No referred customers yet"
+                      : stripeConnectStatus?.connected && stripeConnectStatus?.status === "active"
+                        ? "No pending commissions"
+                        : "Connect Stripe to receive payouts"}
+                </div>
               </div>
             </div>
+
+            {stats.totalCustomers === 0 && (
+              <div style={{
+                background: "#f0f9ff",
+                borderRadius: "16px",
+                padding: "1.25rem 1.5rem",
+                marginBottom: "2rem",
+                border: "1px solid #bae6fd",
+              }}>
+                <p style={{ fontSize: "0.95rem", color: "#0c4a6e", margin: 0, lineHeight: 1.5 }}>
+                  Earnings show up here after a customer pays through your booking link with code{" "}
+                  <strong>{partnerData?.referralCode || partnerData?.partnerCode || "your code"}</strong>.
+                  Share the link below, then complete Stripe Connect so payouts can be sent to your bank.
+                </p>
+              </div>
+            )}
 
             {/* Booking Link & Partner Signup Link Cards */}
             <div style={{
