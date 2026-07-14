@@ -222,7 +222,7 @@ export async function POST(
 
     // Generate registration link for partner signup
     const baseUrl = req.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "https://www.binblastco.com";
-    const signupLink = `${baseUrl}/register?partner=true`;
+    const signupLink = `${baseUrl}/register?partner=true&email=${encodeURIComponent(applicationData.email)}&partnerId=${partnerRef.id}`;
     
     console.log("[Admin] Partner approved. Registration link:", signupLink);
 

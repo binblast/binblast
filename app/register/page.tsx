@@ -29,6 +29,7 @@ function RegisterForm() {
   const selectedPlanId = searchParams.get("plan") || "";
   const sessionId = searchParams.get("session_id") || "";
   const initialEmail = searchParams.get("email") || "";
+  const partnerIdParam = searchParams.get("partnerId") || "";
   const referralCode =
     searchParams.get("ref") || getReferralCodeFromLocation() || getCapturedReferralCode() || "";
   const redirectParam = searchParams.get("redirect") || "";
@@ -46,6 +47,18 @@ function RegisterForm() {
   const [verifyingSession, setVerifyingSession] = useState(!!sessionId);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [checkingPartnerStatus, setCheckingPartnerStatus] = useState(isPartnerSignup);
+  const [loadingPartnerPrefill, setLoadingPartnerPrefill] = useState(isPartnerSignup);
+  const [partnerAlreadyRegistered, setPartnerAlreadyRegistered] = useState(false);
+  const [partnerPrefill, setPartnerPrefill] = useState<{
+    partnerId: string;
+    firstName: string;
+    lastName: string;
+    ownerName: string;
+    email: string;
+    phone: string;
+    businessName: string;
+    referralCode?: string;
+  } | null>(null);
   const [stripeData, setStripeData] = useState<{
     customerId: string | null;
     subscriptionId: string | null;
@@ -165,6 +178,52 @@ function RegisterForm() {
 
     checkPartnerStatus();
   }, [isPartnerSignup, router]);
+
+  // Load approved partner details so they only need to create a password
+  useEffect(() => {
+    async function loadPartnerPrefill() {
+      if (!isPartnerSignup) {
+        setLoadingPartnerPrefill(false);
+        return;
+      }
+
+      const lookupEmail = (initialEmail || email).trim().toLowerCase();
+      if (!lookupEmail && !partnerIdParam) {
+        setLoadingPartnerPrefill(false);
+        return;
+      }
+
+      try {
+        const params = new URLSearchParams();
+        if (lookupEmail) params.set("email", lookupEmail);
+        if (partnerIdParam) params.set("partnerId", partnerIdParam);
+
+        const response = await fetch(`/api/partners/registration-prefill?${params.toString()}`);
+        const data = await response.json();
+
+        if (response.status === 409) {
+          setPartnerAlreadyRegistered(true);
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(data.error || "Unable to load partner details");
+        }
+
+        setPartnerPrefill(data);
+        setFirstName(data.firstName || "");
+        setLastName(data.lastName || "");
+        setEmail(data.email || lookupEmail);
+        setPhone(data.phone || "");
+      } catch (err) {
+        console.warn("[Register] Could not prefill partner application:", err);
+      } finally {
+        setLoadingPartnerPrefill(false);
+      }
+    }
+
+    loadPartnerPrefill();
+  }, [isPartnerSignup, initialEmail, partnerIdParam]);
 
   // Verify Stripe session on mount if session_id is present
   useEffect(() => {
@@ -716,9 +775,9 @@ function RegisterForm() {
             router.push(finalRedirect);
           }, 2000);
         } else if (isPartnerSignup) {
-          // Partner signup param but not yet a partner - redirect to partner application page
+          const partnerDashboardId = partnerPrefill?.partnerId || partnerRecord?.id;
           setTimeout(() => {
-            router.push("/partners/apply");
+            router.push(partnerDashboardId ? "/partners/dashboard" : "/partners/apply");
           }, 2000);
         } else if (stripeData) {
           // User has already paid - redirect to dashboard
@@ -749,7 +808,7 @@ function RegisterForm() {
       // Fallback redirect logic
       if (isPartnerSignup) {
         setTimeout(() => {
-          router.push("/partners/apply");
+          router.push(partnerPrefill?.partnerId ? "/partners/dashboard" : "/partners/apply");
         }, 2000);
       } else if (stripeData) {
         setTimeout(() => {
@@ -769,7 +828,12 @@ function RegisterForm() {
     }
   }
 
+  const hasPrefilledPartner = Boolean(isPartnerSignup && partnerPrefill);
   const hasPrefilledOnboarding = Boolean(sessionId && onboardingData && !isPartnerSignup);
+  const partnerDisplayName =
+    partnerPrefill?.ownerName ||
+    [partnerPrefill?.firstName, partnerPrefill?.lastName].filter(Boolean).join(" ") ||
+    "Partner";
 
   return (
     <>
@@ -778,7 +842,9 @@ function RegisterForm() {
         <div className="container">
           <div style={{ maxWidth: "600px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
-              {isPartnerSignup
+              {hasPrefilledPartner
+                ? `Welcome, ${partnerDisplayName}!`
+                : isPartnerSignup
                 ? "Complete Your Partner Account Setup"
                 : hasPrefilledOnboarding
                 ? "Create Your Login"
@@ -787,7 +853,21 @@ function RegisterForm() {
                 : "Create Your Account"}
             </h1>
             
-            {isPartnerSignup && (
+            {hasPrefilledPartner && partnerPrefill && (
+              <div style={{
+                padding: "1rem 1.5rem",
+                background: "#ecfdf5",
+                borderRadius: "12px",
+                marginBottom: "2rem",
+                border: "1px solid #16a34a"
+              }}>
+                <p style={{ margin: 0, fontSize: "0.95rem", color: "#047857", fontWeight: "500", lineHeight: 1.6 }}>
+                  🎉 Congratulations, <strong>{partnerDisplayName}</strong>! Your partnership application for <strong>{partnerPrefill.businessName}</strong> has been approved. Just create a password below to access your partner dashboard.
+                </p>
+              </div>
+            )}
+
+            {isPartnerSignup && !hasPrefilledPartner && !loadingPartnerPrefill && !partnerAlreadyRegistered && (
               <div style={{
                 padding: "1rem 1.5rem",
                 background: "#eff6ff",
@@ -797,6 +877,37 @@ function RegisterForm() {
               }}>
                 <p style={{ margin: 0, fontSize: "0.95rem", color: "#1e40af", fontWeight: "500" }}>
                   🎉 Congratulations! Your partner application has been accepted. Complete your account setup below to get started.
+                </p>
+              </div>
+            )}
+
+            {partnerAlreadyRegistered && (
+              <div style={{
+                padding: "1rem 1.5rem",
+                background: "#eff6ff",
+                borderRadius: "12px",
+                marginBottom: "2rem",
+                border: "1px solid #3b82f6"
+              }}>
+                <p style={{ margin: 0, fontSize: "0.95rem", color: "#1e40af", fontWeight: "500" }}>
+                  Your partner account is already set up. Please log in to continue.
+                </p>
+                <Link href="/partners" style={{ color: "#1d4ed8", fontWeight: "600", textDecoration: "none" }}>
+                  Go to Partner Login
+                </Link>
+              </div>
+            )}
+
+            {loadingPartnerPrefill && (
+              <div style={{
+                padding: "1rem 1.5rem",
+                background: "#f9fafb",
+                borderRadius: "12px",
+                marginBottom: "2rem",
+                border: "1px solid #e5e7eb"
+              }}>
+                <p style={{ margin: 0, fontSize: "0.95rem", color: "#6b7280" }}>
+                  Loading your approved partner details...
                 </p>
               </div>
             )}
@@ -861,12 +972,12 @@ function RegisterForm() {
                   Account Created!
                 </h2>
                 <p style={{ color: "var(--text-light)" }}>
-                  {isPartnerSignup 
-                    ? "Redirecting to partner application..." 
+                  {hasPrefilledPartner || isPartnerSignup
+                    ? "Redirecting to your partner dashboard..."
                     : "Redirecting to your dashboard..."}
                 </p>
               </div>
-            ) : !sessionId && !redirectParam && !isPartnerSignup ? (
+            ) : partnerAlreadyRegistered ? null : !sessionId && !redirectParam && !isPartnerSignup ? (
               <div style={{ textAlign: "center", padding: "3rem 0" }}>
                 <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem", color: "#111827" }}>
                   Select a Service Plan First
@@ -885,7 +996,7 @@ function RegisterForm() {
                   View Pricing Plans
                 </Link>
               </div>
-            ) : (
+            ) : loadingPartnerPrefill ? null : (
               <div style={{
                 background: "#ffffff",
                 borderRadius: "20px",
@@ -894,6 +1005,29 @@ function RegisterForm() {
                 border: "1px solid #e5e7eb"
               }}>
                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  {hasPrefilledPartner && partnerPrefill && (
+                    <div style={{
+                      padding: "1.25rem 1.5rem",
+                      background: "#f9fafb",
+                      borderRadius: "12px",
+                      border: "1px solid #e5e7eb",
+                    }}>
+                      <p style={{ margin: "0 0 0.75rem", fontSize: "0.8rem", fontWeight: "700", color: "#6b7280", textTransform: "uppercase" }}>
+                        Your Approved Application
+                      </p>
+                      <p style={{ margin: "0 0 0.25rem", fontWeight: "600", color: "var(--text-dark)" }}>
+                        {partnerPrefill.firstName} {partnerPrefill.lastName}
+                      </p>
+                      <p style={{ margin: "0 0 0.25rem", color: "#6b7280", fontSize: "0.9rem" }}>{partnerPrefill.email}</p>
+                      {partnerPrefill.phone && (
+                        <p style={{ margin: "0 0 0.25rem", color: "#6b7280", fontSize: "0.9rem" }}>{partnerPrefill.phone}</p>
+                      )}
+                      <p style={{ margin: "0.5rem 0 0", color: "#6b7280", fontSize: "0.875rem" }}>
+                        Business: <strong>{partnerPrefill.businessName}</strong>
+                      </p>
+                    </div>
+                  )}
+
                   {hasPrefilledOnboarding && onboardingData && (
                     <div style={{
                       padding: "1.25rem 1.5rem",
@@ -922,7 +1056,7 @@ function RegisterForm() {
                     </div>
                   )}
 
-                  {!hasPrefilledOnboarding && (
+                  {!hasPrefilledOnboarding && !hasPrefilledPartner && (
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                     <div>
                       <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
@@ -969,7 +1103,7 @@ function RegisterForm() {
                   </div>
                   )}
 
-                  {!hasPrefilledOnboarding && (
+                  {!hasPrefilledOnboarding && !hasPrefilledPartner && (
                   <div>
                     <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
                       Email
@@ -994,7 +1128,7 @@ function RegisterForm() {
                   </div>
                   )}
 
-                  {!hasPrefilledOnboarding && (
+                  {!hasPrefilledOnboarding && !hasPrefilledPartner && (
                   <div>
                     <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
                       Phone <span style={{ color: "var(--text-light)", fontWeight: "400" }}>(optional)</span>
@@ -1018,13 +1152,17 @@ function RegisterForm() {
                   </div>
                   )}
 
-                  {hasPrefilledOnboarding && (
-                    <input type="hidden" value={firstName} readOnly />
+                  {(hasPrefilledOnboarding || hasPrefilledPartner) && (
+                    <>
+                      <input type="hidden" value={firstName} readOnly />
+                      <input type="hidden" value={lastName} readOnly />
+                      <input type="hidden" value={email} readOnly />
+                    </>
                   )}
 
                   <div>
                     <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                      {hasPrefilledOnboarding ? "Create Password" : "Password"}
+                      {hasPrefilledOnboarding || hasPrefilledPartner ? "Create Password" : "Password"}
                     </label>
                     <input
                       type="password"
@@ -1095,6 +1233,8 @@ function RegisterForm() {
                   >
                     {loading
                       ? "Creating Account..."
+                      : hasPrefilledPartner
+                      ? "Create Password & Go to Dashboard"
                       : hasPrefilledOnboarding
                       ? "Create Account & Go to Dashboard"
                       : "Create Account"}

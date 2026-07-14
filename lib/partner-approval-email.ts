@@ -1,6 +1,24 @@
 import emailjs from "@emailjs/browser";
 import { EMAIL_LOGO_URL } from "@/lib/email-utils";
 
+export function buildPartnerSignupLink(input: {
+  email: string;
+  partnerId?: string;
+  baseUrl?: string;
+}) {
+  const base =
+    input.baseUrl ||
+    (typeof window !== "undefined" ? window.location.origin : "https://www.binblastco.com");
+  const params = new URLSearchParams({
+    partner: "true",
+    email: input.email,
+  });
+  if (input.partnerId) {
+    params.set("partnerId", input.partnerId);
+  }
+  return `${base}/register?${params.toString()}`;
+}
+
 export interface PartnerApprovalEmailParams {
   email: string;
   ownerName: string;
@@ -106,7 +124,10 @@ export function buildPartnerApprovalEmailParams(input: {
     revenueSharePlatform: input.revenueSharePlatform,
     signupLink:
       input.signupLink ||
-      `${typeof window !== "undefined" ? window.location.origin : "https://www.binblastco.com"}/register?partner=true`,
+      buildPartnerSignupLink({
+        email: input.email,
+        partnerId: input.partnerId,
+      }),
     partnerId: input.partnerId,
   };
 }
