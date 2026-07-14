@@ -3,6 +3,7 @@
 "use client";
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { sendPartnerApprovalEmailClient } from "@/lib/partner-approval-email";
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { georgiaCounties } from "@/data/gaCounties";
@@ -469,6 +470,8 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       notify("Revenue shares must total 100%", "error");
       return;
     }
+
+    const application = selectedApplication;
     
     try {
       const response = await fetchWithAuth(`/api/admin/partners/applications/${applicationId}/approve`, {
@@ -483,7 +486,31 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       
       const data = await response.json();
       if (data.success) {
-        notify("Partner approved successfully!");
+        let emailSent = data.emailSent === true;
+        if (!emailSent) {
+          const clientEmailResult = await sendPartnerApprovalEmailClient({
+            email: application.email,
+            ownerName: application.ownerName,
+            businessName: application.businessName,
+            referralCode: data.referralCode,
+            serviceAreas: approveServiceAreas.join(", "),
+            revenueSharePartner: approvePartnerShare,
+            revenueSharePlatform: approvePlatformShare,
+            signupLink: data.signupLink,
+            partnerId: data.partnerId,
+          });
+          emailSent = clientEmailResult.success;
+          if (!emailSent) {
+            console.error("[Partner Program] Client approval email failed:", clientEmailResult.error);
+          }
+        }
+
+        notify(
+          emailSent
+            ? "Partner approved and approval email sent!"
+            : "Partner approved, but the approval email could not be sent. Check EmailJS settings.",
+          emailSent ? "success" : "error"
+        );
         setShowApproveModal(false);
         setSelectedApplication(null);
         setShowMiniProfile(false);

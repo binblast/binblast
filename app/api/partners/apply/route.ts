@@ -49,25 +49,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if user already has a partner application
-    const applicationsQuery = query(
-      collection(db, "partnerApplications"),
-      where("userId", "==", userId)
-    );
-    const existingApplications = await getDocs(applicationsQuery);
-
+    // Check if user already has a partner application (only when logged in)
     let applicationId: string;
-    if (!existingApplications.empty) {
-      // Update existing application
-      applicationId = existingApplications.docs[0].id;
+    let existingData: Record<string, unknown> | null = null;
+
+    if (userId) {
+      const applicationsQuery = query(
+        collection(db, "partnerApplications"),
+        where("userId", "==", userId)
+      );
+      const existingApplications = await getDocs(applicationsQuery);
+
+      if (!existingApplications.empty) {
+        applicationId = existingApplications.docs[0].id;
+        existingData = existingApplications.docs[0].data();
+      } else {
+        applicationId = doc(collection(db, "partnerApplications")).id;
+      }
     } else {
-      // Create new application
       applicationId = doc(collection(db, "partnerApplications")).id;
     }
 
     // Create or update partner application document
     const applicationRef = doc(db, "partnerApplications", applicationId);
-    const existingData = existingApplications.empty ? null : existingApplications.docs[0].data();
     
     const applicationData = {
       userId: userId || null, // Can be null if user hasn't registered yet

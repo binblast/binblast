@@ -226,29 +226,33 @@ export async function POST(
     
     console.log("[Admin] Partner approved. Registration link:", signupLink);
 
-    // Send approval email to partner (non-blocking - fire and forget)
-    (async () => {
-      try {
-        const { notifyPartnerApproval } = await import("@/lib/email-utils");
-        const emailResult = await notifyPartnerApproval({
-          email: applicationData.email,
-          ownerName: applicationData.ownerName,
-          businessName: applicationData.businessName,
-          referralCode,
-          serviceAreas: serviceAreas.join(", "),
-          revenueSharePartner: partnerShare,
-          revenueSharePlatform: platformShare,
-          signupLink,
-          partnerId: partnerRef.id,
-        });
-        if (emailResult.success) {
-          console.log("[Admin] Partner approval email sent to:", applicationData.email);
-        }
-      } catch (emailError: any) {
-        console.error("[Admin] Failed to send approval email:", emailError?.message || emailError);
-        // Don't fail the approval if email fails
+    // Send approval email to partner before returning (serverless functions terminate after response)
+    let emailSent = false;
+    let emailError: string | undefined;
+    try {
+      const { notifyPartnerApproval } = await import("@/lib/email-utils");
+      const emailResult = await notifyPartnerApproval({
+        email: applicationData.email,
+        ownerName: applicationData.ownerName,
+        businessName: applicationData.businessName,
+        referralCode,
+        serviceAreas: serviceAreas.join(", "),
+        revenueSharePartner: partnerShare,
+        revenueSharePlatform: platformShare,
+        signupLink,
+        partnerId: partnerRef.id,
+      });
+      emailSent = emailResult.success;
+      emailError = emailResult.error;
+      if (emailResult.success) {
+        console.log("[Admin] Partner approval email sent to:", applicationData.email);
+      } else {
+        console.error("[Admin] Partner approval email failed:", emailResult.error);
       }
-    })();
+    } catch (sendEmailError: any) {
+      emailError = sendEmailError?.message || String(sendEmailError);
+      console.error("[Admin] Failed to send approval email:", emailError);
+    }
 
     // Create admin notification for approval (non-blocking - fire and forget)
     (async () => {
@@ -275,6 +279,8 @@ export async function POST(
       partnerId: partnerRef.id,
       referralCode,
       signupLink,
+      emailSent,
+      emailError,
       message: "Application approved. Partner can now sign up at /partner",
     });
   } catch (err: any) {
