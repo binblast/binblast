@@ -407,9 +407,10 @@ main {
     overflow-y: auto !important;
   }
   
-  /* Card optimizations */
-  .card,
-  [class*="card"] {
+  /* Card optimizations — dashboard/portal only; marketing cards keep section styles */
+  .dashboard-shell .card,
+  .employee-dashboard .card,
+  .portal-login-shell .card {
     padding: 1rem !important;
     margin-bottom: 1rem !important;
   }

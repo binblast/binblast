@@ -491,14 +491,6 @@ export function Navbar() {
         <Link
           href={homeRootHref}
           className={`nav-logo${isHomePage ? " nav-logo--home" : ""}`}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            textDecoration: "none",
-            height: isHomePage ? "68px" : "52px",
-            minWidth: isHomePage ? "68px" : "52px",
-            flexShrink: 0,
-          }}
         >
           <BrandLogo
             variant="nav"

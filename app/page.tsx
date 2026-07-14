@@ -49,7 +49,7 @@ export default function HomePage() {
   return (
     <>
       <Navbar />
-      <main className="bg-white">
+      <main className="bg-white marketing-main">
         {/* Hero Section with Background Image */}
         <section id="home" className="hero">
           <div className="container">
@@ -272,18 +272,18 @@ export default function HomePage() {
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb"
               }}>
-                <h3 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
+                <h3 style={{ fontSize: "clamp(1.25rem, 5vw, 1.5rem)", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
                   Partner Dashboard
                 </h3>
-                <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem" }}>
+                <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem", fontSize: "clamp(0.9rem, 3vw, 0.95rem)" }}>
                   Track bookings, view earnings, and monitor performance in a dedicated partner dashboard with real-time reporting.
                 </p>
               </div>
             </div>
-            <div style={{
+            <div className="partner-highlight-box" style={{
               background: "#ffffff",
               borderRadius: "20px",
-              padding: "3rem",
+              padding: "clamp(1.25rem, 4vw, 3rem)",
               border: "2px solid #bae6fd",
               maxWidth: "900px",
               margin: "0 auto",
@@ -340,7 +340,7 @@ export default function HomePage() {
         <section id="dashboard" className="account-section" style={{ padding: "clamp(3rem, 8vw, 5rem) 0", background: "#f9fafb" }}>
           <div className="container">
             <h2 className="section-title" style={{ textAlign: "center" }}>Your Bin Blast Dashboards</h2>
-            <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "3rem" }}>
+            <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "clamp(1.75rem, 5vw, 3rem)" }}>
               Every account includes access to a modern online dashboard. Customers manage cleanings and referrals. Partners track bookings and payouts.
             </p>
             <div style={{ 
@@ -351,10 +351,10 @@ export default function HomePage() {
               margin: "0 auto"
             }} className="dashboard-grid">
               {/* Card 1: Plan Overview */}
-              <div style={{
+              <div className="dashboard-preview-card" style={{
                 background: "#ffffff",
                 borderRadius: "16px",
-                padding: "2rem",
+                padding: "clamp(1.25rem, 4vw, 2rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
                 transition: "transform 0.2s, box-shadow 0.2s"
@@ -368,10 +368,10 @@ export default function HomePage() {
               </div>
 
               {/* Card 2: Schedule Cleanings Anytime */}
-              <div style={{
+              <div className="dashboard-preview-card" style={{
                 background: "#ffffff",
                 borderRadius: "16px",
-                padding: "2rem",
+                padding: "clamp(1.25rem, 4vw, 2rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
                 transition: "transform 0.2s, box-shadow 0.2s"
@@ -385,10 +385,10 @@ export default function HomePage() {
               </div>
 
               {/* Card 3: Loyalty Levels */}
-              <div style={{
+              <div className="dashboard-preview-card" style={{
                 background: "#ffffff",
                 borderRadius: "16px",
-                padding: "2rem",
+                padding: "clamp(1.25rem, 4vw, 2rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
                 transition: "transform 0.2s, box-shadow 0.2s"
@@ -402,10 +402,10 @@ export default function HomePage() {
               </div>
 
               {/* Card 4: Referral Rewards */}
-              <div style={{
+              <div className="dashboard-preview-card" style={{
                 background: "#ffffff",
                 borderRadius: "16px",
-                padding: "2rem",
+                padding: "clamp(1.25rem, 4vw, 2rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
                 transition: "transform 0.2s, box-shadow 0.2s"
@@ -419,10 +419,10 @@ export default function HomePage() {
               </div>
 
               {/* Card 5: Cleaning History */}
-              <div style={{
+              <div className="dashboard-preview-card" style={{
                 background: "#ffffff",
                 borderRadius: "16px",
-                padding: "2rem",
+                padding: "clamp(1.25rem, 4vw, 2rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
                 transition: "transform 0.2s, box-shadow 0.2s"
@@ -436,10 +436,10 @@ export default function HomePage() {
           </div>
 
               {/* Card 6: 24/7 AI Chat Support */}
-              <div style={{
+              <div className="dashboard-preview-card" style={{
                 background: "#ffffff",
                 borderRadius: "16px",
-                padding: "2rem",
+                padding: "clamp(1.25rem, 4vw, 2rem)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb",
                 transition: "transform 0.2s, box-shadow 0.2s"
@@ -527,7 +527,7 @@ export default function HomePage() {
             <p className="cta-sub">
               Homeowners can join a recurring plan and let us handle the dirty work. Service businesses can plug into our partner program to add bin cleaning to their offerings with no extra overhead.
             </p>
-            <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginTop: "2rem" }}>
+            <div className="marketing-cta-actions" style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginTop: "2rem" }}>
               <Link href="#pricing" className="btn btn-primary btn-large">
                 Get My Cleaning Plan
               </Link>
@@ -563,7 +563,11 @@ export default function HomePage() {
                 </div>
                 <div className="footer-section">
                   <h3 className="footer-heading">Service Areas</h3>
-                  <p>{SERVICE_AREAS.join(" · ")}</p>
+                  <div className="footer-service-areas">
+                    {SERVICE_AREAS.map((area) => (
+                      <span key={area} className="footer-service-area-chip">{area}</span>
+                    ))}
+                  </div>
                 </div>
                 <div className="footer-section">
                   <h3 className="footer-heading">For Businesses</h3>
@@ -574,17 +578,11 @@ export default function HomePage() {
             </div>
             <div className="footer-bottom">
               <p>&copy; 2024 Bin Blast Co. All rights reserved.</p>
-              <p style={{ marginTop: "0.75rem", fontSize: "0.9rem" }}>
-                <Link href="/terms" style={{ color: "inherit", textDecoration: "underline", marginRight: "1rem" }}>
-                  Terms of Service
-                </Link>
-                <Link href="/privacy" style={{ color: "inherit", textDecoration: "underline", marginRight: "1rem" }}>
-                  Privacy Policy
-                </Link>
-                <Link href="/cancellation" style={{ color: "inherit", textDecoration: "underline" }}>
-                  Cancellation &amp; Refunds
-                </Link>
-              </p>
+              <div className="footer-legal-links">
+                <Link href="/terms">Terms of Service</Link>
+                <Link href="/privacy">Privacy Policy</Link>
+                <Link href="/cancellation">Cancellation &amp; Refunds</Link>
+              </div>
             </div>
           </div>
         </footer>

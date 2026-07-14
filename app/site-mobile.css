@@ -262,11 +262,17 @@ body.nav-menu-open {
     overflow-x: hidden;
   }
 
-  /* Fluid padding for pages not yet using page-main */
-  main {
+  /* Fluid padding for portal/dashboard pages using page-main */
+  main.page-main {
     padding-top: var(--page-padding-y) !important;
     padding-bottom: var(--page-padding-y) !important;
     min-height: calc(100dvh - 80px);
+  }
+
+  main.marketing-main {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    min-height: auto;
   }
 
   /* Force single-column grids with large min widths on small screens */
@@ -519,9 +525,9 @@ body.nav-menu-open {
   }
 
   .lead-capture-close {
-    width: 34px !important;
-    height: 34px !important;
-    min-width: 34px !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
   }
 
   .lead-capture-form {
@@ -554,5 +560,59 @@ body.nav-menu-open {
 
   .employee-detail-actions {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* Marketing site mobile polish */
+@media (max-width: 767px) {
+  .marketing-main .hero-service-areas {
+    display: block;
+    max-width: 100%;
+    line-height: 1.55;
+    font-size: clamp(0.8rem, 3.2vw, 0.9rem);
+    padding: 0.6rem 0.85rem;
+  }
+
+  .marketing-cta-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+    margin-top: 1.5rem !important;
+    padding: 0 clamp(0.5rem, 3vw, 1rem);
+  }
+
+  .marketing-cta-actions .btn {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .marketing-main .footer {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .footer-legal-links {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .service-area-chip--interactive {
+    font-size: 0.8125rem;
+    height: 44px;
+    padding: 0 1rem;
+    min-width: 0;
+  }
+
+  .service-areas-grid {
+    gap: 0.5rem;
+  }
+
+  .pricing-more-services-wrap {
+    margin-top: 2rem;
+    padding: 0 0.5rem;
+  }
+
+  .pricing-disclaimer {
+    margin-top: 1.5rem;
   }
 }

@@ -450,7 +450,7 @@ export function PricingSection() {
 
 
 
-        <p style={{ fontSize: "0.75rem", color: "#6b7280", textAlign: "center", marginTop: "2rem", maxWidth: "900px", marginLeft: "auto", marginRight: "auto" }}>
+        <p className="pricing-disclaimer">
 
           All plans include eco-friendly, high-pressure cleaning, disinfecting,
 
