@@ -81,9 +81,10 @@ export async function POST(req: NextRequest) {
       hasInsurance: hasInsurance === true,
       promotionMethod,
       heardAboutUs: heardAboutUs || null,
-      status: existingData?.status || "pending", // Keep existing status if updating, otherwise "pending"
-      linkedPartnerId: existingData?.linkedPartnerId || null, // Will be set when approved
-      createdAt: existingData?.createdAt || serverTimestamp(), // Keep original creation time if updating
+      // New submissions always require admin review. Preserve approved only if partner account already exists.
+      status: existingData?.linkedPartnerId ? existingData.status || "approved" : "pending",
+      linkedPartnerId: existingData?.linkedPartnerId || null,
+      createdAt: existingData?.createdAt || serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 

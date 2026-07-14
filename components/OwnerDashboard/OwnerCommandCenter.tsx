@@ -14,7 +14,6 @@ import { OwnerFinancialsHub } from "@/components/OwnerDashboard/OwnerFinancialsH
 import { OwnerTrainingOverview } from "@/components/OwnerDashboard/OwnerTrainingOverview";
 import { OwnerPhotosOverview } from "@/components/OwnerDashboard/OwnerPhotosOverview";
 import { SiteLeadsManagement } from "@/components/OwnerDashboard/SiteLeadsManagement";
-import { AdminPartnerApplications } from "@/components/AdminPartnerApplications";
 
 const EmployeeStatus = dynamic(
   () => import("@/components/OperatorDashboard/EmployeeStatus").then((m) => m.EmployeeStatus),
@@ -488,12 +487,7 @@ export function OwnerCommandCenter({
         )}
         {activeTab === "commercial" && <CommercialAccounts userId={userId} />}
         {activeTab === "partners" && (
-          <div>
-            <AdminPartnerApplications />
-            <div style={{ marginTop: "2rem" }}>
-              <PartnerProgramManagement userId={userId} />
-            </div>
-          </div>
+          <PartnerProgramManagement userId={userId} />
         )}
         {activeTab === "financials" && (
           <OwnerFinancialsHub

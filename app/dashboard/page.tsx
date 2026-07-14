@@ -12,8 +12,7 @@ import { CleaningDateConfirmationModal } from "@/components/CleaningDateConfirma
 import { ReferralRewards } from "@/components/ReferralRewards";
 import { ReferralHistory } from "@/components/ReferralHistory";
 import { LoyaltyBadges } from "@/components/LoyaltyBadges";
-import { AdminPartnerApplications } from "@/components/AdminPartnerApplications";
-import { AdminPartnerManagement } from "@/components/AdminPartnerManagement";
+import { PartnerProgramManagement } from "@/components/AdminDashboard/PartnerProgramManagement";
 import { PlanId } from "@/lib/stripe-config";
 import Link from "next/link";
 import { RevenueTrendSummary, CustomerGrowthSummary, WeeklyCleaningsSummary, PlanDistributionSummary, RevenueByPlanSummary } from "@/components/AdminDashboard/ChartSummaries";
@@ -1172,12 +1171,9 @@ function DashboardPageContent() {
           if (mounted) {
             const unreadCount = snapshot.docs.filter(doc => {
               const data = doc.data();
-              return !data.read && (data.type === "partner_application" || data.type === "partner_approved");
+              return !data.read && data.type === "partner_application";
             }).length;
-            // Update partner applications count from notifications
-            if (unreadCount > 0) {
-              setNewPartnerApplicationsCount(unreadCount);
-            }
+            setNewPartnerApplicationsCount(unreadCount);
           }
         }, (error) => {
           console.error("[Dashboard] Error listening to adminNotifications:", error);
@@ -3168,8 +3164,7 @@ function DashboardPageContent() {
                   )}
 
                         {/* Admin Partner Applications Section */}
-                        <AdminPartnerApplications />
-                        <AdminPartnerManagement />
+                        <PartnerProgramManagement userId={userId!} />
                       </div>
                     )}
 
@@ -3737,8 +3732,7 @@ function DashboardPageContent() {
                         <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", marginBottom: "1.5rem" }}>
                           Partner Management
                         </h2>
-                        <AdminPartnerApplications />
-                        <AdminPartnerManagement />
+                        <PartnerProgramManagement userId={userId!} />
                       </div>
                     )}
 

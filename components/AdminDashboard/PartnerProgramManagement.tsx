@@ -61,6 +61,37 @@ interface Partner {
   lastPayoutDate?: any;
 }
 
+type ApplicationStatus = PartnerApplication["status"];
+
+function normalizeApplication(app: PartnerApplication): PartnerApplication {
+  return {
+    ...app,
+    status: (app.status || "pending") as ApplicationStatus,
+  };
+}
+
+function getApplicationStats(applications: PartnerApplication[]) {
+  return {
+    pending: applications.filter((app) => (app.status || "pending") === "pending").length,
+    hold: applications.filter((app) => app.status === "hold").length,
+    approved: applications.filter((app) => app.status === "approved").length,
+    rejected: applications.filter((app) => app.status === "rejected").length,
+  };
+}
+
+function applicationStatusStyle(status: string) {
+  switch (status) {
+    case "approved":
+      return { background: "#dcfce7", color: "#16a34a", border: "1px solid #86efac" };
+    case "rejected":
+      return { background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5" };
+    case "hold":
+      return { background: "#fef3c7", color: "#d97706", border: "1px solid #fcd34d" };
+    default:
+      return { background: "#e0e7ff", color: "#4338ca", border: "1px solid #c7d2fe" };
+  }
+}
+
 interface PartnerProgramManagementProps {
   userId: string;
 }
@@ -73,7 +104,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
   
   // Filters and search
   const [applicationSearch, setApplicationSearch] = useState("");
-  const [applicationStatusFilter, setApplicationStatusFilter] = useState<string>("all");
+  const [applicationStatusFilter, setApplicationStatusFilter] = useState<string>("pending");
   const [partnerSearch, setPartnerSearch] = useState("");
   const [partnerStatusFilter, setPartnerStatusFilter] = useState<string>("all");
   const [partnerServiceAreaFilter, setPartnerServiceAreaFilter] = useState<string>("all");
@@ -132,7 +163,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       const appsResponse = await fetchWithAuth("/api/admin/partners/applications");
       const appsData = await appsResponse.json();
       if (appsData.success) {
-        setApplications(appsData.applications || []);
+        setApplications((appsData.applications || []).map(normalizeApplication));
       }
       
       // Load partners with stats
@@ -207,6 +238,66 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
     } catch (err: any) {
       alert(`Error: ${err.message}`);
     }
+  }
+
+  async function handleApplicationStatusChange(app: PartnerApplication, newStatus: ApplicationStatus) {
+    const currentStatus = app.status || "pending";
+    if (newStatus === currentStatus) return;
+
+    if (newStatus === "approved") {
+      setSelectedApplication(app);
+      const areas = app.serviceArea ? app.serviceArea.split(",").map((s) => s.trim()).filter(Boolean) : [];
+      setApproveServiceAreas(areas);
+      setApprovePartnerShare(60);
+      setApprovePlatformShare(40);
+      setShowApproveModal(true);
+      return;
+    }
+
+    if (newStatus === "rejected") {
+      setSelectedApplication(app);
+      setShowRejectModal(true);
+      return;
+    }
+
+    if (newStatus === "hold") {
+      setSelectedApplication(app);
+      setShowHoldModal(true);
+      return;
+    }
+
+    if (newStatus === "pending") {
+      if (app.linkedPartnerId) {
+        alert("This application is already linked to a partner account. Manage it under Active Partners.");
+        return;
+      }
+      if (!confirm(`Move "${app.businessName}" back to Pending Review?`)) return;
+
+      try {
+        const response = await fetchWithAuth(`/api/admin/partners/applications/${app.id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "pending" }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          loadData();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } catch (err: unknown) {
+        alert(`Error: ${err instanceof Error ? err.message : "Failed to update status"}`);
+      }
+    }
+  }
+
+  function openApproveModal(app: PartnerApplication) {
+    setSelectedApplication(app);
+    const areas = app.serviceArea ? app.serviceArea.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    setApproveServiceAreas(areas);
+    setApprovePartnerShare(60);
+    setApprovePlatformShare(40);
+    setShowApproveModal(true);
   }
 
   async function handleHold(applicationId: string, notes: string) {
@@ -329,6 +420,8 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
     return matchesSearch && matchesStatus && matchesServiceArea && matchesPhotoCompliance;
   });
 
+  const applicationStats = getApplicationStats(applications);
+
   if (loading) {
     return (
       <div style={{ padding: "2rem", textAlign: "center" }}>
@@ -339,9 +432,47 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
 
   return (
     <div style={{ marginBottom: "3rem" }}>
-      <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1.5rem", color: "#111827" }}>
+      <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "0.75rem", color: "#111827" }}>
         Partner Program Management
       </h2>
+      <p style={{ color: "#6b7280", marginBottom: "1.25rem", fontSize: "0.95rem" }}>
+        Review new applications before approving. Nothing is approved automatically — you control partner access from here.
+      </p>
+
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+        gap: "0.75rem",
+        marginBottom: "1.5rem",
+      }}>
+        {[
+          { label: "Pending Review", value: applicationStats.pending, color: "#4338ca", bg: "#eef2ff" },
+          { label: "On Hold", value: applicationStats.hold, color: "#d97706", bg: "#fffbeb" },
+          { label: "Approved", value: applicationStats.approved, color: "#16a34a", bg: "#ecfdf5" },
+          { label: "Rejected", value: applicationStats.rejected, color: "#dc2626", bg: "#fef2f2" },
+        ].map((stat) => (
+          <button
+            key={stat.label}
+            type="button"
+            onClick={() => setApplicationStatusFilter(
+              stat.label === "Pending Review" ? "pending" :
+              stat.label === "On Hold" ? "hold" :
+              stat.label === "Approved" ? "approved" : "rejected"
+            )}
+            style={{
+              textAlign: "left",
+              padding: "0.9rem 1rem",
+              borderRadius: "12px",
+              border: "1px solid #e5e7eb",
+              background: stat.bg,
+              cursor: "pointer",
+            }}
+          >
+            <div style={{ fontSize: "1.4rem", fontWeight: "700", color: stat.color }}>{stat.value}</div>
+            <div style={{ fontSize: "0.78rem", fontWeight: "600", color: "#374151", marginTop: "0.15rem" }}>{stat.label}</div>
+          </button>
+        ))}
+      </div>
 
       {/* Partner Applications Section */}
       <div style={{ marginBottom: "3rem" }}>
@@ -497,20 +628,29 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.serviceArea}</td>
                         <td style={{ padding: "0.75rem", fontSize: "0.875rem" }}>{app.serviceType}</td>
                         <td style={{ padding: "0.75rem" }}>
-                          <span style={{
-                            padding: "0.25rem 0.75rem",
-                            borderRadius: "12px",
-                            fontSize: "0.75rem",
-                            fontWeight: "600",
-                            background: app.status === "approved" ? "#dcfce7" : 
-                                       app.status === "rejected" ? "#fee2e2" : 
-                                       app.status === "hold" ? "#fef3c7" : "#e0e7ff",
-                            color: app.status === "approved" ? "#16a34a" : 
-                                  app.status === "rejected" ? "#dc2626" : 
-                                  app.status === "hold" ? "#d97706" : "#6366f1"
-                          }}>
-                            {app.status || "pending"}
-                          </span>
+                          <select
+                            value={app.status || "pending"}
+                            onChange={(e) => handleApplicationStatusChange(app, e.target.value as ApplicationStatus)}
+                            style={{
+                              padding: "0.45rem 0.65rem",
+                              borderRadius: "8px",
+                              fontSize: "0.78rem",
+                              fontWeight: "600",
+                              cursor: "pointer",
+                              minWidth: "150px",
+                              ...applicationStatusStyle(app.status || "pending"),
+                            }}
+                          >
+                            <option value="pending">Pending Review</option>
+                            <option value="hold">Hold / Needs Review</option>
+                            <option value="approved">Approve Partner</option>
+                            <option value="rejected">Reject</option>
+                          </select>
+                          {app.linkedPartnerId && (
+                            <div style={{ fontSize: "0.7rem", color: "#16a34a", marginTop: "0.35rem", fontWeight: "600" }}>
+                              Partner account created
+                            </div>
+                          )}
                         </td>
                         <td style={{ padding: "0.75rem" }}>
                           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -593,65 +733,21 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
                             >
                               View Profile
                             </button>
-                            {app.status === "pending" && (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    // Pre-populate service areas from application
-                                    const areas = app.serviceArea ? app.serviceArea.split(",").map(s => s.trim()).filter(s => s) : [];
-                                    setApproveServiceAreas(areas);
-                                    setApprovePartnerShare(60);
-                                    setApprovePlatformShare(40);
-                                    setShowApproveModal(true);
-                                  }}
-                                  style={{
-                                    padding: "0.25rem 0.5rem",
-                                    background: "#16a34a",
-                                    color: "#ffffff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    fontSize: "0.75rem",
-                                    cursor: "pointer"
-                                  }}
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    setShowRejectModal(true);
-                                  }}
-                                  style={{
-                                    padding: "0.25rem 0.5rem",
-                                    background: "#dc2626",
-                                    color: "#ffffff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    fontSize: "0.75rem",
-                                    cursor: "pointer"
-                                  }}
-                                >
-                                  Reject
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    setShowHoldModal(true);
-                                  }}
-                                  style={{
-                                    padding: "0.25rem 0.5rem",
-                                    background: "#f59e0b",
-                                    color: "#ffffff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    fontSize: "0.75rem",
-                                    cursor: "pointer"
-                                  }}
-                                >
-                                  Hold
-                                </button>
-                              </>
+                            {(app.status === "pending" || app.status === "hold" || app.status === "rejected") && !app.linkedPartnerId && (
+                              <button
+                                onClick={() => openApproveModal(app)}
+                                style={{
+                                  padding: "0.25rem 0.5rem",
+                                  background: "#16a34a",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  borderRadius: "4px",
+                                  fontSize: "0.75rem",
+                                  cursor: "pointer"
+                                }}
+                              >
+                                Approve
+                              </button>
                             )}
                           </div>
                         </td>
