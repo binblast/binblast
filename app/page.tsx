@@ -58,7 +58,7 @@ export default function HomePage() {
               Homeowners get fresh, odor-free bins on autopilot. Local service businesses plug into our system to add bin cleaning as a new, done-for-you revenue stream.
             </p>
             <p className="hero-service-areas">
-              Now serving Peachtree City, Fayetteville, Tyrone, Sharpsburg &amp; Senoia
+              Now serving {SERVICE_AREAS.slice(0, -1).join(", ")} &amp; {SERVICE_AREAS[SERVICE_AREAS.length - 1]}
             </p>
             <div className="hero-buttons">
               <Link href="#pricing" className="btn btn-primary btn-large">Book a Cleaning</Link>
