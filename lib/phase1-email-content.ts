@@ -1,6 +1,7 @@
-import { EMAIL_LOGO_URL } from "@/lib/email-utils";
-
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.binblastco.com";
+
+export const EMAIL_LOGO_URL =
+  process.env.NEXT_PUBLIC_EMAIL_LOGO_URL || "https://www.binblastco.com/bin-blast-email-logo.png";
 
 function emailShell(title: string, accentColor: string, bodyHtml: string, button?: { text: string; url: string; color?: string }) {
   const buttonHtml = button
@@ -116,5 +117,3 @@ export function formatEmailDate(value: string | Date | undefined | null) {
     day: "numeric",
   });
 }
-
-export { BASE_URL, EMAIL_LOGO_URL };

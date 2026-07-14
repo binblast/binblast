@@ -77,7 +77,7 @@ export async function POST(
     }
 
     try {
-      const { notifyCleaningCompleteForJob } = await import("@/lib/email-utils");
+      const { notifyCleaningCompleteForJob } = await import("@/lib/transactional-email-server");
       await notifyCleaningCompleteForJob({
         userId: jobData.userId,
         userEmail: jobData.userEmail,
