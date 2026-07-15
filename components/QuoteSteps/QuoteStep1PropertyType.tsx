@@ -9,230 +9,132 @@ interface QuoteStep1PropertyTypeProps {
   onNext: () => void;
 }
 
+type PropertyType = NonNullable<QuoteFormData["propertyType"]>;
+
+const PROPERTY_TYPE_OPTIONS: Array<{
+  value: PropertyType;
+  label: string;
+  description: string;
+  icon: string;
+  accent: "residential" | "commercial" | "hoa";
+}> = [
+  {
+    value: "residential",
+    label: "Residential",
+    description: "Single-family homes, apartments, or residential properties",
+    icon: "🏠",
+    accent: "residential",
+  },
+  {
+    value: "commercial",
+    label: "Commercial",
+    description: "Restaurants, offices, retail stores, and commercial properties",
+    icon: "🏢",
+    accent: "commercial",
+  },
+  {
+    value: "hoa",
+    label: "HOA / Neighborhood",
+    description: "Homeowners associations, neighborhoods, and community partnerships",
+    icon: "🏘️",
+    accent: "hoa",
+  },
+];
+
 export function QuoteStep1PropertyType({
   formData,
   updateFormData,
   onNext,
 }: QuoteStep1PropertyTypeProps) {
-  const handleSelect = (type: "residential" | "commercial" | "hoa") => {
+  const selectedOption = PROPERTY_TYPE_OPTIONS.find(
+    (option) => option.value === formData.propertyType
+  );
+
+  const handleSelect = (type: PropertyType) => {
     updateFormData({ propertyType: type });
-    setTimeout(() => onNext(), 300); // Small delay for smooth transition
+    setTimeout(() => onNext(), 300);
+  };
+
+  const handleDropdownChange = (value: string) => {
+    if (!value) return;
+    updateFormData({ propertyType: value as PropertyType });
+  };
+
+  const handleContinue = () => {
+    if (formData.propertyType) {
+      onNext();
+    }
   };
 
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: "1.5rem",
-      animation: "fadeInUp 0.4s ease-out"
-    }}>
-      <div>
-        <h3 style={{
-          fontSize: "clamp(1.125rem, 3vw, 1.25rem)",
-          fontWeight: "600",
-          color: "var(--text-dark)",
-          marginBottom: "0.5rem"
-        }}>
-          What type of property needs cleaning?
-        </h3>
-        <p style={{
-          fontSize: "0.875rem",
-          color: "#6b7280",
-          marginBottom: "1.5rem"
-        }}>
+    <div className="quote-step1">
+      <div className="quote-step1__intro">
+        <h3 className="quote-step1__title">What type of property needs cleaning?</h3>
+        <p className="quote-step1__subtitle">
           Select the option that best describes your property type
         </p>
       </div>
 
-      <div style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "1rem"
-      }}>
-        <button
-          onClick={() => handleSelect("residential")}
-          style={{
-            padding: "clamp(1.25rem, 3vw, 1.5rem)",
-            background: formData.propertyType === "residential" 
-              ? "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)"
-              : "#f9fafb",
-            border: `2px solid ${formData.propertyType === "residential" ? "#16a34a" : "#e5e7eb"}`,
-            borderRadius: "12px",
-            cursor: "pointer",
-            textAlign: "left",
-            transition: "all 0.2s ease",
-            minHeight: "80px",
-            display: "flex",
-            alignItems: "center",
-            gap: "1rem"
-          }}
-          onMouseEnter={(e) => {
-            if (formData.propertyType !== "residential") {
-              e.currentTarget.style.background = "#f3f4f6";
-              e.currentTarget.style.borderColor = "#d1d5db";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (formData.propertyType !== "residential") {
-              e.currentTarget.style.background = "#f9fafb";
-              e.currentTarget.style.borderColor = "#e5e7eb";
-            }
-          }}
+      {/* Mobile: compact native dropdown */}
+      <div className="quote-step1__mobile">
+        <label className="quote-step1__label" htmlFor="quote-property-type">
+          Property type
+        </label>
+        <select
+          id="quote-property-type"
+          className="quote-step1__select"
+          value={formData.propertyType || ""}
+          onChange={(e) => handleDropdownChange(e.target.value)}
         >
-          <div style={{
-            width: "40px",
-            height: "40px",
-            borderRadius: "50%",
-            background: formData.propertyType === "residential" ? "#16a34a" : "#e5e7eb",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "1.25rem",
-            flexShrink: 0
-          }}>
-            {formData.propertyType === "residential" ? "✓" : "🏠"}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontSize: "clamp(1rem, 3vw, 1.125rem)",
-              fontWeight: "600",
-              color: "var(--text-dark)",
-              marginBottom: "0.25rem"
-            }}>
-              Residential
-            </div>
-            <div style={{
-              fontSize: "0.875rem",
-              color: "#6b7280"
-            }}>
-              Single-family homes, apartments, or residential properties
-            </div>
-          </div>
-        </button>
+          <option value="" disabled>
+            Select property type
+          </option>
+          {PROPERTY_TYPE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+
+        {selectedOption && (
+          <p className="quote-step1__hint">{selectedOption.description}</p>
+        )}
 
         <button
-          onClick={() => handleSelect("commercial")}
-          style={{
-            padding: "clamp(1.25rem, 3vw, 1.5rem)",
-            background: formData.propertyType === "commercial"
-              ? "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)"
-              : "#f9fafb",
-            border: `2px solid ${formData.propertyType === "commercial" ? "#2563eb" : "#e5e7eb"}`,
-            borderRadius: "12px",
-            cursor: "pointer",
-            textAlign: "left",
-            transition: "all 0.2s ease",
-            minHeight: "80px",
-            display: "flex",
-            alignItems: "center",
-            gap: "1rem"
-          }}
-          onMouseEnter={(e) => {
-            if (formData.propertyType !== "commercial") {
-              e.currentTarget.style.background = "#f3f4f6";
-              e.currentTarget.style.borderColor = "#d1d5db";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (formData.propertyType !== "commercial") {
-              e.currentTarget.style.background = "#f9fafb";
-              e.currentTarget.style.borderColor = "#e5e7eb";
-            }
-          }}
+          type="button"
+          className="btn btn-primary quote-step1__continue"
+          onClick={handleContinue}
+          disabled={!formData.propertyType}
         >
-          <div style={{
-            width: "40px",
-            height: "40px",
-            borderRadius: "50%",
-            background: formData.propertyType === "commercial" ? "#2563eb" : "#e5e7eb",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "1.25rem",
-            flexShrink: 0
-          }}>
-            {formData.propertyType === "commercial" ? "✓" : "🏢"}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontSize: "clamp(1rem, 3vw, 1.125rem)",
-              fontWeight: "600",
-              color: "var(--text-dark)",
-              marginBottom: "0.25rem"
-            }}>
-              Commercial
-            </div>
-            <div style={{
-              fontSize: "0.875rem",
-              color: "#6b7280"
-            }}>
-              Restaurants, offices, retail stores, and commercial properties
-            </div>
-          </div>
+          Continue
         </button>
+      </div>
 
-        <button
-          onClick={() => handleSelect("hoa")}
-          style={{
-            padding: "clamp(1.25rem, 3vw, 1.5rem)",
-            background: formData.propertyType === "hoa"
-              ? "linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)"
-              : "#f9fafb",
-            border: `2px solid ${formData.propertyType === "hoa" ? "#9333ea" : "#e5e7eb"}`,
-            borderRadius: "12px",
-            cursor: "pointer",
-            textAlign: "left",
-            transition: "all 0.2s ease",
-            minHeight: "80px",
-            display: "flex",
-            alignItems: "center",
-            gap: "1rem"
-          }}
-          onMouseEnter={(e) => {
-            if (formData.propertyType !== "hoa") {
-              e.currentTarget.style.background = "#f3f4f6";
-              e.currentTarget.style.borderColor = "#d1d5db";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (formData.propertyType !== "hoa") {
-              e.currentTarget.style.background = "#f9fafb";
-              e.currentTarget.style.borderColor = "#e5e7eb";
-            }
-          }}
-        >
-          <div style={{
-            width: "40px",
-            height: "40px",
-            borderRadius: "50%",
-            background: formData.propertyType === "hoa" ? "#9333ea" : "#e5e7eb",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "1.25rem",
-            flexShrink: 0
-          }}>
-            {formData.propertyType === "hoa" ? "✓" : ""}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontSize: "clamp(1rem, 3vw, 1.125rem)",
-              fontWeight: "600",
-              color: "var(--text-dark)",
-              marginBottom: "0.25rem"
-            }}>
-              HOA / Neighborhood
-            </div>
-            <div style={{
-              fontSize: "0.875rem",
-              color: "#6b7280"
-            }}>
-              Homeowners associations, neighborhoods, and community partnerships
-            </div>
-          </div>
-        </button>
+      {/* Desktop: visual cards */}
+      <div className="quote-step1__cards" role="group" aria-label="Property type">
+        {PROPERTY_TYPE_OPTIONS.map((option) => {
+          const isSelected = formData.propertyType === option.value;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              className={`quote-step1__card quote-step1__card--${option.accent}${
+                isSelected ? " quote-step1__card--selected" : ""
+              }`}
+              onClick={() => handleSelect(option.value)}
+            >
+              <span className="quote-step1__card-icon" aria-hidden="true">
+                {isSelected ? "✓" : option.icon}
+              </span>
+              <span className="quote-step1__card-copy">
+                <span className="quote-step1__card-label">{option.label}</span>
+                <span className="quote-step1__card-description">{option.description}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
-

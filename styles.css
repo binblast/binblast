@@ -757,6 +757,187 @@ html, body {
     margin-top: clamp(1.25rem, 3vw, 1.75rem);
 }
 
+/* Quote wizard — Step 1 property type (mobile dropdown, desktop cards) */
+.quote-step1 {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    animation: fadeInUp 0.4s ease-out;
+}
+
+.quote-step1__intro {
+    margin: 0;
+}
+
+.quote-step1__title {
+    font-size: clamp(1.125rem, 3vw, 1.25rem);
+    font-weight: 600;
+    color: var(--text-dark);
+    margin: 0 0 0.5rem;
+}
+
+.quote-step1__subtitle {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.quote-step1__mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.quote-step1__cards {
+    display: none;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.quote-step1__label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.quote-step1__select {
+    width: 100%;
+    min-height: 48px;
+    padding: 0.75rem 2.5rem 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    background: #ffffff;
+    color: var(--text-dark);
+    font-size: 1rem;
+    font-weight: 500;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    cursor: pointer;
+}
+
+.quote-step1__select:focus {
+    outline: none;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.quote-step1__hint {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #6b7280;
+}
+
+.quote-step1__continue {
+    width: 100%;
+    min-height: 48px;
+    margin-top: 0.25rem;
+}
+
+.quote-step1__continue:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.quote-step1__card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    min-height: 80px;
+    padding: clamp(1.25rem, 3vw, 1.5rem);
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    background: #f9fafb;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.quote-step1__card:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.quote-step1__card--selected {
+    cursor: default;
+}
+
+.quote-step1__card--residential.quote-step1__card--selected {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-color: #16a34a;
+}
+
+.quote-step1__card--commercial.quote-step1__card--selected {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-color: #2563eb;
+}
+
+.quote-step1__card--hoa.quote-step1__card--selected {
+    background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+    border-color: #9333ea;
+}
+
+.quote-step1__card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.quote-step1__card--residential.quote-step1__card--selected .quote-step1__card-icon {
+    background: #16a34a;
+    color: #ffffff;
+}
+
+.quote-step1__card--commercial.quote-step1__card--selected .quote-step1__card-icon {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.quote-step1__card--hoa.quote-step1__card--selected .quote-step1__card-icon {
+    background: #9333ea;
+    color: #ffffff;
+}
+
+.quote-step1__card-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.quote-step1__card-label {
+    font-size: clamp(1rem, 3vw, 1.125rem);
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.quote-step1__card-description {
+    font-size: 0.875rem;
+    color: #6b7280;
+    line-height: 1.45;
+}
+
+@media (min-width: 640px) {
+    .quote-step1__mobile {
+        display: none;
+    }
+
+    .quote-step1__cards {
+        display: flex;
+    }
+}
+
 .who-we-serve-section {
     padding: clamp(3.5rem, 9vw, 5rem) 0;
     background: #ffffff;
