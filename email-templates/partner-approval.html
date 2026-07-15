@@ -1,131 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Partnership Application Approved</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+  <title>Partnership Application Approved</title>
+  <style type="text/css">
+    body, table, td { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; height: auto; line-height: 100%; max-width: 100%; }
+    table { border-collapse: collapse; }
+    @media only screen and (max-width: 620px) {
+      .email-outer-pad { padding: 16px 12px !important; }
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-logo-pad { padding: 24px 20px 16px !important; }
+      .email-banner { padding: 16px 20px 20px !important; }
+      .email-body { padding: 24px 20px !important; }
+      .email-footer { padding: 16px 20px !important; }
+      .email-heading { font-size: 22px !important; line-height: 1.3 !important; }
+      .email-subheading { font-size: 17px !important; }
+      .email-text { font-size: 15px !important; }
+      .email-card { padding: 16px !important; margin: 20px 0 !important; }
+      .email-logo { max-width: 160px !important; width: 160px !important; }
+      .email-btn-wrap { margin: 20px 0 !important; }
+      .email-btn { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; padding: 16px 20px !important; font-size: 16px !important; }
+      .stack-row td { display: block !important; width: 100% !important; }
+      .stack-label { padding: 8px 0 2px !important; }
+      .stack-value { padding: 0 0 12px !important; }
+      .footer-links span { display: block !important; margin: 6px 0 !important; }
+      .break-link { font-size: 13px !important; word-break: break-all !important; }
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5;">
-        <tr>
-            <td align="center" style="padding: 40px 20px;">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <!-- Logo Header -->
-                    <tr>
-                        <td align="center" style="padding: 30px 30px 20px 30px; background-color: #ffffff;">
-                            <img src="{{logoUrl}}" alt="Bin Blast Co. Logo" style="max-width: 200px; height: auto; display: block; border: 0;" width="200" />
-                        </td>
-                    </tr>
-                    <!-- Header -->
-                    <tr>
-                        <td style="padding: 20px 30px 30px 30px; background-color: #16a34a; border-radius: 0 0 8px 8px;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; text-align: center;">
-                                🎉 Partnership Application Approved!
-                            </h1>
-                        </td>
-                    </tr>
-                    
-                    <!-- Content -->
-                    <tr>
-                        <td style="padding: 30px;">
-                            <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                                Congratulations, <strong>{{ownerName}}</strong>! Your partnership application for <strong>{{businessName}}</strong> has been approved.
-                            </p>
-                            
-                            <p style="margin: 0 0 30px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                                We're excited to have you join the Bin Blast partner network. To get started, please register your partner account by clicking the button below.
-                            </p>
-                            
-                            <!-- CTA Button -->
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                <tr>
-                                    <td align="center" style="padding: 20px 0;">
-                                        <a href="{{signupLink}}" style="display: inline-block; padding: 14px 32px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                                            Register Partner Account
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-                            
-                            <p style="margin: 20px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center;">
-                                Or copy and paste this link into your browser:<br>
-                                <a href="{{signupLink}}" style="color: #2563eb; word-break: break-all;">{{signupLink}}</a>
-                            </p>
-                            
-                            <!-- Partner Details -->
-                            <div style="background-color: #f9fafb; border-left: 4px solid #2563eb; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                                <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">
-                                    Your Partner Details
-                                </h2>
-                                
-                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                    <tr>
-                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 40%; font-weight: 600;">
-                                            Business Name:
-                                        </td>
-                                        <td style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                            {{businessName}}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
-                                            Partner Code:
-                                        </td>
-                                        <td style="padding: 8px 0; color: #111827; font-size: 14px; font-family: monospace;">
-                                            {{referralCode}}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
-                                            Service Areas:
-                                        </td>
-                                        <td style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                            {{serviceAreas}}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">
-                                            Revenue Share:
-                                        </td>
-                                        <td style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                            {{revenueSharePartner}}% Partner / {{revenueSharePlatform}}% Platform
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                            
-                            <!-- Next Steps -->
-                            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                                <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">
-                                    Next Steps
-                                </h2>
-                                <ol style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px; line-height: 1.8;">
-                                    <li>Click the "Register Partner Account" button above</li>
-                                    <li>Fill out the registration form with your information</li>
-                                    <li>Create your partner account password</li>
-                                    <li>Accept the partner agreement</li>
-                                    <li>Set up your Stripe Connect account for payouts</li>
-                                    <li>Start receiving bookings!</li>
-                                </ol>
-                            </div>
-                            
-                            <!-- Important Note -->
-                            <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                                <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
-                                    <strong>Important:</strong> Please complete your partner signup within 7 days. If you have any questions or need assistance, please contact us at <a href="mailto:binblastcompany@gmail.com" style="color: #2563eb;">binblastcompany@gmail.com</a>.
-                                </p>
-                            </div>
-                            
-                            <!-- Footer -->
-                            <p style="margin: 30px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-                                Welcome to the Bin Blast Partner Program!<br>
-                                We look forward to working with you.
-                            </p>
-                        </td>
-                    </tr>
-                </table>
+<body style="margin:0;padding:0;width:100%!important;min-width:100%;font-family:Arial,Helvetica,sans-serif;background-color:#f5f5f5;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f5f5f5;">
+    <tr>
+      <td align="center" class="email-outer-pad" style="padding:40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Logo Header -->
+          <tr>
+            <td align="center" class="email-logo-pad" style="padding:30px 30px 20px;background-color:#ffffff;">
+              <img src="{{logoUrl}}" alt="Bin Blast Co. Logo" width="200" class="email-logo" style="max-width:200px;width:100%;height:auto;display:block;border:0;" />
             </td>
-        </tr>
-    </table>
+          </tr>
+          <!-- Header -->
+          <tr>
+            <td class="email-banner" style="padding:20px 30px 30px;background-color:#16a34a;border-radius:0 0 8px 8px;">
+              <h1 class="email-heading" style="margin:0;color:#ffffff;font-size:24px;font-weight:600;text-align:center;line-height:1.3;">
+                🎉 Partnership Application Approved!
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td class="email-body" style="padding:30px;">
+              <p class="email-text" style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">
+                Congratulations, <strong>{{ownerName}}</strong>! Your partnership application for <strong>{{businessName}}</strong> has been approved.
+              </p>
+
+              <p class="email-text" style="margin:0 0 30px;color:#374151;font-size:16px;line-height:1.6;">
+                We're excited to have you join the Bin Blast partner network. To get started, please register your partner account by clicking the button below.
+              </p>
+
+              <!-- CTA Button -->
+              <div class="email-btn-wrap" style="text-align:center;margin:20px 0;">
+                <a href="{{signupLink}}" class="email-btn" style="display:inline-block;padding:14px 32px;background-color:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:16px;line-height:1.25;">
+                  Register Partner Account
+                </a>
+              </div>
+
+              <p class="email-text" style="margin:20px 0 0;color:#6b7280;font-size:14px;line-height:1.6;text-align:center;">
+                Or copy and paste this link into your browser:<br>
+                <a href="{{signupLink}}" class="break-link" style="color:#2563eb;word-break:break-all;">{{signupLink}}</a>
+              </p>
+
+              <!-- Partner Details -->
+              <div class="email-card" style="background-color:#f9fafb;border-left:4px solid #2563eb;padding:20px;margin:30px 0;border-radius:4px;">
+                <h2 class="email-subheading" style="margin:0 0 15px;color:#111827;font-size:18px;font-weight:600;">
+                  Your Partner Details
+                </h2>
+
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                  <tr class="stack-row">
+                    <td class="stack-label" style="padding:8px 0;color:#6b7280;font-size:14px;width:40%;font-weight:600;vertical-align:top;">
+                      Business Name:
+                    </td>
+                    <td class="stack-value" style="padding:8px 0;color:#111827;font-size:14px;line-height:1.5;vertical-align:top;">
+                      {{businessName}}
+                    </td>
+                  </tr>
+                  <tr class="stack-row">
+                    <td class="stack-label" style="padding:8px 0;color:#6b7280;font-size:14px;font-weight:600;vertical-align:top;">
+                      Partner Code:
+                    </td>
+                    <td class="stack-value" style="padding:8px 0;color:#111827;font-size:14px;font-family:monospace;line-height:1.5;vertical-align:top;">
+                      {{referralCode}}
+                    </td>
+                  </tr>
+                  <tr class="stack-row">
+                    <td class="stack-label" style="padding:8px 0;color:#6b7280;font-size:14px;font-weight:600;vertical-align:top;">
+                      Service Areas:
+                    </td>
+                    <td class="stack-value" style="padding:8px 0;color:#111827;font-size:14px;line-height:1.5;vertical-align:top;">
+                      {{serviceAreas}}
+                    </td>
+                  </tr>
+                  <tr class="stack-row">
+                    <td class="stack-label" style="padding:8px 0;color:#6b7280;font-size:14px;font-weight:600;vertical-align:top;">
+                      Revenue Share:
+                    </td>
+                    <td class="stack-value" style="padding:8px 0;color:#111827;font-size:14px;line-height:1.5;vertical-align:top;">
+                      {{revenueSharePartner}}% Partner / {{revenueSharePlatform}}% Platform
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- Next Steps -->
+              <div class="email-card" style="background-color:#eff6ff;border-left:4px solid #3b82f6;padding:20px;margin:30px 0;border-radius:4px;">
+                <h2 class="email-subheading" style="margin:0 0 15px;color:#111827;font-size:18px;font-weight:600;">
+                  Next Steps
+                </h2>
+                <ol style="margin:0;padding-left:20px;color:#374151;font-size:14px;line-height:1.8;">
+                  <li>Click the "Register Partner Account" button above</li>
+                  <li>Fill out the registration form with your information</li>
+                  <li>Create your partner account password</li>
+                  <li>Accept the partner agreement</li>
+                  <li>Set up your Stripe Connect account for payouts</li>
+                  <li>Start receiving bookings!</li>
+                </ol>
+              </div>
+
+              <!-- Important Note -->
+              <div class="email-card" style="background-color:#fef3c7;border-left:4px solid #f59e0b;padding:20px;margin:30px 0;border-radius:4px;">
+                <p class="email-text" style="margin:0;color:#92400e;font-size:14px;line-height:1.6;">
+                  <strong>Important:</strong> Please complete your partner signup within 7 days. If you have any questions or need assistance, please contact us at <a href="mailto:binblastcompany@gmail.com" style="color:#2563eb;">binblastcompany@gmail.com</a>.
+                </p>
+              </div>
+
+              <!-- Footer -->
+              <p class="email-text" style="margin:30px 0 0;color:#6b7280;font-size:14px;line-height:1.6;text-align:center;border-top:1px solid #e5e7eb;padding-top:20px;">
+                Welcome to the Bin Blast Partner Program!<br>
+                We look forward to working with you.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>

@@ -252,7 +252,7 @@ export async function notifyCustomerWelcome(customerData: {
     : "";
 
   const buttonText = hasPreferredDate ? "Confirm Your Cleaning Date" : "Access Your Dashboard";
-  const buttonColor = hasPreferredDate ? "#16a34a" : "#2563eb";
+  const buttonClass = hasPreferredDate ? "email-btn-green" : "email-btn-blue";
 
   try {
     await sendEmailJS(templateId, {
@@ -273,7 +273,7 @@ export async function notifyCustomerWelcome(customerData: {
       confirmationMessage,
       confirmationDetails,
       buttonText,
-      buttonColor,
+      buttonClass,
       dashboardLink,
       logoUrl: EMAIL_LOGO_URL,
     });

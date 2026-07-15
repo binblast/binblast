@@ -9,7 +9,7 @@ This guide explains how to set up EmailJS to send custom password reset emails f
 2. Navigate to **Email Templates**
 3. Click **Create New Template**
 4. Name it: "Password Reset - Bin Blast Co."
-5. Copy the HTML from `password-reset-emailjs.html` in this directory
+5. Copy the HTML from `password-reset.html` in this directory
 6. Paste it into the template editor
 7. Set the **Subject** to: `Reset Your Bin Blast Co. Password`
 8. Set the **To Email** to: `{{to_email}}` or `{{email}}`

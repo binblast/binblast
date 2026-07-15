@@ -27,10 +27,10 @@ export interface EmailTemplateDefinition {
 export const EMAIL_TEMPLATE_DEFINITIONS: Record<EmailTemplateKey, EmailTemplateDefinition> = {
   CUSTOMER_WELCOME: {
     envKey: "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_CUSTOMER_WELCOME",
-    fallbackId: "template_ent7lyj",
+    fallbackId: "",
     htmlFile: "customer-welcome.html",
     subjectLine: "Welcome to Bin Blast Co. — your fresh bins start here",
-    description: "New customer registration welcome",
+    description: "New customer registration welcome — dedicated template only (not generic)",
   },
   CLEANING_SCHEDULED: {
     envKey: "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_CLEANING_SCHEDULED",
@@ -84,7 +84,7 @@ export const EMAIL_TEMPLATE_DEFINITIONS: Record<EmailTemplateKey, EmailTemplateD
   PASSWORD_RESET: {
     envKey: "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PASSWORD_RESET",
     fallbackId: "template_l421jys",
-    htmlFile: "password-reset-emailjs.html",
+    htmlFile: "password-reset.html",
     subjectLine: "Reset your Bin Blast Co. password",
     description: "Forgot password reset link",
   },
@@ -100,7 +100,10 @@ export const EMAIL_TEMPLATE_DEFINITIONS: Record<EmailTemplateKey, EmailTemplateD
 export function getEmailTemplateId(key: EmailTemplateKey): string {
   const def = EMAIL_TEMPLATE_DEFINITIONS[key];
   const fromEnv = process.env[def.envKey]?.trim();
-  return fromEnv || def.fallbackId;
+  if (fromEnv) return fromEnv;
+  if (def.fallbackId) return def.fallbackId;
+  console.warn(`[EmailJS] Missing template ID for ${key}. Set ${def.envKey} in Vercel.`);
+  return def.fallbackId;
 }
 
 /** Resolve subject line with optional {{variable}} substitutions. */

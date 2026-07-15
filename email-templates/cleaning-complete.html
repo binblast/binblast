@@ -3,52 +3,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
   <title>Cleaning Complete</title>
+  <style type="text/css">
+    body, table, td { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; height: auto; line-height: 100%; max-width: 100%; }
+    table { border-collapse: collapse; }
+    @media only screen and (max-width: 620px) {
+      .email-outer-pad { padding: 16px 12px !important; }
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-logo-pad { padding: 24px 20px 16px !important; }
+      .email-banner { padding: 16px 20px 20px !important; }
+      .email-body { padding: 24px 20px !important; }
+      .email-footer { padding: 16px 20px !important; }
+      .email-heading { font-size: 22px !important; line-height: 1.3 !important; }
+      .email-text { font-size: 15px !important; }
+      .email-card { padding: 16px !important; margin: 20px 0 !important; }
+      .email-logo { max-width: 160px !important; width: 160px !important; }
+      .email-btn-wrap { margin: 20px 0 !important; }
+      .email-btn { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; padding: 16px 20px !important; font-size: 16px !important; }
+      .stack-row td { display: block !important; width: 100% !important; }
+      .stack-label { padding: 8px 0 2px !important; }
+      .stack-value { padding: 0 0 12px !important; }
+    }
+  </style>
 </head>
-<body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f5f5f5;">
+<body style="margin:0;padding:0;width:100%!important;min-width:100%;font-family:Arial,Helvetica,sans-serif;background-color:#f5f5f5;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f5f5f5;">
     <tr>
-      <td align="center" style="padding:40px 20px;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="background-color:#ffffff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+      <td align="center" class="email-outer-pad" style="padding:40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
           <tr>
-            <td align="center" style="padding:30px 30px 20px;background-color:#ffffff;">
-              <img src="{{logoUrl}}" alt="Bin Blast Co. Logo" width="200" style="max-width:200px;height:auto;display:block;border:0;" />
+            <td align="center" class="email-logo-pad" style="padding:30px 30px 20px;background-color:#ffffff;">
+              <img src="{{logoUrl}}" alt="Bin Blast Co. Logo" width="200" class="email-logo" style="max-width:200px;width:100%;height:auto;display:block;border:0;" />
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 30px 30px;background-color:#16a34a;border-radius:0 0 8px 8px;">
-              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:600;text-align:center;">Your Bins Are Fresh!</h1>
+            <td class="email-banner" style="padding:20px 30px 30px;background-color:#16a34a;border-radius:0 0 8px 8px;">
+              <h1 class="email-heading" style="margin:0;color:#ffffff;font-size:24px;font-weight:600;text-align:center;line-height:1.3;">Your Bins Are Fresh!</h1>
             </td>
           </tr>
           <tr>
-            <td style="padding:30px;">
-              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">Hi <strong>{{firstName}}</strong>,</p>
-              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">
+            <td class="email-body" style="padding:30px;">
+              <p class="email-text" style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">Hi <strong>{{firstName}}</strong>,</p>
+              <p class="email-text" style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">
                 All done! Your bins were cleaned, sanitized, and deodorized. Thanks for trusting Bin Blast Co.
               </p>
-              <div style="background-color:#f0fdf4;border-left:4px solid #16a34a;padding:20px;margin:0 0 24px;border-radius:4px;">
+              <div class="email-card" style="background-color:#f0fdf4;border-left:4px solid #16a34a;padding:20px;margin:0 0 24px;border-radius:4px;">
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                  <tr>
-                    <td style="padding:8px 0;color:#6b7280;font-size:14px;width:45%;font-weight:600;">Today's service:</td>
-                    <td style="padding:8px 0;color:#111827;font-size:14px;">{{completedDate}}</td>
+                  <tr class="stack-row">
+                    <td class="stack-label" style="padding:8px 0;color:#6b7280;font-size:14px;width:45%;font-weight:600;vertical-align:top;">Today's service:</td>
+                    <td class="stack-value" style="padding:8px 0;color:#111827;font-size:14px;line-height:1.5;vertical-align:top;">{{completedDate}}</td>
                   </tr>
-                  <tr>
-                    <td style="padding:8px 0;color:#6b7280;font-size:14px;font-weight:600;">Next cleaning:</td>
-                    <td style="padding:8px 0;color:#111827;font-size:14px;font-weight:600;">{{nextCleaningDate}}</td>
+                  <tr class="stack-row">
+                    <td class="stack-label" style="padding:8px 0;color:#6b7280;font-size:14px;font-weight:600;vertical-align:top;">Next cleaning:</td>
+                    <td class="stack-value" style="padding:8px 0;color:#111827;font-size:14px;font-weight:600;line-height:1.5;vertical-align:top;">{{nextCleaningDate}}</td>
                   </tr>
                 </table>
               </div>
-              <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
+              <p class="email-text" style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
                 If anything didn't look right, reply within 24 hours and we'll make it right.
               </p>
-              <div style="text-align:center;margin:24px 0;">
-                <a href="{{dashboardLink}}" style="display:inline-block;padding:14px 28px;background-color:#16a34a;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:18px;">View Cleaning History</a>
+              <div class="email-btn-wrap" style="text-align:center;margin:24px 0;">
+                <a href="{{dashboardLink}}" class="email-btn" style="display:inline-block;padding:14px 28px;background-color:#16a34a;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:18px;line-height:1.25;">View Cleaning History</a>
               </div>
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 30px;background-color:#f9fafb;border-top:1px solid #e5e7eb;border-radius:0 0 8px 8px;text-align:center;">
-              <p style="margin:0;color:#6b7280;font-size:12px;">© 2025 Bin Blast Co. All rights reserved.</p>
+            <td class="email-footer" style="padding:20px 30px;background-color:#f9fafb;border-top:1px solid #e5e7eb;border-radius:0 0 8px 8px;text-align:center;">
+              <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.5;">© 2025 Bin Blast Co. All rights reserved.</p>
             </td>
           </tr>
         </table>
