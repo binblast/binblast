@@ -131,6 +131,9 @@ export function PricingSection() {
   const [availableCredit, setAvailableCredit] = useState<number>(0);
   const [loadingCredit, setLoadingCredit] = useState(false);
   const [showQuoteWizard, setShowQuoteWizard] = useState(false);
+  const [quoteWizardPreset, setQuoteWizardPreset] = useState<
+    "residential" | "commercial" | "hoa" | undefined
+  >();
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const [onboardingData, setOnboardingData] = useState<any>(null);
   const [referralCodeFromUrl, setReferralCodeFromUrl] = useState("");
@@ -151,12 +154,22 @@ export function PricingSection() {
 
   useEffect(() => {
     if (searchParams.get("openQuote") === "commercial") {
+      setQuoteWizardPreset("commercial");
       setShowQuoteWizard(true);
       requestAnimationFrame(() => {
         document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     }
   }, [searchParams]);
+
+  const handleCloseQuoteWizard = () => {
+    setShowQuoteWizard(false);
+    setQuoteWizardPreset(undefined);
+
+    if (searchParams.get("openQuote") === "commercial") {
+      router.replace("/#pricing", { scroll: false });
+    }
+  };
 
   const { isReady: firebaseReady } = useFirebase();
   const { plans: platformPlans } = usePlatformPricing();
@@ -247,7 +260,7 @@ export function PricingSection() {
     console.log("[PricingSection] Plan clicked:", planId);
     
     if (planId === "commercial") {
-      // Open custom quote wizard
+      setQuoteWizardPreset("commercial");
       setShowQuoteWizard(true);
       return;
     }
@@ -405,7 +418,8 @@ export function PricingSection() {
       )}
       <CustomQuoteWizard
         isOpen={showQuoteWizard}
-        onClose={() => setShowQuoteWizard(false)}
+        onClose={handleCloseQuoteWizard}
+        initialPropertyType={quoteWizardPreset}
       />
       <section id="pricing" className="pricing-section">
 

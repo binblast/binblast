@@ -43,28 +43,37 @@ export interface QuoteFormData {
 interface CustomQuoteWizardProps {
   isOpen: boolean;
   onClose: () => void;
+  initialPropertyType?: QuoteFormData["propertyType"];
 }
 
-export function CustomQuoteWizard({ isOpen, onClose }: CustomQuoteWizardProps) {
+export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: CustomQuoteWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<QuoteFormData>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load saved progress from localStorage
+  // Load saved progress or apply a deep-link preset when the wizard opens
   useEffect(() => {
-    if (isOpen) {
-      const saved = localStorage.getItem("customQuoteProgress");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setFormData(parsed.data || {});
-          setCurrentStep(parsed.step || 1);
-        } catch (e) {
-          console.error("Error loading saved progress:", e);
-        }
+    if (!isOpen) {
+      return;
+    }
+
+    if (initialPropertyType) {
+      setFormData({ propertyType: initialPropertyType });
+      setCurrentStep(2);
+      return;
+    }
+
+    const saved = localStorage.getItem("customQuoteProgress");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setFormData(parsed.data || {});
+        setCurrentStep(parsed.step || 1);
+      } catch (e) {
+        console.error("Error loading saved progress:", e);
       }
     }
-  }, [isOpen]);
+  }, [isOpen, initialPropertyType]);
 
   // Save progress to localStorage
   useEffect(() => {

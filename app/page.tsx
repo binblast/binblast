@@ -80,7 +80,7 @@ export default function HomePage() {
             </p>
             <div className="hero-buttons">
               <Link href="#pricing" className="btn btn-primary btn-large">Book a Cleaning</Link>
-              <Link href="#commercial-services" className="btn btn-secondary btn-large">Commercial Services</Link>
+              <Link href="/?openQuote=commercial#pricing" className="btn btn-secondary btn-large">Commercial Services</Link>
             </div>
           </div>
         </section>
