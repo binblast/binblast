@@ -25,13 +25,10 @@ export const ADDITIONAL_METRO_ATLANTA_AREAS = [
   "Douglasville",
 ] as const;
 
-/** Cities with local history / fun-facts panels on the marketing site */
+/** All service areas with local history / fun-facts panels on the marketing site */
 export const SERVICE_AREAS_WITH_HISTORY = [
-  "Peachtree City",
-  "Fayetteville",
-  "Senoia",
-  "Tyrone",
-  "Sharpsburg",
+  ...PRIMARY_SERVICE_AREAS,
+  ...ADDITIONAL_METRO_ATLANTA_AREAS,
 ] as const;
 
 export type PrimaryServiceArea = (typeof PRIMARY_SERVICE_AREAS)[number];

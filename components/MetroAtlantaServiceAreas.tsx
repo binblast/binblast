@@ -69,10 +69,14 @@ export function MetroAtlantaServiceAreas() {
       <div className="service-area-group">
         <h3 className="service-area-group__title">Additional Metro Atlanta Service Areas</h3>
         <p className="service-area-group__hint">
-          Expanding residential and commercial routes throughout the metro
+          Tap a city for local history &amp; fun facts
         </p>
-        <div className="service-areas-grid" aria-label="Additional Metro Atlanta service areas">
-          {ADDITIONAL_METRO_ATLANTA_AREAS.map((city) => renderChip(city, false))}
+        <div
+          className="service-areas-grid"
+          role="tablist"
+          aria-label="Additional Metro Atlanta service areas"
+        >
+          {ADDITIONAL_METRO_ATLANTA_AREAS.map((city) => renderChip(city, isHistoryCity(city)))}
         </div>
       </div>
 
