@@ -4,6 +4,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { QuoteFormData } from "../CustomQuoteWizard";
 import { calculatePricingWithSafeguards, PricingInput } from "@/lib/pricing-safeguards";
+import { QuoteStepNav } from "./QuoteStepNav";
 
 interface QuoteStep5ReviewProps {
   formData: QuoteFormData;
@@ -290,52 +291,22 @@ export function QuoteStep5Review({
   };
 
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: "1.5rem",
-      animation: "fadeInUp 0.4s ease-out"
-    }}>
-      <div>
-        <h3 style={{
-          fontSize: "clamp(1.125rem, 3vw, 1.25rem)",
-          fontWeight: "600",
-          color: "var(--text-dark)",
-          marginBottom: "0.5rem"
-        }}>
+    <div className="quote-step quote-step--review">
+      <div className="quote-step__intro">
+        <h3 className="quote-step__title">
           Review your information
         </h3>
-        <p style={{
-          fontSize: "0.875rem",
-          color: "#6b7280"
-        }}>
+        <p className="quote-step__subtitle">
           Please review all details before submitting
         </p>
       </div>
 
       {/* Estimated Quote */}
-      <div style={{
-        padding: "1.5rem",
-        background: "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)",
-        borderRadius: "12px",
-        border: "2px solid #86efac",
-        marginBottom: "1rem"
-      }}>
-        <div style={{
-          fontSize: "0.875rem",
-          fontWeight: "600",
-          color: "#166534",
-          marginBottom: "0.5rem",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em"
-        }}>
+      <div className="quote-step__estimate">
+        <div className="quote-step__estimate-label">
           Estimated Monthly Price Range
         </div>
-        <div style={{
-          fontSize: "clamp(1.75rem, 4vw, 2.25rem)",
-          fontWeight: "800",
-          color: "#16a34a"
-        }}>
+        <div className="quote-step__estimate-price">
           ${estimatedPrice.low.toLocaleString()} - ${estimatedPrice.high.toLocaleString()}/month
         </div>
         
@@ -374,12 +345,7 @@ export function QuoteStep5Review({
           </div>
         )}
         
-        <div style={{
-          fontSize: "0.75rem",
-          color: "#166534",
-          marginTop: "0.75rem",
-          lineHeight: "1.4"
-        }}>
+        <div className="quote-step__estimate-note">
           * Final pricing may adjust based on grease levels, access, water availability, and environmental requirements. This is an estimated operational price range for sanitation and compliance services, not a final quote.
         </div>
 
@@ -968,28 +934,11 @@ export function QuoteStep5Review({
       </div>
 
       {/* Property Details */}
-      <div style={{
-        padding: "1.25rem",
-        background: "#f9fafb",
-        borderRadius: "12px",
-        border: "1px solid #e5e7eb"
-      }}>
-        <div style={{
-          fontSize: "0.875rem",
-          fontWeight: "700",
-          color: "var(--text-dark)",
-          marginBottom: "1rem",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em"
-        }}>
+      <div className="quote-step__summary-card">
+        <div className="quote-step__summary-title">
           Property Information
         </div>
-        <div style={{
-          fontSize: "1rem",
-          fontWeight: "600",
-          color: "var(--text-dark)",
-          marginBottom: "0.75rem"
-        }}>
+        <div className="quote-step__summary-value" style={{ marginBottom: "0.75rem", textAlign: "left", maxWidth: "none" }}>
           {getPropertyTypeLabel()}
         </div>
         <div style={{
@@ -998,37 +947,17 @@ export function QuoteStep5Review({
           gap: "0.5rem"
         }}>
           {getPropertyDetails().map((detail, index) => (
-            <div key={index} style={{
-              display: "flex",
-              justifyContent: "space-between",
-              fontSize: "0.875rem",
-              paddingBottom: index < getPropertyDetails().length - 1 ? "0.5rem" : "0",
-              borderBottom: index < getPropertyDetails().length - 1 ? "1px solid #e5e7eb" : "none"
-            }}>
-              <span style={{ color: "#6b7280" }}>{detail.label}:</span>
-              <span style={{ fontWeight: "600", color: "var(--text-dark)", textAlign: "right", maxWidth: "60%" }}>
-                {detail.value}
-              </span>
+            <div key={index} className="quote-step__summary-row">
+              <span className="quote-step__summary-label">{detail.label}:</span>
+              <span className="quote-step__summary-value">{detail.value}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Contact Information */}
-      <div style={{
-        padding: "1.25rem",
-        background: "#f9fafb",
-        borderRadius: "12px",
-        border: "1px solid #e5e7eb"
-      }}>
-        <div style={{
-          fontSize: "0.875rem",
-          fontWeight: "700",
-          color: "var(--text-dark)",
-          marginBottom: "1rem",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em"
-        }}>
+      <div className="quote-step__summary-card">
+        <div className="quote-step__summary-title">
           Contact Information
         </div>
         <div style={{
@@ -1036,66 +965,34 @@ export function QuoteStep5Review({
           flexDirection: "column",
           gap: "0.5rem"
         }}>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: "0.875rem"
-          }}>
-            <span style={{ color: "#6b7280" }}>Name:</span>
-            <span style={{ fontWeight: "600", color: "var(--text-dark)" }}>{formData.name || "N/A"}</span>
+          <div className="quote-step__summary-row">
+            <span className="quote-step__summary-label">Name:</span>
+            <span className="quote-step__summary-value">{formData.name || "N/A"}</span>
           </div>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: "0.875rem"
-          }}>
-            <span style={{ color: "#6b7280" }}>Email:</span>
-            <span style={{ fontWeight: "600", color: "var(--text-dark)" }}>{formData.email || "N/A"}</span>
+          <div className="quote-step__summary-row">
+            <span className="quote-step__summary-label">Email:</span>
+            <span className="quote-step__summary-value">{formData.email || "N/A"}</span>
           </div>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: "0.875rem"
-          }}>
-            <span style={{ color: "#6b7280" }}>Phone:</span>
-            <span style={{ fontWeight: "600", color: "var(--text-dark)" }}>{formData.phone || "N/A"}</span>
+          <div className="quote-step__summary-row">
+            <span className="quote-step__summary-label">Phone:</span>
+            <span className="quote-step__summary-value">{formData.phone || "N/A"}</span>
           </div>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: "0.875rem"
-          }}>
-            <span style={{ color: "#6b7280" }}>Preferred contact:</span>
-            <span style={{ fontWeight: "600", color: "var(--text-dark)" }}>{formData.preferredContact || "N/A"}</span>
+          <div className="quote-step__summary-row">
+            <span className="quote-step__summary-label">Preferred contact:</span>
+            <span className="quote-step__summary-value">{formData.preferredContact || "N/A"}</span>
           </div>
           {formData.bestTimeToContact && (
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              fontSize: "0.875rem"
-            }}>
-              <span style={{ color: "#6b7280" }}>Best time:</span>
-              <span style={{ fontWeight: "600", color: "var(--text-dark)" }}>{formData.bestTimeToContact}</span>
+            <div className="quote-step__summary-row">
+              <span className="quote-step__summary-label">Best time:</span>
+              <span className="quote-step__summary-value">{formData.bestTimeToContact}</span>
             </div>
           )}
         </div>
       </div>
 
       {/* Additional Details */}
-      <div style={{
-        padding: "1.25rem",
-        background: "#f9fafb",
-        borderRadius: "12px",
-        border: "1px solid #e5e7eb"
-      }}>
-        <div style={{
-          fontSize: "0.875rem",
-          fontWeight: "700",
-          color: "var(--text-dark)",
-          marginBottom: "1rem",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em"
-        }}>
+      <div className="quote-step__summary-card">
+        <div className="quote-step__summary-title">
           Additional Details
         </div>
         <div style={{
@@ -1104,8 +1001,8 @@ export function QuoteStep5Review({
           gap: "0.75rem"
         }}>
           <div>
-            <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem" }}>Address:</div>
-            <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text-dark)" }}>
+            <div className="quote-step__summary-label" style={{ marginBottom: "0.25rem" }}>Address:</div>
+            <div className="quote-step__summary-value" style={{ textAlign: "left", maxWidth: "none" }}>
               {formData.address || "N/A"}
             </div>
           </div>
@@ -1134,68 +1031,22 @@ export function QuoteStep5Review({
         </div>
       </div>
 
-      {/* Navigation */}
-      <div style={{
-        display: "flex",
-        gap: "1rem",
-        marginTop: "1rem",
-        paddingTop: "1.5rem",
-        borderTop: "1px solid #e5e7eb"
-      }}>
-        <button
-          onClick={onBack}
-          disabled={isSubmitting}
-          style={{
-            flex: 1,
-            padding: "clamp(0.875rem, 2vw, 1rem)",
-            background: "#f9fafb",
-            border: "2px solid #e5e7eb",
-            borderRadius: "8px",
-            fontSize: "clamp(0.95rem, 2vw, 1rem)",
-            fontWeight: "600",
-            color: "var(--text-dark)",
-            cursor: isSubmitting ? "not-allowed" : "pointer",
-            minHeight: "44px",
-            opacity: isSubmitting ? 0.5 : 1
-          }}
-        >
-          Back
-        </button>
-        <button
-          onClick={onSubmit}
-          disabled={isSubmitting || estimatedPrice.requiresManualReview}
-          style={{
-            flex: 2,
-            padding: "clamp(0.875rem, 2vw, 1rem)",
-            background: isSubmitting || estimatedPrice.requiresManualReview
-              ? "#9ca3af"
-              : "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "clamp(0.95rem, 2vw, 1rem)",
-            fontWeight: "700",
-            color: "#ffffff",
-            cursor: isSubmitting || estimatedPrice.requiresManualReview ? "not-allowed" : "pointer",
-            minHeight: "44px",
-            boxShadow: isSubmitting || estimatedPrice.requiresManualReview ? "none" : "0 4px 12px rgba(22, 163, 74, 0.3)",
-            transition: "all 0.2s ease",
-            opacity: estimatedPrice.requiresManualReview ? 0.6 : 1
-          }}
-        >
-          {isSubmitting ? "Submitting..." : estimatedPrice.requiresManualReview ? "Manual Review Required" : "Submit Quote Request"}
-        </button>
-      </div>
+      <QuoteStepNav
+        onBack={onBack}
+        onNext={onSubmit}
+        nextLabel={
+          isSubmitting
+            ? "Submitting..."
+            : estimatedPrice.requiresManualReview
+              ? "Manual Review Required"
+              : "Submit Quote Request"
+        }
+        backDisabled={isSubmitting}
+        nextDisabled={isSubmitting || estimatedPrice.requiresManualReview}
+      />
 
       {isSubmitting && (
-        <div style={{
-          padding: "1rem",
-          background: "#f0fdf4",
-          borderRadius: "8px",
-          border: "1px solid #bbf7d0",
-          textAlign: "center",
-          fontSize: "0.875rem",
-          color: "#166534"
-        }}>
+        <div className="quote-step__submitting">
           Submitting your quote request...
         </div>
       )}

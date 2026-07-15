@@ -121,14 +121,11 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
         throw new Error(error.error || "Failed to submit quote");
       }
 
-      // Clear saved progress
       localStorage.removeItem("customQuoteProgress");
-      
-      // Show success and close after a moment
+
       setTimeout(() => {
         setIsSubmitting(false);
         onClose();
-        // Reset form
         setFormData({});
         setCurrentStep(1);
       }, 2000);
@@ -139,14 +136,7 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
     }
   };
 
-  const getTotalSteps = () => {
-    // Step 1: Property Type
-    // Step 2: Property-specific questions
-    // Step 3: Contact
-    // Step 4: Details
-    // Step 5: Review
-    return 5;
-  };
+  const getTotalSteps = () => 5;
 
   const getStepTitle = () => {
     switch (currentStep) {
@@ -170,122 +160,47 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
 
   if (!isOpen) return null;
 
+  const progress = (currentStep / getTotalSteps()) * 100;
+
   return (
     <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: "rgba(0, 0, 0, 0.5)",
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "clamp(1rem, 4vw, 2rem)",
-        overflowY: "auto",
-        animation: "fadeIn 0.3s ease-out"
-      }}
+      className="quote-wizard__overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isSubmitting) {
           onClose();
         }
       }}
     >
-      <div
-        style={{
-          background: "#ffffff",
-          borderRadius: "20px",
-          width: "100%",
-          maxWidth: "600px",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
-          position: "relative",
-          animation: "slideUp 0.3s ease-out"
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{
-          padding: "clamp(1.5rem, 4vw, 2rem)",
-          borderBottom: "1px solid #e5e7eb",
-          position: "sticky",
-          top: 0,
-          background: "#ffffff",
-          zIndex: 10,
-          borderRadius: "20px 20px 0 0"
-        }}>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1rem"
-          }}>
-            <h2 style={{
-              fontSize: "clamp(1.25rem, 4vw, 1.5rem)",
-              fontWeight: "700",
-              color: "var(--text-dark)",
-              margin: 0
-            }}>
-              Custom Quote Request
-            </h2>
+      <div className="quote-wizard" onClick={(e) => e.stopPropagation()}>
+        <div className="quote-wizard__header">
+          <div className="quote-wizard__header-top">
+            <div className="quote-wizard__badge-wrap">
+              <span className="quote-wizard__badge">Custom Quote</span>
+              <span className="quote-wizard__step-count">
+                Step {currentStep} of {getTotalSteps()}
+              </span>
+            </div>
             <button
+              type="button"
+              className="quote-wizard__close"
               onClick={onClose}
               disabled={isSubmitting}
-              style={{
-                background: "transparent",
-                border: "none",
-                fontSize: "1.5rem",
-                cursor: isSubmitting ? "not-allowed" : "pointer",
-                color: "#6b7280",
-                padding: "0.5rem",
-                lineHeight: 1,
-                opacity: isSubmitting ? 0.5 : 1
-              }}
+              aria-label="Close quote request"
             >
               ×
             </button>
           </div>
 
-          {/* Progress Bar */}
-          <div style={{
-            width: "100%",
-            height: "6px",
-            background: "#e5e7eb",
-            borderRadius: "3px",
-            overflow: "hidden",
-            marginBottom: "0.75rem"
-          }}>
-            <div style={{
-              width: `${(currentStep / getTotalSteps()) * 100}%`,
-              height: "100%",
-              background: "linear-gradient(90deg, #16a34a 0%, #15803d 100%)",
-              transition: "width 0.3s ease",
-              borderRadius: "3px"
-            }} />
+          <h2 className="quote-wizard__title">Custom Quote Request</h2>
+
+          <div className="quote-wizard__progress-track">
+            <div className="quote-wizard__progress-fill" style={{ width: `${progress}%` }} />
           </div>
 
-          {/* Step Indicator */}
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: "0.875rem",
-            color: "#6b7280"
-          }}>
-            <span>Step {currentStep} of {getTotalSteps()}</span>
-            <span style={{ fontWeight: "600", color: "var(--text-dark)" }}>
-              {getStepTitle()}
-            </span>
-          </div>
+          <p className="quote-wizard__step-label">{getStepTitle()}</p>
         </div>
 
-        {/* Content */}
-        <div style={{
-          padding: "clamp(1.5rem, 4vw, 2rem)",
-          minHeight: "300px"
-        }}>
+        <div className="quote-wizard__body">
           {currentStep === 1 && (
             <QuoteStep1PropertyType
               formData={formData}
@@ -354,4 +269,3 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
     </div>
   );
 }
-

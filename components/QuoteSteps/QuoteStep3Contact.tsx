@@ -1,14 +1,18 @@
-// components/QuoteSteps/QuoteStep3Contact.tsx
 "use client";
 
 import { useState } from "react";
 import { QuoteFormData } from "../CustomQuoteWizard";
+import { QuoteStepNav } from "./QuoteStepNav";
 
 interface QuoteStep3ContactProps {
   formData: QuoteFormData;
   updateFormData: (data: Partial<QuoteFormData>) => void;
   onNext: () => void;
   onBack: () => void;
+}
+
+function chipClass(selected: boolean) {
+  return `quote-step__chip${selected ? " quote-step__chip--selected quote-step__chip--green" : ""}`;
 }
 
 export function QuoteStep3Contact({
@@ -44,198 +48,72 @@ export function QuoteStep3Contact({
   };
 
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: "1.5rem",
-      animation: "fadeInUp 0.4s ease-out"
-    }}>
-      <div>
-        <h3 style={{
-          fontSize: "clamp(1.125rem, 3vw, 1.25rem)",
-          fontWeight: "600",
-          color: "var(--text-dark)",
-          marginBottom: "0.5rem"
-        }}>
-          Contact information
-        </h3>
-        <p style={{
-          fontSize: "0.875rem",
-          color: "#6b7280"
-        }}>
-          We'll use this to send your custom quote
-        </p>
+    <div className="quote-step">
+      <div className="quote-step__intro">
+        <h3 className="quote-step__title">Contact information</h3>
+        <p className="quote-step__subtitle">We&apos;ll use this to send your custom quote</p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-        {/* Name */}
-        <div>
-          <label style={{
-            display: "block",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            color: "var(--text-dark)",
-            marginBottom: "0.5rem"
-          }}>
-            Full Name *
-          </label>
+      <div className="quote-step__fields">
+        <div className="quote-step__field">
+          <label className="quote-step__label">Full Name *</label>
           <input
             type="text"
+            className={`quote-step__input${errors.name ? " quote-step__input--error" : ""}`}
             value={formData.name || ""}
             onChange={(e) => updateFormData({ name: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 3vw, 1.25rem)",
-              border: `2px solid ${errors.name ? "#dc2626" : "#e5e7eb"}`,
-              borderRadius: "8px",
-              fontSize: "clamp(0.95rem, 2vw, 1rem)",
-              minHeight: "44px",
-              boxSizing: "border-box"
-            }}
             placeholder="Enter your full name"
           />
-          {errors.name && (
-            <p style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-              {errors.name}
-            </p>
-          )}
+          {errors.name && <p className="quote-step__error">{errors.name}</p>}
         </div>
 
-        {/* Email */}
-        <div>
-          <label style={{
-            display: "block",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            color: "var(--text-dark)",
-            marginBottom: "0.5rem"
-          }}>
-            Email Address *
-          </label>
+        <div className="quote-step__field">
+          <label className="quote-step__label">Email Address *</label>
           <input
             type="email"
+            className={`quote-step__input${errors.email ? " quote-step__input--error" : ""}`}
             value={formData.email || ""}
             onChange={(e) => updateFormData({ email: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 3vw, 1.25rem)",
-              border: `2px solid ${errors.email ? "#dc2626" : "#e5e7eb"}`,
-              borderRadius: "8px",
-              fontSize: "clamp(0.95rem, 2vw, 1rem)",
-              minHeight: "44px",
-              boxSizing: "border-box"
-            }}
             placeholder="your.email@example.com"
           />
-          {errors.email && (
-            <p style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-              {errors.email}
-            </p>
-          )}
+          {errors.email && <p className="quote-step__error">{errors.email}</p>}
         </div>
 
-        {/* Phone */}
-        <div>
-          <label style={{
-            display: "block",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            color: "var(--text-dark)",
-            marginBottom: "0.5rem"
-          }}>
-            Phone Number *
-          </label>
+        <div className="quote-step__field">
+          <label className="quote-step__label">Phone Number *</label>
           <input
             type="tel"
+            className={`quote-step__input${errors.phone ? " quote-step__input--error" : ""}`}
             value={formData.phone || ""}
             onChange={(e) => updateFormData({ phone: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 3vw, 1.25rem)",
-              border: `2px solid ${errors.phone ? "#dc2626" : "#e5e7eb"}`,
-              borderRadius: "8px",
-              fontSize: "clamp(0.95rem, 2vw, 1rem)",
-              minHeight: "44px",
-              boxSizing: "border-box"
-            }}
             placeholder="(470) 305-0823"
           />
-          {errors.phone && (
-            <p style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-              {errors.phone}
-            </p>
-          )}
+          {errors.phone && <p className="quote-step__error">{errors.phone}</p>}
         </div>
 
-        {/* Preferred Contact Method */}
-        <div>
-          <label style={{
-            display: "block",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            color: "var(--text-dark)",
-            marginBottom: "0.5rem"
-          }}>
-            Preferred Contact Method *
-          </label>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-            gap: "0.75rem"
-          }}>
+        <div className="quote-step__field">
+          <label className="quote-step__label">Preferred Contact Method *</label>
+          <div className="quote-step__chip-grid">
             {["Email", "Phone", "Text"].map((method) => (
               <button
                 key={method}
+                type="button"
+                className={chipClass(formData.preferredContact === method)}
                 onClick={() => updateFormData({ preferredContact: method })}
-                style={{
-                  padding: "clamp(0.875rem, 2vw, 1rem)",
-                  background: formData.preferredContact === method
-                    ? "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)"
-                    : "#f9fafb",
-                  border: `2px solid ${formData.preferredContact === method ? "#16a34a" : "#e5e7eb"}`,
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "clamp(0.875rem, 2vw, 0.95rem)",
-                  fontWeight: formData.preferredContact === method ? "600" : "500",
-                  color: formData.preferredContact === method ? "#16a34a" : "var(--text-dark)",
-                  transition: "all 0.2s ease",
-                  minHeight: "44px"
-                }}
               >
                 {method}
               </button>
             ))}
           </div>
-          {errors.preferredContact && (
-            <p style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-              {errors.preferredContact}
-            </p>
-          )}
+          {errors.preferredContact && <p className="quote-step__error">{errors.preferredContact}</p>}
         </div>
 
-        {/* Best Time to Contact */}
-        <div>
-          <label style={{
-            display: "block",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            color: "var(--text-dark)",
-            marginBottom: "0.5rem"
-          }}>
-            Best Time to Contact (Optional)
-          </label>
+        <div className="quote-step__field">
+          <label className="quote-step__label">Best Time to Contact (Optional)</label>
           <select
+            className="quote-step__select"
             value={formData.bestTimeToContact || ""}
             onChange={(e) => updateFormData({ bestTimeToContact: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 3vw, 1.25rem)",
-              border: "2px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "clamp(0.95rem, 2vw, 1rem)",
-              minHeight: "44px",
-              boxSizing: "border-box"
-            }}
           >
             <option value="">Select best time</option>
             <option value="Morning (8am-12pm)">Morning (8am-12pm)</option>
@@ -246,51 +124,7 @@ export function QuoteStep3Contact({
         </div>
       </div>
 
-      {/* Navigation */}
-      <div style={{
-        display: "flex",
-        gap: "1rem",
-        marginTop: "1rem",
-        paddingTop: "1.5rem",
-        borderTop: "1px solid #e5e7eb"
-      }}>
-        <button
-          onClick={onBack}
-          style={{
-            flex: 1,
-            padding: "clamp(0.875rem, 2vw, 1rem)",
-            background: "#f9fafb",
-            border: "2px solid #e5e7eb",
-            borderRadius: "8px",
-            fontSize: "clamp(0.95rem, 2vw, 1rem)",
-            fontWeight: "600",
-            color: "var(--text-dark)",
-            cursor: "pointer",
-            minHeight: "44px"
-          }}
-        >
-          Back
-        </button>
-        <button
-          onClick={handleNext}
-          style={{
-            flex: 2,
-            padding: "clamp(0.875rem, 2vw, 1rem)",
-            background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "clamp(0.95rem, 2vw, 1rem)",
-            fontWeight: "700",
-            color: "#ffffff",
-            cursor: "pointer",
-            minHeight: "44px",
-            boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)"
-          }}
-        >
-          Continue
-        </button>
-      </div>
+      <QuoteStepNav onBack={onBack} onNext={handleNext} />
     </div>
   );
 }
-

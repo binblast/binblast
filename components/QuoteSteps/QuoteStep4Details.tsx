@@ -1,8 +1,8 @@
-// components/QuoteSteps/QuoteStep4Details.tsx
 "use client";
 
 import { useState } from "react";
 import { QuoteFormData } from "../CustomQuoteWizard";
+import { QuoteStepNav } from "./QuoteStepNav";
 
 interface QuoteStep4DetailsProps {
   formData: QuoteFormData;
@@ -35,86 +35,31 @@ export function QuoteStep4Details({
   };
 
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: "1.5rem",
-      animation: "fadeInUp 0.4s ease-out"
-    }}>
-      <div>
-        <h3 style={{
-          fontSize: "clamp(1.125rem, 3vw, 1.25rem)",
-          fontWeight: "600",
-          color: "var(--text-dark)",
-          marginBottom: "0.5rem"
-        }}>
-          Additional details
-        </h3>
-        <p style={{
-          fontSize: "0.875rem",
-          color: "#6b7280"
-        }}>
-          Help us prepare your custom quote
-        </p>
+    <div className="quote-step">
+      <div className="quote-step__intro">
+        <h3 className="quote-step__title">Additional details</h3>
+        <p className="quote-step__subtitle">Help us prepare your custom quote</p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-        {/* Address */}
-        <div>
-          <label style={{
-            display: "block",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            color: "var(--text-dark)",
-            marginBottom: "0.5rem"
-          }}>
-            Service Address *
-          </label>
+      <div className="quote-step__fields">
+        <div className="quote-step__field">
+          <label className="quote-step__label">Service Address *</label>
           <input
             type="text"
+            className={`quote-step__input${errors.address ? " quote-step__input--error" : ""}`}
             value={formData.address || ""}
             onChange={(e) => updateFormData({ address: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 3vw, 1.25rem)",
-              border: `2px solid ${errors.address ? "#dc2626" : "#e5e7eb"}`,
-              borderRadius: "8px",
-              fontSize: "clamp(0.95rem, 2vw, 1rem)",
-              minHeight: "44px",
-              boxSizing: "border-box"
-            }}
             placeholder="Enter full address"
           />
-          {errors.address && (
-            <p style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-              {errors.address}
-            </p>
-          )}
+          {errors.address && <p className="quote-step__error">{errors.address}</p>}
         </div>
 
-        {/* Timeline */}
-        <div>
-          <label style={{
-            display: "block",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            color: "var(--text-dark)",
-            marginBottom: "0.5rem"
-          }}>
-            When do you need service to start? (Optional)
-          </label>
+        <div className="quote-step__field">
+          <label className="quote-step__label">When do you need service to start? (Optional)</label>
           <select
+            className="quote-step__select"
             value={formData.timeline || ""}
             onChange={(e) => updateFormData({ timeline: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 3vw, 1.25rem)",
-              border: "2px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "clamp(0.95rem, 2vw, 1rem)",
-              minHeight: "44px",
-              boxSizing: "border-box"
-            }}
           >
             <option value="">Select timeline</option>
             <option value="ASAP">ASAP</option>
@@ -125,81 +70,18 @@ export function QuoteStep4Details({
           </select>
         </div>
 
-        {/* Special Instructions */}
-        <div>
-          <label style={{
-            display: "block",
-            fontSize: "0.875rem",
-            fontWeight: "600",
-            color: "var(--text-dark)",
-            marginBottom: "0.5rem"
-          }}>
-            Special Instructions (Optional)
-          </label>
+        <div className="quote-step__field">
+          <label className="quote-step__label">Special Instructions (Optional)</label>
           <textarea
+            className="quote-step__textarea"
             value={formData.specialInstructions || ""}
             onChange={(e) => updateFormData({ specialInstructions: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 3vw, 1.25rem)",
-              border: "2px solid #e5e7eb",
-              borderRadius: "8px",
-              fontSize: "clamp(0.95rem, 2vw, 1rem)",
-              minHeight: "120px",
-              resize: "vertical",
-              fontFamily: "inherit",
-              boxSizing: "border-box"
-            }}
             placeholder="Any additional information, special requirements, or questions..."
           />
         </div>
       </div>
 
-      {/* Navigation */}
-      <div style={{
-        display: "flex",
-        gap: "1rem",
-        marginTop: "1rem",
-        paddingTop: "1.5rem",
-        borderTop: "1px solid #e5e7eb"
-      }}>
-        <button
-          onClick={onBack}
-          style={{
-            flex: 1,
-            padding: "clamp(0.875rem, 2vw, 1rem)",
-            background: "#f9fafb",
-            border: "2px solid #e5e7eb",
-            borderRadius: "8px",
-            fontSize: "clamp(0.95rem, 2vw, 1rem)",
-            fontWeight: "600",
-            color: "var(--text-dark)",
-            cursor: "pointer",
-            minHeight: "44px"
-          }}
-        >
-          Back
-        </button>
-        <button
-          onClick={handleNext}
-          style={{
-            flex: 2,
-            padding: "clamp(0.875rem, 2vw, 1rem)",
-            background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "clamp(0.95rem, 2vw, 1rem)",
-            fontWeight: "700",
-            color: "#ffffff",
-            cursor: "pointer",
-            minHeight: "44px",
-            boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)"
-          }}
-        >
-          Review & Submit
-        </button>
-      </div>
+      <QuoteStepNav onBack={onBack} onNext={handleNext} nextLabel="Review & Submit" />
     </div>
   );
 }
-

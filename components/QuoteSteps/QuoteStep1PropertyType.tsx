@@ -102,7 +102,7 @@ export function QuoteStep1PropertyType({
 
         <button
           type="button"
-          className="btn btn-primary quote-step1__continue"
+          className="quote-step__btn quote-step__btn--primary quote-step1__continue"
           onClick={handleContinue}
           disabled={!formData.propertyType}
         >
