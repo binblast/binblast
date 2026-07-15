@@ -1,5 +1,5 @@
 import { notifyCleaningComplete } from "@/lib/email-utils";
-import { formatEmailDate } from "@/lib/phase1-email-content";
+import { formatEmailDate } from "@/lib/email-template-config";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 
 /**

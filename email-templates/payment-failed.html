@@ -1,20 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>Payment Failed</title></head>
-<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f5f5f5;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f5f5;">
-    <tr><td align="center" style="padding:40px 20px;">
-      <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background:#fff;border-radius:8px;">
-        <tr><td align="center" style="padding:30px;"><img src="{{logoUrl}}" alt="Bin Blast Co." width="200" /></td></tr>
-        <tr><td style="padding:20px 30px;background:#dc2626;"><h1 style="margin:0;color:#fff;font-size:24px;text-align:center;">Action needed — update payment</h1></td></tr>
-        <tr><td style="padding:30px;color:#374151;font-size:16px;line-height:1.6;">
-          <p>Hi <strong>{{firstName}}</strong>,</p>
-          <p>We couldn't process your latest payment, so your service is temporarily paused.</p>
-          <p><strong>Plan:</strong> {{planName}}<br><strong>Amount due:</strong> {{amountDue}}</p>
-          <p style="text-align:center;"><a href="{{dashboardLink}}" style="display:inline-block;padding:14px 28px;background:#dc2626;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">Update Payment Method</a></p>
-        </td></tr>
-      </table>
-    </td></tr>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Update Required</title>
+</head>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f5f5f5;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f5f5f5;">
+    <tr>
+      <td align="center" style="padding:40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="background-color:#ffffff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+          <tr>
+            <td align="center" style="padding:30px 30px 20px;background-color:#ffffff;">
+              <img src="{{logoUrl}}" alt="Bin Blast Co. Logo" width="200" style="max-width:200px;height:auto;display:block;border:0;" />
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 30px 30px;background-color:#dc2626;border-radius:0 0 8px 8px;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:600;text-align:center;">Action Needed — Update Payment</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px;">
+              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">Hi <strong>{{firstName}}</strong>,</p>
+              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">
+                We couldn't process your latest payment, so your bin cleaning service is <strong>temporarily paused</strong> until your payment method is updated.
+              </p>
+              <div style="background-color:#fef2f2;border-left:4px solid #dc2626;padding:20px;margin:0 0 24px;border-radius:4px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                  <tr>
+                    <td style="padding:8px 0;color:#6b7280;font-size:14px;width:40%;font-weight:600;">Plan:</td>
+                    <td style="padding:8px 0;color:#111827;font-size:14px;">{{planName}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0;color:#6b7280;font-size:14px;font-weight:600;">Amount due:</td>
+                    <td style="padding:8px 0;color:#111827;font-size:14px;font-weight:600;">{{amountDue}}</td>
+                  </tr>
+                </table>
+              </div>
+              <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
+                Update your card to keep your cleanings on schedule — it only takes a minute.
+              </p>
+              <div style="text-align:center;margin:24px 0;">
+                <a href="{{dashboardLink}}" style="display:inline-block;padding:14px 28px;background-color:#dc2626;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:18px;">Update Payment Method</a>
+              </div>
+              <p style="margin:24px 0 0;color:#6b7280;font-size:14px;line-height:1.6;text-align:center;">
+                Need help? Call (470) 305-0823 or reply to this email.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 30px;background-color:#f9fafb;border-top:1px solid #e5e7eb;border-radius:0 0 8px 8px;text-align:center;">
+              <p style="margin:0;color:#6b7280;font-size:12px;">© 2025 Bin Blast Co. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
   </table>
 </body>
 </html>

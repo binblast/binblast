@@ -1,5 +1,11 @@
 import { CURB_PLACEMENT_MESSAGE } from "@/lib/cleaning-readiness";
-// Helper functions for sending emails via EmailJS
+import {
+  formatEmailDate,
+  getCustomerDashboardUrl,
+  getEmailSubject,
+  getEmailTemplateId,
+  getStaffLoginUrl,
+} from "@/lib/email-template-config";
 
 export const EMAIL_LOGO_URL =
   process.env.NEXT_PUBLIC_EMAIL_LOGO_URL || "https://www.binblastco.com/bin-blast-email-logo.png";
@@ -11,8 +17,8 @@ export const PARTNER_APPROVAL_TEMPLATE_FALLBACKS = [
 ] as const;
 
 export function getPartnerApprovalTemplateCandidates(): string[] {
-  const envId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPROVAL?.trim();
-  return [...new Set([...(envId ? [envId] : []), ...PARTNER_APPROVAL_TEMPLATE_FALLBACKS])];
+  const envId = getEmailTemplateId("PARTNER_APPROVAL");
+  return [...new Set([envId, ...PARTNER_APPROVAL_TEMPLATE_FALLBACKS])];
 }
 
 export interface EmailParams {
@@ -92,15 +98,17 @@ export async function notifyAdminNewApplication(applicationData: {
   submittedAt: string;
 }): Promise<void> {
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "binblastcompany@gmail.com";
-  const templateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPLICATION || "template_aabpctf";
+  const templateId = getEmailTemplateId("PARTNER_APPLICATION");
 
-  // Try to send email (non-blocking)
   sendEmailJS(templateId, {
     to_email: adminEmail,
+    email_subject: getEmailSubject("PARTNER_APPLICATION", {
+      businessName: applicationData.businessName,
+    }),
+    logoUrl: EMAIL_LOGO_URL,
     ...applicationData,
   }).catch((error) => {
     console.error("[Notify Admin] Failed to send email:", error);
-    // Don't throw - email failure shouldn't block application submission
   });
 }
 
@@ -121,6 +129,7 @@ export async function notifyPartnerApproval(partnerData: {
   const templateParams = {
     to_email: partnerData.email,
     email: partnerData.email,
+    email_subject: getEmailSubject("PARTNER_APPROVAL"),
     ownerName: partnerData.ownerName,
     businessName: partnerData.businessName,
     referralCode: partnerData.referralCode,
@@ -168,22 +177,18 @@ export async function notifyTeamMemberInvitation(teamMemberData: {
   payRate?: number;
   loginLink?: string;
 }): Promise<void> {
-  // Hardcoded template ID for team member invitation email
-  const templateId = "template_9796g8g";
+  const templateId = getEmailTemplateId("TEAM_MEMBER_INVITATION");
+  const loginLink = teamMemberData.loginLink || getStaffLoginUrl("employee");
 
-  // Default login link if not provided - redirect to employee dashboard after login
-  const loginLink = teamMemberData.loginLink || "https://binblast.vercel.app/login?redirect=/employee/dashboard";
-
-  // Try to send email (non-blocking)
   try {
-    // Format pay rate for display
     let payRateDisplay = "";
     if (teamMemberData.payRate) {
       payRateDisplay = `$${teamMemberData.payRate.toFixed(2)} per trash can`;
     }
-    
+
     await sendEmailJS(templateId, {
       to_email: teamMemberData.email,
+      email_subject: getEmailSubject("TEAM_MEMBER_INVITATION"),
       firstName: teamMemberData.firstName || "",
       lastName: teamMemberData.lastName || "",
       email: teamMemberData.email || "",
@@ -191,17 +196,16 @@ export async function notifyTeamMemberInvitation(teamMemberData: {
       partnerBusinessName: teamMemberData.partnerBusinessName || "Your Partner",
       serviceAreas: teamMemberData.serviceAreas || "Not assigned",
       payRate: payRateDisplay,
-      loginLink: loginLink,
+      loginLink,
+      logoUrl: EMAIL_LOGO_URL,
     });
   } catch (error: any) {
     console.error("[Notify Team Member] Failed to send invitation email:", error?.message || error);
-    // Don't throw - email failure shouldn't block team member creation
   }
 }
 
 /**
  * Send welcome email to new customer after account creation
- * This email asks them to confirm their cleaning date
  */
 export async function notifyCustomerWelcome(customerData: {
   email: string;
@@ -217,76 +221,64 @@ export async function notifyCustomerWelcome(customerData: {
   preferredDayOfWeek?: string;
   preferredTimeWindow?: string;
 }): Promise<void> {
-  // Hardcoded template ID for customer welcome email
-  const templateId = "template_ent7lyj";
+  const templateId = getEmailTemplateId("CUSTOMER_WELCOME");
+  const dashboardLink = getCustomerDashboardUrl();
 
-  const dashboardLink = "https://binblast.vercel.app/dashboard";
-
-  // Format preferred service date for display (only if provided)
   const preferredDateFormatted = customerData.preferredServiceDate
-    ? new Date(customerData.preferredServiceDate).toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+    ? new Date(customerData.preferredServiceDate).toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       })
     : "";
 
-  // Format address line 2 for display (empty string if not provided)
   const addressLine2Display = customerData.addressLine2 ? `<br>${customerData.addressLine2}` : "";
-
-  // Format preferred day of week for display (only if provided)
-  const preferredDayDisplay = customerData.preferredDayOfWeek 
+  const preferredDayDisplay = customerData.preferredDayOfWeek
     ? `Every ${customerData.preferredDayOfWeek}`
     : "";
 
-  // Determine email content based on whether preferredServiceDate exists
   const hasPreferredDate = !!customerData.preferredServiceDate;
-  const confirmationTitle = hasPreferredDate 
+  const confirmationTitle = hasPreferredDate
     ? "✅ Confirm Your Cleaning Date"
     : "What's Next?";
-  
+
   const confirmationMessage = hasPreferredDate
     ? `We're ready to schedule your first cleaning! Based on your preferences, we've selected <strong>${preferredDateFormatted}</strong> as your preferred cleaning day.<br><br>Please click the button below to confirm this date or choose a different one that works better for you.`
     : `You can now log in to your customer dashboard to view your service schedule, manage your account, and track your cleanings.<br><br>Visit your dashboard to schedule your first cleaning at your convenience.`;
-  
+
   const confirmationDetails = hasPreferredDate
     ? `<p style="margin: 0 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;"><strong>Monthly Schedule:</strong> ${preferredDayDisplay}</p>`
     : "";
-  
-  const buttonText = hasPreferredDate
-    ? "Confirm Your Cleaning Date"
-    : "Access Your Dashboard";
-  
-  const buttonColor = hasPreferredDate
-    ? "#16a34a"
-    : "#2563eb";
 
-  // Try to send email (non-blocking)
+  const buttonText = hasPreferredDate ? "Confirm Your Cleaning Date" : "Access Your Dashboard";
+  const buttonColor = hasPreferredDate ? "#16a34a" : "#2563eb";
+
   try {
     await sendEmailJS(templateId, {
       to_email: customerData.email,
+      email_subject: getEmailSubject("CUSTOMER_WELCOME"),
       firstName: customerData.firstName || "",
       lastName: customerData.lastName || "",
       planName: customerData.planName || "Your Plan",
       addressLine1: customerData.addressLine1 || "",
-      addressLine2: addressLine2Display, // Pre-formatted with <br> if exists
+      addressLine2: addressLine2Display,
       city: customerData.city || "",
       state: customerData.state || "",
       zipCode: customerData.zipCode || "",
       preferredServiceDate: preferredDateFormatted || "Not set",
       preferredTimeWindow: customerData.preferredTimeWindow || "Morning",
       preferredDayOfWeek: preferredDayDisplay || "Not set",
-      confirmationTitle: confirmationTitle,
-      confirmationMessage: confirmationMessage,
-      confirmationDetails: confirmationDetails,
-      buttonText: buttonText,
-      buttonColor: buttonColor,
-      dashboardLink: dashboardLink,
+      confirmationTitle,
+      confirmationMessage,
+      confirmationDetails,
+      buttonText,
+      buttonColor,
+      dashboardLink,
+      logoUrl: EMAIL_LOGO_URL,
     });
   } catch (error: any) {
     console.error("[Notify Customer Welcome] Failed to send welcome email:", error?.message || error);
-    // Don't throw - email failure shouldn't block registration
   }
 }
 
@@ -308,57 +300,44 @@ export async function notifyCleaningScheduled(customerData: {
   planName?: string;
   binsCount?: number;
 }): Promise<void> {
-  // Hardcoded template ID for cleaning scheduled confirmation email
-  const templateId = "template_ent7lyj";
+  const templateId = getEmailTemplateId("CLEANING_SCHEDULED");
+  const dashboardLink = getCustomerDashboardUrl();
 
-  const dashboardLink = "https://binblast.vercel.app/dashboard";
-
-  // Format scheduled date for display
-  const scheduledDateFormatted = new Date(customerData.scheduledDate).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+  const scheduledDateFormatted = new Date(customerData.scheduledDate).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
-  // Format address line 2 for display (empty string if not provided)
   const addressLine2Display = customerData.addressLine2 ? `<br>${customerData.addressLine2}` : "";
-  
-  // Format preferred day of week for display
-  const preferredDayDisplay = customerData.preferredDayOfWeek 
-    ? `Every ${customerData.preferredDayOfWeek}` 
+  const preferredDayDisplay = customerData.preferredDayOfWeek
+    ? `Every ${customerData.preferredDayOfWeek}`
     : "Not set";
 
-  // Try to send email (non-blocking)
   try {
     await sendEmailJS(templateId, {
       to_email: customerData.email,
+      email_subject: getEmailSubject("CLEANING_SCHEDULED"),
       firstName: customerData.firstName || "",
       lastName: customerData.lastName || "",
       scheduledDate: scheduledDateFormatted,
       scheduledTime: customerData.scheduledTime || "",
       addressLine1: customerData.addressLine1 || "",
-      addressLine2: addressLine2Display, // Pre-formatted with <br> if exists
+      addressLine2: addressLine2Display,
       city: customerData.city || "",
       state: customerData.state || "",
       zipCode: customerData.zipCode || "",
-      preferredDayOfWeek: preferredDayDisplay, // Pre-formatted
+      preferredDayOfWeek: preferredDayDisplay,
       planName: customerData.planName || "Your Plan",
       binsCount: String(customerData.binsCount || 1),
       curbPlacementReminder: CURB_PLACEMENT_MESSAGE,
-      dashboardLink: dashboardLink,
+      dashboardLink,
+      logoUrl: EMAIL_LOGO_URL,
     });
   } catch (error: any) {
     console.error("[Notify Cleaning Scheduled] Failed to send confirmation email:", error?.message || error);
-    // Don't throw - email failure shouldn't block scheduling
   }
-}
-
-const GENERIC_MESSAGE_TEMPLATE_ID =
-  process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_GENERIC_MESSAGE || "template_ent7lyj";
-
-function getAppBaseUrl() {
-  return process.env.NEXT_PUBLIC_BASE_URL || "https://www.binblastco.com";
 }
 
 /**
@@ -374,9 +353,10 @@ export async function sendBrandedTransactionalEmail(params: {
   buttonUrl?: string;
   buttonColor?: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const dashboardLink = params.buttonUrl || getAppBaseUrl();
-  return sendEmailJS(GENERIC_MESSAGE_TEMPLATE_ID, {
+  const dashboardLink = params.buttonUrl || getCustomerDashboardUrl();
+  return sendEmailJS(getEmailTemplateId("GENERIC_MESSAGE"), {
     to_email: params.to,
+    email_subject: params.subject,
     firstName: params.firstName || "there",
     lastName: params.lastName || "",
     planName: "Bin Blast Co.",
@@ -394,15 +374,7 @@ export async function sendBrandedTransactionalEmail(params: {
     preferredServiceDate: "",
     preferredTimeWindow: "",
     preferredDayOfWeek: "",
-  });
-}
-
-function fireAndForgetTransactionalEmail(
-  label: string,
-  params: Parameters<typeof sendBrandedTransactionalEmail>[0]
-) {
-  sendBrandedTransactionalEmail(params).catch((error) => {
-    console.error(`[${label}] Failed to send email:`, error?.message || error);
+    logoUrl: EMAIL_LOGO_URL,
   });
 }
 
@@ -416,24 +388,16 @@ export async function notifyPaymentFailed(customerData: {
   planName?: string;
   amountDue: string;
 }): Promise<void> {
-  const { buildPaymentFailedEmailHtml, getCustomerDashboardUrl } = await import(
-    "@/lib/phase1-email-content"
-  );
-
-  fireAndForgetTransactionalEmail("Notify Payment Failed", {
-    to: customerData.email,
+  sendEmailJS(getEmailTemplateId("PAYMENT_FAILED"), {
+    to_email: customerData.email,
+    email_subject: getEmailSubject("PAYMENT_FAILED"),
     firstName: customerData.firstName,
-    lastName: customerData.lastName,
-    subject: "Action needed — update your payment method",
-    messageHtml: buildPaymentFailedEmailHtml({
-      firstName: customerData.firstName,
-      planName: customerData.planName || "Your plan",
-      amountDue: customerData.amountDue,
-      billingUrl: getCustomerDashboardUrl(),
-    }),
-    buttonText: "Update Payment Method",
-    buttonUrl: getCustomerDashboardUrl(),
-    buttonColor: "#dc2626",
+    planName: customerData.planName || "Your plan",
+    amountDue: customerData.amountDue,
+    dashboardLink: getCustomerDashboardUrl(),
+    logoUrl: EMAIL_LOGO_URL,
+  }).catch((error) => {
+    console.error("[Notify Payment Failed] Failed to send email:", error?.message || error);
   });
 }
 
@@ -447,22 +411,16 @@ export async function notifyCleaningComplete(customerData: {
   completedDate: string;
   nextCleaningDate?: string | null;
 }): Promise<void> {
-  const { buildCleaningCompleteEmailHtml, formatEmailDate, getCustomerDashboardUrl } =
-    await import("@/lib/phase1-email-content");
-
-  fireAndForgetTransactionalEmail("Notify Cleaning Complete", {
-    to: customerData.email,
+  sendEmailJS(getEmailTemplateId("CLEANING_COMPLETE"), {
+    to_email: customerData.email,
+    email_subject: getEmailSubject("CLEANING_COMPLETE"),
     firstName: customerData.firstName,
-    lastName: customerData.lastName,
-    subject: `Your bins are fresh — next cleaning ${formatEmailDate(customerData.nextCleaningDate)}`,
-    messageHtml: buildCleaningCompleteEmailHtml({
-      firstName: customerData.firstName,
-      completedDate: formatEmailDate(customerData.completedDate),
-      nextCleaningDate: formatEmailDate(customerData.nextCleaningDate),
-      dashboardUrl: getCustomerDashboardUrl(),
-    }),
-    buttonText: "View Cleaning History",
-    buttonUrl: getCustomerDashboardUrl(),
+    completedDate: formatEmailDate(customerData.completedDate),
+    nextCleaningDate: formatEmailDate(customerData.nextCleaningDate),
+    dashboardLink: getCustomerDashboardUrl(),
+    logoUrl: EMAIL_LOGO_URL,
+  }).catch((error) => {
+    console.error("[Notify Cleaning Complete] Failed to send email:", error?.message || error);
   });
 }
 
@@ -475,13 +433,17 @@ export async function notifyPartnerRejection(partnerData: {
   businessName: string;
   reason?: string | null;
 }): Promise<void> {
-  const { buildPartnerRejectionEmailHtml } = await import("@/lib/phase1-email-content");
-
-  fireAndForgetTransactionalEmail("Notify Partner Rejection", {
-    to: partnerData.email,
-    firstName: partnerData.ownerName.split(/\s+/)[0] || partnerData.ownerName,
-    subject: "Update on your Bin Blast partner application",
-    messageHtml: buildPartnerRejectionEmailHtml(partnerData),
+  sendEmailJS(getEmailTemplateId("PARTNER_REJECTION"), {
+    to_email: partnerData.email,
+    email_subject: getEmailSubject("PARTNER_REJECTION"),
+    ownerName: partnerData.ownerName,
+    businessName: partnerData.businessName,
+    rejectionReason:
+      partnerData.reason?.trim() ||
+      "We've decided not to move forward at this time based on our current partner criteria.",
+    logoUrl: EMAIL_LOGO_URL,
+  }).catch((error) => {
+    console.error("[Notify Partner Rejection] Failed to send email:", error?.message || error);
   });
 }
 
@@ -497,9 +459,7 @@ export async function notifyBinBlastStaffInvitation(staffData: {
   serviceAreas?: string[];
   payRatePerJob?: number;
 }): Promise<void> {
-  const loginLink = `${getAppBaseUrl()}/login?redirect=${encodeURIComponent(
-    staffData.role === "operator" ? "/operator" : "/employee/dashboard"
-  )}`;
+  const loginLink = getStaffLoginUrl(staffData.role);
 
   await notifyTeamMemberInvitation({
     email: staffData.email,

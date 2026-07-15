@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cleaning Complete</title>
+  <title>{{confirmationTitle}}</title>
 </head>
 <body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f5f5f5;">
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f5f5f5;">
@@ -17,38 +17,35 @@
           </tr>
           <tr>
             <td style="padding:20px 30px 30px;background-color:#16a34a;border-radius:0 0 8px 8px;">
-              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:600;text-align:center;">Your Bins Are Fresh!</h1>
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:600;text-align:center;">{{confirmationTitle}}</h1>
             </td>
           </tr>
           <tr>
             <td style="padding:30px;">
-              <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">Hi <strong>{{firstName}}</strong>,</p>
               <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">
-                All done! Your bins were cleaned, sanitized, and deodorized. Thanks for trusting Bin Blast Co.
+                Hi <strong>{{firstName}}</strong>,
               </p>
-              <div style="background-color:#f0fdf4;border-left:4px solid #16a34a;padding:20px;margin:0 0 24px;border-radius:4px;">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                  <tr>
-                    <td style="padding:8px 0;color:#6b7280;font-size:14px;width:45%;font-weight:600;">Today's service:</td>
-                    <td style="padding:8px 0;color:#111827;font-size:14px;">{{completedDate}}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:8px 0;color:#6b7280;font-size:14px;font-weight:600;">Next cleaning:</td>
-                    <td style="padding:8px 0;color:#111827;font-size:14px;font-weight:600;">{{nextCleaningDate}}</td>
-                  </tr>
-                </table>
+              <div style="background-color:#f9fafb;border-left:4px solid #16a34a;padding:20px;margin:0 0 24px;border-radius:4px;color:#374151;font-size:16px;line-height:1.6;">
+                {{{confirmationMessage}}}
               </div>
-              <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
-                If anything didn't look right, reply within 24 hours and we'll make it right.
-              </p>
               <div style="text-align:center;margin:24px 0;">
-                <a href="{{dashboardLink}}" style="display:inline-block;padding:14px 28px;background-color:#16a34a;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:18px;">View Cleaning History</a>
+                <a href="{{dashboardLink}}" style="display:inline-block;padding:14px 28px;background-color:{{buttonColor}};color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:18px;">{{buttonText}}</a>
               </div>
+              <p style="margin:24px 0 0;color:#6b7280;font-size:14px;line-height:1.6;text-align:center;">
+                Questions? Reply to this email or call (470) 305-0823.
+              </p>
+              <p style="margin:16px 0 0;color:#374151;font-size:16px;line-height:1.6;text-align:center;">
+                <strong>The Bin Blast Co. Team</strong>
+              </p>
             </td>
           </tr>
           <tr>
             <td style="padding:20px 30px;background-color:#f9fafb;border-top:1px solid #e5e7eb;border-radius:0 0 8px 8px;text-align:center;">
               <p style="margin:0;color:#6b7280;font-size:12px;">© 2025 Bin Blast Co. All rights reserved.</p>
+              <p style="margin:10px 0 0;color:#6b7280;font-size:12px;">
+                <a href="https://www.binblastco.com" style="color:#16a34a;text-decoration:none;">Visit our website</a> |
+                <a href="mailto:support@binblastco.com" style="color:#16a34a;text-decoration:none;">Contact Support</a>
+              </p>
             </td>
           </tr>
         </table>

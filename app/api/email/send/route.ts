@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendEmailJS } from "@/lib/email-utils";
+import { EMAIL_LOGO_URL, sendEmailJS } from "@/lib/email-utils";
+import { getAppBaseUrl, getEmailTemplateId } from "@/lib/email-template-config";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,8 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing email message content" }, { status: 400 });
     }
 
-    const templateId =
-      process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_GENERIC_MESSAGE || "template_ent7lyj";
+    const templateId = getEmailTemplateId("GENERIC_MESSAGE");
 
     const nameParts = (recipientName || to.split("@")[0] || "Customer").trim().split(/\s+/);
     const firstName = nameParts[0] || "there";
@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
 
     const result = await sendEmailJS(templateId, {
       to_email: to,
+      email_subject: subject,
       firstName,
       lastName,
       planName: "Bin Blast Co.",
@@ -37,10 +38,11 @@ export async function POST(req: NextRequest) {
       confirmationDetails: "",
       buttonText: "Visit Bin Blast Co.",
       buttonColor: "#16a34a",
-      dashboardLink: process.env.NEXT_PUBLIC_BASE_URL || "https://www.binblastco.com",
+      dashboardLink: getAppBaseUrl(),
       preferredServiceDate: "",
       preferredTimeWindow: "",
       preferredDayOfWeek: "",
+      logoUrl: EMAIL_LOGO_URL,
     });
 
     if (!result.success) {

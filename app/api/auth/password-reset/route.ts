@@ -1,5 +1,7 @@
 // app/api/auth/password-reset/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { EMAIL_LOGO_URL } from "@/lib/email-utils";
+import { getEmailSubject, getEmailTemplateId } from "@/lib/email-template-config";
 
 export async function POST(req: NextRequest) {
   try {
@@ -291,7 +293,7 @@ export async function POST(req: NextRequest) {
 
     // Validate EmailJS configuration before proceeding
     const emailjsServiceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || "service_rok6u9h";
-    const emailjsTemplateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PASSWORD_RESET || "template_l421jys";
+    const emailjsTemplateId = getEmailTemplateId("PASSWORD_RESET");
     const emailjsPublicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
 
     if (!emailjsPublicKey || typeof emailjsPublicKey !== 'string' || emailjsPublicKey.length < 10) {
@@ -305,14 +307,18 @@ export async function POST(req: NextRequest) {
     // Return success immediately - send email asynchronously (non-blocking)
     // This significantly improves perceived response time
     const emailjsUrl = "https://api.emailjs.com/api/v1.0/email/send";
+    const firstName = email.split("@")[0] || "there";
     const emailPayload = {
       service_id: emailjsServiceId,
       template_id: emailjsTemplateId,
       user_id: emailjsPublicKey,
       template_params: {
         to_email: email,
+        email_subject: getEmailSubject("PASSWORD_RESET"),
+        firstName,
         resetLink: resetLink,
         email: email,
+        logoUrl: EMAIL_LOGO_URL,
       },
     };
 
