@@ -19,8 +19,9 @@ const AttributionBootstrap = dynamic(
 );
 
 export const metadata: Metadata = {
-  title: "Bin Blast Co. - Professional Trash Bin Cleaning Service",
-  description: "Professional trash bin cleaning service that keeps your bins fresh, sanitized, and odor-free.",
+  title: "Trash Bin Cleaning in Metro Atlanta | Bin Blast Co.",
+  description:
+    "Bin Blast Co. provides professional residential, HOA, restaurant, apartment, and commercial trash bin cleaning throughout Metro Atlanta. Book curbside service or request a commercial quote.",
   icons: {
     icon: "/bin-blast-mascot.png",
     apple: "/bin-blast-mascot.png",

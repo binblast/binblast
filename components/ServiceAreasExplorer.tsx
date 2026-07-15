@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { SERVICE_AREAS } from "@/lib/service-areas";
+import { SERVICE_AREAS_WITH_HISTORY } from "@/lib/service-areas";
 import { SERVICE_AREA_PROFILES, type ServiceAreaProfile } from "@/data/serviceAreaHistory";
 
 export function ServiceAreasExplorer() {
   const [activeArea, setActiveArea] = useState<ServiceAreaProfile | null>(null);
 
-  function handleSelect(area: (typeof SERVICE_AREAS)[number]) {
+  function handleSelect(area: (typeof SERVICE_AREAS_WITH_HISTORY)[number]) {
     const profile = SERVICE_AREA_PROFILES[area];
     setActiveArea((current) => (current?.name === area ? null : profile));
   }
@@ -19,7 +19,7 @@ export function ServiceAreasExplorer() {
       </p>
 
       <div className="service-areas-grid" role="tablist" aria-label="Service area cities">
-        {SERVICE_AREAS.map((area) => {
+        {SERVICE_AREAS_WITH_HISTORY.map((area) => {
           const isActive = activeArea?.name === area;
           return (
             <button

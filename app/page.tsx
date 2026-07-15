@@ -1,10 +1,28 @@
 // app/page.tsx
 
+import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import Link from "next/link";
-import { SERVICE_AREAS } from "@/lib/service-areas";
+import { PRIMARY_SERVICE_AREAS, METRO_ATLANTA_TAGLINE } from "@/lib/service-areas";
 import { BrandLogo } from "@/components/BrandLogo";
+import { WhoWeServeSection } from "@/components/WhoWeServeSection";
+import { CommercialServicesSection } from "@/components/CommercialServicesSection";
+
+export const metadata: Metadata = {
+  title: "Trash Bin Cleaning in Metro Atlanta | Bin Blast Co.",
+  description:
+    "Bin Blast Co. provides professional residential, HOA, restaurant, apartment, and commercial trash bin cleaning throughout Metro Atlanta. Book curbside service or request a commercial quote.",
+  keywords: [
+    "Metro Atlanta trash bin cleaning",
+    "Atlanta trash can cleaning",
+    "residential bin cleaning",
+    "HOA bin cleaning",
+    "restaurant trash bin cleaning",
+    "commercial bin cleaning",
+    "curbside trash can cleaning",
+  ],
+};
 
 // CRITICAL: Dynamically import all components that use Firebase to prevent import-time errors
 // This ensures Firebase is initialized before these components load
@@ -29,13 +47,13 @@ const ChatWidget = dynamic(() => import("@/components/ChatWidget").then(mod => (
   loading: () => null,
 });
 
-const ServiceAreasExplorer = dynamic(
-  () => import("@/components/ServiceAreasExplorer").then((mod) => mod.ServiceAreasExplorer),
+const MetroAtlantaServiceAreas = dynamic(
+  () => import("@/components/MetroAtlantaServiceAreas").then((mod) => mod.MetroAtlantaServiceAreas),
   {
     ssr: false,
     loading: () => (
       <div className="service-areas-grid">
-        {SERVICE_AREAS.map((area) => (
+        {PRIMARY_SERVICE_AREAS.map((area) => (
           <span key={area} className="service-area-chip">
             {area}
           </span>
@@ -53,16 +71,16 @@ export default function HomePage() {
         {/* Hero Section with Background Image */}
         <section id="home" className="hero">
           <div className="container">
-            <h1 className="hero-headline">Sparkling Clean Bins. Simple for You. Profitable for Partners.</h1>
+            <h1 className="hero-headline">Professional Trash Bin Cleaning for Homes, Communities &amp; Businesses</h1>
             <p className="hero-subheadline">
-              Homeowners get fresh, odor-free bins on autopilot. Local service businesses plug into our system to add bin cleaning as a new, done-for-you revenue stream.
+              Bin Blast Co. provides convenient curbside trash bin cleaning, sanitizing, and deodorizing for homeowners, HOAs, restaurants, apartment communities, and commercial properties across Metro Atlanta.
             </p>
             <p className="hero-service-areas">
-              Now serving {SERVICE_AREAS.slice(0, -1).join(", ")} &amp; {SERVICE_AREAS[SERVICE_AREAS.length - 1]}
+              {METRO_ATLANTA_TAGLINE}
             </p>
             <div className="hero-buttons">
               <Link href="#pricing" className="btn btn-primary btn-large">Book a Cleaning</Link>
-              <Link href="#why-different" className="btn btn-secondary btn-large">Explore Features</Link>
+              <Link href="#commercial-services" className="btn btn-secondary btn-large">Commercial Services</Link>
             </div>
           </div>
         </section>
@@ -70,24 +88,24 @@ export default function HomePage() {
         {/* Service Areas Section */}
         <section id="service-areas" className="service-areas-section">
           <div className="container">
-            <h2 className="section-title">Areas We Service</h2>
+            <h2 className="section-title">Serving Metro Atlanta</h2>
             <p className="section-subtitle service-areas-subtitle">
-              Bin Blast Co. provides professional curbside bin cleaning across south metro Atlanta. If you live or work in one of these communities, we&apos;ve got you covered.
+              We are based in Fayette County and continue to expand our residential and commercial service routes throughout Metro Atlanta.
             </p>
-            <ServiceAreasExplorer />
-            <p className="service-areas-note">
-              Don&apos;t see your city?{" "}
-              <Link href="#pricing">Book a cleaning</Link> or contact us — we&apos;re expanding and may already be in your neighborhood.
-            </p>
+            <MetroAtlantaServiceAreas />
           </div>
         </section>
+
+        <WhoWeServeSection />
+
+        <CommercialServicesSection />
 
         {/* Why Bin Blast Co. Is Different Section */}
         <section id="why-different" className="benefits" style={{ padding: "clamp(3rem, 8vw, 5rem) 0", background: "#f9fafb" }}>
           <div className="container">
             <h2 className="section-title">The Bin Blast Co. Advantage</h2>
             <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "clamp(2rem, 5vw, 3rem)", color: "var(--text-light)", fontSize: "clamp(0.95rem, 3vw, 1.125rem)" }}>
-              More than a cleaning truck. We give customers a modern experience and partners a simple way to add recurring revenue.
+              More than a cleaning truck. Customers get a modern Metro Atlanta trash bin cleaning experience with smart scheduling, loyalty rewards, and easy account management.
             </p>
             <div style={{ 
               display: "flex", 
@@ -224,9 +242,9 @@ export default function HomePage() {
         {/* Business Partner Program Section */}
         <section id="partners" style={{ padding: "clamp(3rem, 8vw, 5rem) 0", background: "#f0f9ff", borderTop: "2px solid #bae6fd" }}>
           <div className="container">
-            <h2 className="section-title" style={{ textAlign: "center" }}>Partner With Bin Blast Co.</h2>
+            <h2 className="section-title" style={{ textAlign: "center" }}>Add Bin Cleaning to Your Service Business</h2>
             <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "clamp(2rem, 5vw, 3rem)", color: "var(--text-light)", fontSize: "clamp(0.95rem, 3vw, 1.125rem)" }}>
-              Service businesses plug into our system to offer bin cleaning without buying trucks, software, or building a brand from scratch.
+              Local pressure washing and service businesses can use the Bin Blast Co. system to add recurring bin-cleaning revenue.
             </p>
             <div style={{
               display: "grid",
@@ -317,7 +335,7 @@ export default function HomePage() {
                 ))}
               </div>
               <Link 
-                href="/partners/apply" 
+                href="/partners" 
                 className="btn btn-primary"
                 style={{
                   display: "inline-block",
@@ -327,7 +345,7 @@ export default function HomePage() {
                   minHeight: "44px"
                 }}
               >
-                Apply to Become a Partner
+                Explore the Partner Program
               </Link>
               <p style={{ fontSize: "0.875rem", color: "#0c4a6e", marginTop: "1rem", margin: 0 }}>
                 We'll review your application and help you plug into our system step by step.
@@ -523,17 +541,17 @@ export default function HomePage() {
         {/* CTA Box Section */}
         <section className="cta-box">
           <div className="cta-content">
-            <h2 className="cta-title">Ready for Fresh Bins or a New Revenue Stream?</h2>
+            <h2 className="cta-title">Ready for Fresh, Sanitized Bins?</h2>
             <p className="cta-sub">
-              Homeowners can join a recurring plan and let us handle the dirty work. Service businesses can plug into our partner program to add bin cleaning to their offerings with no extra overhead.
+              Book residential curbside trash can cleaning or request a commercial quote for restaurants, HOAs, apartments, and properties throughout Metro Atlanta.
             </p>
             <div className="marketing-cta-actions" style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginTop: "2rem" }}>
               <Link href="#pricing" className="btn btn-primary btn-large">
                 Get My Cleaning Plan
               </Link>
-              <Link href="/partners/apply" className="btn btn-secondary btn-large" style={{ background: "transparent", border: "2px solid #ffffff", color: "#ffffff" }}>
-                Apply to Become a Partner
-            </Link>
+              <Link href="/?openQuote=commercial#pricing" className="btn btn-secondary btn-large" style={{ background: "transparent", border: "2px solid #ffffff", color: "#ffffff" }}>
+                Request a Commercial Quote
+              </Link>
             </div>
           </div>
         </section>
@@ -563,8 +581,11 @@ export default function HomePage() {
                 </div>
                 <div className="footer-section">
                   <h3 className="footer-heading">Service Areas</h3>
+                  <p style={{ marginBottom: "0.75rem", lineHeight: 1.6 }}>
+                    Based in Fayette County — serving Metro Atlanta
+                  </p>
                   <div className="footer-service-areas">
-                    {SERVICE_AREAS.map((area) => (
+                    {PRIMARY_SERVICE_AREAS.map((area) => (
                       <span key={area} className="footer-service-area-chip">{area}</span>
                     ))}
                   </div>

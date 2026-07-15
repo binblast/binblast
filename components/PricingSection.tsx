@@ -149,6 +149,15 @@ export function PricingSection() {
     return () => window.removeEventListener("hashchange", syncAttributionFromLocation);
   }, [searchParams]);
 
+  useEffect(() => {
+    if (searchParams.get("openQuote") === "commercial") {
+      setShowQuoteWizard(true);
+      requestAnimationFrame(() => {
+        document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [searchParams]);
+
   const { isReady: firebaseReady } = useFirebase();
   const { plans: platformPlans } = usePlatformPricing();
 

@@ -1,5 +1,9 @@
 import { PLAN_CONFIGS } from "@/lib/stripe-config";
-import { SERVICE_AREAS, SERVICE_AREA_SUMMARY } from "@/lib/service-areas";
+import {
+  PRIMARY_SERVICE_AREAS,
+  ADDITIONAL_METRO_ATLANTA_AREAS,
+  SERVICE_AREA_SUMMARY,
+} from "@/lib/service-areas";
 
 export const SUPPORT_PHONE = "(470) 305-0823";
 export const SUPPORT_PHONE_TEL = "+14703050823";
@@ -466,8 +470,10 @@ const INTENTS: IntentHandler[] = [
     }
     return {
       text:
-        `${SERVICE_AREA_SUMMARY}\n\nWe currently serve:\n` +
-        SERVICE_AREAS.map((area) => `• ${area}`).join("\n") +
+        `${SERVICE_AREA_SUMMARY}\n\nPrimary service area:\n` +
+        PRIMARY_SERVICE_AREAS.map((area) => `• ${area}`).join("\n") +
+        `\n\nAdditional Metro Atlanta areas we are expanding into:\n` +
+        ADDITIONAL_METRO_ATLANTA_AREAS.map((area) => `• ${area}`).join("\n") +
         "\n\nDon't see your city? Book from the pricing section or contact us — we're expanding.",
       quickReplies: ["Schedule a cleaning", "What are your prices?", "Contact support"],
     };
