@@ -4550,7 +4550,6 @@ function DashboardPageContent() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                       {!isAdmin && userId ? (
                         <CustomerUpcomingCleanings
-                          userId={userId}
                           cleanings={upcomingCleanings}
                           planId={user?.selectedPlan}
                           cleaningCredits={user?.cleaningCredits ?? 0}

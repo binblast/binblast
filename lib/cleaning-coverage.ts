@@ -134,9 +134,8 @@ export function buildUpcomingCleaningCoverage(
         duplicateCount += 1;
       } else if (cleaning.billingCoverage === "paid_extra") {
         status = "paid_extra";
-      } else if (cleaning.billingCoverage === "plan_included") {
-        status = "included_in_plan";
       } else if (indexInMonth < baseAllowance) {
+        // Allowance is positional per calendar month — ignore stale plan_included flags on legacy rows.
         status = "included_in_plan";
       } else {
         status = "payment_required";
@@ -199,7 +198,7 @@ export function buildCleaningCoverageSummary(
 export function getCoverageLabel(status: CleaningCoverageStatus): string {
   switch (status) {
     case "included_in_plan":
-      return "Included in your plan";
+      return "Scheduled";
     case "paid_extra":
       return "Extra cleaning — paid";
     case "payment_required":
@@ -225,19 +224,17 @@ export function partitionUpcomingCleanings<T extends { id: string }>(
 
   for (const cleaning of cleanings) {
     const coverage = coverageSummary.byId[cleaning.id];
-    if (!coverage) {
-      confirmed.push(cleaning);
+    if (!coverage || coverage.status === "payment_required") {
+      if (coverage?.status === "payment_required") {
+        needsPayment.push(cleaning);
+      }
       continue;
     }
     if (coverage.isDuplicate) {
       duplicates.push(cleaning);
       continue;
     }
-    if (coverage.status === "payment_required") {
-      needsPayment.push(cleaning);
-    } else {
-      confirmed.push(cleaning);
-    }
+    confirmed.push(cleaning);
   }
 
   return { confirmed, needsPayment, duplicates };
