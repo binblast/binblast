@@ -4553,6 +4553,7 @@ function DashboardPageContent() {
                           userId={userId}
                           cleanings={upcomingCleanings}
                           planId={user?.selectedPlan}
+                          cleaningCredits={user?.cleaningCredits ?? 0}
                           getCleaningDate={getCleaningDate}
                           preferredDayOfWeek={user?.preferredDayOfWeek}
                           binsCount={user?.binsCount || 1}

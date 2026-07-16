@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { UpcomingCleaningCard } from "@/components/CustomerDashboard/UpcomingCleaningCard";
 import { CleaningLimitModal } from "@/components/CleaningLimitModal";
 import {
-  buildCleaningCoverageSummary,
+  buildUpcomingCleaningCoverage,
   partitionUpcomingCleanings,
-  type CleaningCoverageSummary,
 } from "@/lib/cleaning-coverage";
 import { formatRecurringScheduleSummary } from "@/lib/recurring-preference";
 import { PlanId } from "@/lib/stripe-config";
@@ -32,6 +31,7 @@ interface CustomerUpcomingCleaningsProps {
   userId: string;
   cleanings: CleaningItem[];
   planId?: string;
+  cleaningCredits?: number;
   getCleaningDate: (cleaning: CleaningItem) => Date;
   preferredDayOfWeek?: string;
   binsCount?: number;
@@ -45,6 +45,7 @@ export function CustomerUpcomingCleanings({
   userId,
   cleanings,
   planId,
+  cleaningCredits = 0,
   getCleaningDate,
   preferredDayOfWeek,
   binsCount = 1,
@@ -53,59 +54,53 @@ export function CustomerUpcomingCleanings({
   servicePaused,
   onEdit,
 }: CustomerUpcomingCleaningsProps) {
-  const [coverageSummary, setCoverageSummary] = useState<CleaningCoverageSummary | null>(null);
   const [planName, setPlanName] = useState("Your plan");
   const [upgradePreview, setUpgradePreview] = useState<any>(null);
   const [upgradeBlockedReason, setUpgradeBlockedReason] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  const loadCoverage = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `/api/customer/cleaning-schedule-eligibility?userId=${encodeURIComponent(userId)}`
-      );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to load plan coverage");
-      }
+  const resolvedPlanId = ((planId as PlanId) || "one-time") as PlanId;
 
-      const summary = buildCleaningCoverageSummary(
-        cleanings,
-        (data.planId as PlanId) || "one-time",
-        new Date(data.billingPeriodStart),
-        new Date(data.billingPeriodEnd),
-        data.allocation?.cleaningCredits || 0
-      );
+  const coverageSummary = useMemo(
+    () => buildUpcomingCleaningCoverage(cleanings, resolvedPlanId, cleaningCredits),
+    [cleanings, cleaningCredits, resolvedPlanId]
+  );
 
-      setCoverageSummary(summary);
-      setPlanName(data.planName || "Your plan");
-      setUpgradePreview(data.options?.upgradeToBiWeekly || null);
-      setUpgradeBlockedReason(data.options?.upgradeBlockedReason || null);
-    } catch (error) {
-      console.error("[CustomerUpcomingCleanings] Failed to load coverage:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [cleanings, userId]);
+  const partitions = useMemo(
+    () => partitionUpcomingCleanings(cleanings, coverageSummary),
+    [cleanings, coverageSummary]
+  );
 
   useEffect(() => {
-    loadCoverage();
-  }, [loadCoverage]);
+    let cancelled = false;
 
-  const partitions = useMemo(() => {
-    if (!coverageSummary) {
-      return { confirmed: cleanings, needsPayment: [] as CleaningItem[], duplicates: [] as CleaningItem[] };
+    async function loadUpgradeOptions() {
+      try {
+        const response = await fetch(
+          `/api/customer/cleaning-schedule-eligibility?userId=${encodeURIComponent(userId)}`
+        );
+        const data = await response.json();
+        if (!response.ok || cancelled) return;
+
+        setPlanName(data.planName || "Your plan");
+        setUpgradePreview(data.options?.upgradeToBiWeekly || null);
+        setUpgradeBlockedReason(data.options?.upgradeBlockedReason || null);
+      } catch (error) {
+        console.error("[CustomerUpcomingCleanings] Failed to load upgrade options:", error);
+      }
     }
-    return partitionUpcomingCleanings(cleanings, coverageSummary);
-  }, [cleanings, coverageSummary]);
+
+    loadUpgradeOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const scheduleSummaryFor = (cleaning: CleaningItem) =>
     formatRecurringScheduleSummary(planId, cleaning.trashDay || preferredDayOfWeek);
 
   const renderCard = (cleaning: CleaningItem) => {
-    const coverage = coverageSummary?.byId[cleaning.id];
+    const coverage = coverageSummary.byId[cleaning.id];
     return (
       <UpcomingCleaningCard
         key={cleaning.id}
@@ -118,7 +113,7 @@ export function CustomerUpcomingCleanings({
         subscriptionStatus={subscriptionStatus}
         servicePaused={servicePaused}
         coverageStatus={coverage?.status}
-        extraCleaningPrice={coverage?.extraCleaningPrice ?? coverageSummary?.extraCleaningPrice ?? 35}
+        extraCleaningPrice={coverage?.extraCleaningPrice ?? coverageSummary.extraCleaningPrice}
         userId={userId}
         onEdit={() => onEdit(cleaning)}
         onUpgrade={
@@ -130,10 +125,6 @@ export function CustomerUpcomingCleanings({
     );
   };
 
-  if (loading && !coverageSummary) {
-    return <p style={{ color: "#6b7280", margin: 0 }}>Checking plan coverage...</p>;
-  }
-
   return (
     <>
       {partitions.confirmed.length > 0 ? (
@@ -143,7 +134,7 @@ export function CustomerUpcomingCleanings({
       ) : partitions.needsPayment.length === 0 ? (
         <div className="customer-cleaning-groups__empty">
           <p style={{ color: "#6b7280", margin: 0 }}>
-            No confirmed cleanings this period. Complete payment below to keep extra visits on the calendar.
+            No confirmed cleanings this month. Complete payment below to keep extra visits on the calendar.
           </p>
         </div>
       ) : null}
@@ -153,9 +144,9 @@ export function CustomerUpcomingCleanings({
           <div className="customer-cleaning-groups__header">
             <h4 className="customer-cleaning-groups__title">Payment required</h4>
             <p className="customer-cleaning-groups__subtitle">
-              Your {planName} includes {coverageSummary?.baseAllowance ?? 1} cleaning
-              {(coverageSummary?.baseAllowance ?? 1) === 1 ? "" : "s"} per billing period. These extra visits
-              need payment or a plan upgrade before service.
+              Your {planName} includes {coverageSummary.baseAllowance} cleaning
+              {coverageSummary.baseAllowance === 1 ? "" : "s"} per month. These extra visits in the same
+              month need payment or a plan upgrade before service.
             </p>
           </div>
           <div className="customer-cleaning-groups__list">{partitions.needsPayment.map(renderCard)}</div>
@@ -182,8 +173,8 @@ export function CustomerUpcomingCleanings({
           onClose={() => setShowUpgradeModal(false)}
           planName={planName}
           scheduledCount={cleanings.length}
-          baseAllowance={coverageSummary?.baseAllowance ?? 1}
-          oneTimePrice={coverageSummary?.extraCleaningPrice ?? 35}
+          baseAllowance={coverageSummary.baseAllowance}
+          oneTimePrice={coverageSummary.extraCleaningPrice}
           upgradePreview={upgradePreview}
           upgradeBlockedReason={upgradeBlockedReason}
           userId={userId}

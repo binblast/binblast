@@ -1,9 +1,7 @@
-import {
-  buildCleaningAllocation,
-  parseCleaningDate,
-} from "@/lib/cleaning-allocation";
+import { parseCleaningDate } from "@/lib/cleaning-allocation";
 import { getExtraCleaningPriceDollars } from "@/lib/cleaning-scheduling-policy";
 import { PlanId } from "@/lib/stripe-config";
+import { getCleaningsPerMonth } from "@/lib/subscription-utils";
 
 export type CleaningCoverageStatus =
   | "included_in_plan"
@@ -31,12 +29,11 @@ export interface CleaningCoverageInfo {
   primaryCleaningId: string;
   extraCleaningPrice: number;
   sortIndex: number;
+  calendarMonthKey: string;
 }
 
 export interface CleaningCoverageSummary {
   byId: Record<string, CleaningCoverageInfo>;
-  billingPeriodStart: Date;
-  billingPeriodEnd: Date;
   baseAllowance: number;
   cleaningCreditsRemaining: number;
   extraCleaningPrice: number;
@@ -57,6 +54,19 @@ function parseCreatedAt(value: unknown): number {
   return 0;
 }
 
+function isActiveCleaning(cleaning: CleaningCoverageRecord): boolean {
+  const status = cleaning.status || cleaning.jobStatus;
+  return status !== "cancelled" && status !== "completed";
+}
+
+function compareCleanings(a: CleaningCoverageRecord, b: CleaningCoverageRecord): number {
+  const dateDiff =
+    (parseCleaningDate(a.scheduledDate)?.getTime() || 0) -
+    (parseCleaningDate(b.scheduledDate)?.getTime() || 0);
+  if (dateDiff !== 0) return dateDiff;
+  return parseCreatedAt(a.createdAt) - parseCreatedAt(b.createdAt);
+}
+
 export function getCleaningSlotKey(cleaning: CleaningCoverageRecord): string {
   const date = parseCleaningDate(cleaning.scheduledDate);
   const dateKey = date ? date.toISOString().split("T")[0] : "unknown-date";
@@ -66,114 +76,124 @@ export function getCleaningSlotKey(cleaning: CleaningCoverageRecord): string {
   return `${dateKey}|${timeKey}|${addressKey}|${zipKey}`;
 }
 
-function isActiveCleaning(cleaning: CleaningCoverageRecord): boolean {
-  const status = cleaning.status || cleaning.jobStatus;
-  return status !== "cancelled" && status !== "completed";
+function getCalendarMonthKey(value: unknown): string | null {
+  const date = parseCleaningDate(value);
+  if (!date) return null;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export function buildCleaningCoverageSummary(
+function getMonthlyDisplayAllowance(planId: PlanId): number {
+  return Math.max(1, getCleaningsPerMonth(planId) || 1);
+}
+
+/**
+ * Customer-facing coverage uses calendar months so "1 cleaning per month" matches the UI copy.
+ */
+export function buildUpcomingCleaningCoverage(
   cleanings: CleaningCoverageRecord[],
   planId: PlanId,
-  billingPeriodStart: Date,
-  billingPeriodEnd: Date,
   cleaningCreditsRemaining = 0
 ): CleaningCoverageSummary {
+  const baseAllowance = getMonthlyDisplayAllowance(planId);
   const extraCleaningPrice = getExtraCleaningPriceDollars(planId);
-  const allocation = buildCleaningAllocation(
-    planId,
-    billingPeriodStart,
-    billingPeriodEnd,
-    cleanings,
-    cleaningCreditsRemaining
-  );
-
-  const inPeriod = cleanings
-    .filter((cleaning) => {
-      if (!isActiveCleaning(cleaning)) return false;
-      const date = parseCleaningDate(cleaning.scheduledDate);
-      if (!date) return false;
-      return date >= billingPeriodStart && date <= billingPeriodEnd;
-    })
-    .sort((a, b) => {
-      const dateDiff =
-        (parseCleaningDate(a.scheduledDate)?.getTime() || 0) -
-        (parseCleaningDate(b.scheduledDate)?.getTime() || 0);
-      if (dateDiff !== 0) return dateDiff;
-      return parseCreatedAt(a.createdAt) - parseCreatedAt(b.createdAt);
-    });
-
-  const extrasInPeriod = Math.max(0, inPeriod.length - allocation.baseAllowance);
-  const unpaidExtras = Math.max(0, extrasInPeriod - cleaningCreditsRemaining);
-  const paidExtraSlots = Math.max(0, extrasInPeriod - unpaidExtras);
+  const activeCleanings = cleanings.filter(isActiveCleaning).sort(compareCleanings);
 
   const slotPrimary = new Map<string, string>();
-  for (const cleaning of inPeriod) {
+  for (const cleaning of activeCleanings) {
     const slotKey = getCleaningSlotKey(cleaning);
     if (!slotPrimary.has(slotKey)) {
       slotPrimary.set(slotKey, cleaning.id);
     }
   }
 
+  const byMonth = new Map<string, CleaningCoverageRecord[]>();
+  for (const cleaning of activeCleanings) {
+    const monthKey = getCalendarMonthKey(cleaning.scheduledDate) || "unknown-month";
+    const monthCleanings = byMonth.get(monthKey) || [];
+    monthCleanings.push(cleaning);
+    byMonth.set(monthKey, monthCleanings);
+  }
+
   const byId: Record<string, CleaningCoverageInfo> = {};
-  let paymentRequiredCount = 0;
+  const paymentRequiredIds: string[] = [];
   let duplicateCount = 0;
+  let sortIndex = 0;
 
-  inPeriod.forEach((cleaning, index) => {
-    const slotKey = getCleaningSlotKey(cleaning);
-    const primaryCleaningId = slotPrimary.get(slotKey) || cleaning.id;
-    const isDuplicate = primaryCleaningId !== cleaning.id;
+  for (const monthCleanings of byMonth.values()) {
+    monthCleanings.sort(compareCleanings);
 
-    let status: CleaningCoverageStatus;
-    if (isDuplicate) {
-      status = "duplicate_slot";
-      duplicateCount += 1;
-    } else if (cleaning.billingCoverage === "paid_extra") {
-      status = "paid_extra";
-    } else if (cleaning.billingCoverage === "plan_included") {
-      status = "included_in_plan";
-    } else if (index < allocation.baseAllowance) {
-      status = "included_in_plan";
-    } else if (index - allocation.baseAllowance < paidExtraSlots) {
-      status = "paid_extra";
-    } else {
-      status = "payment_required";
-      paymentRequiredCount += 1;
-    }
+    monthCleanings.forEach((cleaning, indexInMonth) => {
+      const slotKey = getCleaningSlotKey(cleaning);
+      const primaryCleaningId = slotPrimary.get(slotKey) || cleaning.id;
+      const isDuplicate = primaryCleaningId !== cleaning.id;
+      const calendarMonthKey = getCalendarMonthKey(cleaning.scheduledDate) || "unknown";
 
-    byId[cleaning.id] = {
-      id: cleaning.id,
-      status,
-      slotKey,
-      isDuplicate,
-      primaryCleaningId,
-      extraCleaningPrice,
-      sortIndex: index,
-    };
+      let status: CleaningCoverageStatus;
+      if (isDuplicate) {
+        status = "duplicate_slot";
+        duplicateCount += 1;
+      } else if (cleaning.billingCoverage === "paid_extra") {
+        status = "paid_extra";
+      } else if (cleaning.billingCoverage === "plan_included") {
+        status = "included_in_plan";
+      } else if (indexInMonth < baseAllowance) {
+        status = "included_in_plan";
+      } else {
+        status = "payment_required";
+        paymentRequiredIds.push(cleaning.id);
+      }
+
+      byId[cleaning.id] = {
+        id: cleaning.id,
+        status,
+        slotKey,
+        isDuplicate,
+        primaryCleaningId,
+        extraCleaningPrice,
+        sortIndex,
+        calendarMonthKey,
+      };
+      sortIndex += 1;
+    });
+  }
+
+  paymentRequiredIds.sort((a, b) => {
+    const cleaningA = activeCleanings.find((cleaning) => cleaning.id === a);
+    const cleaningB = activeCleanings.find((cleaning) => cleaning.id === b);
+    if (!cleaningA || !cleaningB) return 0;
+    return compareCleanings(cleaningA, cleaningB);
   });
 
-  for (const cleaning of cleanings) {
-    if (byId[cleaning.id] || !isActiveCleaning(cleaning)) continue;
-    byId[cleaning.id] = {
-      id: cleaning.id,
-      status: "included_in_plan",
-      slotKey: getCleaningSlotKey(cleaning),
-      isDuplicate: false,
-      primaryCleaningId: cleaning.id,
-      extraCleaningPrice,
-      sortIndex: 999,
-    };
+  let creditsLeft = Math.max(0, cleaningCreditsRemaining);
+  for (const cleaningId of paymentRequiredIds) {
+    if (creditsLeft <= 0) break;
+    byId[cleaningId].status = "paid_extra";
+    creditsLeft -= 1;
   }
+
+  const paymentRequiredCount = Object.values(byId).filter(
+    (entry) => entry.status === "payment_required"
+  ).length;
 
   return {
     byId,
-    billingPeriodStart,
-    billingPeriodEnd,
-    baseAllowance: allocation.baseAllowance,
+    baseAllowance,
     cleaningCreditsRemaining,
     extraCleaningPrice,
     paymentRequiredCount,
     duplicateCount,
   };
+}
+
+/** @deprecated Prefer buildUpcomingCleaningCoverage for customer dashboard display. */
+export function buildCleaningCoverageSummary(
+  cleanings: CleaningCoverageRecord[],
+  planId: PlanId,
+  _billingPeriodStart: Date,
+  _billingPeriodEnd: Date,
+  cleaningCreditsRemaining = 0
+): CleaningCoverageSummary {
+  return buildUpcomingCleaningCoverage(cleanings, planId, cleaningCreditsRemaining);
 }
 
 export function getCoverageLabel(status: CleaningCoverageStatus): string {
@@ -191,11 +211,6 @@ export function getCoverageLabel(status: CleaningCoverageStatus): string {
   }
 }
 
-export function shouldDisplayUpcomingCleaning(coverage?: CleaningCoverageInfo): boolean {
-  if (!coverage) return true;
-  return !coverage.isDuplicate;
-}
-
 export function partitionUpcomingCleanings<T extends { id: string }>(
   cleanings: T[],
   coverageSummary: CleaningCoverageSummary
@@ -210,8 +225,12 @@ export function partitionUpcomingCleanings<T extends { id: string }>(
 
   for (const cleaning of cleanings) {
     const coverage = coverageSummary.byId[cleaning.id];
-    if (!coverage || coverage.isDuplicate) {
-      if (coverage?.isDuplicate) duplicates.push(cleaning);
+    if (!coverage) {
+      confirmed.push(cleaning);
+      continue;
+    }
+    if (coverage.isDuplicate) {
+      duplicates.push(cleaning);
       continue;
     }
     if (coverage.status === "payment_required") {
