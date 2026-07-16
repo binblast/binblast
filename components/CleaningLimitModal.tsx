@@ -19,6 +19,7 @@ interface CleaningLimitModalProps {
   baseAllowance: number;
   oneTimePrice: number;
   upgradePreview: UpgradePreview | null;
+  upgradeBlockedReason?: string | null;
   userId: string;
   onPurchaseComplete?: () => void;
   onUpgradeComplete?: () => void;
@@ -32,6 +33,7 @@ export function CleaningLimitModal({
   baseAllowance,
   oneTimePrice,
   upgradePreview,
+  upgradeBlockedReason,
   userId,
   onPurchaseComplete,
   onUpgradeComplete,
@@ -174,7 +176,7 @@ export function CleaningLimitModal({
                 fontSize: "0.9375rem",
               }}
             >
-              Choose how you&apos;d like to add another cleaning:
+              Choose how you&apos;d like to add another cleaning at your plan rate:
             </p>
 
             <button
@@ -229,21 +231,27 @@ export function CleaningLimitModal({
               <button
                 type="button"
                 onClick={() => setStep("upgrade-warning")}
-                disabled={loading}
+                disabled={loading || Boolean(upgradeBlockedReason)}
                 style={{
                   width: "100%",
                   padding: "0.875rem 1rem",
                   borderRadius: "10px",
                   border: "none",
-                  background: "#16a34a",
+                  background: upgradeBlockedReason ? "#9ca3af" : "#16a34a",
                   color: "#ffffff",
                   fontWeight: "700",
-                  cursor: loading ? "not-allowed" : "pointer",
+                  cursor: loading || upgradeBlockedReason ? "not-allowed" : "pointer",
                 }}
               >
                 Upgrade to {upgradePreview.newPlanName} — ${upgradePreview.newPlanPrice}/month
               </button>
             )}
+
+            {upgradeBlockedReason ? (
+              <p style={{ margin: "0.75rem 0 0", color: "#92400e", fontSize: "0.875rem", lineHeight: 1.5 }}>
+                {upgradeBlockedReason}
+              </p>
+            ) : null}
 
             <button
               type="button"

@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { getReferralCouponId } from "@/lib/stripe-coupons";
 import { getUnusedCreditsForUser } from "@/lib/referral-service";
+import { buildCleaningAllocation } from "@/lib/cleaning-allocation";
+import { getExtraCleaningPriceCents } from "@/lib/cleaning-scheduling-policy";
+import { PlanId } from "@/lib/stripe-config";
 
 export const dynamic = "force-dynamic";
-
-const ONE_TIME_CLEANING_PRICE = 3500;
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,6 +27,9 @@ export async function POST(req: NextRequest) {
 
     const userData = userDoc.data() || {};
     const stripeCustomerId = userData.stripeCustomerId as string | undefined;
+    const planId = (userData.selectedPlan as PlanId) || "one-time";
+    const cleaningCredits = Number(userData.cleaningCredits) || 0;
+    const stripeSubscriptionId = userData.stripeSubscriptionId as string | undefined;
 
     if (!stripeCustomerId) {
       return NextResponse.json(
@@ -33,6 +37,51 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    let billingPeriodStart = new Date();
+    let billingPeriodEnd = new Date();
+    billingPeriodStart.setDate(1);
+    billingPeriodStart.setHours(0, 0, 0, 0);
+    billingPeriodEnd = new Date(
+      billingPeriodStart.getFullYear(),
+      billingPeriodStart.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
+
+    if (stripeSubscriptionId) {
+      const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+      billingPeriodStart = new Date((subscription as any).current_period_start * 1000);
+      billingPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+    }
+
+    const cleaningsSnapshot = await db
+      .collection("scheduledCleanings")
+      .where("userId", "==", userId)
+      .get();
+    const cleanings = cleaningsSnapshot.docs.map((doc: { data: () => Record<string, unknown> }) => doc.data());
+    const allocation = buildCleaningAllocation(
+      planId,
+      billingPeriodStart,
+      billingPeriodEnd,
+      cleanings,
+      cleaningCredits
+    );
+
+    if (allocation.canScheduleAnother) {
+      return NextResponse.json(
+        {
+          error:
+            "Your plan still has an available cleaning this billing period. Schedule it before purchasing an extra cleaning.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const oneTimeCleaningPrice = getExtraCleaningPriceCents(planId);
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
     const successUrl = `${origin}/dashboard?one_time_cleaning=success&schedule_cleaning=1&session_id={CHECKOUT_SESSION_ID}`;
@@ -53,7 +102,7 @@ export async function POST(req: NextRequest) {
               description:
                 "Add one additional bin cleaning to your current billing period",
             },
-            unit_amount: ONE_TIME_CLEANING_PRICE,
+            unit_amount: oneTimeCleaningPrice,
           },
           quantity: 1,
         },
@@ -96,7 +145,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       sessionId: session.id,
       url: session.url,
-      totalAmount: ((ONE_TIME_CLEANING_PRICE - creditApplied * 100) / 100).toFixed(2),
+      totalAmount: ((oneTimeCleaningPrice - creditApplied * 100) / 100).toFixed(2),
       creditApplied: creditApplied.toFixed(2),
     });
   } catch (error: any) {

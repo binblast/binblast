@@ -5,7 +5,6 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useFirebase } from "@/lib/firebase-context";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 import { CleaningLimitModal } from "@/components/CleaningLimitModal";
-import { appendStandardPrepNote } from "@/lib/cleaning-readiness";
 import {
   buildRecurringPreferenceUpdate,
   formatRecurringScheduleSummary,
@@ -13,6 +12,11 @@ import {
   getNextOccurrenceOfWeekday,
   formatDateForFormInput,
 } from "@/lib/recurring-preference";
+import {
+  canModifyScheduledCleaning,
+  getSchedulingPolicyState,
+  MODIFY_LOCK_HOURS,
+} from "@/lib/cleaning-scheduling-policy";
 
 interface ScheduledCleaning {
   id: string;
@@ -66,6 +70,7 @@ interface EligibilityState {
   baseAllowance: number;
   canScheduleAnother: boolean;
   oneTimePrice: number;
+  upgradeBlockedReason?: string | null;
   upgradePreview: {
     newPlanId: string;
     newPlanName: string;
@@ -172,6 +177,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
         baseAllowance: data.allocation?.baseAllowance || 0,
         canScheduleAnother: Boolean(data.allocation?.canScheduleAnother),
         oneTimePrice: data.options?.oneTimeCleaning?.price || 35,
+        upgradeBlockedReason: data.options?.upgradeBlockedReason || null,
         upgradePreview: data.options?.upgradeToBiWeekly || null,
       };
     } catch (err) {
@@ -186,16 +192,14 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
       return;
     }
 
-    if (existingCleaning) {
-      setCheckingEligibility(true);
-      const result = await checkScheduleEligibility();
-      setCheckingEligibility(false);
+    setCheckingEligibility(true);
+    const result = await checkScheduleEligibility();
+    setCheckingEligibility(false);
 
-      if (result && !result.canScheduleAnother) {
-        setEligibility(result);
-        setShowLimitModal(true);
-        return;
-      }
+    if (result && !result.canScheduleAnother) {
+      setEligibility(result);
+      setShowLimitModal(true);
+      return;
     }
 
     setIsRescheduling(false);
@@ -204,10 +208,31 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
 
   useEffect(() => {
     if (!initialOpenForNewCleaning) return;
-    setIsRescheduling(false);
-    setIsOpen(true);
-    onInitialOpenHandled?.();
-  }, [initialOpenForNewCleaning, onInitialOpenHandled]);
+
+    let cancelled = false;
+
+    async function openAfterEligibilityCheck() {
+      const result = await checkScheduleEligibility();
+      if (cancelled) return;
+
+      if (result && !result.canScheduleAnother) {
+        setEligibility(result);
+        setShowLimitModal(true);
+        onInitialOpenHandled?.();
+        return;
+      }
+
+      setIsRescheduling(false);
+      setIsOpen(true);
+      onInitialOpenHandled?.();
+    }
+
+    openAfterEligibilityCheck();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialOpenForNewCleaning, onInitialOpenHandled, checkScheduleEligibility]);
 
   // Update form fields when existingCleaning prop changes (e.g., when pending data is available)
   useEffect(() => {
@@ -280,15 +305,9 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     });
   };
 
-  // Check if rescheduling is allowed - must be at least 12 hours ahead
-  const canReschedule = (cleaningDate: Date): boolean => {
-    const now = new Date();
-    
-    // Calculate 12 hours from now
-    const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-    
-    // Check if the cleaning date/time is at least 12 hours away
-    return cleaningDate > twelveHoursFromNow;
+  // Reschedule/cancel lock: must be at least 24 hours before the scheduled window starts.
+  const canReschedule = (cleaningDate: Date, scheduledTime?: string): boolean => {
+    return canModifyScheduledCleaning(cleaningDate, scheduledTime);
   };
 
   // Generate dropdown options for each day within 2-week window
@@ -422,17 +441,14 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
       return;
     }
 
-    // Check 12-hour advance requirement for rescheduling
+    // Check 24-hour advance requirement for rescheduling
     if (isRescheduling && existingCleaning?.scheduledDate) {
       const existingDate = parseDate(existingCleaning.scheduledDate);
-      const now = new Date();
-      
-      // Calculate 12 hours from now
-      const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-      
-      // Check if the existing cleaning is less than 12 hours away
-      if (existingDate <= twelveHoursFromNow) {
-        setError("Changes must be made at least 12 hours before the scheduled cleaning time.");
+
+      if (!canReschedule(existingDate, existingCleaning.scheduledTime)) {
+        setError(
+          `Changes must be made at least ${MODIFY_LOCK_HOURS} hours before the scheduled cleaning time.`
+        );
         return;
       }
     }
@@ -469,31 +485,34 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
       // CRITICAL: Use safe import wrapper to ensure Firebase app exists
       const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
       const firestore = await safeImportFirestore();
-      const { collection, addDoc, doc, updateDoc, serverTimestamp } = firestore;
+      const { doc, updateDoc, serverTimestamp } = firestore;
 
       // Use the selected date value directly
       const scheduledDate = selectedDateValue;
 
-      // Rescheduling is now always allowed
+      // Update existing cleaning
       if (existingCleaning && isRescheduling) {
-        // No time restriction - allow rescheduling at any time
-
-        // Update existing cleaning
-        const cleaningRef = doc(db, "scheduledCleanings", existingCleaning.id);
-        await updateDoc(cleaningRef, {
-          addressLine1,
-          addressLine2: addressLine2 || null,
-          city,
-          state,
-          zipCode,
-          trashDay,
-          scheduledDate: scheduledDate,
-          scheduledTime: selectedTime,
-          notes: notes || null,
-          binsCount: Number(binsCount) || 1,
-          internalNotes: appendStandardPrepNote(null),
-          updatedAt: serverTimestamp(),
+        const updateResponse = await fetch(`/api/cleanings/${existingCleaning.id}/update`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            addressLine1,
+            addressLine2,
+            city,
+            state,
+            zipCode,
+            trashDay,
+            scheduledDate,
+            scheduledTime: selectedTime,
+            notes,
+          }),
         });
+
+        const updateData = await updateResponse.json();
+        if (!updateResponse.ok) {
+          throw new Error(updateData.error || "Failed to reschedule cleaning");
+        }
 
         await syncUserRecurringPreference(firestore, db);
         
@@ -537,42 +556,35 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
           console.error("[ScheduleCleaningForm] Error sending confirmation email:", emailErr);
         }
       } else {
-        // Create new scheduled cleaning
-        const scheduledCleaning = {
-          userId,
-          userEmail,
-          addressLine1,
-          addressLine2: addressLine2 || null,
-          city,
-          state,
-          zipCode,
-          trashDay,
-          scheduledDate: scheduledDate,
-          scheduledTime: selectedTime,
-          notes: notes || null,
-          binsCount: Number(binsCount) || 1,
-          internalNotes: appendStandardPrepNote(null),
-          status: "upcoming",
-          createdAt: serverTimestamp(),
-        };
+        const scheduleResponse = await fetch("/api/customer/schedule-cleaning", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            userEmail,
+            addressLine1,
+            addressLine2,
+            city,
+            state,
+            zipCode,
+            trashDay,
+            scheduledDate,
+            scheduledTime: selectedTime,
+            notes,
+            binsCount: Number(binsCount) || 1,
+          }),
+        });
 
-        await addDoc(collection(db, "scheduledCleanings"), scheduledCleaning);
-
-        await syncUserRecurringPreference(firestore, db);
-
-        if (eligibilityResult && eligibilityResult.scheduledCount >= eligibilityResult.baseAllowance) {
-          try {
-            const userDocRef = doc(db, "users", userId);
-            const currentCredits = userData?.cleaningCredits || 0;
-            if (currentCredits > 0) {
-              await updateDoc(userDocRef, {
-                cleaningCredits: Math.max(0, currentCredits - 1),
-                updatedAt: serverTimestamp(),
-              });
+        const scheduleData = await scheduleResponse.json();
+        if (!scheduleResponse.ok) {
+          if (scheduleResponse.status === 403) {
+            const refreshedEligibility = await checkScheduleEligibility();
+            if (refreshedEligibility) {
+              setEligibility(refreshedEligibility);
+              setShowLimitModal(true);
             }
-          } catch (creditErr) {
-            console.error("[ScheduleCleaningForm] Error decrementing cleaning credit:", creditErr);
           }
+          throw new Error(scheduleData.error || "Failed to schedule cleaning");
         }
         
         // Send confirmation email after scheduling
@@ -648,7 +660,13 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
 
   // Get existing cleaning date info for display
   const existingCleaningDate = existingCleaning?.scheduledDate ? parseDate(existingCleaning.scheduledDate) : null;
-  const canRescheduleExisting = existingCleaningDate ? canReschedule(existingCleaningDate) : true;
+  const reschedulePolicy = getSchedulingPolicyState(
+    existingCleaning?.scheduledDate,
+    existingCleaning?.scheduledTime
+  );
+  const canRescheduleExisting = existingCleaningDate
+    ? canReschedule(existingCleaningDate, existingCleaning?.scheduledTime)
+    : true;
 
   return (
     <div>
@@ -676,19 +694,28 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
             </div>
             <button
               onClick={() => {
+                if (!canRescheduleExisting) return;
                 setIsOpen(true);
                 setIsRescheduling(true);
               }}
               className="btn btn-primary"
+              disabled={!canRescheduleExisting}
               style={{ 
                 padding: "0.5rem 1rem",
                 fontSize: "0.875rem",
-                whiteSpace: "nowrap"
+                whiteSpace: "nowrap",
+                opacity: canRescheduleExisting ? 1 : 0.6,
+                cursor: canRescheduleExisting ? "pointer" : "not-allowed",
               }}
             >
               Reschedule
             </button>
           </div>
+          {!canRescheduleExisting && reschedulePolicy.message ? (
+            <p style={{ margin: "0.75rem 0 0", fontSize: "0.8125rem", color: "#92400e", lineHeight: 1.5 }}>
+              {reschedulePolicy.message}
+            </p>
+          ) : null}
         </div>
       )}
       
@@ -716,6 +743,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
           baseAllowance={eligibility.baseAllowance}
           oneTimePrice={eligibility.oneTimePrice}
           upgradePreview={eligibility.upgradePreview}
+          upgradeBlockedReason={eligibility.upgradeBlockedReason}
           userId={userId}
           onPurchaseComplete={() => {
             setShowLimitModal(false);
@@ -747,7 +775,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
               </>
             ) : (
               recurringHint
-            )}
+            )}{" "}
+            Extra visits beyond your plan require payment at your plan rate. Rescheduling and cancellation are locked
+            within {MODIFY_LOCK_HOURS} hours of your visit. Plan upgrades remain available until 4 hours before your
+            cleaning.
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>

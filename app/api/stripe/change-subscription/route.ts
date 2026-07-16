@@ -5,6 +5,10 @@ import { PlanId } from "@/lib/stripe-config";
 import { getPlatformPlanConfigs } from "@/lib/platform-pricing";
 import { stripe } from "@/lib/stripe";
 import { getMonthlyPriceForPlan, calculateCleaningRollover } from "@/lib/subscription-utils";
+import {
+  canChangePlanWithUpcomingCleaning,
+  getNextUpcomingCleaning,
+} from "@/lib/cleaning-scheduling-policy";
 import type Stripe from "stripe";
 
 export const dynamic = 'force-dynamic';
@@ -191,6 +195,26 @@ export async function POST(req: NextRequest) {
     const currentMonthlyPrice = getMonthlyPriceForPlan(finalCurrentPlanId, planConfigs);
     const newMonthlyPrice = getMonthlyPriceForPlan(newPlanId as PlanId, planConfigs);
     const isUpgrade = newMonthlyPrice > currentMonthlyPrice;
+
+    const cleaningsPolicyQuery = query(
+      collection(db, "scheduledCleanings"),
+      where("userId", "==", userId)
+    );
+    const cleaningsPolicySnapshot = await getDocs(cleaningsPolicyQuery);
+    const cleaningsForPolicy = cleaningsPolicySnapshot.docs.map((doc) => doc.data());
+    const nextUpcomingCleaning = getNextUpcomingCleaning(cleaningsForPolicy);
+    const planChangePolicy = canChangePlanWithUpcomingCleaning(
+      isUpgrade,
+      nextUpcomingCleaning?.scheduledDate,
+      nextUpcomingCleaning?.scheduledTime as string | undefined
+    );
+
+    if (!planChangePolicy.allowed) {
+      return NextResponse.json(
+        { error: planChangePolicy.message || "This plan change is not allowed right now." },
+        { status: 403 }
+      );
+    }
     
     let actualProratedAmount = 0;
     

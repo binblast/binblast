@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { buildCleaningAllocation } from "@/lib/cleaning-allocation";
+import {
+  getExtraCleaningPriceDollars,
+  getNextUpcomingCleaning,
+  getSchedulingPolicyState,
+} from "@/lib/cleaning-scheduling-policy";
 import { getUpgradeProrationPreview } from "@/lib/subscription-upgrade-service";
 import { PlanId, PLAN_CONFIGS } from "@/lib/stripe-config";
 import { stripe } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
-
-const ONE_TIME_CLEANING_PRICE = 3500;
 
 export async function GET(req: NextRequest) {
   try {
@@ -70,9 +73,18 @@ export async function GET(req: NextRequest) {
       cleaningCredits
     );
 
+    const nextUpcomingCleaning = getNextUpcomingCleaning(cleanings);
+    const schedulingPolicy = getSchedulingPolicyState(
+      nextUpcomingCleaning?.scheduledDate,
+      nextUpcomingCleaning?.scheduledTime as string | undefined
+    );
+    const extraCleaningPrice = getExtraCleaningPriceDollars(planId);
+
     let upgradePreview = null;
     const canUpgradeToBiWeekly =
-      planId === "one-time" && Boolean(stripeSubscriptionId);
+      planId === "one-time" &&
+      Boolean(stripeSubscriptionId) &&
+      schedulingPolicy.canUpgradePlan;
 
     if (canUpgradeToBiWeekly) {
       try {
@@ -106,13 +118,24 @@ export async function GET(req: NextRequest) {
       planId,
       planName: PLAN_CONFIGS[planId]?.name || planId,
       allocation,
+      schedulingPolicy,
+      nextUpcomingCleaning: nextUpcomingCleaning
+        ? {
+            id: nextUpcomingCleaning.id,
+            scheduledDate: nextUpcomingCleaning.scheduledDate,
+            scheduledTime: nextUpcomingCleaning.scheduledTime,
+          }
+        : null,
       options: allocation.isAtLimit
         ? {
             oneTimeCleaning: {
-              price: ONE_TIME_CLEANING_PRICE / 100,
+              price: extraCleaningPrice,
               label: "One-Time Extra Cleaning",
             },
             upgradeToBiWeekly: canUpgradeToBiWeekly ? upgradePreview : null,
+            upgradeBlockedReason: !schedulingPolicy.canUpgradePlan
+              ? schedulingPolicy.message
+              : null,
           }
         : null,
     });

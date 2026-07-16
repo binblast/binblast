@@ -22,7 +22,8 @@ const faqData = [
   },
   {
     question: "How do I cancel or reschedule my appointment?",
-    answer: "You can cancel or reschedule your appointment by calling us or logging into your account online. We require at least 24 hours notice for cancellations."
+    answer:
+      "You can reschedule an upcoming cleaning from your dashboard when it is more than 24 hours away. Within 24 hours, rescheduling and cancellation are locked. Plan upgrades may still be available until 4 hours before your visit. Extra cleanings beyond your package require payment at your plan rate.",
   },
   {
     question: "What payment methods do you accept?",

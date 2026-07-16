@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildRecurringPreferenceUpdate } from "@/lib/recurring-preference";
+import { assertCanModifyCleaning } from "@/lib/cleaning-schedule-validation";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: { cleaningId: string } }
 ) {
   try {
-    const { getDbInstance } = await import("@/lib/firebase");
-    const { doc, getDoc, updateDoc, serverTimestamp } = await import("firebase/firestore");
-    
     const cleaningId = params.cleaningId;
     const body = await req.json();
     const {
+      userId,
       addressLine1,
       addressLine2,
       city,
@@ -32,31 +32,39 @@ export async function PUT(
       );
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json(
-        { error: "Firebase is not configured" },
-        { status: 500 }
-      );
-    }
+    const db = await getAdminFirestore();
+    const cleaningDoc = await db.collection("scheduledCleanings").doc(cleaningId).get();
 
-    const cleaningDocRef = doc(db, "scheduledCleanings", cleaningId);
-    const cleaningDoc = await getDoc(cleaningDocRef);
-
-    if (!cleaningDoc.exists()) {
+    if (!cleaningDoc.exists) {
       return NextResponse.json(
         { error: "Cleaning not found" },
         { status: 404 }
       );
     }
 
-    const cleaningData = cleaningDoc.data();
-    const userId = cleaningData.userId as string | undefined;
+    const cleaningData = cleaningDoc.data() || {};
+    const cleaningUserId = (userId || cleaningData.userId) as string | undefined;
+
+    if (!cleaningUserId) {
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
+    }
 
     if (cleaningData.status === "completed" || cleaningData.status === "cancelled") {
       return NextResponse.json(
         { error: "Cannot edit completed or cancelled cleanings" },
         { status: 400 }
+      );
+    }
+
+    try {
+      await assertCanModifyCleaning(cleaningUserId, cleaningId);
+    } catch (policyError: any) {
+      return NextResponse.json(
+        { error: policyError.message || "This cleaning can no longer be changed." },
+        { status: 403 }
       );
     }
 
@@ -76,30 +84,28 @@ export async function PUT(
       trashDay,
       scheduledTime,
       notes: notes || null,
-      updatedAt: serverTimestamp(),
+      updatedAt: new Date(),
     };
 
     if (scheduledDate) {
       cleaningUpdate.scheduledDate = scheduledDate;
     }
 
-    await updateDoc(cleaningDocRef, cleaningUpdate);
+    await db.collection("scheduledCleanings").doc(cleaningId).update(cleaningUpdate);
 
-    if (userId) {
-      const userDocRef = doc(db, "users", userId);
-      await updateDoc(userDocRef, {
-        ...buildRecurringPreferenceUpdate({
-          preferredDayOfWeek: trashDay,
-          preferredTimeWindow: scheduledTime,
-          addressLine1,
-          addressLine2: addressLine2 || null,
-          city,
-          state,
-          zipCode,
-        }),
-        updatedAt: serverTimestamp(),
-      });
-    }
+    const userDocRef = db.collection("users").doc(cleaningUserId);
+    await userDocRef.update({
+      ...buildRecurringPreferenceUpdate({
+        preferredDayOfWeek: trashDay,
+        preferredTimeWindow: scheduledTime,
+        addressLine1,
+        addressLine2: addressLine2 || null,
+        city,
+        state,
+        zipCode,
+      }),
+      updatedAt: new Date(),
+    });
 
     return NextResponse.json({
       success: true,

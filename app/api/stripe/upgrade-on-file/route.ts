@@ -5,6 +5,7 @@ import {
   getDefaultPaymentMethodId,
   getUpgradeProrationPreview,
 } from "@/lib/subscription-upgrade-service";
+import { assertCanUpgradePlan } from "@/lib/cleaning-schedule-validation";
 import { stripe } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,15 @@ export async function POST(req: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
+    }
+
+    try {
+      await assertCanUpgradePlan(userId);
+    } catch (policyError: any) {
+      return NextResponse.json(
+        { error: policyError.message || "Plan upgrade is not allowed right now." },
+        { status: 403 }
+      );
     }
 
     const { getAdminFirestore } = await import("@/lib/firebase-admin");

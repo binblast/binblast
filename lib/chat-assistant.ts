@@ -86,7 +86,7 @@ const rescheduleResponse = (): AssistantResponse => ({
     "2. Option A: In Schedule a Cleaning, click Reschedule on your upcoming visit banner\n" +
     "3. Option B: Under Your Cleanings → Upcoming, click Edit on the cleaning card\n" +
     "4. Pick a new date and time window, then save\n\n" +
-    "Changes must be made at least 12 hours before your scheduled cleaning time (the site enforces this). " +
+    "Changes must be made at least 24 hours before your scheduled cleaning time (the site enforces this). " +
     "For urgent changes inside that window, call us at " +
     SUPPORT_PHONE +
     ".\n\n" +
@@ -665,7 +665,7 @@ const INTENTS: IntentHandler[] = [
         "• We use eco-friendly, biodegradable, EPA-approved products\n" +
         "• Trash, recycling, and compost bins are all fine — note your bin type when booking\n" +
         "• Add gate codes, bin location, or access notes in special instructions\n" +
-        "• Cancel/reschedule: at least 12 hours ahead in your dashboard (24 hours recommended; call us for urgent changes)",
+        "• Cancel/reschedule: locked within 24 hours of your cleaning in the dashboard (plan upgrades allowed until 4 hours before)",
       quickReplies: ["Schedule a cleaning", "Reschedule a cleaning", "Contact support"],
     };
   },
