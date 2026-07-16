@@ -17,6 +17,7 @@ import {
   canModifyScheduledCleaning,
   getSchedulingPolicyState,
   MODIFY_LOCK_HOURS,
+  UPGRADE_MIN_HOURS,
 } from "@/lib/cleaning-scheduling-policy";
 
 interface ScheduledCleaning {
@@ -175,7 +176,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
 
   const checkScheduleEligibility = useCallback(async (scheduledDate?: string): Promise<EligibilityState | null> => {
     try {
-      const params = new URLSearchParams({ userId });
+      const params = new URLSearchParams({ userId, intent: "add_cleaning" });
       if (scheduledDate) {
         params.set("scheduledDate", scheduledDate);
       }
@@ -868,8 +869,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
               recurringHint
             )}{" "}
             Extra visits beyond your plan require payment at your plan rate. Rescheduling and cancellation are locked
-            within {MODIFY_LOCK_HOURS} hours of your visit. Plan upgrades remain available until 4 hours before your
-            cleaning.
+            within {MODIFY_LOCK_HOURS} hours of a visit. On the day of your cleaning, cancellation is also locked within{" "}
+            {UPGRADE_MIN_HOURS} hours, but plan upgrades remain available.
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>

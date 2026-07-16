@@ -13,14 +13,14 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, newPlanId = "twice-month" } = body;
+    const { userId, newPlanId = "twice-month", bypassUpgradeTimeLock = false } = body;
 
     if (!userId) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
     try {
-      await assertCanUpgradePlan(userId);
+      await assertCanUpgradePlan(userId, { bypassTimeLock: Boolean(bypassUpgradeTimeLock) });
     } catch (policyError: any) {
       return NextResponse.json(
         { error: policyError.message || "Plan upgrade is not allowed right now." },

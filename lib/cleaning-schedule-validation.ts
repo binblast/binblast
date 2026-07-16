@@ -2,7 +2,6 @@ import { getAdminFirestore } from "./firebase-admin";
 import { buildCleaningAllocation, canScheduleOnDate, planUsesCalendarMonthLimits } from "./cleaning-allocation";
 import {
   canModifyScheduledCleaning,
-  canUpgradeWithUpcomingCleaning,
   getNextUpcomingCleaning,
 } from "./cleaning-scheduling-policy";
 import { PlanId } from "./stripe-config";
@@ -124,18 +123,9 @@ export async function assertCanModifyCleaning(
   }
 }
 
-export async function assertCanUpgradePlan(userId: string) {
-  const { nextUpcomingCleaning } = await loadUserSchedulingContext(userId);
-
-  if (
-    nextUpcomingCleaning?.scheduledDate &&
-    !canUpgradeWithUpcomingCleaning(
-      nextUpcomingCleaning.scheduledDate,
-      nextUpcomingCleaning.scheduledTime as string | undefined
-    )
-  ) {
-    throw new Error(
-      "Plan upgrades cannot be made within 4 hours of your scheduled cleaning."
-    );
-  }
+export async function assertCanUpgradePlan(
+  _userId: string,
+  _options?: { bypassTimeLock?: boolean }
+) {
+  // Plan upgrades are always allowed. Time locks only affect cancel/reschedule.
 }

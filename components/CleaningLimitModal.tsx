@@ -85,7 +85,7 @@ export function CleaningLimitModal({
     async function loadUpgradePreview() {
       try {
         const response = await fetch(
-          `/api/customer/cleaning-schedule-eligibility?userId=${encodeURIComponent(userId)}`
+          `/api/customer/cleaning-schedule-eligibility?userId=${encodeURIComponent(userId)}&intent=add_cleaning`
         );
         const data = await response.json();
         if (!response.ok || cancelled) return;
@@ -145,6 +145,7 @@ export function CleaningLimitModal({
         body: JSON.stringify({
           userId,
           newPlanId: activeUpgrade?.newPlanId || "twice-month",
+          bypassUpgradeTimeLock: true,
         }),
       });
       const data = await response.json();

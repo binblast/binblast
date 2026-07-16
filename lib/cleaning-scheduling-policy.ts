@@ -81,22 +81,46 @@ export function parseCleaningDateTime(
 
 export function hoursUntilCleaning(
   scheduledDate: unknown,
-  scheduledTime?: string
+  scheduledTime?: string,
+  referenceDate: Date = new Date()
 ): number | null {
   const cleaningAt = parseCleaningDateTime(scheduledDate, scheduledTime);
   if (!cleaningAt) return null;
-  return (cleaningAt.getTime() - Date.now()) / (1000 * 60 * 60);
+  return (cleaningAt.getTime() - referenceDate.getTime()) / (1000 * 60 * 60);
+}
+
+function isSameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+export function isCleaningScheduledToday(
+  scheduledDate: unknown,
+  referenceDate: Date = new Date()
+): boolean {
+  const date = parseDateValue(scheduledDate);
+  if (!date) return false;
+  return isSameCalendarDay(date, referenceDate);
 }
 
 export function getSchedulingPolicyState(
   scheduledDate?: unknown,
-  scheduledTime?: string
+  scheduledTime?: string,
+  referenceDate: Date = new Date()
 ): SchedulingPolicyState {
-  const hours = scheduledDate ? hoursUntilCleaning(scheduledDate, scheduledTime) : null;
+  const cleaningAt = scheduledDate
+    ? parseCleaningDateTime(scheduledDate, scheduledTime)
+    : null;
+  const hours = cleaningAt
+    ? (cleaningAt.getTime() - referenceDate.getTime()) / (1000 * 60 * 60)
+    : null;
 
-  if (hours === null) {
+  if (hours === null || hours < 0) {
     return {
-      hoursUntilCleaning: null,
+      hoursUntilCleaning: hours,
       canReschedule: true,
       canCancel: true,
       canUpgradePlan: true,
@@ -106,16 +130,21 @@ export function getSchedulingPolicyState(
     };
   }
 
-  if (hours < UPGRADE_MIN_HOURS) {
+  const isCleaningDay = cleaningAt
+    ? isSameCalendarDay(cleaningAt, referenceDate)
+    : false;
+
+  // Same-day visit within 4 hours: cancel/reschedule locked, upgrades still allowed.
+  if (isCleaningDay && hours < UPGRADE_MIN_HOURS) {
     return {
       hoursUntilCleaning: hours,
       canReschedule: false,
       canCancel: false,
-      canUpgradePlan: false,
+      canUpgradePlan: true,
       canDowngradePlan: false,
       lockReason: "within_4h",
       message:
-        "No changes can be made within 4 hours of your scheduled cleaning.",
+        "Cancellation is locked within 4 hours of today's cleaning. Plan upgrades are still available.",
     };
   }
 
@@ -128,7 +157,7 @@ export function getSchedulingPolicyState(
       canDowngradePlan: false,
       lockReason: "within_24h",
       message:
-        "Rescheduling and cancellation are locked within 24 hours of your cleaning. Plan upgrades are still available until 4 hours before your visit.",
+        "Rescheduling and cancellation are locked within 24 hours of your cleaning. Plan upgrades are still available.",
     };
   }
 
@@ -165,14 +194,7 @@ export function canChangePlanWithUpcomingCleaning(
   const policy = getSchedulingPolicyState(scheduledDate, scheduledTime);
 
   if (isUpgrade) {
-    return policy.canUpgradePlan
-      ? { allowed: true }
-      : {
-          allowed: false,
-          message:
-            policy.message ||
-            "Plan upgrades cannot be made within 4 hours of your scheduled cleaning.",
-        };
+    return { allowed: true };
   }
 
   return policy.canDowngradePlan

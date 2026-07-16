@@ -5,6 +5,7 @@ import {
   getExtraCleaningPriceDollars,
   getNextUpcomingCleaning,
   getSchedulingPolicyState,
+  isCleaningScheduledToday,
 } from "@/lib/cleaning-scheduling-policy";
 import { getUpgradeProrationPreview } from "@/lib/subscription-upgrade-service";
 import { PlanId, PLAN_CONFIGS } from "@/lib/stripe-config";
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     const userId = req.nextUrl.searchParams.get("userId");
+    const scheduledDate = req.nextUrl.searchParams.get("scheduledDate");
 
     if (!userId) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
@@ -65,8 +67,6 @@ export async function GET(req: NextRequest) {
       ...doc.data(),
     }));
 
-    const scheduledDate = req.nextUrl.searchParams.get("scheduledDate");
-
     const allocation = buildCleaningAllocation(
       planId,
       billingPeriodStart,
@@ -77,17 +77,27 @@ export async function GET(req: NextRequest) {
     );
 
     const nextUpcomingCleaning = getNextUpcomingCleaning(cleanings);
-    const schedulingPolicy = getSchedulingPolicyState(
-      nextUpcomingCleaning?.scheduledDate,
-      nextUpcomingCleaning?.scheduledTime as string | undefined
-    );
+    const cleaningIsToday =
+      nextUpcomingCleaning?.scheduledDate &&
+      isCleaningScheduledToday(nextUpcomingCleaning.scheduledDate);
+    const schedulingPolicy = cleaningIsToday
+      ? getSchedulingPolicyState(
+          nextUpcomingCleaning?.scheduledDate,
+          nextUpcomingCleaning?.scheduledTime as string | undefined
+        )
+      : {
+          hoursUntilCleaning: null,
+          canReschedule: true,
+          canCancel: true,
+          canUpgradePlan: true,
+          canDowngradePlan: true,
+          lockReason: null,
+          message: null,
+        };
     const extraCleaningPrice = getExtraCleaningPriceDollars(planId);
 
     let upgradePreview = null;
-    const canUpgradeToBiWeekly =
-      planId === "one-time" &&
-      Boolean(stripeSubscriptionId) &&
-      schedulingPolicy.canUpgradePlan;
+    const canUpgradeToBiWeekly = planId === "one-time" && Boolean(stripeSubscriptionId);
 
     if (canUpgradeToBiWeekly) {
       try {
@@ -138,9 +148,7 @@ export async function GET(req: NextRequest) {
               label: "One-Time Extra Cleaning",
             },
             upgradeToBiWeekly: canUpgradeToBiWeekly ? upgradePreview : null,
-            upgradeBlockedReason: !schedulingPolicy.canUpgradePlan
-              ? schedulingPolicy.message
-              : null,
+            upgradeBlockedReason: null,
           }
         : null,
     });

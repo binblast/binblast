@@ -41,7 +41,7 @@ export function ScheduleLimitBanner({ userId, onUpgradeClick }: ScheduleLimitBan
     setError(null);
     try {
       const response = await fetch(
-        `/api/customer/cleaning-schedule-eligibility?userId=${encodeURIComponent(userId)}`
+        `/api/customer/cleaning-schedule-eligibility?userId=${encodeURIComponent(userId)}&intent=add_cleaning`
       );
       const data = await response.json();
       if (!response.ok) {
