@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useFirebase } from "@/lib/firebase-context";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 import { CleaningLimitModal } from "@/components/CleaningLimitModal";
+import { PLAN_CONFIGS, type PlanId } from "@/lib/stripe-config";
 import {
   buildRecurringPreferenceUpdate,
   formatRecurringScheduleSummary,
@@ -79,6 +80,12 @@ interface EligibilityState {
     daysRemaining: number;
     cleaningCreditsRollover: number;
   } | null;
+}
+
+
+function isPlanLimitMessage(message?: string | null): boolean {
+  if (!message) return false;
+  return message.toLowerCase().includes("plan limit");
 }
 
 export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, initialOpenForNewCleaning = false, onInitialOpenHandled, existingCleaning, userData }: ScheduleCleaningFormProps) {
@@ -194,15 +201,67 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     }
   }, [userId]);
 
-  const presentPlanLimitOptions = (result: EligibilityState) => {
-    setEligibility(result);
-    setShowLimitModal(true);
-    setError(null);
-  };
+  const buildLimitEligibility = useCallback(
+    (partial?: Partial<EligibilityState> | null): EligibilityState => {
+      const planId = (userData?.selectedPlan as PlanId) || "one-time";
+      const planConfig = PLAN_CONFIGS[planId in PLAN_CONFIGS ? planId : "one-time"];
+      const fallbackUpgrade =
+        planId === "one-time"
+          ? {
+              newPlanId: "twice-month",
+              newPlanName: PLAN_CONFIGS["twice-month"].name,
+              newPlanPrice: PLAN_CONFIGS["twice-month"].price,
+              proratedAmount: 0,
+              daysRemaining: 0,
+              cleaningCreditsRollover: 0,
+            }
+          : null;
+
+      return {
+        planName: partial?.planName || planConfig.name,
+        scheduledCount: partial?.scheduledCount ?? eligibility?.scheduledCount ?? 1,
+        baseAllowance: partial?.baseAllowance ?? eligibility?.baseAllowance ?? 1,
+        canScheduleAnother: false,
+        oneTimePrice: partial?.oneTimePrice ?? planLimitState?.oneTimePrice ?? planConfig.price,
+        upgradeBlockedReason:
+          partial?.upgradeBlockedReason ?? eligibility?.upgradeBlockedReason ?? null,
+        upgradePreview:
+          partial?.upgradePreview ?? eligibility?.upgradePreview ?? fallbackUpgrade,
+      };
+    },
+    [eligibility, planLimitState?.oneTimePrice, userData?.selectedPlan]
+  );
+
+  const presentPlanLimitOptions = useCallback(
+    async (partial?: Partial<EligibilityState> | null) => {
+      let resolved = partial ?? null;
+
+      if (!resolved?.upgradePreview || resolved.oneTimePrice == null) {
+        const general = await checkScheduleEligibility();
+        resolved = {
+          ...general,
+          ...resolved,
+          upgradePreview: resolved?.upgradePreview ?? general?.upgradePreview ?? null,
+          oneTimePrice: resolved?.oneTimePrice ?? general?.oneTimePrice,
+          planName: resolved?.planName ?? general?.planName,
+          scheduledCount: resolved?.scheduledCount ?? general?.scheduledCount,
+          baseAllowance: resolved?.baseAllowance ?? general?.baseAllowance,
+          upgradeBlockedReason:
+            resolved?.upgradeBlockedReason ?? general?.upgradeBlockedReason ?? null,
+        };
+      }
+
+      setEligibility(buildLimitEligibility(resolved));
+      setShowLimitModal(true);
+      setError(null);
+    },
+    [buildLimitEligibility, checkScheduleEligibility]
+  );
 
   const refreshPlanLimitState = useCallback(async () => {
     const result = await checkScheduleEligibility();
     if (result) {
+      setEligibility(result);
       setPlanLimitState({
         isAtLimit: !result.canScheduleAnother,
         oneTimePrice: result.oneTimePrice,
@@ -482,8 +541,12 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
 
       if (!isRescheduling) {
         eligibilityResult = await checkScheduleEligibility(selectedDateValue);
-        if (eligibilityResult && !eligibilityResult.canScheduleAnother) {
-          presentPlanLimitOptions(eligibilityResult);
+        const atLimit =
+          (eligibilityResult && !eligibilityResult.canScheduleAnother) ||
+          (!eligibilityResult && planLimitState?.isAtLimit);
+
+        if (atLimit) {
+          await presentPlanLimitOptions(eligibilityResult);
           setLoading(false);
           return;
         }
@@ -591,13 +654,11 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
 
         const scheduleData = await scheduleResponse.json();
         if (!scheduleResponse.ok) {
-          if (scheduleResponse.status === 403) {
+          if (scheduleResponse.status === 403 || isPlanLimitMessage(scheduleData.error)) {
             const refreshedEligibility = await checkScheduleEligibility(selectedDateValue);
-            if (refreshedEligibility) {
-              presentPlanLimitOptions(refreshedEligibility);
-              setLoading(false);
-              return;
-            }
+            await presentPlanLimitOptions(refreshedEligibility);
+            setLoading(false);
+            return;
           }
           throw new Error(scheduleData.error || "Failed to schedule cleaning");
         }
@@ -660,6 +721,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
       }
     } catch (err: any) {
       console.error("Error scheduling cleaning:", err);
+      if (isPlanLimitMessage(err.message)) {
+        await presentPlanLimitOptions(eligibility);
+        return;
+      }
       setError(err.message || "Failed to schedule cleaning. Please try again.");
     } finally {
       setLoading(false);
@@ -756,7 +821,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
         ) : null}
       </div>
 
-      {eligibility && (
+      {showLimitModal && eligibility && (
         <CleaningLimitModal
           isOpen={showLimitModal}
           onClose={() => setShowLimitModal(false)}
@@ -769,6 +834,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
           userId={userId}
           onPurchaseComplete={() => {
             setShowLimitModal(false);
+          }}
+          onUpgradeComplete={() => {
+            setShowLimitModal(false);
+            window.location.reload();
           }}
         />
       )}

@@ -45,6 +45,12 @@ export function CleaningLimitModal({
   const [applyCredit, setApplyCredit] = useState(false);
 
   useEffect(() => {
+    if (!isOpen) return;
+    setStep("options");
+    setError(null);
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!isOpen || !userId) return;
 
     async function loadCredits() {
@@ -63,6 +69,44 @@ export function CleaningLimitModal({
 
     loadCredits();
   }, [isOpen, userId]);
+
+  const [resolvedUpgrade, setResolvedUpgrade] = useState(upgradePreview);
+
+  useEffect(() => {
+    if (!isOpen || !userId) return;
+
+    if (upgradePreview) {
+      setResolvedUpgrade(upgradePreview);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadUpgradePreview() {
+      try {
+        const response = await fetch(
+          `/api/customer/cleaning-schedule-eligibility?userId=${encodeURIComponent(userId)}`
+        );
+        const data = await response.json();
+        if (!response.ok || cancelled) return;
+        setResolvedUpgrade(data.options?.upgradeToBiWeekly || null);
+      } catch (previewError) {
+        console.error("[CleaningLimitModal] Failed to load upgrade preview:", previewError);
+      }
+    }
+
+    loadUpgradePreview();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, userId, upgradePreview]);
+
+  const activeUpgrade = resolvedUpgrade || upgradePreview;
+
+  const checkoutPrice =
+    applyCredit && availableCredit > 0
+      ? Math.max(0, oneTimePrice - Math.min(10, availableCredit))
+      : oneTimePrice;
 
   if (!isOpen) return null;
 
@@ -100,7 +144,7 @@ export function CleaningLimitModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId,
-          newPlanId: upgradePreview?.newPlanId || "twice-month",
+          newPlanId: activeUpgrade?.newPlanId || "twice-month",
         }),
       });
       const data = await response.json();
@@ -129,54 +173,70 @@ export function CleaningLimitModal({
 
   return (
     <div
+      className="cleaning-limit-modal"
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(15, 23, 42, 0.55)",
+        background: "rgba(15, 23, 42, 0.65)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: "1rem",
-        zIndex: 1000,
+        zIndex: 10000,
       }}
       onClick={handleClose}
     >
       <div
+        className="cleaning-limit-modal__panel"
         style={{
           background: "#ffffff",
-          borderRadius: "16px",
-          padding: "clamp(1.25rem, 4vw, 1.75rem)",
-          maxWidth: "480px",
+          borderRadius: "20px",
+          padding: "clamp(1.25rem, 4vw, 2rem)",
+          maxWidth: "520px",
           width: "100%",
-          boxShadow: "0 20px 40px rgba(15, 23, 42, 0.18)",
+          boxShadow: "0 24px 48px rgba(15, 23, 42, 0.22)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {step === "options" ? (
           <>
+            <p
+              style={{
+                margin: "0 0 0.5rem",
+                fontSize: "0.8125rem",
+                fontWeight: "700",
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: "#ea580c",
+              }}
+            >
+              Plan limit reached
+            </p>
             <h2
               style={{
                 margin: "0 0 0.75rem",
-                fontSize: "1.25rem",
-                fontWeight: "700",
+                fontSize: "1.5rem",
+                fontWeight: "800",
                 color: "#111827",
+                lineHeight: 1.25,
               }}
             >
-              Cleaning Limit Reached
+              Need another cleaning this month?
             </h2>
-            <p style={{ margin: "0 0 1rem", color: "#4b5563", lineHeight: 1.5 }}>
+            <p style={{ margin: "0 0 1rem", color: "#4b5563", lineHeight: 1.55 }}>
               Your <strong>{planName}</strong> includes {baseAllowance} cleaning
-              {baseAllowance === 1 ? "" : "s"} per month. You already
-              have {scheduledCount} scheduled for this month.
+              {baseAllowance === 1 ? "" : "s"} per month. You already have {scheduledCount} on the
+              calendar for this month.
             </p>
             <p
               style={{
                 margin: "0 0 1.25rem",
-                color: "#6b7280",
-                fontSize: "0.9375rem",
+                color: "#111827",
+                fontSize: "0.975rem",
+                fontWeight: "600",
               }}
             >
-              Choose how you&apos;d like to add another cleaning this month:
+              Pick one to keep going:
             </p>
 
             <button
@@ -186,20 +246,22 @@ export function CleaningLimitModal({
               style={{
                 width: "100%",
                 marginBottom: "0.75rem",
-                padding: "0.875rem 1rem",
-                borderRadius: "10px",
-                border: "1px solid #e5e7eb",
-                background: "#ffffff",
-                color: "#111827",
-                fontWeight: "600",
+                padding: "1rem 1.125rem",
+                borderRadius: "12px",
+                border: "none",
+                background: loading ? "#9ca3af" : "#ea580c",
+                color: "#ffffff",
+                fontWeight: "800",
+                fontSize: "1rem",
                 cursor: loading ? "not-allowed" : "pointer",
+                boxShadow: "0 8px 20px rgba(234, 88, 12, 0.28)",
               }}
             >
               {loading
-                ? "Redirecting..."
+                ? "Redirecting to checkout..."
                 : applyCredit && availableCredit > 0
-                  ? `Stripe checkout — $${Math.max(0, oneTimePrice - Math.min(10, availableCredit)).toFixed(2)} (with $${Math.min(10, availableCredit).toFixed(2)} credit)`
-                  : `Stripe checkout — $${oneTimePrice.toFixed(2)}`}
+                  ? `Pay $${checkoutPrice.toFixed(2)} — Add extra cleaning`
+                  : `Pay $${oneTimePrice.toFixed(2)} — Add extra cleaning`}
             </button>
 
             {availableCredit > 0 && (
@@ -221,29 +283,30 @@ export function CleaningLimitModal({
                   style={{ marginTop: "0.2rem" }}
                 />
                 <span>
-                  Apply ${Math.min(10, availableCredit).toFixed(2)} referral credit from your
-                  account (${availableCredit.toFixed(2)} available)
+                  Apply ${Math.min(10, availableCredit).toFixed(2)} referral credit (${availableCredit.toFixed(2)}{" "}
+                  available)
                 </span>
               </label>
             )}
 
-            {upgradePreview && (
+            {activeUpgrade && (
               <button
                 type="button"
                 onClick={() => setStep("upgrade-warning")}
                 disabled={loading || Boolean(upgradeBlockedReason)}
                 style={{
                   width: "100%",
-                  padding: "0.875rem 1rem",
-                  borderRadius: "10px",
-                  border: "none",
-                  background: upgradeBlockedReason ? "#9ca3af" : "#16a34a",
-                  color: "#ffffff",
+                  padding: "1rem 1.125rem",
+                  borderRadius: "12px",
+                  border: "2px solid #16a34a",
+                  background: upgradeBlockedReason ? "#f3f4f6" : "#ffffff",
+                  color: upgradeBlockedReason ? "#9ca3af" : "#166534",
                   fontWeight: "700",
+                  fontSize: "0.975rem",
                   cursor: loading || upgradeBlockedReason ? "not-allowed" : "pointer",
                 }}
               >
-                Upgrade to {upgradePreview.newPlanName} — ${upgradePreview.newPlanPrice}/month
+                Upgrade to {activeUpgrade.newPlanName} — ${activeUpgrade.newPlanPrice}/month
               </button>
             )}
 
@@ -291,21 +354,21 @@ export function CleaningLimitModal({
               }}
             >
               <p style={{ margin: 0, color: "#92400e", lineHeight: 1.5 }}>
-                You are upgrading to <strong>{upgradePreview?.newPlanName}</strong>.
-                {upgradePreview && upgradePreview.proratedAmount > 0 ? (
+                You are upgrading to <strong>{activeUpgrade?.newPlanName}</strong>.
+                {activeUpgrade && activeUpgrade.proratedAmount > 0 ? (
                   <>
                     {" "}
                     Your card on file will be charged{" "}
-                    <strong>${upgradePreview.proratedAmount.toFixed(2)}</strong>{" "}
+                    <strong>${activeUpgrade.proratedAmount.toFixed(2)}</strong>{" "}
                     today for the prorated difference based on what you&apos;ve
-                    already paid this billing period ({upgradePreview.daysRemaining}{" "}
+                    already paid this billing period ({activeUpgrade.daysRemaining}{" "}
                     days remaining).
                   </>
                 ) : (
                   <> No additional charge is required today.</>
                 )}
               </p>
-              {upgradePreview && upgradePreview.cleaningCreditsRollover > 0 && (
+              {activeUpgrade && activeUpgrade.cleaningCreditsRollover > 0 && (
                 <p
                   style={{
                     margin: "0.75rem 0 0",
@@ -313,8 +376,8 @@ export function CleaningLimitModal({
                     fontSize: "0.875rem",
                   }}
                 >
-                  {upgradePreview.cleaningCreditsRollover} unused cleaning credit
-                  {upgradePreview.cleaningCreditsRollover > 1 ? "s" : ""} will roll
+                  {activeUpgrade.cleaningCreditsRollover} unused cleaning credit
+                  {activeUpgrade.cleaningCreditsRollover > 1 ? "s" : ""} will roll
                   over to your new plan.
                 </p>
               )}
