@@ -8,7 +8,8 @@ import { CleaningLimitModal } from "@/components/CleaningLimitModal";
 import { appendStandardPrepNote } from "@/lib/cleaning-readiness";
 import {
   buildRecurringPreferenceUpdate,
-  formatRecurringDayLabel,
+  formatRecurringScheduleSummary,
+  getPlanRecurringHint,
   getNextOccurrenceOfWeekday,
   formatDateForFormInput,
 } from "@/lib/recurring-preference";
@@ -247,7 +248,14 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     }
   }, [existingCleaning, userData?.preferredDayOfWeek, selectedDateValue]);
 
-  const recurringDayLabel = formatRecurringDayLabel(userData?.preferredDayOfWeek);
+  const recurringScheduleSummary = formatRecurringScheduleSummary(
+    userData?.selectedPlan,
+    trashDay || userData?.preferredDayOfWeek
+  );
+  const recurringHint = getPlanRecurringHint(
+    userData?.selectedPlan,
+    trashDay || userData?.preferredDayOfWeek
+  );
 
   const syncUserRecurringPreference = async (
     firestore: Awaited<ReturnType<typeof import("@/lib/firebase-module-loader").safeImportFirestore>>,
@@ -732,17 +740,15 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
 
           <CleaningReadinessBanner variant="customer" />
 
-          {recurringDayLabel ? (
-            <p className="customer-dash-recurring-note">
-              Your recurring cleaning day is <strong>{recurringDayLabel}</strong>. Future visits
-              follow this day unless you change or cancel it here.
-            </p>
-          ) : (
-            <p className="customer-dash-recurring-note">
-              Pick the weekday you want us every month. That day stays on your account until you
-              change or cancel it.
-            </p>
-          )}
+          <p className="customer-dash-recurring-note">
+            {recurringScheduleSummary ? (
+              <>
+                Your recurring schedule is <strong>{recurringScheduleSummary}</strong>. {recurringHint}
+              </>
+            ) : (
+              recurringHint
+            )}
+          </p>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             {/* Recurring cleaning day */}
@@ -785,7 +791,11 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
                     day: "numeric", 
                     year: "numeric" 
                   })}
-                  {trashDay ? ` · Repeats every ${trashDay}` : ""}
+                  {trashDay && userData?.selectedPlan
+                    ? ` · ${formatRecurringScheduleSummary(userData.selectedPlan, trashDay) ?? `Repeats every ${trashDay}`}`
+                    : trashDay
+                      ? ` · Repeats every ${trashDay}`
+                      : ""}
                 </p>
               )}
             </div>

@@ -5,6 +5,7 @@ import {
   STAFF_CURB_REMINDER,
   TRASH_CAN_PREP_REMINDER,
 } from "@/lib/cleaning-readiness";
+import { formatRecurringDayLabel, formatRecurringScheduleSummary } from "@/lib/recurring-preference";
 
 type Variant = "customer" | "staff" | "compact";
 
@@ -56,32 +57,46 @@ export function CleaningJobPrepDetails({
   binsCount,
   scheduledTime,
   trashDay,
+  planId,
   notes,
   internalNotes,
   showInternalNotes = false,
+  showScheduleFields = true,
 }: {
   binsCount?: number;
   scheduledTime?: string;
   trashDay?: string;
+  planId?: string | null;
   notes?: string;
   internalNotes?: string;
   showInternalNotes?: boolean;
+  /** When false, time/trash are omitted (shown on the parent card instead). */
+  showScheduleFields?: boolean;
 }) {
+  const recurringSummary =
+    showScheduleFields && planId && trashDay
+      ? formatRecurringScheduleSummary(planId, trashDay)
+      : null;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", marginTop: "0.5rem" }}>
       <div style={{ fontSize: "0.8125rem", color: "#374151" }}>
         <strong>Bins to clean:</strong> {binsCount || 1}
       </div>
-      {scheduledTime && (
+      {showScheduleFields && scheduledTime && (
         <div style={{ fontSize: "0.8125rem", color: "#374151" }}>
           <strong>Time window:</strong> {scheduledTime}
         </div>
       )}
-      {trashDay && (
+      {recurringSummary ? (
         <div style={{ fontSize: "0.8125rem", color: "#374151" }}>
-          <strong>Trash day:</strong> {trashDay}
+          <strong>Recurring schedule:</strong> {recurringSummary}
         </div>
-      )}
+      ) : showScheduleFields && trashDay ? (
+        <div style={{ fontSize: "0.8125rem", color: "#374151" }}>
+          <strong>Recurring day:</strong> {formatRecurringDayLabel(trashDay)}
+        </div>
+      ) : null}
       {notes && (
         <div style={{ fontSize: "0.8125rem", color: "#6b7280", fontStyle: "italic" }}>
           <strong>Customer notes:</strong> {notes}

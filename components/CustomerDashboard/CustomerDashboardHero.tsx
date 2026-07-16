@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
+import {
+  formatRecurringScheduleSummary,
+  getPlanRecurringFrequencyLabel,
+} from "@/lib/recurring-preference";
 
 interface NextCleaningSummary {
   dateLabel: string;
@@ -16,6 +20,7 @@ interface CustomerDashboardHeroProps {
   cleaningCredits?: number;
   nextCleaning?: NextCleaningSummary | null;
   recurringDay?: string;
+  planId?: string | null;
   onScheduleClick?: () => void;
 }
 
@@ -26,6 +31,7 @@ export function CustomerDashboardHero({
   cleaningCredits = 0,
   nextCleaning,
   recurringDay,
+  planId,
   onScheduleClick,
 }: CustomerDashboardHeroProps) {
   const rawName = firstName?.trim();
@@ -34,6 +40,8 @@ export function CustomerDashboardHero({
     : "there";
   const hasPlan = planLabel !== "No plan yet";
   const isPaid = paymentStatus === "paid";
+  const recurringScheduleSummary = formatRecurringScheduleSummary(planId, recurringDay);
+  const planFrequencyLabel = getPlanRecurringFrequencyLabel(planId);
 
   return (
     <section className="customer-dash-hero" aria-label="Dashboard overview">
@@ -59,10 +67,10 @@ export function CustomerDashboardHero({
           {nextCleaning?.timeWindow ? (
             <span className="customer-dash-stat__meta">
               {nextCleaning.timeWindow}
-              {nextCleaning.recurringDay ? ` · Every ${nextCleaning.recurringDay}` : ""}
+              {recurringScheduleSummary ? ` · ${recurringScheduleSummary}` : ""}
             </span>
-          ) : recurringDay ? (
-            <span className="customer-dash-stat__meta">Recurring day: Every {recurringDay}</span>
+          ) : recurringScheduleSummary ? (
+            <span className="customer-dash-stat__meta">{recurringScheduleSummary}</span>
           ) : (
             <span className="customer-dash-stat__meta">Book a visit when you&apos;re ready</span>
           )}
@@ -74,6 +82,9 @@ export function CustomerDashboardHero({
           <span className={`customer-dash-stat__badge${isPaid ? " customer-dash-stat__badge--paid" : ""}`}>
             {hasPlan ? (isPaid ? "Active & paid" : "Payment pending") : "Choose a plan"}
           </span>
+          {planFrequencyLabel ? (
+            <span className="customer-dash-stat__meta">{planFrequencyLabel}</span>
+          ) : null}
         </article>
 
         <article className="customer-dash-stat">

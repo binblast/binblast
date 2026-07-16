@@ -35,6 +35,7 @@ import type { ScheduleJob, ScheduleStaffMember } from "@/lib/schedule-board";
 import type { CustomerSubTab } from "@/lib/operator-customers";
 import { PortalBrandHeader } from "@/components/PortalBrandHeader";
 import { CustomerDashboardHero } from "@/components/CustomerDashboard/CustomerDashboardHero";
+import { formatRecurringScheduleSummary } from "@/lib/recurring-preference";
 
 const OwnerCommandCenter = dynamic(
   () => import("@/components/OwnerDashboard/OwnerCommandCenter").then((m) => m.OwnerCommandCenter),
@@ -2520,6 +2521,7 @@ function DashboardPageContent() {
                   cleaningCredits={cleaningAccountSummary?.cleaningCredits ?? user.cleaningCredits ?? 0}
                   nextCleaning={customerNextCleaningSummary}
                   recurringDay={user.preferredDayOfWeek}
+                  planId={user.selectedPlan}
                   onScheduleClick={() => scrollToSection(scheduleSectionRef)}
                 />
               )}
@@ -4115,8 +4117,9 @@ function DashboardPageContent() {
                 <div className="customer-dash-card__header customer-dash-card__header--accent">
                   <h2 className="customer-dash-card__title">Schedule a Cleaning</h2>
                   <p className="customer-dash-card__subtitle">
-                    Pick your recurring cleaning day and confirm your address below. That weekday
-                    stays on your account until you change or cancel it.
+                    {user.selectedPlan
+                      ? `Pick your recurring cleaning day and confirm your address below. Your schedule matches your ${PLAN_NAMES[user.selectedPlan] || "plan"} package until you change or cancel it.`
+                      : "Pick your recurring cleaning day and confirm your address below. That weekday stays on your account until you change or cancel it."}
                   </p>
                 </div>
                 {scheduleActionMessage && (
@@ -4566,11 +4569,19 @@ function DashboardPageContent() {
                               <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
                                 <strong>Address:</strong> {cleaning.addressLine1}{cleaning.addressLine2 ? `, ${cleaning.addressLine2}` : ""}, {cleaning.city}, {cleaning.state} {cleaning.zipCode}
                               </div>
-                              {cleaning.trashDay && (
-                                <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
-                                  <strong>Recurring day:</strong> Every {cleaning.trashDay}
-                                </div>
-                              )}
+                              {(() => {
+                                const planId = customer?.selectedPlan || user?.selectedPlan;
+                                const scheduleSummary = formatRecurringScheduleSummary(
+                                  planId,
+                                  cleaning.trashDay || user?.preferredDayOfWeek
+                                );
+                                if (!scheduleSummary) return null;
+                                return (
+                                  <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
+                                    <strong>Recurring schedule:</strong> {scheduleSummary}
+                                  </div>
+                                );
+                              })()}
                               {customer && (
                                 <div style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: "0.5rem" }}>
                                   {customer.selectedPlan ? (PLAN_NAMES[customer.selectedPlan] || customer.selectedPlan) : "No plan"} • {customer.source === "partner" ? "Partner" : "Direct"}
@@ -4578,10 +4589,11 @@ function DashboardPageContent() {
                               )}
                               <CleaningJobPrepDetails
                                 binsCount={cleaning.binsCount || user?.binsCount || 1}
-                                scheduledTime={cleaning.scheduledTime}
-                                trashDay={cleaning.trashDay}
+                                planId={customer?.selectedPlan || user?.selectedPlan}
+                                trashDay={cleaning.trashDay || user?.preferredDayOfWeek}
                                 notes={cleaning.notes}
                                 showInternalNotes={isAdmin}
+                                showScheduleFields={isAdmin}
                                 internalNotes={(cleaning as any).internalNotes}
                               />
                             </div>
