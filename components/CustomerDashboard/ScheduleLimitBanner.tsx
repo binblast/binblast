@@ -87,8 +87,8 @@ export function ScheduleLimitBanner({ userId, onUpgradeClick }: ScheduleLimitBan
         <strong>Plan limit reached</strong>
         <p>
           Your <span>{planName}</span> includes {baseAllowance} cleaning
-          {baseAllowance === 1 ? "" : "s"} this billing period. You already have {scheduledCount}{" "}
-          scheduled. Pay for an extra visit or upgrade to add another cleaning.
+          {baseAllowance === 1 ? "" : "s"} this month. You already have {scheduledCount}{" "}
+          scheduled. Pay for an extra visit at full price or upgrade to add another cleaning.
         </p>
       </div>
       <div className="customer-schedule-limit__actions">

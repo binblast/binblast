@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await assertCanScheduleAnotherCleaning(userId);
+    await assertCanScheduleAnotherCleaning(userId, scheduledDate);
 
     const { allocation } = await loadUserSchedulingContext(userId);
     const db = await getAdminFirestore();

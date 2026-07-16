@@ -5,7 +5,6 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useFirebase } from "@/lib/firebase-context";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 import { CleaningLimitModal } from "@/components/CleaningLimitModal";
-import { startExtraCleaningCheckout } from "@/lib/extra-cleaning-checkout";
 import {
   buildRecurringPreferenceUpdate,
   formatRecurringScheduleSummary,
@@ -167,10 +166,14 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     oneTimePrice: number;
   } | null>(null);
 
-  const checkScheduleEligibility = useCallback(async (): Promise<EligibilityState | null> => {
+  const checkScheduleEligibility = useCallback(async (scheduledDate?: string): Promise<EligibilityState | null> => {
     try {
+      const params = new URLSearchParams({ userId });
+      if (scheduledDate) {
+        params.set("scheduledDate", scheduledDate);
+      }
       const response = await fetch(
-        `/api/customer/cleaning-schedule-eligibility?userId=${encodeURIComponent(userId)}`
+        `/api/customer/cleaning-schedule-eligibility?${params.toString()}`
       );
       if (!response.ok) {
         return null;
@@ -190,6 +193,12 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
       return null;
     }
   }, [userId]);
+
+  const presentPlanLimitOptions = (result: EligibilityState) => {
+    setEligibility(result);
+    setShowLimitModal(true);
+    setError(null);
+  };
 
   const refreshPlanLimitState = useCallback(async () => {
     const result = await checkScheduleEligibility();
@@ -213,23 +222,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     }
 
     setCheckingEligibility(true);
-    const result = await refreshPlanLimitState();
+    await refreshPlanLimitState();
     setCheckingEligibility(false);
-
-    if (result && !result.canScheduleAnother) {
-      setEligibility(result);
-      setError(null);
-      const checkout = await startExtraCleaningCheckout(userId);
-      if (checkout.error) {
-        if (result.upgradePreview) {
-          setShowLimitModal(true);
-        } else {
-          setError(checkout.error);
-        }
-      }
-      return;
-    }
-
     setIsRescheduling(false);
     setIsOpen(true);
   };
@@ -242,16 +236,6 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     async function openAfterEligibilityCheck() {
       const result = await refreshPlanLimitState();
       if (cancelled) return;
-
-      if (result && !result.canScheduleAnother) {
-        setEligibility(result);
-        const checkout = await startExtraCleaningCheckout(userId);
-        if (checkout.error && result.upgradePreview) {
-          setShowLimitModal(true);
-        }
-        onInitialOpenHandled?.();
-        return;
-      }
 
       setIsRescheduling(false);
       setIsOpen(true);
@@ -497,10 +481,9 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
       let eligibilityResult: EligibilityState | null = null;
 
       if (!isRescheduling) {
-        eligibilityResult = await checkScheduleEligibility();
+        eligibilityResult = await checkScheduleEligibility(selectedDateValue);
         if (eligibilityResult && !eligibilityResult.canScheduleAnother) {
-          setEligibility(eligibilityResult);
-          setShowLimitModal(true);
+          presentPlanLimitOptions(eligibilityResult);
           setLoading(false);
           return;
         }
@@ -609,10 +592,11 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
         const scheduleData = await scheduleResponse.json();
         if (!scheduleResponse.ok) {
           if (scheduleResponse.status === 403) {
-            const refreshedEligibility = await checkScheduleEligibility();
+            const refreshedEligibility = await checkScheduleEligibility(selectedDateValue);
             if (refreshedEligibility) {
-              setEligibility(refreshedEligibility);
-              setShowLimitModal(true);
+              presentPlanLimitOptions(refreshedEligibility);
+              setLoading(false);
+              return;
             }
           }
           throw new Error(scheduleData.error || "Failed to schedule cleaning");
@@ -753,24 +737,21 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
       <div className="customer-schedule-actions">
         <button
           onClick={handleScheduleAnotherClick}
-          className={`btn btn-primary customer-schedule-actions__primary${
-            planLimitState?.isAtLimit ? " customer-schedule-actions__primary--checkout" : ""
-          }`}
+          className="btn btn-primary customer-schedule-actions__primary"
           disabled={checkingEligibility}
         >
           {checkingEligibility
             ? "Checking..."
             : isOpen
               ? "Cancel"
-              : planLimitState?.isAtLimit
-                ? `Pay $${planLimitState.oneTimePrice.toFixed(2)} — Stripe checkout`
-                : existingCleaning
-                  ? "Schedule another cleaning"
-                  : "Schedule cleaning"}
+              : existingCleaning
+                ? "Schedule another cleaning"
+                : "Schedule cleaning"}
         </button>
         {planLimitState?.isAtLimit && !isOpen ? (
           <p className="customer-schedule-actions__hint">
-            Your plan limit is reached. Checkout adds one extra cleaning credit for this billing period.
+            Your monthly cleaning is already scheduled. Purchase an extra cleaning at full price or upgrade
+            your plan to add another visit this month.
           </p>
         ) : null}
       </div>
@@ -1037,6 +1018,20 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
               </div>
             )}
 
+            {!isRescheduling && planLimitState?.isAtLimit ? (
+              <div style={{
+                padding: "0.75rem 1rem",
+                background: "#fffbeb",
+                border: "1px solid #fde68a",
+                borderRadius: "8px",
+                color: "#92400e",
+                fontSize: "0.875rem",
+                lineHeight: 1.5,
+              }}>
+                This month is already at your plan limit. Submitting will offer a one-time purchase at full
+                price or a plan upgrade before another visit can be added.
+              </div>
+            ) : null}
 
             <button
               type="submit"

@@ -97,19 +97,6 @@ export function CustomerUpcomingCleanings({
         </div>
       )}
 
-      {partitions.duplicates.length > 0 ? (
-        <section className="customer-cleaning-groups customer-cleaning-groups--duplicate">
-          <div className="customer-cleaning-groups__header">
-            <h4 className="customer-cleaning-groups__title">Duplicate bookings removed</h4>
-            <p className="customer-cleaning-groups__subtitle">
-              {partitions.duplicates.length} duplicate booking
-              {partitions.duplicates.length === 1 ? "" : "s"} for the same day and time{" "}
-              {partitions.duplicates.length === 1 ? "was" : "were"} hidden. Only one visit is performed per time
-              slot.
-            </p>
-          </div>
-        </section>
-      ) : null}
     </>
   );
 }

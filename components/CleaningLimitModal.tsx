@@ -166,8 +166,8 @@ export function CleaningLimitModal({
             </h2>
             <p style={{ margin: "0 0 1rem", color: "#4b5563", lineHeight: 1.5 }}>
               Your <strong>{planName}</strong> includes {baseAllowance} cleaning
-              {baseAllowance === 1 ? "" : "s"} per billing period. You already
-              have {scheduledCount} scheduled for this period.
+              {baseAllowance === 1 ? "" : "s"} per month. You already
+              have {scheduledCount} scheduled for this month.
             </p>
             <p
               style={{
@@ -176,7 +176,7 @@ export function CleaningLimitModal({
                 fontSize: "0.9375rem",
               }}
             >
-              Choose how you&apos;d like to add another cleaning at your plan rate:
+              Choose how you&apos;d like to add another cleaning this month:
             </p>
 
             <button

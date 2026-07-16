@@ -1,5 +1,5 @@
 import { getAdminFirestore } from "./firebase-admin";
-import { buildCleaningAllocation } from "./cleaning-allocation";
+import { buildCleaningAllocation, canScheduleOnDate, planUsesCalendarMonthLimits } from "./cleaning-allocation";
 import {
   canModifyScheduledCleaning,
   canUpgradeWithUpcomingCleaning,
@@ -78,12 +78,25 @@ export async function loadUserSchedulingContext(userId: string) {
   };
 }
 
-export async function assertCanScheduleAnotherCleaning(userId: string) {
-  const { allocation } = await loadUserSchedulingContext(userId);
+export async function assertCanScheduleAnotherCleaning(
+  userId: string,
+  scheduledDate?: unknown
+) {
+  const { allocation, cleanings, planId } = await loadUserSchedulingContext(userId);
+  const cleaningCredits = allocation.cleaningCredits;
+
+  if (scheduledDate && planUsesCalendarMonthLimits(planId)) {
+    if (!canScheduleOnDate(planId, cleanings, scheduledDate, cleaningCredits)) {
+      throw new Error(
+        "You have reached your plan limit for this month. Purchase an extra cleaning at full price or upgrade your plan to schedule another visit."
+      );
+    }
+    return;
+  }
 
   if (!allocation.canScheduleAnother) {
     throw new Error(
-      "You have reached your plan limit for this billing period. Purchase an extra cleaning or upgrade your plan to schedule another visit."
+      "You have reached your plan limit for this month. Purchase an extra cleaning at full price or upgrade your plan to schedule another visit."
     );
   }
 }

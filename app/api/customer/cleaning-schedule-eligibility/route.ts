@@ -65,12 +65,15 @@ export async function GET(req: NextRequest) {
       ...doc.data(),
     }));
 
+    const scheduledDate = req.nextUrl.searchParams.get("scheduledDate");
+
     const allocation = buildCleaningAllocation(
       planId,
       billingPeriodStart,
       billingPeriodEnd,
       cleanings,
-      cleaningCredits
+      cleaningCredits,
+      scheduledDate ? { targetScheduleDate: scheduledDate } : undefined
     );
 
     const nextUpcomingCleaning = getNextUpcomingCleaning(cleanings);
