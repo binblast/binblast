@@ -5,6 +5,9 @@ export const SITE_URL =
 
 export const SITE_NAME = "Bin Blast Co.";
 
+/** Meta / Facebook Open Graph app ID (developers.facebook.com → your app → Settings → Basic). */
+export const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID?.trim() || "";
+
 export const DEFAULT_TITLE =
   "Trash Bin Cleaning in Metro Atlanta | Bin Blast Co.";
 
