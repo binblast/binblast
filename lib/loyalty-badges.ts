@@ -99,6 +99,8 @@ export function getLoyaltyRankSummary(completedServices: number) {
 
   return {
     title,
+    shortTitle: unlocked?.name ?? "Getting Started",
+    rankLevel: unlocked?.level ?? null,
     meta,
     color: unlocked?.color ?? "#6b7280",
     bgColor: unlocked?.bgColor ?? "#f9fafb",

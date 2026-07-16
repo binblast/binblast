@@ -104,12 +104,26 @@ export function CustomerDashboardHero({
           }}
         >
           <span className="customer-dash-stat__label">Current rank</span>
-          <strong className="customer-dash-stat__value" style={{ color: rankSummary.color }}>
-            {rankSummary.title}
+          <strong
+            className="customer-dash-stat__value customer-dash-stat__value--rank"
+            style={{ color: rankSummary.color }}
+          >
+            {rankSummary.rankLevel ? (
+              <>
+                <span className="customer-dash-stat__rank-level">Level {rankSummary.rankLevel}</span>
+                <span className="customer-dash-stat__rank-name">{rankSummary.shortTitle}</span>
+              </>
+            ) : (
+              rankSummary.title
+            )}
           </strong>
           <span className="customer-dash-stat__meta">{rankSummary.meta}</span>
           {onViewRankClick ? (
-            <button type="button" className="customer-dash-stat__link" onClick={onViewRankClick}>
+            <button
+              type="button"
+              className="customer-dash-stat__link customer-dash-stat__link--action"
+              onClick={onViewRankClick}
+            >
               View badges & progress
             </button>
           ) : null}

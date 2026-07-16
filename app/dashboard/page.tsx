@@ -4704,7 +4704,7 @@ function DashboardPageContent() {
 
             {/* (F) Loyalty Badges - Hidden for admin */}
             {!isAdmin && userId && (
-              <div ref={rewardsSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
+              <div ref={rewardsSectionRef} className="customer-dash-rewards-anchor">
                 <LoyaltyBadges userId={userId} />
               </div>
             )}
