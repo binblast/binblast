@@ -1,5 +1,5 @@
-// app/api/cleanings/[cleaningId]/update/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { buildRecurringPreferenceUpdate } from "@/lib/recurring-preference";
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +20,7 @@ export async function PUT(
       state,
       zipCode,
       trashDay,
+      scheduledDate,
       scheduledTime,
       notes,
     } = body;
@@ -31,15 +32,6 @@ export async function PUT(
       );
     }
 
-    // Get user from auth header or session
-    const authHeader = req.headers.get("authorization");
-    let userId: string | null = null;
-
-    if (authHeader) {
-      // Extract user ID from auth header if needed
-      // For now, we'll get it from the cleaning document
-    }
-
     const db = await getDbInstance();
     if (!db) {
       return NextResponse.json(
@@ -48,7 +40,6 @@ export async function PUT(
       );
     }
 
-    // Get the cleaning document
     const cleaningDocRef = doc(db, "scheduledCleanings", cleaningId);
     const cleaningDoc = await getDoc(cleaningDocRef);
 
@@ -60,14 +51,8 @@ export async function PUT(
     }
 
     const cleaningData = cleaningDoc.data();
-    
-    // Get userId from cleaning document (for now, we'll allow updates if user matches)
-    // In production, you'd want to verify the user is authenticated and matches
-    userId = cleaningData.userId;
+    const userId = cleaningData.userId as string | undefined;
 
-    // Rescheduling is now allowed at any time - no time restriction
-
-    // Check if cleaning is already completed or cancelled
     if (cleaningData.status === "completed" || cleaningData.status === "cancelled") {
       return NextResponse.json(
         { error: "Cannot edit completed or cancelled cleanings" },
@@ -75,7 +60,6 @@ export async function PUT(
       );
     }
 
-    // Validate required fields
     if (!addressLine1 || !city || !state || !zipCode || !trashDay || !scheduledTime) {
       return NextResponse.json(
         { error: "All required fields must be provided" },
@@ -83,8 +67,7 @@ export async function PUT(
       );
     }
 
-    // Update the cleaning document
-    await updateDoc(cleaningDocRef, {
+    const cleaningUpdate: Record<string, unknown> = {
       addressLine1,
       addressLine2: addressLine2 || null,
       city,
@@ -94,7 +77,29 @@ export async function PUT(
       scheduledTime,
       notes: notes || null,
       updatedAt: serverTimestamp(),
-    });
+    };
+
+    if (scheduledDate) {
+      cleaningUpdate.scheduledDate = scheduledDate;
+    }
+
+    await updateDoc(cleaningDocRef, cleaningUpdate);
+
+    if (userId) {
+      const userDocRef = doc(db, "users", userId);
+      await updateDoc(userDocRef, {
+        ...buildRecurringPreferenceUpdate({
+          preferredDayOfWeek: trashDay,
+          preferredTimeWindow: scheduledTime,
+          addressLine1,
+          addressLine2: addressLine2 || null,
+          city,
+          state,
+          zipCode,
+        }),
+        updatedAt: serverTimestamp(),
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -108,4 +113,3 @@ export async function PUT(
     );
   }
 }
-

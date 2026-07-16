@@ -161,6 +161,13 @@ interface UserData {
   binsCount?: number;
   cleaningCredits?: number;
   role?: string; // "admin" | "customer" | "partner"
+  preferredDayOfWeek?: string;
+  preferredTimeWindow?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
   createdAt?: any;
   partnerAccepted?: boolean;
   partnerAccountCreated?: boolean;
@@ -1409,6 +1416,7 @@ function DashboardPageContent() {
           day: "numeric",
         }),
         timeWindow: nextCleaning.scheduledTime || undefined,
+        recurringDay: nextCleaning.trashDay || user?.preferredDayOfWeek,
       }
     : null;
 
@@ -2511,6 +2519,7 @@ function DashboardPageContent() {
                   paymentStatus={user.paymentStatus}
                   cleaningCredits={cleaningAccountSummary?.cleaningCredits ?? user.cleaningCredits ?? 0}
                   nextCleaning={customerNextCleaningSummary}
+                  recurringDay={user.preferredDayOfWeek}
                   onScheduleClick={() => scrollToSection(scheduleSectionRef)}
                 />
               )}
@@ -4106,7 +4115,8 @@ function DashboardPageContent() {
                 <div className="customer-dash-card__header customer-dash-card__header--accent">
                   <h2 className="customer-dash-card__title">Schedule a Cleaning</h2>
                   <p className="customer-dash-card__subtitle">
-                    Pick your preferred cleaning day and confirm your address below.
+                    Pick your recurring cleaning day and confirm your address below. That weekday
+                    stays on your account until you change or cancel it.
                   </p>
                 </div>
                 {scheduleActionMessage && (
@@ -4144,6 +4154,13 @@ function DashboardPageContent() {
                     stripeCustomerId: user.stripeCustomerId || undefined,
                     stripeSubscriptionId: user.stripeSubscriptionId || undefined,
                     cleaningCredits: user.cleaningCredits || 0,
+                    preferredDayOfWeek: user.preferredDayOfWeek,
+                    preferredTimeWindow: user.preferredTimeWindow || user.pendingCleaningData?.preferredTimeWindow,
+                    addressLine1: user.addressLine1 || user.pendingCleaningData?.addressLine1,
+                    addressLine2: user.addressLine2 || user.pendingCleaningData?.addressLine2,
+                    city: user.city || user.pendingCleaningData?.city,
+                    state: user.state || user.pendingCleaningData?.state,
+                    zipCode: user.zipCode || user.pendingCleaningData?.zipCode,
                   }}
                   existingCleaning={(() => {
                     // If user has pending cleaning data, use that to pre-fill the form
@@ -4549,9 +4566,9 @@ function DashboardPageContent() {
                               <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
                                 <strong>Address:</strong> {cleaning.addressLine1}{cleaning.addressLine2 ? `, ${cleaning.addressLine2}` : ""}, {cleaning.city}, {cleaning.state} {cleaning.zipCode}
                               </div>
-                              {cleaning.preferredCleaningDay && (
+                              {cleaning.trashDay && (
                                 <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>
-                                  <strong>Preferred Cleaning Day:</strong> {cleaning.preferredCleaningDay}
+                                  <strong>Recurring day:</strong> Every {cleaning.trashDay}
                                 </div>
                               )}
                               {customer && (

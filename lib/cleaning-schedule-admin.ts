@@ -1,4 +1,5 @@
 import { getAdminFirestore } from "@/lib/firebase-admin";
+import { resolveStickyCleaningDay } from "@/lib/recurring-preference";
 import {
   CleaningRecord,
   computeNextCleaningDate,
@@ -27,7 +28,9 @@ export async function scheduleNextCleaningIfNeeded(
   const planId = userData.selectedPlan as string | undefined;
   if (!planId) return null;
 
-  const trashDay = completedCleaning.trashDay || userData.trashDay;
+  if (userData.recurringScheduleActive === false) return null;
+
+  const trashDay = resolveStickyCleaningDay(completedCleaning, userData);
   if (!trashDay) return null;
 
   const completedDate = parseCleaningDate(completedCleaning.scheduledDate);

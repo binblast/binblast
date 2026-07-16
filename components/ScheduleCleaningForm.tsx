@@ -6,6 +6,12 @@ import { useFirebase } from "@/lib/firebase-context";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 import { CleaningLimitModal } from "@/components/CleaningLimitModal";
 import { appendStandardPrepNote } from "@/lib/cleaning-readiness";
+import {
+  buildRecurringPreferenceUpdate,
+  formatRecurringDayLabel,
+  getNextOccurrenceOfWeekday,
+  formatDateForFormInput,
+} from "@/lib/recurring-preference";
 
 interface ScheduledCleaning {
   id: string;
@@ -43,6 +49,13 @@ interface ScheduleCleaningFormProps {
     stripeCustomerId?: string;
     stripeSubscriptionId?: string;
     cleaningCredits?: number;
+    preferredDayOfWeek?: string;
+    preferredTimeWindow?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
   } | null;
 }
 
@@ -109,22 +122,29 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
         return "";
       }
     }
+    if (userData?.preferredDayOfWeek) {
+      try {
+        return formatDateForFormInput(getNextOccurrenceOfWeekday(userData.preferredDayOfWeek));
+      } catch {
+        return "";
+      }
+    }
     return "";
   };
 
-  const [zipCode, setZipCode] = useState(existingCleaning?.zipCode || "");
-  const [city, setCity] = useState(existingCleaning?.city || "");
-  const [state, setState] = useState(existingCleaning?.state || "");
-  const [trashDay, setTrashDay] = useState(existingCleaning?.trashDay || "");
+  const [zipCode, setZipCode] = useState(existingCleaning?.zipCode || userData?.zipCode || "");
+  const [city, setCity] = useState(existingCleaning?.city || userData?.city || "");
+  const [state, setState] = useState(existingCleaning?.state || userData?.state || "");
+  const [trashDay, setTrashDay] = useState(existingCleaning?.trashDay || userData?.preferredDayOfWeek || "");
   const [selectedDateValue, setSelectedDateValue] = useState(getInitialDate()); // Store the actual date value
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isReady: firebaseReady } = useFirebase();
   
   // Form fields
-  const [addressLine1, setAddressLine1] = useState(existingCleaning?.addressLine1 || "");
-  const [addressLine2, setAddressLine2] = useState(existingCleaning?.addressLine2 || "");
-  const [selectedTime, setSelectedTime] = useState(existingCleaning?.scheduledTime || "");
+  const [addressLine1, setAddressLine1] = useState(existingCleaning?.addressLine1 || userData?.addressLine1 || "");
+  const [addressLine2, setAddressLine2] = useState(existingCleaning?.addressLine2 || userData?.addressLine2 || "");
+  const [selectedTime, setSelectedTime] = useState(existingCleaning?.scheduledTime || userData?.preferredTimeWindow || "");
   const [notes, setNotes] = useState(existingCleaning?.notes || "");
   const [binsCount, setBinsCount] = useState(
     (existingCleaning as { binsCount?: number } | null | undefined)?.binsCount ||
@@ -212,6 +232,45 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
       }
     }
   }, [existingCleaning]);
+
+  // Pre-select the customer's recurring day when they have no upcoming visit yet.
+  useEffect(() => {
+    if (existingCleaning?.id || existingCleaning?.scheduledDate) return;
+    if (!userData?.preferredDayOfWeek || selectedDateValue) return;
+
+    try {
+      const nextDate = getNextOccurrenceOfWeekday(userData.preferredDayOfWeek);
+      setSelectedDateValue(formatDateForFormInput(nextDate));
+      setTrashDay(userData.preferredDayOfWeek);
+    } catch (error) {
+      console.error("[ScheduleCleaningForm] Could not pre-fill recurring day:", error);
+    }
+  }, [existingCleaning, userData?.preferredDayOfWeek, selectedDateValue]);
+
+  const recurringDayLabel = formatRecurringDayLabel(userData?.preferredDayOfWeek);
+
+  const syncUserRecurringPreference = async (
+    firestore: Awaited<ReturnType<typeof import("@/lib/firebase-module-loader").safeImportFirestore>>,
+    db: NonNullable<Awaited<ReturnType<typeof import("@/lib/firebase").getDbInstance>>>
+  ) => {
+    if (!trashDay) return;
+    const { doc, updateDoc, serverTimestamp } = firestore;
+    const userDocRef = doc(db, "users", userId);
+    await updateDoc(userDocRef, {
+      ...buildRecurringPreferenceUpdate({
+        preferredDayOfWeek: trashDay,
+        preferredTimeWindow: selectedTime,
+        addressLine1,
+        addressLine2: addressLine2 || null,
+        city,
+        state,
+        zipCode,
+      }),
+      pendingCleaningConfirmation: false,
+      pendingCleaningData: null,
+      updatedAt: serverTimestamp(),
+    });
+  };
 
   // Check if rescheduling is allowed - must be at least 12 hours ahead
   const canReschedule = (cleaningDate: Date): boolean => {
@@ -427,20 +486,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
           internalNotes: appendStandardPrepNote(null),
           updatedAt: serverTimestamp(),
         });
-        
-        // Clear pending cleaning confirmation data if it exists (user rescheduled via form instead of modal)
-        try {
-          const userDocRef = doc(db, "users", userId);
-          await updateDoc(userDocRef, {
-            pendingCleaningConfirmation: false,
-            pendingCleaningData: null,
-            updatedAt: serverTimestamp(),
-          });
-          console.log("[ScheduleCleaningForm] Cleared pending cleaning confirmation data after rescheduling");
-        } catch (clearErr) {
-          console.error("[ScheduleCleaningForm] Error clearing pending cleaning data:", clearErr);
-          // Don't fail rescheduling if clearing pending data fails
-        }
+
+        await syncUserRecurringPreference(firestore, db);
         
         // Send confirmation email after rescheduling
         try {
@@ -503,6 +550,8 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
 
         await addDoc(collection(db, "scheduledCleanings"), scheduledCleaning);
 
+        await syncUserRecurringPreference(firestore, db);
+
         if (eligibilityResult && eligibilityResult.scheduledCount >= eligibilityResult.baseAllowance) {
           try {
             const userDocRef = doc(db, "users", userId);
@@ -516,21 +565,6 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
           } catch (creditErr) {
             console.error("[ScheduleCleaningForm] Error decrementing cleaning credit:", creditErr);
           }
-        }
-        
-        // Clear pending cleaning confirmation data if it exists (user scheduled via form instead of modal)
-        try {
-          const { doc, updateDoc, serverTimestamp } = firestore;
-          const userDocRef = doc(db, "users", userId);
-          await updateDoc(userDocRef, {
-            pendingCleaningConfirmation: false,
-            pendingCleaningData: null,
-            updatedAt: serverTimestamp(),
-          });
-          console.log("[ScheduleCleaningForm] Cleared pending cleaning confirmation data");
-        } catch (clearErr) {
-          console.error("[ScheduleCleaningForm] Error clearing pending cleaning data:", clearErr);
-          // Don't fail scheduling if clearing pending data fails
         }
         
         // Send confirmation email after scheduling
@@ -698,11 +732,23 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
 
           <CleaningReadinessBanner variant="customer" />
 
+          {recurringDayLabel ? (
+            <p className="customer-dash-recurring-note">
+              Your recurring cleaning day is <strong>{recurringDayLabel}</strong>. Future visits
+              follow this day unless you change or cancel it here.
+            </p>
+          ) : (
+            <p className="customer-dash-recurring-note">
+              Pick the weekday you want us every month. That day stays on your account until you
+              change or cancel it.
+            </p>
+          )}
+
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            {/* Preferred Cleaning Day Selection */}
+            {/* Recurring cleaning day */}
             <div>
               <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
-                Preferred Cleaning Day
+                Recurring Cleaning Day
               </label>
               <select
                 key={`day-select-${selectedDateValue}`}
@@ -719,7 +765,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
                   boxSizing: "border-box"
                 }}
               >
-                <option value="">Select preferred cleaning day</option>
+                <option value="">Select your recurring cleaning day</option>
                 {dayOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -739,6 +785,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
                     day: "numeric", 
                     year: "numeric" 
                   })}
+                  {trashDay ? ` · Repeats every ${trashDay}` : ""}
                 </p>
               )}
             </div>

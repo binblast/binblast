@@ -99,6 +99,14 @@ export function CleaningDateConfirmationModal({
       await updateDoc(userDocRef, {
         pendingCleaningConfirmation: false,
         pendingCleaningData: null,
+        preferredDayOfWeek,
+        preferredTimeWindow: pendingCleaningData.preferredTimeWindow,
+        addressLine1: pendingCleaningData.addressLine1,
+        addressLine2: pendingCleaningData.addressLine2 || null,
+        city: pendingCleaningData.city,
+        state: pendingCleaningData.state,
+        zipCode: pendingCleaningData.zipCode,
+        recurringScheduleActive: true,
         updatedAt: serverTimestamp(),
       });
 

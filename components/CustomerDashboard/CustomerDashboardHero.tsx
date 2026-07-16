@@ -6,6 +6,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 interface NextCleaningSummary {
   dateLabel: string;
   timeWindow?: string;
+  recurringDay?: string;
 }
 
 interface CustomerDashboardHeroProps {
@@ -14,6 +15,7 @@ interface CustomerDashboardHeroProps {
   paymentStatus?: string;
   cleaningCredits?: number;
   nextCleaning?: NextCleaningSummary | null;
+  recurringDay?: string;
   onScheduleClick?: () => void;
 }
 
@@ -23,6 +25,7 @@ export function CustomerDashboardHero({
   paymentStatus,
   cleaningCredits = 0,
   nextCleaning,
+  recurringDay,
   onScheduleClick,
 }: CustomerDashboardHeroProps) {
   const rawName = firstName?.trim();
@@ -54,7 +57,12 @@ export function CustomerDashboardHero({
             {nextCleaning ? nextCleaning.dateLabel : "Not scheduled"}
           </strong>
           {nextCleaning?.timeWindow ? (
-            <span className="customer-dash-stat__meta">{nextCleaning.timeWindow}</span>
+            <span className="customer-dash-stat__meta">
+              {nextCleaning.timeWindow}
+              {nextCleaning.recurringDay ? ` · Every ${nextCleaning.recurringDay}` : ""}
+            </span>
+          ) : recurringDay ? (
+            <span className="customer-dash-stat__meta">Recurring day: Every {recurringDay}</span>
           ) : (
             <span className="customer-dash-stat__meta">Book a visit when you&apos;re ready</span>
           )}

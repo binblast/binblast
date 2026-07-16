@@ -189,6 +189,7 @@ export function EditCleaningModal({ cleaning, isOpen, onClose, onUpdated }: Edit
           state,
           zipCode,
           trashDay,
+          scheduledDate: selectedDayValue || undefined,
           scheduledTime: selectedTime,
           notes: notes || null,
         }),
