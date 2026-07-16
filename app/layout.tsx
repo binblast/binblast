@@ -21,8 +21,8 @@ const AttributionBootstrap = dynamic(
 
 export const metadata: Metadata = buildSiteMetadata({
   icons: {
-    icon: "/bin-blast-mascot.png",
-    apple: "/bin-blast-mascot.png",
+    icon: "/favicon.png",
+    apple: "/apple-touch-icon.png",
   },
 });
 
@@ -40,7 +40,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/bin-blast-mascot.png" type="image/png" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         {FACEBOOK_APP_ID ? (
           <meta property="fb:app_id" content={FACEBOOK_APP_ID} />
         ) : null}

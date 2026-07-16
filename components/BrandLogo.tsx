@@ -42,7 +42,7 @@ export function BrandLogo({
   const image = (
     <span className={`${config.className} ${toneClass} ${className}`.trim()}>
       <Image
-        src="/bin-blast-mascot.png"
+        src="/bin-blast-mascot.png?v=4"
         alt="Bin Blast Co. mascot logo"
         width={config.width}
         height={config.height}
