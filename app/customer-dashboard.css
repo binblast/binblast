@@ -1,0 +1,245 @@
+/* Customer dashboard — visual polish only; same features as before */
+
+.customer-dash-hero {
+  margin-bottom: 1.75rem;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border-radius: 24px;
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 55%, #ecfdf5 100%);
+  border: 1px solid #bbf7d0;
+  box-shadow: 0 8px 32px rgba(22, 163, 74, 0.08);
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.customer-dash-hero__main {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.875rem, 3vw, 1.5rem);
+  margin-bottom: 1.5rem;
+}
+
+.customer-dash-hero__logo {
+  display: inline-flex;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.customer-dash-hero__mascot.brand-logo--sidebar {
+  width: clamp(72px, 16vw, 96px);
+  height: clamp(72px, 16vw, 96px);
+}
+
+.customer-dash-hero__copy {
+  min-width: 0;
+}
+
+.customer-dash-hero__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #16a34a;
+}
+
+.customer-dash-hero__title {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.5rem, 4.5vw, 2.25rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--text-dark);
+}
+
+.customer-dash-hero__subtitle {
+  margin: 0;
+  font-size: clamp(0.9375rem, 2.5vw, 1.0625rem);
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.customer-dash-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.875rem;
+}
+
+.customer-dash-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.125rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #e5e7eb;
+  min-height: 100%;
+}
+
+.customer-dash-stat--action {
+  justify-content: center;
+  gap: 0.625rem;
+  background: transparent;
+  border-style: dashed;
+}
+
+.customer-dash-stat__label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.customer-dash-stat__value {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.3;
+}
+
+.customer-dash-stat__meta {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.customer-dash-stat__badge {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-top: 0.25rem;
+  padding: 0.2rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.customer-dash-stat__badge--paid {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.customer-dash-stat__cta {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
+}
+
+.customer-dash-stat__cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(22, 163, 74, 0.35);
+}
+
+.customer-dash-stat__cta--secondary {
+  background: #ffffff;
+  color: #15803d;
+  border: 1px solid #86efac;
+  box-shadow: none;
+}
+
+.customer-dash-stat__cta--secondary:hover {
+  background: #f0fdf4;
+}
+
+.customer-dash-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 960px) {
+  .customer-dash-layout--split {
+    grid-template-columns: 1.35fr 1fr;
+    align-items: start;
+  }
+}
+
+.customer-dash-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.customer-dash-card__header {
+  margin-bottom: 1.25rem;
+}
+
+.customer-dash-card__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.customer-dash-card__subtitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.customer-dash-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: 0.75rem;
+  border-radius: 12px;
+  font-size: 1.25rem;
+  background: #ecfdf5;
+}
+
+.customer-dash-plan-highlight {
+  padding: 1.25rem 1.5rem;
+  border-radius: 14px;
+  margin-bottom: 1.25rem;
+}
+
+.customer-dash-plan-highlight--paid {
+  background: #ecfdf5;
+  border: 2px solid #16a34a;
+}
+
+.customer-dash-plan-highlight--pending {
+  background: #fef3c7;
+  border: 2px solid #f59e0b;
+}
+
+@media (max-width: 900px) {
+  .customer-dash-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .customer-dash-hero__main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .customer-dash-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-dash-stat--action {
+    order: -1;
+  }
+
+  .customer-dash-hero__mascot.brand-logo--sidebar {
+    width: 72px;
+    height: 72px;
+  }
+}

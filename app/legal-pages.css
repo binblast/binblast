@@ -17,18 +17,20 @@
   height: 100%;
   max-width: 100%;
   object-fit: contain;
+  object-position: center;
+  transform: scale(1.12);
   background: transparent !important;
 }
 
 .brand-logo--nav {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
 }
 
 .brand-logo--nav-home {
-  width: 68px;
-  height: 68px;
+  width: 72px;
+  height: 72px;
 }
 
 .brand-logo--hero {
@@ -42,8 +44,8 @@
 }
 
 .brand-logo--sidebar {
-  width: 80px;
-  height: 80px;
+  width: 88px;
+  height: 88px;
 }
 
 .brand-logo--on-dark {
@@ -739,7 +741,7 @@
   }
 
   .portal-brand-header .brand-logo--sidebar {
-    width: 64px;
-    height: 64px;
+    width: 72px;
+    height: 72px;
   }
 }

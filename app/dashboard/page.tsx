@@ -34,6 +34,7 @@ import {
 import type { ScheduleJob, ScheduleStaffMember } from "@/lib/schedule-board";
 import type { CustomerSubTab } from "@/lib/operator-customers";
 import { PortalBrandHeader } from "@/components/PortalBrandHeader";
+import { CustomerDashboardHero } from "@/components/CustomerDashboard/CustomerDashboardHero";
 
 const OwnerCommandCenter = dynamic(
   () => import("@/components/OwnerDashboard/OwnerCommandCenter").then((m) => m.OwnerCommandCenter),
@@ -1400,6 +1401,21 @@ function DashboardPageContent() {
       parseCleaningDate(b.scheduledDate).getTime()
   );
 
+  const customerNextCleaningSummary = nextCleaning
+    ? {
+        dateLabel: getCleaningDate(nextCleaning).toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }),
+        timeWindow: nextCleaning.scheduledTime || undefined,
+      }
+    : null;
+
+  const customerPlanLabel = user?.selectedPlan
+    ? PLAN_NAMES[user.selectedPlan] || user.selectedPlan
+    : "No plan yet";
+
   const filteredPast = scheduledCleanings.filter((c) => {
     const date = parseCleaningDate(c.scheduledDate);
     date.setHours(0, 0, 0, 0);
@@ -2474,26 +2490,30 @@ function DashboardPageContent() {
           }}>
             
             {/* (A) Hero Welcome + Status Summary */}
-            <div style={{ 
-              marginBottom: "2rem",
-              animation: "fadeInUp 0.6s ease-out"
-            }}>
-              <PortalBrandHeader
-                portalTitle={
-                  isOwner
-                    ? "Owner Dashboard"
-                    : isAdmin
-                      ? "Admin Dashboard"
-                      : "Customer Dashboard"
-                }
-                subtitle={
-                  isOwner
-                    ? "Complete business control center"
-                    : isAdmin
-                      ? "Manage your business operations"
-                      : `Welcome back, ${user.firstName || "Bin Blast"}! Here's a quick look at your bin cleaning status.`
-                }
-              />
+            <div style={isAdmin ? { marginBottom: "2rem", animation: "fadeInUp 0.6s ease-out" } : undefined}>
+              {isAdmin ? (
+                <PortalBrandHeader
+                  portalTitle={
+                    isOwner
+                      ? "Owner Dashboard"
+                      : "Admin Dashboard"
+                  }
+                  subtitle={
+                    isOwner
+                      ? "Complete business control center"
+                      : "Manage your business operations"
+                  }
+                />
+              ) : (
+                <CustomerDashboardHero
+                  firstName={user.firstName}
+                  planLabel={customerPlanLabel}
+                  paymentStatus={user.paymentStatus}
+                  cleaningCredits={cleaningAccountSummary?.cleaningCredits ?? user.cleaningCredits ?? 0}
+                  nextCleaning={customerNextCleaningSummary}
+                  onScheduleClick={() => scrollToSection(scheduleSectionRef)}
+                />
+              )}
 
               {/* Admin Tab Navigation */}
               {isAdmin && !isOwner && (
@@ -4078,26 +4098,18 @@ function DashboardPageContent() {
               />
             )}
 
-            {/* (C) Schedule a Cleaning - Hidden for admin */}
+            {/* (C) Schedule + Plan — side-by-side on desktop for customers */}
             {!isAdmin && (
-            <div ref={scheduleSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "20px",
-                padding: "2.5rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb"
-              }}>
-                <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "0.5rem" }}>
-                  Schedule a Cleaning
-                </h2>
-                <p style={{ 
-                  fontSize: "0.95rem", 
-                  color: "#6b7280", 
-                  marginBottom: "2rem"
-                }}>
-                  Pick your preferred cleaning day and confirm your address below.
-                </p>
+            <div className="customer-dash-layout customer-dash-layout--split">
+            <div ref={scheduleSectionRef} style={{ scrollMarginTop: "100px" }}>
+              <div className="customer-dash-card">
+                <div className="customer-dash-card__header">
+                  <span className="customer-dash-card__icon" aria-hidden="true">📅</span>
+                  <h2 className="customer-dash-card__title">Schedule a Cleaning</h2>
+                  <p className="customer-dash-card__subtitle">
+                    Pick your preferred cleaning day and confirm your address below.
+                  </p>
+                </div>
                 {scheduleActionMessage && (
                   <div
                     style={{
@@ -4210,29 +4222,16 @@ function DashboardPageContent() {
                 </p>
               </div>
             </div>
-            )}
 
-            {/* (D) Subscription & Plan Card - Hidden for admin */}
-            {!isAdmin && user.selectedPlan && (
-              <div ref={planSectionRef} style={{ marginBottom: "2rem", scrollMarginTop: "100px" }}>
-                <div style={{
-                  background: "#ffffff",
-                  borderRadius: "20px",
-                  padding: "2.5rem",
-                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1rem" }}>
-                    Your Plan
-                  </h2>
+            {user.selectedPlan && (
+              <div ref={planSectionRef} style={{ scrollMarginTop: "100px" }}>
+                <div className="customer-dash-card">
+                  <div className="customer-dash-card__header">
+                    <span className="customer-dash-card__icon" aria-hidden="true">✨</span>
+                    <h2 className="customer-dash-card__title">Your Plan</h2>
+                  </div>
 
-                    <div style={{ 
-                    padding: "1.5rem",
-                    background: user.paymentStatus === "paid" ? "#ecfdf5" : "#fef3c7",
-                    borderRadius: "12px",
-                    border: `2px solid ${user.paymentStatus === "paid" ? "#16a34a" : "#f59e0b"}`,
-                    marginBottom: "1.5rem"
-                    }}>
+                    <div className={`customer-dash-plan-highlight${user.paymentStatus === "paid" ? " customer-dash-plan-highlight--paid" : " customer-dash-plan-highlight--pending"}`}>
                     <div style={{ fontSize: "1.25rem", fontWeight: "700", color: user.paymentStatus === "paid" ? "#047857" : "#92400e", marginBottom: "0.5rem" }}>
                       {PLAN_NAMES[user.selectedPlan] || user.selectedPlan}
                     </div>
@@ -4435,6 +4434,8 @@ function DashboardPageContent() {
                 </div>
               </div>
             )}
+            </div>
+            )}
 
             {/* Next Steps (if no plan) - Hidden for admin */}
             {!isAdmin && !user.selectedPlan && (
@@ -4459,13 +4460,7 @@ function DashboardPageContent() {
 
             {/* (E) Upcoming & Past Cleanings */}
             <div style={{ marginBottom: "2rem" }}>
-            <div style={{
-              background: "#ffffff",
-              borderRadius: "20px",
-                padding: "2.5rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb"
-            }}>
+            <div className="customer-dash-card">
                 <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "1.5rem" }}>
                   {isAdmin ? "All Cleanings / Route Schedule" : "Your Cleanings"}
               </h2>

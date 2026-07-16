@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BRAND_MASCOT_SRC } from "@/lib/brand";
 
 type BrandLogoVariant = "nav" | "hero" | "footer" | "sidebar";
 type BrandLogoTone = "light" | "dark" | "hero" | "none";
@@ -42,7 +43,7 @@ export function BrandLogo({
   const image = (
     <span className={`${config.className} ${toneClass} ${className}`.trim()}>
       <Image
-        src="/bin-blast-mascot.png?v=4"
+        src={BRAND_MASCOT_SRC}
         alt="Bin Blast Co. mascot logo"
         width={config.width}
         height={config.height}

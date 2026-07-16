@@ -168,6 +168,7 @@
   flex-shrink: 0;
   background: transparent;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transform: scale(1.15);
 }
 
 .chat-widget-message__avatar-spacer {

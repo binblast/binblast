@@ -6,6 +6,7 @@ import {
   generateAssistantResponse,
   resolveQuickReplyAction,
 } from "@/lib/chat-assistant";
+import { BRAND_MASCOT_SRC } from "@/lib/brand";
 
 interface Message {
   id: string;
@@ -260,7 +261,7 @@ export function ChatWidget() {
               >
                 {message.sender === "assistant" && showAssistantAvatar(message.id) ? (
                   <img
-                    src="/bin-blast-mascot.png?v=4"
+                    src={BRAND_MASCOT_SRC}
                     alt="Bin Blast Assistant"
                     className="chat-widget-message__avatar"
                     width={30}
@@ -292,7 +293,7 @@ export function ChatWidget() {
             {isTyping && (
               <div className="chat-widget-typing" aria-live="polite" aria-label="Assistant is typing">
                 <img
-                  src="/bin-blast-mascot.png?v=4"
+                  src={BRAND_MASCOT_SRC}
                   alt="Bin Blast Assistant"
                   className="chat-widget-message__avatar"
                   width={30}
