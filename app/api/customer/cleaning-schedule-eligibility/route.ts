@@ -117,6 +117,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       planId,
       planName: PLAN_CONFIGS[planId]?.name || planId,
+      billingPeriodStart: billingPeriodStart.toISOString(),
+      billingPeriodEnd: billingPeriodEnd.toISOString(),
       allocation,
       schedulingPolicy,
       nextUpcomingCleaning: nextUpcomingCleaning

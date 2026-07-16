@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
       binsCount: Number(binsCount) || 1,
       internalNotes: appendStandardPrepNote(null),
       status: "upcoming",
+      billingCoverage: shouldConsumeCleaningCredit(allocation) ? "paid_extra" : "plan_included",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });

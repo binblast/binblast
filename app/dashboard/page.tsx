@@ -35,7 +35,7 @@ import type { ScheduleJob, ScheduleStaffMember } from "@/lib/schedule-board";
 import type { CustomerSubTab } from "@/lib/operator-customers";
 import { PortalBrandHeader } from "@/components/PortalBrandHeader";
 import { CustomerDashboardHero } from "@/components/CustomerDashboard/CustomerDashboardHero";
-import { UpcomingCleaningCard } from "@/components/CustomerDashboard/UpcomingCleaningCard";
+import { CustomerUpcomingCleanings } from "@/components/CustomerDashboard/CustomerUpcomingCleanings";
 import { ScheduleLimitBanner } from "@/components/CustomerDashboard/ScheduleLimitBanner";
 import { CleaningLimitModal } from "@/components/CleaningLimitModal";
 import { formatRecurringScheduleSummary } from "@/lib/recurring-preference";
@@ -4548,7 +4548,24 @@ function DashboardPageContent() {
                     </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                      {(isAdmin ? allCleanings.filter(c => {
+                      {!isAdmin && userId ? (
+                        <CustomerUpcomingCleanings
+                          userId={userId}
+                          cleanings={upcomingCleanings}
+                          planId={user?.selectedPlan}
+                          getCleaningDate={getCleaningDate}
+                          preferredDayOfWeek={user?.preferredDayOfWeek}
+                          binsCount={user?.binsCount || 1}
+                          paymentStatus={user?.paymentStatus}
+                          subscriptionStatus={user?.subscriptionStatus}
+                          servicePaused={user?.servicePaused}
+                          onEdit={(cleaning) => {
+                            setEditingCleaning(cleaning as ScheduledCleaning);
+                            setIsEditModalOpen(true);
+                          }}
+                        />
+                      ) : (
+                      (isAdmin ? allCleanings.filter(c => {
                         const date = c.scheduledDate?.toDate?.() || new Date(c.scheduledDate);
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
@@ -4558,32 +4575,6 @@ function DashboardPageContent() {
                       }).slice(0, 20) : upcomingCleanings).map((cleaning) => {
                         const cleaningDate = getCleaningDate(cleaning);
                         const customer = isAdmin ? allCustomers.find((c: any) => c.id === cleaning.userId) : null;
-                        const planId = customer?.selectedPlan || user?.selectedPlan;
-                        const scheduleSummary = formatRecurringScheduleSummary(
-                          planId,
-                          cleaning.trashDay || user?.preferredDayOfWeek
-                        );
-
-                        if (!isAdmin) {
-                          return (
-                            <UpcomingCleaningCard
-                              key={cleaning.id}
-                              cleaning={cleaning}
-                              cleaningDate={cleaningDate}
-                              scheduleSummary={scheduleSummary}
-                              planId={planId}
-                              binsCount={user?.binsCount || 1}
-                              paymentStatus={user?.paymentStatus}
-                              subscriptionStatus={user?.subscriptionStatus}
-                              servicePaused={user?.servicePaused}
-                              onEdit={() => {
-                                setEditingCleaning(cleaning);
-                                setIsEditModalOpen(true);
-                              }}
-                            />
-                          );
-                        }
-
                         const isCompleted = cleaning.status === "completed" || (cleaning as any).jobStatus === "completed";
                         const canEdit = !isCompleted && cleaning.status !== "cancelled";
                         const readiness = evaluateCleaningReadiness(
@@ -4700,7 +4691,8 @@ function DashboardPageContent() {
                             </div>
                           </div>
                         );
-                      })}
+                      })
+                      )}
                     </div>
                   )}
                 </div>
