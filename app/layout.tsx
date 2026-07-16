@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import "./globals.css";
 import { FirebaseGate } from "@/components/FirebaseGate";
 import { FirebaseErrorBoundary } from "@/components/FirebaseErrorBoundary";
+import { buildSiteMetadata } from "@/lib/site-metadata";
 // CRITICAL: Do NOT statically import firebase-client.ts here
 // Static imports cause webpack to bundle firebase-client.ts into page chunks
 // Firebase will initialize automatically when firebase-client.ts is first dynamically imported
@@ -18,15 +19,12 @@ const AttributionBootstrap = dynamic(
   { ssr: false }
 );
 
-export const metadata: Metadata = {
-  title: "Trash Bin Cleaning in Metro Atlanta | Bin Blast Co.",
-  description:
-    "Bin Blast Co. provides professional residential, HOA, restaurant, apartment, and commercial trash bin cleaning throughout Metro Atlanta. Book curbside service or request a commercial quote.",
+export const metadata: Metadata = buildSiteMetadata({
   icons: {
     icon: "/bin-blast-mascot.png",
     apple: "/bin-blast-mascot.png",
   },
-};
+});
 
 export const viewport: Viewport = {
   width: "device-width",

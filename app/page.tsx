@@ -1,18 +1,15 @@
 // app/page.tsx
 
-import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import Link from "next/link";
 import { PRIMARY_SERVICE_AREAS, METRO_ATLANTA_TAGLINE } from "@/lib/service-areas";
+import { buildSiteMetadata } from "@/lib/site-metadata";
 import { BrandLogo } from "@/components/BrandLogo";
 import { WhoWeServeSection } from "@/components/WhoWeServeSection";
 import { CommercialServicesSection } from "@/components/CommercialServicesSection";
 
-export const metadata: Metadata = {
-  title: "Trash Bin Cleaning in Metro Atlanta | Bin Blast Co.",
-  description:
-    "Bin Blast Co. provides professional residential, HOA, restaurant, apartment, and commercial trash bin cleaning throughout Metro Atlanta. Book curbside service or request a commercial quote.",
+export const metadata = buildSiteMetadata({
   keywords: [
     "Metro Atlanta trash bin cleaning",
     "Atlanta trash can cleaning",
@@ -22,7 +19,7 @@ export const metadata: Metadata = {
     "commercial bin cleaning",
     "curbside trash can cleaning",
   ],
-};
+});
 
 // CRITICAL: Dynamically import all components that use Firebase to prevent import-time errors
 // This ensures Firebase is initialized before these components load
