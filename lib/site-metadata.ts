@@ -15,7 +15,7 @@ export const DEFAULT_OG_IMAGE = {
   url: "/og-image.png",
   width: 1200,
   height: 630,
-  alt: "Bin Blast Co. mascot — professional trash bin cleaning in Metro Atlanta",
+  alt: "Bin Blast Co. — We make dirty bins look new. Professional bin cleaning in Metro Atlanta.",
 } as const;
 
 export function buildSiteMetadata(overrides?: Metadata): Metadata {

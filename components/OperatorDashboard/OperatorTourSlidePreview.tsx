@@ -3,9 +3,9 @@
 import type { CSSProperties, ReactNode } from "react";
 
 const panelStyle: CSSProperties = {
-  background: "linear-gradient(180deg, #1a1f2e 0%, #12151f 100%)",
+  background: "#ffffff",
   borderRadius: "14px",
-  border: "1px solid rgba(255,255,255,0.08)",
+  border: "1px solid #e5e7eb",
   padding: "1rem",
   height: "100%",
   minHeight: "260px",
@@ -23,9 +23,9 @@ const chip = (label: string, active = false, color?: string): ReactNode => (
       borderRadius: "999px",
       fontSize: "0.65rem",
       fontWeight: 600,
-      background: active ? (color || "#16a34a") : "rgba(255,255,255,0.06)",
-      color: active ? "#ffffff" : "#94a3b8",
-      border: active ? "none" : "1px solid rgba(255,255,255,0.08)",
+      background: active ? (color || "#16a34a") : "#f3f4f6",
+      color: active ? "#ffffff" : "#6b7280",
+      border: active ? "none" : "1px solid #e5e7eb",
       whiteSpace: "nowrap",
     }}
   >
@@ -37,15 +37,15 @@ const miniCard = (title: string, value: string, color: string): ReactNode => (
   <div
     key={title}
     style={{
-      background: "rgba(255,255,255,0.04)",
-      border: "1px solid rgba(255,255,255,0.08)",
+      background: "#f9fafb",
+      border: "1px solid #e5e7eb",
       borderRadius: "10px",
       padding: "0.65rem 0.75rem",
       flex: 1,
       minWidth: "70px",
     }}
   >
-    <div style={{ fontSize: "0.6rem", color: "#94a3b8", marginBottom: "0.2rem" }}>{title}</div>
+    <div style={{ fontSize: "0.6rem", color: "#6b7280", marginBottom: "0.2rem" }}>{title}</div>
     <div style={{ fontSize: "1.1rem", fontWeight: 700, color }}>{value}</div>
   </div>
 );
@@ -54,19 +54,19 @@ const exampleRow = (scenario: string, action: string, tone: string): ReactNode =
   <div
     key={scenario}
     style={{
-      background: "rgba(255,255,255,0.03)",
-      border: "1px solid rgba(255,255,255,0.07)",
+      background: "#f9fafb",
+      border: "1px solid #e5e7eb",
       borderRadius: "10px",
       padding: "0.65rem 0.75rem",
       fontSize: "0.68rem",
       lineHeight: 1.45,
     }}
   >
-    <div style={{ color: "#e2e8f0", marginBottom: "0.25rem" }}>
+    <div style={{ color: "#374151", marginBottom: "0.25rem" }}>
       <span style={{ color: tone, fontWeight: 700 }}>Example: </span>
       {scenario}
     </div>
-    <div style={{ color: "#94a3b8" }}>
+    <div style={{ color: "#6b7280" }}>
       <span style={{ color: "#60a5fa", fontWeight: 600 }}>→ </span>
       {action}
     </div>
@@ -76,10 +76,10 @@ const exampleRow = (scenario: string, action: string, tone: string): ReactNode =
 const PREVIEWS: Record<string, () => ReactNode> = {
   welcome: () => (
     <div style={panelStyle}>
-      <div style={{ fontSize: "0.65rem", color: "#64748b", letterSpacing: "0.08em", fontWeight: 700 }}>
+      <div style={{ fontSize: "0.65rem", color: "#6b7280", letterSpacing: "0.08em", fontWeight: 700 }}>
         BLAST COMMAND
       </div>
-      <div style={{ fontSize: "1rem", fontWeight: 700, color: "#f8fafc", lineHeight: 1.3 }}>
+      <div style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", lineHeight: 1.3 }}>
         Your daily operations hub
       </div>
       <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
@@ -93,12 +93,12 @@ const PREVIEWS: Record<string, () => ReactNode> = {
         style={{
           flex: 1,
           borderRadius: "10px",
-          background: "linear-gradient(135deg, rgba(22,163,74,0.15) 0%, rgba(37,99,235,0.12) 100%)",
-          border: "1px solid rgba(22,163,74,0.25)",
+          background: "linear-gradient(135deg, #dcfce7 0%, #dbeafe 100%)",
+          border: "1px solid #bbf7d0",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#86efac",
+          color: "#166534",
           fontSize: "0.75rem",
           fontWeight: 600,
         }}
@@ -132,7 +132,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
 
   "live-map": () => (
     <div style={panelStyle}>
-      <div style={{ fontSize: "0.7rem", color: "#94a3b8", fontWeight: 600 }}>Live Fleet Map</div>
+      <div style={{ fontSize: "0.7rem", color: "#6b7280", fontWeight: 600 }}>Live Fleet Map</div>
       <div
         style={{
           flex: 1,
@@ -190,7 +190,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
   "overview-stats": () => (
     <div style={panelStyle}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-        {miniCard("Direct Customers", "142", "#f8fafc")}
+        {miniCard("Direct Customers", "142", "#111827")}
         {miniCard("Upcoming", "18", "#60a5fa")}
         {miniCard("Completed Week", "87", "#4ade80")}
         {miniCard("Open Issues", "3", "#f87171")}
@@ -212,23 +212,23 @@ const PREVIEWS: Record<string, () => ReactNode> = {
       </div>
       <div
         style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: "#f9fafb",
+          border: "1px solid #e5e7eb",
           borderRadius: "10px",
           padding: "0.75rem",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
-          <span style={{ color: "#f8fafc", fontWeight: 700, fontSize: "0.8rem" }}>James Robert</span>
+          <span style={{ color: "#111827", fontWeight: 700, fontSize: "0.8rem" }}>James Robert</span>
           <span style={{ color: "#86efac", fontSize: "0.65rem", fontWeight: 600 }}>Clocked In · 3:45 PM</span>
         </div>
         <div style={{ background: "rgba(22,163,74,0.2)", color: "#86efac", fontSize: "0.65rem", padding: "0.3rem 0.5rem", borderRadius: "6px", marginBottom: "0.5rem" }}>
           Route complete
         </div>
-        <div style={{ display: "flex", gap: "0.75rem", fontSize: "0.65rem", color: "#94a3b8" }}>
-          <span>Assigned: <strong style={{ color: "#e2e8f0" }}>4</strong></span>
+        <div style={{ display: "flex", gap: "0.75rem", fontSize: "0.65rem", color: "#6b7280" }}>
+          <span>Assigned: <strong style={{ color: "#374151" }}>4</strong></span>
           <span>Done: <strong style={{ color: "#4ade80" }}>4</strong></span>
-          <span>Left: <strong style={{ color: "#e2e8f0" }}>0</strong></span>
+          <span>Left: <strong style={{ color: "#374151" }}>0</strong></span>
         </div>
       </div>
     </div>
@@ -236,7 +236,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
 
   "employee-card": () => (
     <div style={panelStyle}>
-      <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Employee profile actions</div>
+      <div style={{ fontSize: "0.7rem", color: "#6b7280" }}>Employee profile actions</div>
       <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
         {chip("Open Route", true, "#2563eb")}
         {chip("Photos")}
@@ -262,7 +262,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
         }}
       >
         Missing after photo — 123 Oak St
-        <div style={{ color: "#94a3b8", marginTop: "0.2rem" }}>James Robert · Today 2:15 PM</div>
+        <div style={{ color: "#6b7280", marginTop: "0.2rem" }}>James Robert · Today 2:15 PM</div>
       </div>
       <div
         style={{
@@ -275,7 +275,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
         }}
       >
         Gate locked — cannot access bins
-        <div style={{ color: "#94a3b8", marginTop: "0.2rem" }}>Maria Lopez · Today 11:00 AM</div>
+        <div style={{ color: "#6b7280", marginTop: "0.2rem" }}>Maria Lopez · Today 11:00 AM</div>
       </div>
       {exampleRow("Missing photo flag", "Message driver to re-upload → mark resolved", "#f87171")}
     </div>
@@ -288,21 +288,21 @@ const PREVIEWS: Record<string, () => ReactNode> = {
         {chip("Hours & Pay", true, "#111827")}
       </div>
       <div style={{ display: "flex", gap: "0.4rem" }}>
-        {miniCard("Bins Today", "12", "#f8fafc")}
+        {miniCard("Bins Today", "12", "#111827")}
         {miniCard("Pay Today", "$68", "#4ade80")}
         {miniCard("Week Pay", "$312", "#4ade80")}
       </div>
       <div
         style={{
           fontSize: "0.68rem",
-          color: "#94a3b8",
-          background: "rgba(255,255,255,0.03)",
+          color: "#6b7280",
+          background: "#f9fafb",
           borderRadius: "8px",
           padding: "0.6rem 0.75rem",
           lineHeight: 1.5,
         }}
       >
-        <div style={{ color: "#e2e8f0", marginBottom: "0.25rem", fontWeight: 600 }}>Per-bin example</div>
+        <div style={{ color: "#374151", marginBottom: "0.25rem", fontWeight: 600 }}>Per-bin example</div>
         2-bin stop = $8 + $2 = <span style={{ color: "#4ade80", fontWeight: 700 }}>$10.00</span>
         <br />
         4-bin commercial = $8 + $2 + $2 + $2 = <span style={{ color: "#4ade80", fontWeight: 700 }}>$14.00</span>
@@ -312,36 +312,36 @@ const PREVIEWS: Record<string, () => ReactNode> = {
 
   "schedule-board": () => (
     <div style={panelStyle}>
-      <div style={{ fontSize: "0.7rem", color: "#94a3b8", fontWeight: 600 }}>Schedule & Route Board</div>
+      <div style={{ fontSize: "0.7rem", color: "#6b7280", fontWeight: 600 }}>Schedule & Route Board</div>
       <div
         style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: "#f9fafb",
+          border: "1px solid #e5e7eb",
           borderRadius: "10px",
           padding: "0.65rem 0.75rem",
           fontSize: "0.68rem",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", color: "#e2e8f0", marginBottom: "0.35rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", color: "#374151", marginBottom: "0.35rem" }}>
           <span>456 Pine Ave — 2 bins</span>
           <span style={{ color: "#f87171", fontWeight: 600 }}>Unassigned</span>
         </div>
-        <div style={{ color: "#64748b", fontSize: "0.62rem" }}>Today · Residential</div>
+        <div style={{ color: "#6b7280", fontSize: "0.62rem" }}>Today · Residential</div>
       </div>
       <div
         style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: "#f9fafb",
+          border: "1px solid #e5e7eb",
           borderRadius: "10px",
           padding: "0.65rem 0.75rem",
           fontSize: "0.68rem",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", color: "#e2e8f0", marginBottom: "0.35rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", color: "#374151", marginBottom: "0.35rem" }}>
           <span>789 Elm St — 1 bin</span>
           <span style={{ color: "#4ade80", fontWeight: 600 }}>James R.</span>
         </div>
-        <div style={{ color: "#64748b", fontSize: "0.62rem" }}>Today · In Progress</div>
+        <div style={{ color: "#6b7280", fontSize: "0.62rem" }}>Today · In Progress</div>
       </div>
       {exampleRow("4 jobs still unassigned", "Unassigned filter → assign each before dispatch", "#f87171")}
     </div>
@@ -349,7 +349,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
 
   "schedule-filters": () => (
     <div style={panelStyle}>
-      <div style={{ fontSize: "0.65rem", color: "#94a3b8", marginBottom: "0.15rem" }}>Morning workflow</div>
+      <div style={{ fontSize: "0.65rem", color: "#6b7280", marginBottom: "0.15rem" }}>Morning workflow</div>
       <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
         {chip("Unassigned", true, "#dc2626")}
         {chip("Today", true, "#2563eb")}
@@ -369,7 +369,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
               alignItems: "center",
               gap: "0.5rem",
               fontSize: "0.68rem",
-              color: item.done ? "#86efac" : "#94a3b8",
+              color: item.done ? "#86efac" : "#6b7280",
             }}
           >
             <span
@@ -404,14 +404,14 @@ const PREVIEWS: Record<string, () => ReactNode> = {
       </div>
       <div
         style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: "#f9fafb",
+          border: "1px solid #e5e7eb",
           borderRadius: "10px",
           padding: "0.65rem 0.75rem",
           fontSize: "0.68rem",
         }}
       >
-        <div style={{ color: "#e2e8f0", fontWeight: 600 }}>Sarah Mitchell</div>
+        <div style={{ color: "#374151", fontWeight: 600 }}>Sarah Mitchell</div>
         <div style={{ color: "#4ade80", fontSize: "0.62rem" }}>Active · Sparkle Plan</div>
         <div style={{ color: "#fbbf24", marginTop: "0.35rem", fontSize: "0.62rem" }}>
           Note: Gate code 4521 — bins behind garage
@@ -437,15 +437,15 @@ const PREVIEWS: Record<string, () => ReactNode> = {
       </div>
       <div
         style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: "#f9fafb",
+          border: "1px solid #e5e7eb",
           borderRadius: "10px",
           padding: "0.65rem 0.75rem",
           fontSize: "0.68rem",
         }}
       >
-        <div style={{ color: "#e2e8f0", fontWeight: 600 }}>Oakwood HOA — 40 units</div>
-        <div style={{ color: "#94a3b8", fontSize: "0.62rem" }}>Commercial · Pending review</div>
+        <div style={{ color: "#374151", fontWeight: 600 }}>Oakwood HOA — 40 units</div>
+        <div style={{ color: "#6b7280", fontSize: "0.62rem" }}>Commercial · Pending review</div>
       </div>
       {exampleRow("New commercial lead", "Review bins & access → create offer same day", "#fbbf24")}
     </div>
@@ -453,7 +453,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
 
   messages: () => (
     <div style={panelStyle}>
-      <div style={{ fontSize: "0.7rem", color: "#94a3b8", fontWeight: 600 }}>Team Messages</div>
+      <div style={{ fontSize: "0.7rem", color: "#6b7280", fontWeight: 600 }}>Team Messages</div>
       <div
         style={{
           background: "rgba(37,99,235,0.1)",
@@ -467,7 +467,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
         }}
       >
         Customer not home, bins in backyard — what should I do?
-        <div style={{ color: "#64748b", fontSize: "0.58rem", marginTop: "0.2rem" }}>James · 2:34 PM</div>
+        <div style={{ color: "#6b7280", fontSize: "0.58rem", marginTop: "0.2rem" }}>James · 2:34 PM</div>
       </div>
       <div
         style={{
@@ -482,14 +482,14 @@ const PREVIEWS: Record<string, () => ReactNode> = {
         }}
       >
         Check side gate — code is on the stop notes. Call me if still blocked.
-        <div style={{ color: "#64748b", fontSize: "0.58rem", marginTop: "0.2rem" }}>You · 2:35 PM</div>
+        <div style={{ color: "#6b7280", fontSize: "0.58rem", marginTop: "0.2rem" }}>You · 2:35 PM</div>
       </div>
     </div>
   ),
 
   checklist: () => (
     <div style={panelStyle}>
-      <div style={{ fontSize: "0.7rem", color: "#94a3b8", fontWeight: 600 }}>Morning checklist (~10 min)</div>
+      <div style={{ fontSize: "0.7rem", color: "#6b7280", fontWeight: 600 }}>Morning checklist (~10 min)</div>
       {[
         "Live Map — all drivers clocked in?",
         "Unassigned — every job has a driver?",
@@ -505,7 +505,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
             gap: "0.5rem",
             fontSize: "0.68rem",
             color: "#cbd5e1",
-            background: "rgba(255,255,255,0.03)",
+            background: "#f9fafb",
             borderRadius: "8px",
             padding: "0.45rem 0.6rem",
           }}
@@ -520,7 +520,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
               alignItems: "center",
               justifyContent: "center",
               fontSize: "0.55rem",
-              color: "#64748b",
+              color: "#6b7280",
               flexShrink: 0,
             }}
           >
@@ -547,8 +547,8 @@ const PREVIEWS: Record<string, () => ReactNode> = {
       >
         <div style={{ fontSize: "2.5rem" }}>✓</div>
         <div style={{ fontSize: "1rem", fontWeight: 700, color: "#4ade80" }}>You're all set</div>
-        <div style={{ fontSize: "0.72rem", color: "#94a3b8", lineHeight: 1.5, maxWidth: "220px" }}>
-          Reopen anytime with <strong style={{ color: "#e2e8f0" }}>? Take a Tour</strong> in the dashboard header
+        <div style={{ fontSize: "0.72rem", color: "#6b7280", lineHeight: 1.5, maxWidth: "220px" }}>
+          Reopen anytime with <strong style={{ color: "#374151" }}>? Take a Tour</strong> in the dashboard header
         </div>
       </div>
     </div>

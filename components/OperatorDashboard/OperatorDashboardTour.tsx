@@ -215,8 +215,8 @@ export function OperatorDashboardTour({
               position: "fixed",
               inset: 0,
               zIndex: 10000,
-              background: "rgba(8, 12, 22, 0.82)",
-              backdropFilter: "blur(6px)",
+              background: "rgba(0, 0, 0, 0.5)",
+              backdropFilter: "blur(4px)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -230,10 +230,10 @@ export function OperatorDashboardTour({
               style={{
                 width: "min(920px, 100%)",
                 maxHeight: "min(90vh, 720px)",
-                background: "linear-gradient(180deg, #151a28 0%, #0f131d 100%)",
+                background: "#ffffff",
                 borderRadius: "20px",
-                border: "1px solid rgba(255,255,255,0.08)",
-                boxShadow: "0 30px 80px rgba(0,0,0,0.55)",
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
@@ -255,7 +255,7 @@ export function OperatorDashboardTour({
               <div
                 style={{
                   padding: "1rem 1.25rem 0.75rem",
-                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                  borderBottom: "1px solid #e5e7eb",
                 }}
               >
                 <div
@@ -275,9 +275,9 @@ export function OperatorDashboardTour({
                         gap: "0.35rem",
                         padding: "0.3rem 0.65rem",
                         borderRadius: "999px",
-                        background: "rgba(37,99,235,0.15)",
-                        border: "1px solid rgba(96,165,250,0.25)",
-                        color: "#93c5fd",
+                        background: "#dcfce7",
+                        border: "1px solid #bbf7d0",
+                        color: "#166534",
                         fontSize: "0.65rem",
                         fontWeight: 700,
                         letterSpacing: "0.06em",
@@ -288,13 +288,13 @@ export function OperatorDashboardTour({
                           width: "6px",
                           height: "6px",
                           borderRadius: "50%",
-                          background: "#60a5fa",
-                          boxShadow: "0 0 6px #60a5fa",
+                          background: "#16a34a",
+                          boxShadow: "0 0 6px rgba(22,163,74,0.45)",
                         }}
                       />
                       OPERATOR TOUR
                     </span>
-                    <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 600 }}>
+                    <span style={{ fontSize: "0.75rem", color: "#6b7280", fontWeight: 600 }}>
                       {stepIndex + 1} of {OPERATOR_TOUR_STEPS.length}
                     </span>
                   </div>
@@ -304,8 +304,8 @@ export function OperatorDashboardTour({
                     aria-label="Close tour"
                     style={{
                       border: "none",
-                      background: "rgba(255,255,255,0.06)",
-                      color: "#94a3b8",
+                      background: "#f3f4f6",
+                      color: "#6b7280",
                       width: "32px",
                       height: "32px",
                       borderRadius: "8px",
@@ -322,7 +322,7 @@ export function OperatorDashboardTour({
                   style={{
                     height: "3px",
                     borderRadius: "999px",
-                    background: "rgba(255,255,255,0.06)",
+                    background: "#e5e7eb",
                     overflow: "hidden",
                   }}
                 >
@@ -364,7 +364,7 @@ export function OperatorDashboardTour({
                       margin: "0 0 0.65rem",
                       fontSize: "clamp(1.25rem, 3vw, 1.65rem)",
                       fontWeight: 800,
-                      color: "#f8fafc",
+                      color: "#111827",
                       lineHeight: 1.25,
                     }}
                   >
@@ -375,7 +375,7 @@ export function OperatorDashboardTour({
                       margin: "0 0 1rem",
                       fontSize: "0.9rem",
                       lineHeight: 1.65,
-                      color: "#94a3b8",
+                      color: "#6b7280",
                     }}
                   >
                     {step.body}
@@ -394,16 +394,16 @@ export function OperatorDashboardTour({
                         <div
                           key={item.label}
                           style={{
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.08)",
+                            background: "#f9fafb",
+                            border: "1px solid #e5e7eb",
                             borderRadius: "10px",
                             padding: "0.65rem 0.75rem",
                           }}
                         >
-                          <div style={{ fontSize: "0.65rem", color: "#64748b", marginBottom: "0.15rem" }}>
+                          <div style={{ fontSize: "0.65rem", color: "#6b7280", marginBottom: "0.15rem" }}>
                             {item.label}
                           </div>
-                          <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#e2e8f0" }}>{item.value}</div>
+                          <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827" }}>{item.value}</div>
                         </div>
                       ))}
                     </div>
@@ -414,7 +414,7 @@ export function OperatorDashboardTour({
                       style={{
                         margin: "0 0 1rem",
                         paddingLeft: "1.1rem",
-                        color: "#cbd5e1",
+                        color: "#374151",
                         fontSize: "0.82rem",
                         lineHeight: 1.6,
                       }}
@@ -433,7 +433,7 @@ export function OperatorDashboardTour({
                         style={{
                           fontSize: "0.7rem",
                           fontWeight: 700,
-                          color: "#64748b",
+                          color: "#6b7280",
                           letterSpacing: "0.05em",
                           textTransform: "uppercase",
                         }}
@@ -444,15 +444,15 @@ export function OperatorDashboardTour({
                         <div
                           key={example.scenario}
                           style={{
-                            background: "rgba(255,255,255,0.03)",
-                            border: "1px solid rgba(255,255,255,0.07)",
+                            background: "#f9fafb",
+                            border: "1px solid #e5e7eb",
                             borderRadius: "10px",
                             padding: "0.75rem 0.875rem",
                             fontSize: "0.8rem",
                             lineHeight: 1.55,
                           }}
                         >
-                          <div style={{ color: "#e2e8f0", marginBottom: "0.3rem" }}>
+                          <div style={{ color: "#374151", marginBottom: "0.3rem" }}>
                             <span style={{ color: "#fbbf24", fontWeight: 700 }}>Scenario: </span>
                             {example.scenario}
                           </div>
@@ -475,7 +475,7 @@ export function OperatorDashboardTour({
               <div
                 style={{
                   padding: "1rem 1.25rem 1.15rem",
-                  borderTop: "1px solid rgba(255,255,255,0.06)",
+                  borderTop: "1px solid #e5e7eb",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
@@ -500,10 +500,10 @@ export function OperatorDashboardTour({
                           cursor: "pointer",
                           background:
                             index === stepIndex
-                              ? "linear-gradient(90deg, #16a34a, #3b82f6)"
+                                ? "linear-gradient(90deg, #16a34a, #3b82f6)"
                               : index < stepIndex
-                                ? "rgba(74,222,128,0.5)"
-                                : "rgba(255,255,255,0.15)",
+                                ? "#86efac"
+                                : "#d1d5db",
                           transition: "all 0.2s ease",
                         }}
                       />
@@ -515,7 +515,7 @@ export function OperatorDashboardTour({
                       alignItems: "center",
                       gap: "0.45rem",
                       fontSize: "0.75rem",
-                      color: "#64748b",
+                      color: "#6b7280",
                       cursor: "pointer",
                       userSelect: "none",
                     }}
@@ -538,9 +538,9 @@ export function OperatorDashboardTour({
                       style={{
                         padding: "0.6rem 0.9rem",
                         borderRadius: "10px",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        background: "rgba(255,255,255,0.04)",
-                        color: "#94a3b8",
+                        border: "1px solid #e5e7eb",
+                        background: "#f9fafb",
+                        color: "#374151",
                         fontSize: "0.8rem",
                         fontWeight: "600",
                         cursor: "pointer",
@@ -556,9 +556,9 @@ export function OperatorDashboardTour({
                     style={{
                       padding: "0.6rem 1rem",
                       borderRadius: "10px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      background: "rgba(255,255,255,0.04)",
-                      color: isFirstStep ? "#475569" : "#cbd5e1",
+                      border: "1px solid #e5e7eb",
+                      background: "#f9fafb",
+                      color: isFirstStep ? "#9ca3af" : "#374151",
                       fontSize: "0.8125rem",
                       fontWeight: "600",
                       cursor: isFirstStep ? "not-allowed" : "pointer",
@@ -573,9 +573,9 @@ export function OperatorDashboardTour({
                       style={{
                         padding: "0.6rem 0.9rem",
                         borderRadius: "10px",
-                        border: "1px solid rgba(255,255,255,0.08)",
+                        border: "1px solid #e5e7eb",
                         background: "transparent",
-                        color: "#64748b",
+                        color: "#6b7280",
                         fontSize: "0.8125rem",
                         fontWeight: "600",
                         cursor: "pointer",
