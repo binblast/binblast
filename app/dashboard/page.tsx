@@ -1425,6 +1425,11 @@ function DashboardPageContent() {
     ? PLAN_NAMES[user.selectedPlan] || user.selectedPlan
     : "No plan yet";
 
+  const completedCleaningsCount = useMemo(
+    () => scheduledCleanings.filter((c) => isCleaningCompleted(c)).length,
+    [scheduledCleanings]
+  );
+
   const filteredPast = scheduledCleanings.filter((c) => {
     const date = parseCleaningDate(c.scheduledDate);
     date.setHours(0, 0, 0, 0);
@@ -2519,10 +2524,11 @@ function DashboardPageContent() {
                   planLabel={customerPlanLabel}
                   paymentStatus={user.paymentStatus}
                   cleaningCredits={cleaningAccountSummary?.cleaningCredits ?? user.cleaningCredits ?? 0}
+                  completedCleanings={completedCleaningsCount}
                   nextCleaning={customerNextCleaningSummary}
                   recurringDay={user.preferredDayOfWeek}
                   planId={user.selectedPlan}
-                  onScheduleClick={() => scrollToSection(scheduleSectionRef)}
+                  onViewRankClick={() => scrollToSection(rewardsSectionRef)}
                 />
               )}
 

@@ -6,6 +6,7 @@ import {
   formatRecurringScheduleSummary,
   getPlanRecurringFrequencyLabel,
 } from "@/lib/recurring-preference";
+import { getLoyaltyRankSummary } from "@/lib/loyalty-badges";
 
 interface NextCleaningSummary {
   dateLabel: string;
@@ -18,10 +19,11 @@ interface CustomerDashboardHeroProps {
   planLabel?: string;
   paymentStatus?: string;
   cleaningCredits?: number;
+  completedCleanings?: number;
   nextCleaning?: NextCleaningSummary | null;
   recurringDay?: string;
   planId?: string | null;
-  onScheduleClick?: () => void;
+  onViewRankClick?: () => void;
 }
 
 export function CustomerDashboardHero({
@@ -29,10 +31,11 @@ export function CustomerDashboardHero({
   planLabel = "No plan yet",
   paymentStatus,
   cleaningCredits = 0,
+  completedCleanings = 0,
   nextCleaning,
   recurringDay,
   planId,
-  onScheduleClick,
+  onViewRankClick,
 }: CustomerDashboardHeroProps) {
   const rawName = firstName?.trim();
   const displayName = rawName
@@ -42,6 +45,7 @@ export function CustomerDashboardHero({
   const isPaid = paymentStatus === "paid";
   const recurringScheduleSummary = formatRecurringScheduleSummary(planId, recurringDay);
   const planFrequencyLabel = getPlanRecurringFrequencyLabel(planId);
+  const rankSummary = getLoyaltyRankSummary(completedCleanings);
 
   return (
     <section className="customer-dash-hero" aria-label="Dashboard overview">
@@ -65,10 +69,7 @@ export function CustomerDashboardHero({
             {nextCleaning ? nextCleaning.dateLabel : "Not scheduled"}
           </strong>
           {nextCleaning?.timeWindow ? (
-            <span className="customer-dash-stat__meta">
-              {nextCleaning.timeWindow}
-              {recurringScheduleSummary ? ` · ${recurringScheduleSummary}` : ""}
-            </span>
+            <span className="customer-dash-stat__meta">{nextCleaning.timeWindow}</span>
           ) : recurringScheduleSummary ? (
             <span className="customer-dash-stat__meta">{recurringScheduleSummary}</span>
           ) : (
@@ -95,18 +96,29 @@ export function CustomerDashboardHero({
           </span>
         </article>
 
-        <div className="customer-dash-stat customer-dash-stat--action">
-          {onScheduleClick ? (
-            <button type="button" className="customer-dash-stat__cta" onClick={onScheduleClick}>
-              Schedule cleaning
+        <article
+          className="customer-dash-stat customer-dash-stat--rank"
+          style={{
+            background: rankSummary.bgColor,
+            borderColor: rankSummary.unlocked ? rankSummary.color : "#e5e7eb",
+          }}
+        >
+          <span className="customer-dash-stat__label">Current rank</span>
+          <strong className="customer-dash-stat__value" style={{ color: rankSummary.color }}>
+            {rankSummary.title}
+          </strong>
+          <span className="customer-dash-stat__meta">{rankSummary.meta}</span>
+          {onViewRankClick ? (
+            <button type="button" className="customer-dash-stat__link" onClick={onViewRankClick}>
+              View badges & progress
             </button>
           ) : null}
           {!hasPlan ? (
-            <Link href="/#pricing" className="customer-dash-stat__cta customer-dash-stat__cta--secondary">
+            <Link href="/#pricing" className="customer-dash-stat__link customer-dash-stat__link--muted">
               View plans
             </Link>
           ) : null}
-        </div>
+        </article>
       </div>
     </section>
   );

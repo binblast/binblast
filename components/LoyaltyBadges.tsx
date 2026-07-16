@@ -4,85 +4,13 @@
 import { useState, useEffect, useMemo, type CSSProperties } from "react";
 import { useFirebase } from "@/lib/firebase-context";
 import { BRAND_MASCOT_SRC } from "@/lib/brand";
+import {
+  BADGE_LEVELS,
+  getLoyaltyRankSummary,
+} from "@/lib/loyalty-badges";
 
 interface LoyaltyBadgesProps {
   userId: string;
-}
-
-interface BadgeLevel {
-  level: number;
-  name: string;
-  description: string;
-  color: string;
-  bgColor: string;
-  minServices: number;
-}
-
-const BADGE_LEVELS: BadgeLevel[] = [
-  {
-    level: 1,
-    name: "Clean Freak",
-    description: "Your first cleaning milestone",
-    color: "#16a34a",
-    bgColor: "#ecfdf5",
-    minServices: 1,
-  },
-  {
-    level: 2,
-    name: "Bin Boss",
-    description: "5+ cleanings completed",
-    color: "#2563eb",
-    bgColor: "#eff6ff",
-    minServices: 5,
-  },
-  {
-    level: 3,
-    name: "Sparkle Specialist",
-    description: "15+ cleanings completed",
-    color: "#7c3aed",
-    bgColor: "#f5f3ff",
-    minServices: 15,
-  },
-  {
-    level: 4,
-    name: "Sanitation Superstar",
-    description: "30+ cleanings completed",
-    color: "#d97706",
-    bgColor: "#fffbeb",
-    minServices: 30,
-  },
-  {
-    level: 5,
-    name: "Bin Royalty",
-    description: "50+ cleanings completed",
-    color: "#dc2626",
-    bgColor: "#fef2f2",
-    minServices: 50,
-  },
-];
-
-function getUnlockedLevel(completedServices: number): BadgeLevel | null {
-  let unlocked: BadgeLevel | null = null;
-  for (const badge of BADGE_LEVELS) {
-    if (completedServices >= badge.minServices) {
-      unlocked = badge;
-    }
-  }
-  return unlocked;
-}
-
-function getNextLevel(completedServices: number): BadgeLevel | null {
-  return BADGE_LEVELS.find((badge) => completedServices < badge.minServices) ?? null;
-}
-
-function getProgressPercent(completedServices: number, unlocked: BadgeLevel | null, next: BadgeLevel | null): number {
-  if (!next) return 100;
-  if (!unlocked) {
-    return Math.min(100, (completedServices / next.minServices) * 100);
-  }
-  const span = next.minServices - unlocked.minServices;
-  if (span <= 0) return 100;
-  return Math.min(100, Math.max(0, ((completedServices - unlocked.minServices) / span) * 100));
 }
 
 export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
@@ -137,12 +65,10 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
     };
   }, [firebaseReady, userId]);
 
-  const unlockedLevel = useMemo(() => getUnlockedLevel(completedServices), [completedServices]);
-  const nextLevel = useMemo(() => getNextLevel(completedServices), [completedServices]);
-  const progressPercent = useMemo(
-    () => getProgressPercent(completedServices, unlockedLevel, nextLevel),
-    [completedServices, unlockedLevel, nextLevel]
-  );
+  const rankSummary = useMemo(() => getLoyaltyRankSummary(completedServices), [completedServices]);
+  const unlockedLevel = rankSummary.unlocked;
+  const nextLevel = rankSummary.next;
+  const progressPercent = rankSummary.progressPercent;
 
   const displayTitle = unlockedLevel
     ? `Level ${unlockedLevel.level} – ${unlockedLevel.name}`
@@ -196,7 +122,14 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
               {completedServices} / {nextLevel.minServices}
             </span>
           </div>
-          <div className="loyalty-progress__track" role="progressbar" aria-valuenow={Math.round(progressPercent)} aria-valuemin={0} aria-valuemax={100} aria-label={`Progress toward ${nextLevel.name}`}>
+          <div
+            className="loyalty-progress__track"
+            role="progressbar"
+            aria-valuenow={Math.round(progressPercent)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Progress toward ${nextLevel.name}`}
+          >
             <div
               className="loyalty-progress__fill"
               style={{
@@ -262,7 +195,9 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
                   </span>
                 </div>
                 {isCurrent ? <span className="loyalty-levels__pill">Current</span> : null}
-                {isUnlocked && !isCurrent ? <span className="loyalty-levels__pill loyalty-levels__pill--earned">Earned</span> : null}
+                {isUnlocked && !isCurrent ? (
+                  <span className="loyalty-levels__pill loyalty-levels__pill--earned">Earned</span>
+                ) : null}
               </li>
             );
           })}

@@ -73,6 +73,32 @@
   min-height: 100%;
 }
 
+.customer-dash-stat--rank {
+  border-width: 2px;
+}
+
+.customer-dash-stat__link {
+  align-self: flex-start;
+  margin-top: 0.35rem;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #15803d;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.customer-dash-stat__link--muted {
+  color: #6b7280;
+}
+
+.customer-dash-stat__link:hover {
+  color: #166534;
+}
+
 .customer-dash-stat--action {
   justify-content: center;
   gap: 0.625rem;
@@ -440,10 +466,6 @@
 
   .customer-dash-stats {
     grid-template-columns: 1fr;
-  }
-
-  .customer-dash-stat--action {
-    order: -1;
   }
 
   .customer-dash-hero__mascot.brand-logo--sidebar {
