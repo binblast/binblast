@@ -2479,7 +2479,7 @@ function DashboardPageContent() {
   return (
     <>
       <Navbar />
-      <main className="page-main dashboard-shell" style={{ 
+      <main className={`page-main dashboard-shell${!isAdmin ? " customer-dashboard" : ""}`} style={{ 
         background: "#f9fafb" 
       }}>
         <div className="container">
@@ -4103,8 +4103,7 @@ function DashboardPageContent() {
             <div className="customer-dash-layout customer-dash-layout--split">
             <div ref={scheduleSectionRef} style={{ scrollMarginTop: "100px" }}>
               <div className="customer-dash-card">
-                <div className="customer-dash-card__header">
-                  <span className="customer-dash-card__icon" aria-hidden="true">📅</span>
+                <div className="customer-dash-card__header customer-dash-card__header--accent">
                   <h2 className="customer-dash-card__title">Schedule a Cleaning</h2>
                   <p className="customer-dash-card__subtitle">
                     Pick your preferred cleaning day and confirm your address below.
@@ -4226,8 +4225,7 @@ function DashboardPageContent() {
             {user.selectedPlan && (
               <div ref={planSectionRef} style={{ scrollMarginTop: "100px" }}>
                 <div className="customer-dash-card">
-                  <div className="customer-dash-card__header">
-                    <span className="customer-dash-card__icon" aria-hidden="true">✨</span>
+                  <div className="customer-dash-card__header customer-dash-card__header--accent customer-dash-card__header--accent-blue">
                     <h2 className="customer-dash-card__title">Your Plan</h2>
                   </div>
 

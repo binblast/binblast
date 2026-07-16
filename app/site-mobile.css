@@ -615,4 +615,63 @@ body.nav-menu-open {
   .pricing-disclaimer {
     margin-top: 1.5rem;
   }
+
+  /* Prevent horizontal overflow site-wide */
+  img,
+  video,
+  svg,
+  canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .marketing-main section,
+  .page-main section {
+    overflow-x: clip;
+  }
+
+  /* Quote wizard */
+  .quote-wizard,
+  .quote-step {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .quote-wizard .btn,
+  .quote-step .btn {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Navbar safe area */
+  .navbar,
+  .nav-container {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  /* Customer dashboard shell */
+  .customer-dashboard {
+    overflow-x: hidden;
+  }
+
+  .customer-dashboard .container > .dashboard-shell {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .referral-card [style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Subscription modal footers */
+  .customer-dashboard [style*="justifyContent: \"flex-end\""] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .customer-dashboard [style*="justifyContent: \"flex-end\""] > button {
+    width: 100% !important;
+  }
 }

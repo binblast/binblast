@@ -107,34 +107,11 @@ export function ReferralRewards({ userId }: ReferralRewardsProps) {
   }
 
   return (
-    <div
-      style={{
-        background: "#ffffff",
-        borderRadius: "20px",
-        padding: "2.5rem",
-        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-        border: "1px solid #e5e7eb",
-        marginBottom: "1.5rem",
-      }}
-    >
-      <h2
-        style={{
-          fontSize: "1.5rem",
-          fontWeight: "700",
-          color: "var(--text-dark)",
-          margin: 0,
-          marginBottom: "0.5rem",
-        }}
-      >
+    <div className="customer-dash-card referral-card">
+      <h2 className="customer-dash-card__title" style={{ marginBottom: "0.5rem" }}>
         Referral Rewards
       </h2>
-      <p
-        style={{
-          fontSize: "0.95rem",
-          color: "#6b7280",
-          marginBottom: "1.5rem",
-        }}
-      >
+      <p className="customer-dash-card__subtitle" style={{ marginBottom: "1.5rem" }}>
         Share your link and earn $10 every time a friend completes their first paid
         service. Your friend also gets $10 off at signup.
       </p>

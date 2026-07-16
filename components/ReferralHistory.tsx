@@ -123,44 +123,18 @@ export function ReferralHistory({ userId }: ReferralHistoryProps) {
 
   if (loading) {
     return (
-      <div
-        style={{
-          background: "#ffffff",
-          borderRadius: "20px",
-          padding: "2rem",
-          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-          border: "1px solid #e5e7eb",
-          marginBottom: "1.5rem",
-        }}
-      >
+      <div className="customer-dash-card referral-card">
         <p style={{ color: "var(--text-light)" }}>Loading referral history...</p>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        background: "#ffffff",
-        borderRadius: "20px",
-        padding: "2rem",
-        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-        border: "1px solid #e5e7eb",
-        marginBottom: "1.5rem",
-      }}
-    >
-      <h2
-        style={{
-          fontSize: "1.5rem",
-          fontWeight: "700",
-          color: "var(--text-dark)",
-          margin: 0,
-          marginBottom: "0.5rem",
-        }}
-      >
+    <div className="customer-dash-card referral-card">
+      <h2 className="customer-dash-card__title" style={{ marginBottom: "0.5rem" }}>
         Referral History
       </h2>
-      <p style={{ fontSize: "0.95rem", color: "#6b7280", marginBottom: "1.5rem" }}>
+      <p className="customer-dash-card__subtitle" style={{ marginBottom: "1.5rem" }}>
         Who you referred, what you earned, and when.
       </p>
 

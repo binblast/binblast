@@ -274,13 +274,7 @@ export function SubscriptionManagerStandalone({
         <button
           onClick={handleBillingPortal}
           disabled={billingPortalLoading}
-          className="btn btn-secondary"
-          style={{
-            marginTop: "1rem",
-            display: "block",
-            width: "100%",
-            maxWidth: "300px",
-          }}
+          className="btn btn-secondary customer-plan-action"
         >
           {billingPortalLoading ? "Opening..." : "Manage Billing"}
         </button>
@@ -291,13 +285,7 @@ export function SubscriptionManagerStandalone({
           setModalStep("select");
           setShowChangeModal(true);
         }}
-        className="btn btn-primary"
-        style={{ 
-          marginTop: "1rem",
-          display: "block",
-          width: "100%",
-          maxWidth: "300px"
-        }}
+        className="btn btn-primary customer-plan-action"
       >
         Change Plan
       </button>

@@ -1,9 +1,9 @@
 // components/LoyaltyBadges.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, type CSSProperties } from "react";
 import { useFirebase } from "@/lib/firebase-context";
-// Note: Firebase functions are imported dynamically inside useEffect to prevent build-time initialization errors
+import { BRAND_MASCOT_SRC } from "@/lib/brand";
 
 interface LoyaltyBadgesProps {
   userId: string;
@@ -15,7 +15,6 @@ interface BadgeLevel {
   description: string;
   color: string;
   bgColor: string;
-  icon: string;
   minServices: number;
 }
 
@@ -23,60 +22,75 @@ const BADGE_LEVELS: BadgeLevel[] = [
   {
     level: 1,
     name: "Clean Freak",
-    description: "Getting started!",
-    color: "#6b7280",
-    bgColor: "#f3f4f6",
-    icon: "",
-    minServices: 1
+    description: "Your first cleaning milestone",
+    color: "#16a34a",
+    bgColor: "#ecfdf5",
+    minServices: 1,
   },
   {
     level: 2,
     name: "Bin Boss",
     description: "5+ cleanings completed",
-    color: "#3b82f6",
-    bgColor: "#dbeafe",
-    icon: "",
-    minServices: 5
+    color: "#2563eb",
+    bgColor: "#eff6ff",
+    minServices: 5,
   },
   {
     level: 3,
     name: "Sparkle Specialist",
     description: "15+ cleanings completed",
-    color: "#8b5cf6",
-    bgColor: "#ede9fe",
-    icon: "",
-    minServices: 15
+    color: "#7c3aed",
+    bgColor: "#f5f3ff",
+    minServices: 15,
   },
   {
     level: 4,
     name: "Sanitation Superstar",
     description: "30+ cleanings completed",
-    color: "#f59e0b",
-    bgColor: "#fef3c7",
-    icon: "",
-    minServices: 30
+    color: "#d97706",
+    bgColor: "#fffbeb",
+    minServices: 30,
   },
   {
     level: 5,
     name: "Bin Royalty",
     description: "50+ cleanings completed",
     color: "#dc2626",
-    bgColor: "#fee2e2",
-    icon: "",
-    minServices: 50
-  }
+    bgColor: "#fef2f2",
+    minServices: 50,
+  },
 ];
 
+function getUnlockedLevel(completedServices: number): BadgeLevel | null {
+  let unlocked: BadgeLevel | null = null;
+  for (const badge of BADGE_LEVELS) {
+    if (completedServices >= badge.minServices) {
+      unlocked = badge;
+    }
+  }
+  return unlocked;
+}
+
+function getNextLevel(completedServices: number): BadgeLevel | null {
+  return BADGE_LEVELS.find((badge) => completedServices < badge.minServices) ?? null;
+}
+
+function getProgressPercent(completedServices: number, unlocked: BadgeLevel | null, next: BadgeLevel | null): number {
+  if (!next) return 100;
+  if (!unlocked) {
+    return Math.min(100, (completedServices / next.minServices) * 100);
+  }
+  const span = next.minServices - unlocked.minServices;
+  if (span <= 0) return 100;
+  return Math.min(100, Math.max(0, ((completedServices - unlocked.minServices) / span) * 100));
+}
+
 export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
-  const [currentLevel, setCurrentLevel] = useState<BadgeLevel>(BADGE_LEVELS[0]);
-  const [completedServices, setCompletedServices] = useState<number>(0);
+  const [completedServices, setCompletedServices] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [nextLevel, setNextLevel] = useState<BadgeLevel | null>(null);
-  const [progress, setProgress] = useState<number>(0);
   const { isReady: firebaseReady } = useFirebase();
 
   useEffect(() => {
-    // Only load data when Firebase is ready
     if (!firebaseReady || !userId) {
       setLoading(false);
       return;
@@ -90,52 +104,22 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
         const db = await getDbInstance();
         if (!db || !userId) return;
 
-        // CRITICAL: Use safe import wrapper to ensure Firebase app exists
         const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
         const firestore = await safeImportFirestore();
         const { collection, query, where, getDocs } = firestore;
-        
-        // Count completed cleanings (check both status and jobStatus fields)
-        // Query for status = "completed" first
+
         const cleaningsQuery = query(
           collection(db, "scheduledCleanings"),
           where("userId", "==", userId)
         );
         const cleaningsSnapshot = await getDocs(cleaningsQuery);
-        // Filter in memory to check both status and jobStatus
-        const completedCount = cleaningsSnapshot.docs.filter(doc => {
+        const completedCount = cleaningsSnapshot.docs.filter((doc) => {
           const data = doc.data();
           return data.status === "completed" || data.jobStatus === "completed";
         }).length;
 
-        setCompletedServices(completedCount);
-
-        // Determine current level
-        let userLevel = BADGE_LEVELS[0];
-        for (let i = BADGE_LEVELS.length - 1; i >= 0; i--) {
-          if (completedCount >= BADGE_LEVELS[i].minServices) {
-            userLevel = BADGE_LEVELS[i];
-            break;
-          }
-        }
-
-        setCurrentLevel(userLevel);
-
-        // Find next level
-        const nextLevelIndex = BADGE_LEVELS.findIndex(
-          level => level.minServices > completedCount
-        );
-        if (nextLevelIndex !== -1) {
-          setNextLevel(BADGE_LEVELS[nextLevelIndex]);
-          
-          // Calculate progress to next level
-          const currentMin = userLevel.minServices;
-          const nextMin = BADGE_LEVELS[nextLevelIndex].minServices;
-          const progressValue = ((completedCount - currentMin) / (nextMin - currentMin)) * 100;
-          setProgress(Math.max(0, Math.min(100, progressValue)));
-        } else {
-          setNextLevel(null);
-          setProgress(100); // Max level reached
+        if (mounted) {
+          setCompletedServices(completedCount);
         }
       } catch (error) {
         console.error("Error loading loyalty data:", error);
@@ -153,209 +137,137 @@ export function LoyaltyBadges({ userId }: LoyaltyBadgesProps) {
     };
   }, [firebaseReady, userId]);
 
+  const unlockedLevel = useMemo(() => getUnlockedLevel(completedServices), [completedServices]);
+  const nextLevel = useMemo(() => getNextLevel(completedServices), [completedServices]);
+  const progressPercent = useMemo(
+    () => getProgressPercent(completedServices, unlockedLevel, nextLevel),
+    [completedServices, unlockedLevel, nextLevel]
+  );
+
+  const displayTitle = unlockedLevel
+    ? `Level ${unlockedLevel.level} – ${unlockedLevel.name}`
+    : "Getting Started";
+  const displayDescription = unlockedLevel
+    ? unlockedLevel.description
+    : "Complete your first cleaning to unlock your first badge.";
+  const displayColor = unlockedLevel?.color ?? "#6b7280";
+  const displayBg = unlockedLevel?.bgColor ?? "#f9fafb";
+
   if (loading) {
     return (
-      <div style={{
-        background: "#ffffff",
-        borderRadius: "20px",
-        padding: "2rem",
-        boxShadow: "0 8px 28px rgba(15, 23, 42, 0.06)",
-        border: "1px solid #e5e7eb",
-        marginBottom: "1.5rem"
-      }}>
-        <p style={{ color: "var(--text-light)" }}>Loading loyalty badge...</p>
+      <div className="customer-dash-card loyalty-card">
+        <p className="loyalty-card__loading">Loading loyalty badges...</p>
       </div>
     );
   }
 
   return (
-    <div style={{
-      background: "#ffffff",
-      borderRadius: "20px",
-      padding: "2.5rem",
-      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-      border: "1px solid #e5e7eb",
-      marginBottom: "1.5rem"
-    }}>
-      <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--text-dark)", margin: 0, marginBottom: "0.5rem" }}>
-        Loyalty & Badges
-      </h2>
-      <p style={{ 
-        fontSize: "0.95rem", 
-        color: "#6b7280", 
-        marginBottom: "1.5rem"
-      }}>
-        Earn badges as you keep your bins fresh. The more cleanings, the higher your level.
-      </p>
-
-      {/* Current Badge */}
-      <div style={{
-        background: currentLevel.bgColor,
-        borderRadius: "16px",
-        padding: "2rem",
-        border: `2px solid ${currentLevel.color}`,
-        textAlign: "center",
-        marginBottom: "1.5rem"
-      }}>
-        <div style={{
-          fontSize: "1.5rem",
-          fontWeight: "700",
-          color: currentLevel.color,
-          marginBottom: "0.5rem"
-        }}>
-          Level {currentLevel.level} – {currentLevel.name}
-        </div>
-        <div style={{
-          fontSize: "0.875rem",
-          color: "#6b7280",
-          marginBottom: "1rem"
-        }}>
-          {currentLevel.description}
-        </div>
-        <div style={{
-          fontSize: "0.875rem",
-          color: "#6b7280",
-          fontWeight: "500"
-        }}>
-          {completedServices} {completedServices === 1 ? "cleaning" : "cleanings"} completed
-        </div>
+    <div className="customer-dash-card loyalty-card">
+      <div className="customer-dash-card__header">
+        <h2 className="customer-dash-card__title">Loyalty & Badges</h2>
+        <p className="customer-dash-card__subtitle">
+          Earn badges as you keep your bins fresh. The more cleanings, the higher your level.
+        </p>
       </div>
 
-      {/* Progress to Next Level */}
-      {nextLevel && (
-        <div style={{ marginBottom: "1.5rem" }}>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "0.5rem"
-          }}>
-            <span style={{
-              fontSize: "0.875rem",
-              color: "var(--text-light)",
-              fontWeight: "500"
-            }}>
+      <div
+        className="loyalty-card__current"
+        style={{
+          background: displayBg,
+          borderColor: displayColor,
+        }}
+      >
+        <p className="loyalty-card__current-label" style={{ color: displayColor }}>
+          {displayTitle}
+        </p>
+        <p className="loyalty-card__current-desc">{displayDescription}</p>
+        <p className="loyalty-card__current-count">
+          {completedServices} {completedServices === 1 ? "cleaning" : "cleanings"} completed
+        </p>
+      </div>
+
+      {nextLevel ? (
+        <div className="loyalty-progress">
+          <div className="loyalty-progress__meta">
+            <span>
               Progress to Level {nextLevel.level} – {nextLevel.name}
             </span>
-            <span style={{
-              fontSize: "0.875rem",
-              color: "var(--text-light)",
-              fontWeight: "600"
-            }}>
+            <span>
               {completedServices} / {nextLevel.minServices}
             </span>
           </div>
-          <div style={{
-            width: "100%",
-            height: "12px",
-            background: "#e5e7eb",
-            borderRadius: "999px",
-            overflow: "hidden"
-          }}>
-            <div style={{
-              width: `${progress}%`,
-              height: "100%",
-              background: `linear-gradient(90deg, ${nextLevel.color}, ${nextLevel.color}dd)`,
-              borderRadius: "999px",
-              transition: "width 0.3s ease"
-            }} />
+          <div className="loyalty-progress__track" role="progressbar" aria-valuenow={Math.round(progressPercent)} aria-valuemin={0} aria-valuemax={100} aria-label={`Progress toward ${nextLevel.name}`}>
+            <div
+              className="loyalty-progress__fill"
+              style={{
+                width: `${progressPercent}%`,
+                background: `linear-gradient(90deg, ${nextLevel.color}, ${nextLevel.color}cc)`,
+              }}
+            />
+            <img
+              src={BRAND_MASCOT_SRC}
+              alt=""
+              aria-hidden="true"
+              className="loyalty-progress__mascot"
+              style={{ left: `clamp(0px, calc(${progressPercent}% - 20px), calc(100% - 40px))` }}
+            />
           </div>
+        </div>
+      ) : (
+        <div className="loyalty-progress loyalty-progress--max">
+          <div className="loyalty-progress__track" aria-label="Maximum loyalty level reached">
+            <div className="loyalty-progress__fill loyalty-progress__fill--max" />
+            <img
+              src={BRAND_MASCOT_SRC}
+              alt=""
+              aria-hidden="true"
+              className="loyalty-progress__mascot loyalty-progress__mascot--max"
+            />
+          </div>
+          <p className="loyalty-progress__max-label">Maximum level reached — you&apos;re Bin Royalty!</p>
         </div>
       )}
 
-      {/* All Badge Levels */}
-      <div style={{
-        padding: "1rem",
-        background: "#f9fafb",
-        borderRadius: "12px",
-        border: "1px solid #e5e7eb"
-      }}>
-        <div style={{
-          fontSize: "0.875rem",
-          fontWeight: "600",
-          color: "var(--text-dark)",
-          marginBottom: "1rem"
-        }}>
-          All Badge Levels:
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+      <div className="loyalty-levels">
+        <p className="loyalty-levels__title">All badge levels</p>
+        <ul className="loyalty-levels__list">
           {BADGE_LEVELS.map((badge) => {
             const isUnlocked = completedServices >= badge.minServices;
-            const isCurrent = badge.level === currentLevel.level;
-            
+            const isCurrent = unlockedLevel?.level === badge.level;
+
             return (
-              <div
+              <li
                 key={badge.level}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "1rem",
-                  padding: "0.75rem",
-                  background: isCurrent ? badge.bgColor : "#ffffff",
-                  borderRadius: "8px",
-                  border: `1px solid ${isCurrent ? badge.color : "#e5e7eb"}`,
-                  opacity: isUnlocked ? 1 : 0.6
-                }}
+                className={`loyalty-levels__item${isCurrent ? " loyalty-levels__item--current" : ""}${isUnlocked ? " loyalty-levels__item--unlocked" : ""}`}
+                style={
+                  isCurrent
+                    ? ({
+                        background: badge.bgColor,
+                        borderColor: badge.color,
+                      } as CSSProperties)
+                    : undefined
+                }
               >
-                <div style={{
-                  width: "24px",
-                  height: "24px",
-                  borderRadius: "50%",
-                  background: isUnlocked ? badge.color : "#d1d5db",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0
-                }}>
-                  {isUnlocked ? (
-                    <div style={{
-                      width: "12px",
-                      height: "12px",
-                      borderRadius: "50%",
-                      background: "#ffffff"
-                    }} />
-                  ) : (
-                    <div style={{
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      background: "#9ca3af"
-                    }} />
-                  )}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{
-                    fontSize: "0.875rem",
-                    fontWeight: isCurrent ? "700" : "500",
-                    color: isCurrent ? badge.color : "var(--text-dark)"
-                  }}>
+                <span
+                  className="loyalty-levels__dot"
+                  style={{ background: isUnlocked ? badge.color : "#d1d5db" }}
+                  aria-hidden="true"
+                />
+                <div className="loyalty-levels__copy">
+                  <span className="loyalty-levels__name" style={isCurrent ? { color: badge.color } : undefined}>
                     Level {badge.level} – {badge.name}
-                  </div>
-                  <div style={{
-                    fontSize: "0.75rem",
-                    color: "#6b7280"
-                  }}>
-                    {badge.minServices} {badge.minServices === 1 ? "cleaning" : "cleanings"}
-                  </div>
-                </div>
-                {isCurrent && (
-                  <span style={{
-                    fontSize: "0.75rem",
-                    fontWeight: "600",
-                    color: badge.color,
-                    padding: "0.25rem 0.75rem",
-                    background: "#ffffff",
-                    borderRadius: "999px"
-                  }}>
-                    Current
                   </span>
-                )}
-              </div>
+                  <span className="loyalty-levels__req">
+                    {badge.minServices} {badge.minServices === 1 ? "cleaning" : "cleanings"}
+                  </span>
+                </div>
+                {isCurrent ? <span className="loyalty-levels__pill">Current</span> : null}
+                {isUnlocked && !isCurrent ? <span className="loyalty-levels__pill loyalty-levels__pill--earned">Earned</span> : null}
+              </li>
             );
           })}
-        </div>
+        </ul>
       </div>
     </div>
   );
 }
-
