@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useFirebase } from "@/lib/firebase-context";
 import { CleaningReadinessBanner } from "@/components/CleaningReadinessBanner";
 import { CleaningLimitModal } from "@/components/CleaningLimitModal";
+import { startExtraCleaningCheckout } from "@/lib/extra-cleaning-checkout";
 import {
   buildRecurringPreferenceUpdate,
   formatRecurringScheduleSummary,
@@ -161,6 +162,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [eligibility, setEligibility] = useState<EligibilityState | null>(null);
   const [checkingEligibility, setCheckingEligibility] = useState(false);
+  const [planLimitState, setPlanLimitState] = useState<{
+    isAtLimit: boolean;
+    oneTimePrice: number;
+  } | null>(null);
 
   const checkScheduleEligibility = useCallback(async (): Promise<EligibilityState | null> => {
     try {
@@ -176,7 +181,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
         scheduledCount: data.allocation?.scheduledCount || 0,
         baseAllowance: data.allocation?.baseAllowance || 0,
         canScheduleAnother: Boolean(data.allocation?.canScheduleAnother),
-        oneTimePrice: data.options?.oneTimeCleaning?.price || 35,
+        oneTimePrice: data.options?.oneTimeCleaning?.price ?? 35,
         upgradeBlockedReason: data.options?.upgradeBlockedReason || null,
         upgradePreview: data.options?.upgradeToBiWeekly || null,
       };
@@ -186,6 +191,21 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     }
   }, [userId]);
 
+  const refreshPlanLimitState = useCallback(async () => {
+    const result = await checkScheduleEligibility();
+    if (result) {
+      setPlanLimitState({
+        isAtLimit: !result.canScheduleAnother,
+        oneTimePrice: result.oneTimePrice,
+      });
+    }
+    return result;
+  }, [checkScheduleEligibility]);
+
+  useEffect(() => {
+    refreshPlanLimitState();
+  }, [refreshPlanLimitState]);
+
   const handleScheduleAnotherClick = async () => {
     if (isOpen) {
       setIsOpen(false);
@@ -193,12 +213,20 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     }
 
     setCheckingEligibility(true);
-    const result = await checkScheduleEligibility();
+    const result = await refreshPlanLimitState();
     setCheckingEligibility(false);
 
     if (result && !result.canScheduleAnother) {
       setEligibility(result);
-      setShowLimitModal(true);
+      setError(null);
+      const checkout = await startExtraCleaningCheckout(userId);
+      if (checkout.error) {
+        if (result.upgradePreview) {
+          setShowLimitModal(true);
+        } else {
+          setError(checkout.error);
+        }
+      }
       return;
     }
 
@@ -212,12 +240,15 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     let cancelled = false;
 
     async function openAfterEligibilityCheck() {
-      const result = await checkScheduleEligibility();
+      const result = await refreshPlanLimitState();
       if (cancelled) return;
 
       if (result && !result.canScheduleAnother) {
         setEligibility(result);
-        setShowLimitModal(true);
+        const checkout = await startExtraCleaningCheckout(userId);
+        if (checkout.error && result.upgradePreview) {
+          setShowLimitModal(true);
+        }
         onInitialOpenHandled?.();
         return;
       }
@@ -232,7 +263,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     return () => {
       cancelled = true;
     };
-  }, [initialOpenForNewCleaning, onInitialOpenHandled, checkScheduleEligibility]);
+  }, [initialOpenForNewCleaning, onInitialOpenHandled, refreshPlanLimitState, userId]);
 
   // Update form fields when existingCleaning prop changes (e.g., when pending data is available)
   useEffect(() => {
@@ -719,20 +750,30 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
         </div>
       )}
       
-      <button
-        onClick={handleScheduleAnotherClick}
-        className="btn btn-primary"
-        style={{ marginBottom: "1.5rem" }}
-        disabled={checkingEligibility}
-      >
-        {checkingEligibility
-          ? "Checking..."
-          : isOpen
-            ? "Cancel"
-            : existingCleaning
-              ? "Schedule Another Cleaning"
-              : "Schedule Cleaning"}
-      </button>
+      <div className="customer-schedule-actions">
+        <button
+          onClick={handleScheduleAnotherClick}
+          className={`btn btn-primary customer-schedule-actions__primary${
+            planLimitState?.isAtLimit ? " customer-schedule-actions__primary--checkout" : ""
+          }`}
+          disabled={checkingEligibility}
+        >
+          {checkingEligibility
+            ? "Checking..."
+            : isOpen
+              ? "Cancel"
+              : planLimitState?.isAtLimit
+                ? `Pay $${planLimitState.oneTimePrice.toFixed(2)} — Stripe checkout`
+                : existingCleaning
+                  ? "Schedule another cleaning"
+                  : "Schedule cleaning"}
+        </button>
+        {planLimitState?.isAtLimit && !isOpen ? (
+          <p className="customer-schedule-actions__hint">
+            Your plan limit is reached. Checkout adds one extra cleaning credit for this billing period.
+          </p>
+        ) : null}
+      </div>
 
       {eligibility && (
         <CleaningLimitModal

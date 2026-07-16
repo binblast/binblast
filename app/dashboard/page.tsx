@@ -35,6 +35,9 @@ import type { ScheduleJob, ScheduleStaffMember } from "@/lib/schedule-board";
 import type { CustomerSubTab } from "@/lib/operator-customers";
 import { PortalBrandHeader } from "@/components/PortalBrandHeader";
 import { CustomerDashboardHero } from "@/components/CustomerDashboard/CustomerDashboardHero";
+import { UpcomingCleaningCard } from "@/components/CustomerDashboard/UpcomingCleaningCard";
+import { ScheduleLimitBanner } from "@/components/CustomerDashboard/ScheduleLimitBanner";
+import { CleaningLimitModal } from "@/components/CleaningLimitModal";
 import { formatRecurringScheduleSummary } from "@/lib/recurring-preference";
 
 const OwnerCommandCenter = dynamic(
@@ -289,6 +292,22 @@ function DashboardPageContent() {
   const [adminLoading, setAdminLoading] = useState(false);
   const [editingCleaning, setEditingCleaning] = useState<ScheduledCleaning | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showUpgradeLimitModal, setShowUpgradeLimitModal] = useState(false);
+  const [upgradeLimitEligibility, setUpgradeLimitEligibility] = useState<{
+    planName: string;
+    scheduledCount: number;
+    baseAllowance: number;
+    oneTimePrice: number;
+    upgradePreview: {
+      newPlanId: string;
+      newPlanName: string;
+      newPlanPrice: number;
+      proratedAmount: number;
+      daysRemaining: number;
+      cleaningCreditsRollover: number;
+    } | null;
+    upgradeBlockedReason?: string | null;
+  } | null>(null);
   const [customerFilter, setCustomerFilter] = useState<{ plan?: string; source?: string; search?: string }>({});
   
   // Operator state
@@ -4144,6 +4163,15 @@ function DashboardPageContent() {
                     {scheduleActionMessage}
                   </div>
                 )}
+                {userId ? (
+                  <ScheduleLimitBanner
+                    userId={userId}
+                    onUpgradeClick={(payload) => {
+                      setUpgradeLimitEligibility(payload);
+                      setShowUpgradeLimitModal(true);
+                    }}
+                  />
+                ) : null}
                 <ScheduleCleaningForm
                   userId={userId}
                   userEmail={user.email}
@@ -4530,8 +4558,34 @@ function DashboardPageContent() {
                       }).slice(0, 20) : upcomingCleanings).map((cleaning) => {
                         const cleaningDate = getCleaningDate(cleaning);
                         const customer = isAdmin ? allCustomers.find((c: any) => c.id === cleaning.userId) : null;
+                        const planId = customer?.selectedPlan || user?.selectedPlan;
+                        const scheduleSummary = formatRecurringScheduleSummary(
+                          planId,
+                          cleaning.trashDay || user?.preferredDayOfWeek
+                        );
+
+                        if (!isAdmin) {
+                          return (
+                            <UpcomingCleaningCard
+                              key={cleaning.id}
+                              cleaning={cleaning}
+                              cleaningDate={cleaningDate}
+                              scheduleSummary={scheduleSummary}
+                              planId={planId}
+                              binsCount={user?.binsCount || 1}
+                              paymentStatus={user?.paymentStatus}
+                              subscriptionStatus={user?.subscriptionStatus}
+                              servicePaused={user?.servicePaused}
+                              onEdit={() => {
+                                setEditingCleaning(cleaning);
+                                setIsEditModalOpen(true);
+                              }}
+                            />
+                          );
+                        }
+
                         const isCompleted = cleaning.status === "completed" || (cleaning as any).jobStatus === "completed";
-                        const canEdit = !isAdmin && !isCompleted && cleaning.status !== "cancelled";
+                        const canEdit = !isCompleted && cleaning.status !== "cancelled";
                         const readiness = evaluateCleaningReadiness(
                           {
                             scheduledDate: cleaningDate.toISOString().split("T")[0],
@@ -5009,9 +5063,10 @@ function DashboardPageContent() {
       )}
 
       {/* Edit Cleaning Modal */}
-      {editingCleaning && (
+      {editingCleaning && userId && (
         <EditCleaningModal
           cleaning={editingCleaning}
+          userId={userId}
           isOpen={isEditModalOpen}
           onClose={() => {
             setIsEditModalOpen(false);
@@ -5021,6 +5076,24 @@ function DashboardPageContent() {
             setIsEditModalOpen(false);
             setEditingCleaning(null);
             // Reload cleanings
+            window.location.reload();
+          }}
+        />
+      )}
+
+      {upgradeLimitEligibility && userId && (
+        <CleaningLimitModal
+          isOpen={showUpgradeLimitModal}
+          onClose={() => setShowUpgradeLimitModal(false)}
+          planName={upgradeLimitEligibility.planName}
+          scheduledCount={upgradeLimitEligibility.scheduledCount}
+          baseAllowance={upgradeLimitEligibility.baseAllowance}
+          oneTimePrice={upgradeLimitEligibility.oneTimePrice}
+          upgradePreview={upgradeLimitEligibility.upgradePreview}
+          upgradeBlockedReason={upgradeLimitEligibility.upgradeBlockedReason}
+          userId={userId}
+          onUpgradeComplete={() => {
+            setShowUpgradeLimitModal(false);
             window.location.reload();
           }}
         />

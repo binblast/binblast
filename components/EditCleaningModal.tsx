@@ -1,7 +1,12 @@
 // components/EditCleaningModal.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  canModifyScheduledCleaning,
+  getSchedulingPolicyState,
+  MODIFY_LOCK_HOURS,
+} from "@/lib/cleaning-scheduling-policy";
 
 interface Cleaning {
   id: string;
@@ -19,12 +24,13 @@ interface Cleaning {
 
 interface EditCleaningModalProps {
   cleaning: Cleaning;
+  userId: string;
   isOpen: boolean;
   onClose: () => void;
   onUpdated: () => void;
 }
 
-export function EditCleaningModal({ cleaning, isOpen, onClose, onUpdated }: EditCleaningModalProps) {
+export function EditCleaningModal({ cleaning, userId, isOpen, onClose, onUpdated }: EditCleaningModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -37,6 +43,15 @@ export function EditCleaningModal({ cleaning, isOpen, onClose, onUpdated }: Edit
   const [trashDay, setTrashDay] = useState(cleaning.trashDay || "");
   const [selectedTime, setSelectedTime] = useState(cleaning.scheduledTime || "");
   const [notes, setNotes] = useState(cleaning.notes || "");
+
+  const canEditCleaning = useMemo(
+    () => canModifyScheduledCleaning(cleaning.scheduledDate, cleaning.scheduledTime),
+    [cleaning.scheduledDate, cleaning.scheduledTime]
+  );
+  const editPolicy = useMemo(
+    () => getSchedulingPolicyState(cleaning.scheduledDate, cleaning.scheduledTime),
+    [cleaning.scheduledDate, cleaning.scheduledTime]
+  );
 
   // Format date for input (YYYY-MM-DD)
   const formatDateForInput = (date: Date): string => {
@@ -174,6 +189,14 @@ export function EditCleaningModal({ cleaning, isOpen, onClose, onUpdated }: Edit
       return;
     }
 
+    if (!canEditCleaning) {
+      setError(
+        editPolicy.message ||
+          `Changes must be made at least ${MODIFY_LOCK_HOURS} hours before your scheduled cleaning time.`
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -183,6 +206,7 @@ export function EditCleaningModal({ cleaning, isOpen, onClose, onUpdated }: Edit
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          userId,
           addressLine1,
           addressLine2: addressLine2 || null,
           city,

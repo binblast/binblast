@@ -198,8 +198,8 @@ export function CleaningLimitModal({
               {loading
                 ? "Redirecting..."
                 : applyCredit && availableCredit > 0
-                  ? `Buy One-Time Cleaning — $${Math.max(0, oneTimePrice - Math.min(10, availableCredit)).toFixed(2)} (with $${Math.min(10, availableCredit).toFixed(2)} credit)`
-                  : `Buy One-Time Cleaning — $${oneTimePrice.toFixed(2)}`}
+                  ? `Stripe checkout — $${Math.max(0, oneTimePrice - Math.min(10, availableCredit)).toFixed(2)} (with $${Math.min(10, availableCredit).toFixed(2)} credit)`
+                  : `Stripe checkout — $${oneTimePrice.toFixed(2)}`}
             </button>
 
             {availableCredit > 0 && (

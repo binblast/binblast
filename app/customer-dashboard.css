@@ -641,10 +641,223 @@
   }
 }
 
+/* Upcoming cleaning cards */
+.customer-cleaning-card {
+  padding: 1.125rem 1.25rem;
+  background: linear-gradient(180deg, #f8fdff 0%, #f0f9ff 100%);
+  border-radius: 16px;
+  border: 1px solid #bae6fd;
+  box-shadow: 0 4px 14px rgba(14, 116, 144, 0.06);
+}
+
+.customer-cleaning-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.875rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid rgba(186, 230, 253, 0.9);
+}
+
+.customer-cleaning-card__date {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.3;
+}
+
+.customer-cleaning-card__time {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.customer-cleaning-card__status {
+  flex-shrink: 0;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  border: 1px solid transparent;
+}
+
+.customer-cleaning-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.customer-cleaning-card__body p {
+  margin: 0;
+}
+
+.customer-cleaning-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.customer-cleaning-card__btn {
+  min-height: 44px;
+  padding: 0.625rem 1.125rem;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.22);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.customer-cleaning-card__btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(22, 163, 74, 0.28);
+}
+
+.customer-cleaning-card__locked {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 0.875rem;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.customer-cleaning-card__policy {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #92400e;
+  line-height: 1.45;
+}
+
+/* Plan limit / checkout banner */
+.customer-schedule-limit {
+  margin-bottom: 1rem;
+  padding: 1rem 1.125rem;
+  border-radius: 14px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.customer-schedule-limit__copy strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #92400e;
+  font-size: 0.9375rem;
+}
+
+.customer-schedule-limit__copy p {
+  margin: 0;
+  color: #78350f;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.customer-schedule-limit__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-top: 0.875rem;
+}
+
+.customer-schedule-limit__btn {
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.customer-schedule-limit__btn--primary {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.22);
+}
+
+.customer-schedule-limit__btn--secondary {
+  background: #ffffff;
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.customer-schedule-limit__note,
+.customer-schedule-limit__error {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.customer-schedule-limit__note {
+  color: #92400e;
+}
+
+.customer-schedule-limit__error {
+  color: #dc2626;
+}
+
+.customer-schedule-actions {
+  margin-bottom: 1.5rem;
+}
+
+.customer-schedule-actions__primary {
+  width: 100%;
+  max-width: none;
+}
+
+.customer-schedule-actions__primary--checkout {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%) !important;
+}
+
+.customer-schedule-actions__hint {
+  margin: 0.625rem 0 0;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
 @media (max-width: 767px) {
   .customer-dashboard .customer-dash-layout--split {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  .customer-cleaning-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .customer-cleaning-card__status {
+    align-self: flex-start;
+  }
+
+  .customer-cleaning-card__btn {
+    width: 100%;
+  }
+
+  .customer-schedule-limit__actions {
+    flex-direction: column;
+  }
+
+  .customer-schedule-limit__btn {
+    width: 100%;
   }
 
   .customer-dashboard [style*="display: flex"][style*="justifyContent: \"space-between\""] {
