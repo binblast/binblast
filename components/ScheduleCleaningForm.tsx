@@ -19,6 +19,12 @@ import {
   MODIFY_LOCK_HOURS,
   UPGRADE_MIN_HOURS,
 } from "@/lib/cleaning-scheduling-policy";
+import {
+  getTimeSlotsForDate,
+  isSunday,
+  normalizeTrashDay,
+  validateBusinessSchedule,
+} from "@/lib/business-hours";
 
 interface ScheduledCleaning {
   id: string;
@@ -419,6 +425,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     
     // For each day of the week, find the next occurrence within 2 weeks
     dayNames.forEach((dayName, dayIndex) => {
+      if (dayIndex === 0) return;
       const currentDayIndex = today.getDay();
       let daysUntilDay = dayIndex - currentDayIndex;
       
@@ -500,7 +507,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     // Extract day name from the selected option
     const selectedOption = dayOptions.find(opt => opt.value === selectedValue);
     if (selectedOption) {
-      setTrashDay(selectedOption.dayName);
+      setTrashDay(normalizeTrashDay(selectedOption.dayName));
     } else {
       setTrashDay("");
     }
@@ -513,6 +520,17 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
 
     if (!addressLine1 || !city || !state || !zipCode || !selectedDateValue || !selectedTime) {
       setError("Please fill in all required fields");
+      return;
+    }
+
+    if (isSunday(selectedDateValue)) {
+      setError("We're closed on Sundays. Please choose another day.");
+      return;
+    }
+
+    const scheduleCheck = validateBusinessSchedule(selectedDateValue, selectedTime);
+    if (!scheduleCheck.valid) {
+      setError(scheduleCheck.error || "Invalid schedule selection.");
       return;
     }
 
@@ -732,12 +750,16 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     }
   };
 
-  const timeSlots = [
-    "6:00 AM - 9:00 AM",
-    "9:00 AM - 12:00 PM",
-    "12:00 PM - 3:00 PM",
-    "3:00 PM - 6:00 PM",
-  ];
+  const timeSlots = useMemo(
+    () => (selectedDateValue ? getTimeSlotsForDate(selectedDateValue) : []),
+    [selectedDateValue]
+  );
+
+  useEffect(() => {
+    if (selectedDateValue && timeSlots.length > 0 && !timeSlots.includes(selectedTime)) {
+      setSelectedTime(timeSlots[0]);
+    }
+  }, [selectedDateValue, timeSlots, selectedTime]);
 
   // Get existing cleaning date info for display
   const existingCleaningDate = existingCleaning?.scheduledDate ? parseDate(existingCleaning.scheduledDate) : null;
@@ -770,7 +792,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
                   month: "long", 
                   day: "numeric", 
                   year: "numeric" 
-                })} at {existingCleaning.scheduledTime}
+                })}
               </p>
             </div>
             <button

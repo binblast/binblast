@@ -72,7 +72,7 @@ export async function scheduleNextCleaningIfNeeded(
     scheduledTime:
       completedCleaning.scheduledTime ||
       userData.preferredTimeWindow ||
-      "9:00 AM - 12:00 PM",
+      "8:00 AM - 12:00 PM",
     notes: completedCleaning.notes || null,
     status: "upcoming",
     jobStatus: "pending",

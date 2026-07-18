@@ -4,6 +4,7 @@ import { appendStandardPrepNote } from "@/lib/cleaning-readiness";
 import { buildRecurringPreferenceUpdate } from "@/lib/recurring-preference";
 import { shouldConsumeCleaningCredit } from "@/lib/cleaning-allocation";
 import { assertCanScheduleAnotherCleaning, loadUserSchedulingContext } from "@/lib/cleaning-schedule-validation";
+import { getDayOfWeekName, normalizeTrashDay, validateBusinessSchedule } from "@/lib/business-hours";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const scheduleCheck = validateBusinessSchedule(scheduledDate, scheduledTime);
+    if (!scheduleCheck.valid) {
+      return NextResponse.json({ error: scheduleCheck.error }, { status: 400 });
+    }
+
+    const resolvedTrashDay = normalizeTrashDay(trashDay || getDayOfWeekName(scheduledDate));
+
     await assertCanScheduleAnotherCleaning(userId, scheduledDate);
 
     const { allocation } = await loadUserSchedulingContext(userId);
@@ -55,7 +63,7 @@ export async function POST(req: NextRequest) {
       city,
       state,
       zipCode,
-      trashDay,
+      trashDay: resolvedTrashDay,
       scheduledDate,
       scheduledTime,
       notes: notes || null,
@@ -69,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     await db.collection("users").doc(userId).update({
       ...buildRecurringPreferenceUpdate({
-        preferredDayOfWeek: trashDay,
+        preferredDayOfWeek: resolvedTrashDay,
         preferredTimeWindow: scheduledTime,
         addressLine1,
         addressLine2: addressLine2 || null,

@@ -429,6 +429,41 @@ function DashboardPageContent() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!userId) return;
+
+    const initialCheckout = searchParams.get("initial_checkout");
+    const sessionId = searchParams.get("session_id");
+    if (initialCheckout !== "1" || !sessionId) return;
+
+    const handledKey = `initialCheckout:${sessionId}`;
+    if (sessionStorage.getItem(handledKey)) {
+      router.replace("/dashboard", undefined);
+      return;
+    }
+
+    const finalizeCheckout = async () => {
+      try {
+        const response = await fetch("/api/customer/complete-initial-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, userId }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to finalize checkout");
+        }
+        sessionStorage.setItem(handledKey, "1");
+        await refreshUserProfile(userId);
+        router.replace("/dashboard", undefined);
+      } catch (error) {
+        console.error("[Dashboard] Initial checkout finalization failed:", error);
+      }
+    };
+
+    finalizeCheckout();
+  }, [userId, searchParams, router, refreshUserProfile]);
+
   const loadCleaningAccountSummary = useCallback(async (uid: string) => {
     try {
       const response = await fetch(
@@ -1435,8 +1470,6 @@ function DashboardPageContent() {
           month: "short",
           day: "numeric",
         }),
-        timeWindow: nextCleaning.scheduledTime || undefined,
-        recurringDay: nextCleaning.trashDay || user?.preferredDayOfWeek,
       }
     : null;
 

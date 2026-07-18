@@ -1,8 +1,18 @@
 // components/CustomerOnboardingWizard.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { getSiteLeadProfile, splitFullName } from "@/lib/site-leads";
+import { ServiceDatePicker } from "@/components/ServiceDatePicker";
+import {
+  getDayOfWeekName,
+  getMinSelectableDate,
+  getTimeSlotsForDate,
+  isSunday,
+  normalizeTrashDay,
+  parseLocalDate,
+  validateBusinessSchedule,
+} from "@/lib/business-hours";
 
 interface OnboardingData {
   firstName: string;
@@ -14,18 +24,23 @@ interface OnboardingData {
   city: string;
   state: string;
   zipCode: string;
-  preferredServiceDate: string; // Date they want first cleaning
-  preferredDayOfWeek: string; // Day of week for monthly cleanings (e.g., "Monday", "Tuesday")
-  preferredTimeWindow: string; // Morning, Afternoon, Evening
+  preferredServiceDate: string;
+  preferredDayOfWeek: string;
+  preferredTimeWindow: string;
   notes: string;
 }
+
+export type OnboardingCompletePayload = OnboardingData & {
+  password: string;
+};
 
 interface CustomerOnboardingWizardProps {
   planId: string;
   planName: string;
   isOpen: boolean;
   onClose: () => void;
-  onComplete: (data: OnboardingData) => void;
+  onComplete: (data: OnboardingCompletePayload) => void;
+  creatingAccount?: boolean;
 }
 
 export function CustomerOnboardingWizard({
@@ -34,6 +49,7 @@ export function CustomerOnboardingWizard({
   isOpen,
   onClose,
   onComplete,
+  creatingAccount = false,
 }: CustomerOnboardingWizardProps) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<OnboardingData>({
@@ -48,10 +64,12 @@ export function CustomerOnboardingWizard({
     zipCode: "",
     preferredServiceDate: "",
     preferredDayOfWeek: "",
-    preferredTimeWindow: "Morning",
+    preferredTimeWindow: "8:00 AM - 12:00 PM",
     notes: "",
   });
-  const [errors, setErrors] = useState<Partial<Record<keyof OnboardingData, string>>>({});
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [errors, setErrors] = useState<Partial<Record<keyof OnboardingData | "password" | "confirmPassword", string>>>({});
 
   useEffect(() => {
     if (!isOpen) return;
@@ -71,8 +89,13 @@ export function CustomerOnboardingWizard({
 
   if (!isOpen) return null;
 
+  const timeSlotOptions = useMemo(
+    () => getTimeSlotsForDate(formData.preferredServiceDate),
+    [formData.preferredServiceDate]
+  );
+
   const validateStep = (currentStep: number): boolean => {
-    const newErrors: Partial<Record<keyof OnboardingData, string>> = {};
+    const newErrors: Partial<Record<keyof OnboardingData | "password" | "confirmPassword", string>> = {};
 
     if (currentStep === 1) {
       if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
@@ -86,6 +109,14 @@ export function CustomerOnboardingWizard({
         newErrors.phone = "Phone number is required";
       } else if (!/^[\d\s\-\(\)]+$/.test(formData.phone.replace(/\s/g, ""))) {
         newErrors.phone = "Invalid phone number";
+      }
+      if (!password) {
+        newErrors.password = "Password is required";
+      } else if (password.length < 6) {
+        newErrors.password = "Password must be at least 6 characters";
+      }
+      if (password !== confirmPassword) {
+        newErrors.confirmPassword = "Passwords do not match";
       }
     }
 
@@ -103,13 +134,22 @@ export function CustomerOnboardingWizard({
     if (currentStep === 3) {
       if (!formData.preferredServiceDate) {
         newErrors.preferredServiceDate = "Please select a preferred service date";
+      } else if (isSunday(formData.preferredServiceDate)) {
+        newErrors.preferredServiceDate = "We're closed on Sundays. Please choose another day.";
       } else {
-        const selectedDate = new Date(formData.preferredServiceDate);
+        const selectedDate = parseLocalDate(formData.preferredServiceDate);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         if (selectedDate < today) {
           newErrors.preferredServiceDate = "Service date must be today or in the future";
         }
+      }
+      const scheduleCheck = validateBusinessSchedule(
+        formData.preferredServiceDate,
+        formData.preferredTimeWindow
+      );
+      if (!scheduleCheck.valid && formData.preferredServiceDate) {
+        newErrors.preferredServiceDate = scheduleCheck.error;
       }
     }
 
@@ -122,7 +162,7 @@ export function CustomerOnboardingWizard({
       if (step < 4) {
         setStep(step + 1);
       } else {
-        onComplete(formData);
+        onComplete({ ...formData, password });
       }
     }
   };
@@ -135,7 +175,6 @@ export function CustomerOnboardingWizard({
 
   const handleInputChange = (field: keyof OnboardingData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -145,9 +184,16 @@ export function CustomerOnboardingWizard({
     }
   };
 
-  const getMinDate = () => {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
+  const handleDateChange = (dateValue: string) => {
+    handleInputChange("preferredServiceDate", dateValue);
+    if (dateValue) {
+      const dayOfWeek = normalizeTrashDay(getDayOfWeekName(dateValue));
+      handleInputChange("preferredDayOfWeek", dayOfWeek);
+      const slots = getTimeSlotsForDate(dateValue);
+      if (slots.length > 0 && !slots.includes(formData.preferredTimeWindow)) {
+        handleInputChange("preferredTimeWindow", slots[0]);
+      }
+    }
   };
 
   return (
@@ -383,6 +429,69 @@ export function CustomerOnboardingWizard({
                     <p style={{ margin: "4px 0 0 0", color: "#dc2626", fontSize: "12px" }}>{errors.phone}</p>
                   )}
                 </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
+                    Create Password *
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) {
+                        setErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.password;
+                          return next;
+                        });
+                      }
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      border: `1px solid ${errors.password ? "#dc2626" : "#d1d5db"}`,
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                    }}
+                    placeholder="At least 6 characters"
+                  />
+                  {errors.password && (
+                    <p style={{ margin: "4px 0 0 0", color: "#dc2626", fontSize: "12px" }}>{errors.password}</p>
+                  )}
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
+                    Confirm Password *
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (errors.confirmPassword) {
+                        setErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.confirmPassword;
+                          return next;
+                        });
+                      }
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      border: `1px solid ${errors.confirmPassword ? "#dc2626" : "#d1d5db"}`,
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                    }}
+                    placeholder="Re-enter your password"
+                  />
+                  {errors.confirmPassword && (
+                    <p style={{ margin: "4px 0 0 0", color: "#dc2626", fontSize: "12px" }}>{errors.confirmPassword}</p>
+                  )}
+                  <p style={{ margin: "8px 0 0", fontSize: "12px", color: "#6b7280" }}>
+                    Your account is created before checkout so you can sign in anytime.
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -515,36 +624,15 @@ export function CustomerOnboardingWizard({
                   <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
                     Preferred Service Date *
                   </label>
-                  <input
-                    type="date"
+                  <ServiceDatePicker
                     value={formData.preferredServiceDate}
-                    onChange={(e) => {
-                      const dateValue = e.target.value;
-                      handleInputChange("preferredServiceDate", dateValue);
-                      
-                      // Extract day of week from selected date for monthly scheduling
-                      if (dateValue) {
-                        const selectedDate = new Date(dateValue);
-                        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-                        const dayOfWeek = dayNames[selectedDate.getDay()];
-                        handleInputChange("preferredDayOfWeek", dayOfWeek);
-                      }
-                    }}
-                    min={getMinDate()}
-                    style={{
-                      width: "100%",
-                      padding: "10px",
-                      border: `1px solid ${errors.preferredServiceDate ? "#dc2626" : "#d1d5db"}`,
-                      borderRadius: "6px",
-                      fontSize: "14px",
-                    }}
+                    onChange={handleDateChange}
+                    minDate={getMinSelectableDate()}
+                    error={errors.preferredServiceDate}
                   />
-                  {errors.preferredServiceDate && (
-                    <p style={{ margin: "4px 0 0 0", color: "#dc2626", fontSize: "12px" }}>{errors.preferredServiceDate}</p>
-                  )}
                   {formData.preferredServiceDate && formData.preferredDayOfWeek && (
                     <p style={{ margin: "8px 0 0 0", fontSize: "13px", color: "#16a34a", fontWeight: "500" }}>
-                      ✓ Monthly cleanings will be scheduled on {formData.preferredDayOfWeek}s
+                      ✓ Recurring cleanings will be scheduled on {formData.preferredDayOfWeek}s
                     </p>
                   )}
                 </div>
@@ -555,6 +643,7 @@ export function CustomerOnboardingWizard({
                   <select
                     value={formData.preferredTimeWindow}
                     onChange={(e) => handleInputChange("preferredTimeWindow", e.target.value)}
+                    disabled={timeSlotOptions.length === 0}
                     style={{
                       width: "100%",
                       padding: "10px",
@@ -563,10 +652,11 @@ export function CustomerOnboardingWizard({
                       fontSize: "14px",
                     }}
                   >
-                    <option value="Morning">Morning (8 AM - 12 PM)</option>
-                    <option value="Afternoon">Afternoon (12 PM - 4 PM)</option>
-                    <option value="Evening">Evening (4 PM - 7 PM)</option>
-                    <option value="Any">Any Time</option>
+                    {timeSlotOptions.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -628,7 +718,15 @@ export function CustomerOnboardingWizard({
                   Service Schedule
                 </h4>
                 <p style={{ margin: "4px 0", fontSize: "14px", color: "#374151" }}>
-                  First Cleaning: {formData.preferredServiceDate ? new Date(formData.preferredServiceDate).toLocaleDateString() : "Not selected"}
+                  First Cleaning:{" "}
+                  {formData.preferredServiceDate
+                    ? parseLocalDate(formData.preferredServiceDate).toLocaleDateString("en-US", {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : "Not selected"}
                 </p>
                 {formData.preferredDayOfWeek && (
                   <p style={{ margin: "4px 0", fontSize: "14px", color: "#374151" }}>
@@ -674,18 +772,24 @@ export function CustomerOnboardingWizard({
             </button>
             <button
               onClick={handleNext}
+              disabled={creatingAccount}
               style={{
                 padding: "10px 24px",
-                background: "#2563eb",
+                background: creatingAccount ? "#9ca3af" : "#2563eb",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "6px",
                 fontSize: "14px",
                 fontWeight: "600",
-                cursor: "pointer",
+                cursor: creatingAccount ? "not-allowed" : "pointer",
+                opacity: creatingAccount ? 0.7 : 1,
               }}
             >
-              {step < 4 ? "Next" : "Proceed to Payment"}
+              {creatingAccount
+                ? "Creating account..."
+                : step < 4
+                  ? "Next"
+                  : "Proceed to Payment"}
             </button>
           </div>
         </div>

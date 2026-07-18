@@ -68,13 +68,11 @@ export function CustomerDashboardHero({
           <strong className="customer-dash-stat__value">
             {nextCleaning ? nextCleaning.dateLabel : "Not scheduled"}
           </strong>
-          {nextCleaning?.timeWindow ? (
-            <span className="customer-dash-stat__meta">{nextCleaning.timeWindow}</span>
-          ) : recurringScheduleSummary ? (
+          {!nextCleaning && recurringScheduleSummary ? (
             <span className="customer-dash-stat__meta">{recurringScheduleSummary}</span>
-          ) : (
+          ) : !nextCleaning ? (
             <span className="customer-dash-stat__meta">Book a visit when you&apos;re ready</span>
-          )}
+          ) : null}
         </article>
 
         <article className="customer-dash-stat">

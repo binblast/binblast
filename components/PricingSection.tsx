@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PlanConfirmationModal } from "./PlanConfirmationModal";
 import { CustomQuoteWizard } from "./CustomQuoteWizard";
-import { CustomerOnboardingWizard } from "./CustomerOnboardingWizard";
+import { CustomerOnboardingWizard, type OnboardingCompletePayload } from "./CustomerOnboardingWizard";
 import { usePlatformPricing } from "@/hooks/usePlatformPricing";
 import { useFirebase } from "@/lib/firebase-context";
 import { getCapturedReferralCode, getCapturedPartnerCode, persistSiteLeadProfile } from "@/lib/site-leads";
@@ -136,6 +136,7 @@ export function PricingSection() {
   >();
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const [onboardingData, setOnboardingData] = useState<any>(null);
+  const [creatingAccount, setCreatingAccount] = useState(false);
   const [referralCodeFromUrl, setReferralCodeFromUrl] = useState("");
   const [partnerCodeFromUrl, setPartnerCodeFromUrl] = useState("");
 
@@ -278,15 +279,94 @@ export function PricingSection() {
     setSelectedPlanId(planId);
   };
 
-  const handleOnboardingComplete = async (data: any) => {
-    console.log("[PricingSection] Onboarding completed:", data);
-    setOnboardingData(data);
-    setShowOnboardingWizard(false);
-    persistSiteLeadProfile({
-      name: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
-      email: data.email || "",
-      phone: data.phone || "",
-    });
+  const handleOnboardingComplete = async (payload: OnboardingCompletePayload) => {
+    const { password, ...data } = payload;
+    setCreatingAccount(true);
+
+    try {
+      const {
+        createUserWithEmailAndPassword,
+        signInWithEmailAndPassword,
+        updateProfile,
+        getDbInstance,
+      } = await import("@/lib/firebase");
+      const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+      const firestore = await safeImportFirestore();
+      const { doc, setDoc, serverTimestamp } = firestore;
+      const db = await getDbInstance();
+
+      const accountEmail = data.email.trim().toLowerCase();
+      let userCredential;
+
+      try {
+        userCredential = await createUserWithEmailAndPassword(accountEmail, password);
+      } catch (createErr: any) {
+        if (
+          createErr.code === "auth/email-already-in-use" ||
+          createErr.code === "auth/email-already-exists"
+        ) {
+          userCredential = await signInWithEmailAndPassword(accountEmail, password);
+        } else {
+          throw createErr;
+        }
+      }
+
+      await updateProfile(userCredential.user, {
+        displayName: `${data.firstName} ${data.lastName}`.trim(),
+      });
+
+      if (db && userCredential.user) {
+        await setDoc(
+          doc(db, "users", userCredential.user.uid),
+          {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: accountEmail,
+            phone: data.phone,
+            selectedPlan: selectedPlanId,
+            addressLine1: data.addressLine1,
+            addressLine2: data.addressLine2 || null,
+            city: data.city,
+            state: data.state,
+            zipCode: data.zipCode,
+            preferredDayOfWeek: data.preferredDayOfWeek,
+            paymentStatus: "pending",
+            subscriptionStatus: "pending",
+            role: "customer",
+            referralCount: 0,
+            pendingCleaningConfirmation: true,
+            pendingCleaningData: {
+              preferredServiceDate: data.preferredServiceDate,
+              preferredDayOfWeek: data.preferredDayOfWeek,
+              preferredTimeWindow: data.preferredTimeWindow,
+              addressLine1: data.addressLine1,
+              addressLine2: data.addressLine2 || null,
+              city: data.city,
+              state: data.state,
+              zipCode: data.zipCode,
+              notes: data.notes || null,
+            },
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+
+      setUserId(userCredential.user.uid);
+      setOnboardingData(data);
+      setShowOnboardingWizard(false);
+      persistSiteLeadProfile({
+        name: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
+        email: data.email || "",
+        phone: data.phone || "",
+      });
+    } catch (error: any) {
+      console.error("[PricingSection] Account creation failed:", error);
+      alert(error.message || "Failed to create your account. Please try again.");
+    } finally {
+      setCreatingAccount(false);
+    }
   };
 
   const handleConfirmCheckout = async (
@@ -294,7 +374,7 @@ export function PricingSection() {
     referralCode?: string,
     partnerCode?: string
   ) => {
-    if (!selectedPlanId) return;
+    if (!selectedPlanId || !userId) return;
 
     setLoadingPlanId(selectedPlanId);
     setLoadingCredit(true);
@@ -401,9 +481,10 @@ export function PricingSection() {
             setOnboardingData(null);
           }}
           onComplete={handleOnboardingComplete}
+          creatingAccount={creatingAccount}
         />
       )}
-      {selectedPlanId && selectedPlanId !== "commercial" && !showOnboardingWizard && (userId || onboardingData) && (
+      {selectedPlanId && selectedPlanId !== "commercial" && !showOnboardingWizard && userId && (
         <PlanConfirmationModal
           planId={selectedPlanId}
           isOpen={true}

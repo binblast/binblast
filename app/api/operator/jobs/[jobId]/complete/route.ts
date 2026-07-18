@@ -33,6 +33,13 @@ export async function POST(
 
     const jobData = jobDoc.data() || {};
 
+    if (jobData.status === "completed" || jobData.jobStatus === "completed") {
+      return NextResponse.json(
+        { message: "Job already completed", alreadyCompleted: true },
+        { status: 200 }
+      );
+    }
+
     const updateData: Record<string, unknown> = {
       jobStatus: "completed",
       status: "completed",

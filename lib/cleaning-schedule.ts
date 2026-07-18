@@ -1,4 +1,5 @@
 // lib/cleaning-schedule.ts
+import { normalizeTrashDay } from "@/lib/business-hours";
 import { getNextCleaningDate } from "@/lib/scheduling";
 
 const PLAN_MIN_DAYS: Record<string, number> = {
@@ -98,11 +99,12 @@ export function computeNextCleaningDate(
   const minDays = PLAN_MIN_DAYS[planId];
   if (!minDays || !trashDay) return null;
 
+  const normalizedTrashDay = normalizeTrashDay(trashDay);
   const ref = new Date(afterDate);
   ref.setHours(0, 0, 0, 0);
   ref.setDate(ref.getDate() + minDays);
 
-  return getNextCleaningDate(trashDay, "WEEKLY", ref);
+  return getNextCleaningDate(normalizedTrashDay, "WEEKLY", ref);
 }
 
 export function buildCompletionUpdateData(status: string): Record<string, unknown> {

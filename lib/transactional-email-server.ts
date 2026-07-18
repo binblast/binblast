@@ -1,5 +1,6 @@
 import { notifyCleaningComplete } from "@/lib/email-utils";
 import { formatEmailDate } from "@/lib/email-template-config";
+import { parseCleaningDate, formatCleaningDateForStorage } from "@/lib/cleaning-schedule";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 
 /**
@@ -11,12 +12,10 @@ export async function notifyCleaningCompleteForJob(params: {
   completedDate?: string | null;
   nextCleaningId?: string | null;
 }): Promise<void> {
-  const email = params.userEmail?.trim();
-  if (!email) return;
-
   try {
     const db = await getAdminFirestore();
 
+    let email = params.userEmail?.trim() || "";
     let firstName = email.split("@")[0] || "there";
     let lastName = "";
 
@@ -24,15 +23,24 @@ export async function notifyCleaningCompleteForJob(params: {
       const userDoc = await db.collection("users").doc(params.userId).get();
       if (userDoc.exists) {
         const userData = userDoc.data() || {};
+        email = (userData.email as string)?.trim() || email;
         firstName = (userData.firstName as string) || firstName;
         lastName = (userData.lastName as string) || "";
       }
     }
 
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      console.warn("[Notify Cleaning Complete For Job] Skipping — invalid or missing email.");
+      return;
+    }
+
     let nextCleaningDate: string | null = null;
     if (params.nextCleaningId) {
       const nextDoc = await db.collection("scheduledCleanings").doc(params.nextCleaningId).get();
-      nextCleaningDate = (nextDoc.data()?.scheduledDate as string) || null;
+      const rawNextDate = nextDoc.data()?.scheduledDate;
+      nextCleaningDate = rawNextDate
+        ? formatCleaningDateForStorage(parseCleaningDate(rawNextDate))
+        : null;
     } else if (params.userId) {
       const upcomingSnapshot = await db
         .collection("scheduledCleanings")
@@ -47,23 +55,30 @@ export async function notifyCleaningCompleteForJob(params: {
         .filter((cleaning: Record<string, unknown>) => {
           const status = `${cleaning.status || ""} ${cleaning.jobStatus || ""}`.toLowerCase();
           if (status.includes("completed") || status.includes("cancel")) return false;
-          const scheduled = cleaning.scheduledDate ? new Date(String(cleaning.scheduledDate)) : null;
-          if (!scheduled || Number.isNaN(scheduled.getTime())) return false;
+          const scheduled = parseCleaningDate(cleaning.scheduledDate);
           scheduled.setHours(0, 0, 0, 0);
           return scheduled >= today;
         })
         .sort((a: Record<string, unknown>, b: Record<string, unknown>) =>
-          String(a.scheduledDate).localeCompare(String(b.scheduledDate))
+          parseCleaningDate(a.scheduledDate).getTime() -
+          parseCleaningDate(b.scheduledDate).getTime()
         );
 
-      nextCleaningDate = (upcoming[0]?.scheduledDate as string) || null;
+      const rawNextDate = upcoming[0]?.scheduledDate;
+      nextCleaningDate = rawNextDate
+        ? formatCleaningDateForStorage(parseCleaningDate(rawNextDate))
+        : null;
     }
+
+    const completedDateValue = params.completedDate
+      ? formatCleaningDateForStorage(parseCleaningDate(params.completedDate))
+      : formatCleaningDateForStorage(new Date());
 
     await notifyCleaningComplete({
       email,
       firstName,
       lastName,
-      completedDate: formatEmailDate(params.completedDate || new Date()),
+      completedDate: formatEmailDate(completedDateValue),
       nextCleaningDate,
     });
   } catch (error: unknown) {

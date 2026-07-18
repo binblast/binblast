@@ -52,6 +52,11 @@ export function getNextCleaningDate(
     }
   }
 
+  // Bin Blast is closed on Sundays — skip to Monday if needed.
+  while (date.getDay() === 0) {
+    date.setDate(date.getDate() + 1);
+  }
+
   return date;
 }
 

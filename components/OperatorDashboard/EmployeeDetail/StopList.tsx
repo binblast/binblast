@@ -151,7 +151,17 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
   };
 
   const handleMarkComplete = async (stopId: string) => {
+    if (workingStopId) return;
     setWorkingStopId(stopId);
+
+    const markCompleted = (stop: Stop): Stop => ({
+      ...stop,
+      status: "completed",
+      jobStatus: "completed",
+    });
+    setTodayStops((prev) => prev.map((stop) => (stop.id === stopId ? markCompleted(stop) : stop)));
+    setUpcomingStops((prev) => prev.map((stop) => (stop.id === stopId ? markCompleted(stop) : stop)));
+
     try {
       const { getAuthInstance } = await import("@/lib/firebase");
       const auth = await getAuthInstance();
@@ -167,7 +177,10 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
         const data = await response.json();
         throw new Error(data.message || data.error || "Failed to complete stop");
       }
+
+      await loadStops();
     } catch (error: unknown) {
+      await loadStops();
       const message = error instanceof Error ? error.message : "Failed to complete stop";
       alert(message);
     } finally {
@@ -225,7 +238,7 @@ export function StopList({ employeeId, refreshKey = 0, managerId }: StopListProp
               disabled={busy}
               onClick={() => handleMarkComplete(stop.id)}
             >
-              {busy ? "Saving..." : "Complete"}
+              {busy ? "Completing..." : "Complete"}
             </OperatorActionButton>
           )}
         </div>

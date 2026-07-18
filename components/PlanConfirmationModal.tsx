@@ -607,7 +607,7 @@ export function PlanConfirmationModal({
                   fontWeight: "600",
                 }}
               >
-                Referral Code Discount
+                One-time referral discount (first payment only)
               </span>
               <span
                 style={{
@@ -619,6 +619,21 @@ export function PlanConfirmationModal({
                 -${referralDiscount.toFixed(2)}
               </span>
             </div>
+          )}
+
+          {referralDiscount > 0 && (
+            <p
+              style={{
+                margin: "0 0 0.75rem",
+                fontSize: "0.8125rem",
+                color: "#6b7280",
+                lineHeight: 1.5,
+              }}
+            >
+              Your plan stays at ${planPrice.toFixed(2)}
+              {plan.priceSuffix || ""} after this first payment. The ${referralDiscount.toFixed(2)} referral
+              discount applies once — not every month.
+            </p>
           )}
 
           <div
@@ -638,7 +653,7 @@ export function PlanConfirmationModal({
                 color: "var(--text-dark)",
               }}
             >
-              Total
+              {referralDiscount > 0 || creditDiscount > 0 ? "Due today" : "Total"}
             </span>
             <span
               style={{
@@ -648,7 +663,20 @@ export function PlanConfirmationModal({
               }}
             >
               ${finalPrice.toFixed(2)}
-              {plan.priceSuffix && plan.isRecurring && (
+              {plan.priceSuffix && plan.isRecurring && (referralDiscount > 0 || creditDiscount > 0) ? (
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: "0.75rem",
+                    fontWeight: "500",
+                    color: "#6b7280",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  Then ${planPrice.toFixed(2)}
+                  {plan.priceSuffix}
+                </span>
+              ) : plan.priceSuffix && plan.isRecurring ? (
                 <span
                   style={{
                     fontSize: "0.875rem",
@@ -659,7 +687,7 @@ export function PlanConfirmationModal({
                 >
                   {plan.priceSuffix}
                 </span>
-              )}
+              ) : null}
             </span>
           </div>
         </div>

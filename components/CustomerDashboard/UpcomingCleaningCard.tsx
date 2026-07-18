@@ -103,7 +103,6 @@ export function UpcomingCleaningCard({
               day: "numeric",
             })}
           </h4>
-          <p className="customer-cleaning-card__time">{cleaning.scheduledTime || "Time TBD"}</p>
         </div>
         <span className="customer-cleaning-card__status" style={badgeStyle}>
           {coverageLabel}
@@ -116,11 +115,6 @@ export function UpcomingCleaningCard({
           {cleaning.addressLine2 ? `, ${cleaning.addressLine2}` : ""}, {cleaning.city},{" "}
           {cleaning.state} {cleaning.zipCode}
         </p>
-        {scheduleSummary ? (
-          <p>
-            <strong>Recurring schedule:</strong> {scheduleSummary}
-          </p>
-        ) : null}
         <CleaningJobPrepDetails
           binsCount={cleaning.binsCount || binsCount}
           planId={planId}

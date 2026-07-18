@@ -5,10 +5,16 @@ export const MODIFY_LOCK_HOURS = 24;
 export const UPGRADE_MIN_HOURS = 4;
 
 const TIME_WINDOW_START_HOUR: Record<string, number> = {
-  "6:00 AM - 9:00 AM": 6,
-  "9:00 AM - 12:00 PM": 9,
+  "8:00 AM - 12:00 PM": 8,
   "12:00 PM - 3:00 PM": 12,
   "3:00 PM - 6:00 PM": 15,
+  "12:00 PM - 2:00 PM": 12,
+  "6:00 AM - 9:00 AM": 6,
+  "9:00 AM - 12:00 PM": 9,
+  Morning: 8,
+  Afternoon: 12,
+  Evening: 15,
+  Any: 8,
 };
 
 export interface UpcomingCleaningRef {

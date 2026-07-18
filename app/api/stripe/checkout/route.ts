@@ -46,6 +46,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (onboardingData && !userId) {
+      return NextResponse.json(
+        { error: "Please create your account before checkout." },
+        { status: 400 }
+      );
+    }
+
     const origin = req.headers.get("origin") || "http://localhost:3000";
     // Preserve referral code in success URL if present
     // Note: {CHECKOUT_SESSION_ID} is a Stripe placeholder that gets replaced automatically
@@ -56,7 +63,11 @@ export async function POST(req: NextRequest) {
     if (referralCode) {
       successUrlParams.push(`ref=${encodeURIComponent(referralCode)}`);
     }
-    const successUrl = `${origin}/register?${successUrlParams.join('&')}`;
+    const successPath = userId ? "/dashboard" : "/register";
+    if (userId) {
+      successUrlParams.push("initial_checkout=1");
+    }
+    const successUrl = `${origin}${successPath}?${successUrlParams.join("&")}`;
     const cancelUrl = referralCode
       ? `${origin}/?ref=${encodeURIComponent(referralCode)}#pricing`
       : `${origin}/#pricing`;
