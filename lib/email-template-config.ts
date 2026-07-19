@@ -13,6 +13,8 @@ export type EmailTemplateKey =
   | "PARTNER_REJECTION"
   | "TEAM_MEMBER_INVITATION"
   | "PASSWORD_RESET"
+  | "CUSTOM_QUOTE_ESTIMATE"
+  | "CUSTOM_QUOTE_FINAL_OFFER"
   | "GENERIC_MESSAGE";
 
 export interface EmailTemplateDefinition {
@@ -87,6 +89,20 @@ export const EMAIL_TEMPLATE_DEFINITIONS: Record<EmailTemplateKey, EmailTemplateD
     htmlFile: "password-reset.html",
     subjectLine: "Reset your Bin Blast Co. password",
     description: "Forgot password reset link",
+  },
+  CUSTOM_QUOTE_ESTIMATE: {
+    envKey: "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_CUSTOM_QUOTE_ESTIMATE",
+    fallbackId: "",
+    htmlFile: "custom-quote-estimate.html",
+    subjectLine: "Your custom quote estimate — Bin Blast Co.",
+    description: "Initial estimate sent when a customer submits a custom quote request",
+  },
+  CUSTOM_QUOTE_FINAL_OFFER: {
+    envKey: "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_CUSTOM_QUOTE_FINAL_OFFER",
+    fallbackId: "",
+    htmlFile: "custom-quote-final-offer.html",
+    subjectLine: "Your final service quote — Bin Blast Co.",
+    description: "Final quote sent by operator after reviewing a custom quote request",
   },
   GENERIC_MESSAGE: {
     envKey: "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_GENERIC_MESSAGE",

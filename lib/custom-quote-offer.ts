@@ -1,5 +1,10 @@
 import { getAppBaseUrl } from "@/lib/email-template-config";
 
+const EMAIL_LOGO_URL =
+  process.env.NEXT_PUBLIC_EMAIL_LOGO_URL || "https://www.binblastco.com/bin-blast-email-logo.png";
+const CONTACT_PHONE = "(470) 305-0823";
+const CONTACT_PHONE_TEL = "+14703050823";
+
 export type QuotePropertyType = "residential" | "commercial" | "hoa";
 
 export interface QuoteRecordForOffer {
@@ -41,18 +46,6 @@ export interface OfferRecordForEmail {
   specialNotes?: string;
   timeline?: string;
   termsAndConditions?: string;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function formatMultilineHtml(value: string): string {
-  return escapeHtml(value).replace(/\n/g, "<br>");
 }
 
 export function getPropertyTypeLabel(type?: string): string {
@@ -121,123 +114,174 @@ export function buildOfferFormPrefill(quote: QuoteRecordForOffer) {
   };
 }
 
-export function buildCustomQuoteOfferEmailHtml(
-  quote: QuoteRecordForOffer,
-  offer: OfferRecordForEmail
-): string {
-  const services = offer.customizedServices || {};
-  const terms =
-    offer.termsAndConditions?.trim() || getDefaultOfferTerms(quote.propertyType);
-  const adminEmail =
-    process.env.NEXT_PUBLIC_ADMIN_EMAIL || "binblastcompany@gmail.com";
-  const baseUrl = getAppBaseUrl();
-  const customerPhone = quote.phone?.trim() || "Contact us";
+export interface QuoteEstimateEmailOptions {
+  referenceId: string;
+  requiresManualReview?: boolean;
+  recommendedBundle?: string | null;
+  preferredContact?: string | null;
+  bestTimeToContact?: string | null;
+}
 
-  const detailRows: string[] = [
-    `<div class="detail-row"><span class="label">Property type:</span> ${escapeHtml(getPropertyTypeLabel(quote.propertyType))}</div>`,
-    `<div class="detail-row"><span class="label">Service address:</span> ${escapeHtml(quote.address || "On file")}</div>`,
-    `<div class="detail-row"><span class="label">Service frequency:</span> ${escapeHtml(offer.customizedFrequency || "Monthly")}</div>`,
-  ];
+function getCustomerFirstName(name?: string, email?: string): string {
+  const fromName = name?.trim().split(/\s+/)[0];
+  if (fromName) return fromName;
+  const fromEmail = email?.trim().split("@")[0];
+  return fromEmail || "there";
+}
+
+function getQuoteContactEmail(): string {
+  return process.env.NEXT_PUBLIC_ADMIN_EMAIL || "binblastcompany@gmail.com";
+}
+
+function getQuoteFrequency(quote: QuoteRecordForOffer, offer?: OfferRecordForEmail): string {
+  return (
+    offer?.customizedFrequency ||
+    quote.commercialFrequency ||
+    quote.residentialFrequency ||
+    quote.hoaFrequency ||
+    "Monthly"
+  );
+}
+
+export function formatQuotePriceRange(low?: number, high?: number, single?: number): string {
+  if (low != null && high != null && low !== high) {
+    return `$${Number(low).toLocaleString()} - $${Number(high).toLocaleString()}/month`;
+  }
+  const value = single ?? high ?? low ?? 0;
+  return `$${Number(value).toLocaleString()}/month`;
+}
+
+export function buildQuoteServiceDetails(
+  quote: QuoteRecordForOffer,
+  offer?: OfferRecordForEmail
+): string {
+  const services = offer?.customizedServices || {};
+  const lines: string[] = [];
 
   if (quote.propertyType === "commercial") {
     if (quote.commercialType) {
-      detailRows.push(
-        `<div class="detail-row"><span class="label">Business type:</span> ${escapeHtml(quote.commercialType)}</div>`
-      );
+      lines.push(`Business type: ${quote.commercialType}`);
     }
-    if (services.dumpsterCount) {
-      detailRows.push(
-        `<div class="detail-row"><span class="label">Dumpsters included:</span> ${services.dumpsterCount}</div>`
-      );
+    const dumpsterCount = services.dumpsterCount ?? quote.commercialBins;
+    if (dumpsterCount) {
+      lines.push(`Dumpsters: ${dumpsterCount}`);
     }
-    if (services.hasDumpsterPad) {
-      detailRows.push(
-        `<div class="detail-row"><span class="label">Dumpster pad cleaning:</span> Included</div>`
-      );
+    const hasPad = services.hasDumpsterPad ?? quote.dumpsterPadCleaning;
+    if (hasPad) {
+      lines.push("Dumpster pad cleaning: Included");
     }
   }
 
-  if (quote.propertyType === "residential" && services.residentialBins) {
-    detailRows.push(
-      `<div class="detail-row"><span class="label">Bins included:</span> ${services.residentialBins}</div>`
-    );
+  if (quote.propertyType === "residential") {
+    const bins = services.residentialBins ?? quote.residentialBins;
+    if (bins) {
+      lines.push(`Bins: ${bins}`);
+    }
   }
 
   if (quote.propertyType === "hoa") {
-    if (services.hoaUnits) {
-      detailRows.push(
-        `<div class="detail-row"><span class="label">Units / homes:</span> ${services.hoaUnits}</div>`
-      );
+    const units = services.hoaUnits ?? quote.hoaUnits;
+    const bins = services.hoaBins ?? quote.hoaBins;
+    if (units) {
+      lines.push(`Units / homes: ${units}`);
     }
-    if (services.hoaBins) {
-      detailRows.push(
-        `<div class="detail-row"><span class="label">Total bins:</span> ${services.hoaBins}</div>`
-      );
+    if (bins) {
+      lines.push(`Total bins: ${bins}`);
     }
   }
 
-  if (offer.timeline?.trim()) {
-    detailRows.push(
-      `<div class="detail-row"><span class="label">Start timeline:</span> ${escapeHtml(offer.timeline.trim())}</div>`
-    );
+  const specialInstructions = getQuoteSpecialInstructions(quote);
+  if (specialInstructions) {
+    lines.push(`Special requirements: ${specialInstructions}`);
   }
 
-  const specialNotesBlock = offer.specialNotes?.trim()
-    ? `<div style="margin:20px 0;padding:15px;background:#fef3c7;border-left:4px solid #fbbf24;border-radius:4px;">
-        <strong>Special notes:</strong><br>${formatMultilineHtml(offer.specialNotes.trim())}
-      </div>`
-    : "";
+  return lines.length > 0 ? lines.join("\n") : "Details on file with your quote request.";
+}
 
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-    .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; }
-    .offer-box { background: #f0fdf4; border: 2px solid #16a34a; border-radius: 8px; padding: 20px; margin: 20px 0; }
-    .price { font-size: 2em; font-weight: bold; color: #16a34a; margin: 10px 0; }
-    .footer { background: #f9fafb; padding: 20px; text-align: center; font-size: 0.875em; color: #6b7280; border-radius: 0 0 10px 10px; }
-    .detail-row { margin: 10px 0; padding: 10px; background: #f9fafb; border-radius: 6px; }
-    .label { font-weight: 600; color: #374151; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1 style="margin:0;">Your Custom Service Offer</h1>
-    </div>
-    <div class="content">
-      <p>Dear ${escapeHtml(quote.name || "Customer")},</p>
-      <p>Thank you for your interest in Bin Blast Co. We've prepared a customized ${escapeHtml(getPropertyTypeLabel(quote.propertyType).toLowerCase())} service offer based on your quote request.</p>
+export function buildQuoteEstimateEmailParams(
+  quote: QuoteRecordForOffer,
+  options: QuoteEstimateEmailOptions
+): Record<string, string> {
+  const baseUrl = getAppBaseUrl();
+  const calendlyUrl = process.env.NEXT_PUBLIC_CALENDLY_URL?.trim();
+  const contactChannel = options.preferredContact?.trim() || "email";
+  const contactWindow = options.bestTimeToContact?.trim()
+    ? ` during ${options.bestTimeToContact.trim()}`
+    : " within 24 hours";
 
-      <div class="offer-box">
-        <h2 style="margin-top:0;color:#16a34a;">Offer Summary</h2>
-        <div class="price">$${Number(offer.customizedPrice || 0).toLocaleString()}/month</div>
-        ${detailRows.join("\n        ")}
-      </div>
+  const introText = options.requiresManualReview
+    ? "We've received your custom quote request. Because of the scope of your property, our team will review the details and prepare a tailored offer for you."
+    : "We've received your custom quote request and prepared the estimate below based on the information you provided.";
 
-      ${specialNotesBlock}
+  const nextSteps = options.requiresManualReview
+    ? "Our team will review your property details and send a final quote once pricing is confirmed. After you accept, we'll send a secure link to set up billing and schedule your first service."
+    : "Our team will confirm the details and follow up with next steps. After pricing is finalized, you'll receive a secure link to accept your offer and set up payment.";
 
-      <div style="margin:20px 0;padding:15px;background:#f3f4f6;border-radius:4px;font-size:0.9em;">
-        <strong>Terms and conditions</strong><br>
-        ${formatMultilineHtml(terms)}
-      </div>
+  let contactNote = `We'll contact you via ${contactChannel}${contactWindow}.`;
+  if (calendlyUrl) {
+    contactNote += ` You can also schedule a call here: ${calendlyUrl}`;
+  }
 
-      <p><strong>To accept this offer or ask questions:</strong></p>
-      <p>
-        Reply to this email, call <a href="tel:+14703050823">${escapeHtml(customerPhone)}</a>,
-        or contact us at <a href="mailto:${escapeHtml(adminEmail)}">${escapeHtml(adminEmail)}</a>.
-      </p>
-      <p>Once you approve, we'll send a secure link to set up billing and schedule your first service.</p>
-      <p>Best regards,<br>Bin Blast Co. Team</p>
-    </div>
-    <div class="footer">
-      <p>Bin Blast Co. · <a href="${baseUrl}/terms">Terms</a> · <a href="${baseUrl}/cancellation">Cancellation Policy</a></p>
-    </div>
-  </div>
-</body>
-</html>`;
+  if (options.recommendedBundle) {
+    contactNote += ` Recommended bundle: ${options.recommendedBundle}.`;
+  }
+
+  return {
+    firstName: getCustomerFirstName(quote.name, quote.email),
+    logoUrl: EMAIL_LOGO_URL,
+    introText,
+    referenceId: options.referenceId,
+    propertyType: getPropertyTypeLabel(quote.propertyType),
+    serviceAddress: quote.address?.trim() || "On file",
+    priceRange: formatQuotePriceRange(
+      quote.estimatedPriceLow,
+      quote.estimatedPriceHigh,
+      quote.estimatedPrice
+    ),
+    serviceFrequency: getQuoteFrequency(quote),
+    serviceDetails: buildQuoteServiceDetails(quote),
+    nextSteps,
+    contactNote,
+    contactPhone: CONTACT_PHONE,
+    contactPhoneTel: CONTACT_PHONE_TEL,
+    contactEmail: getQuoteContactEmail(),
+    termsUrl: `${baseUrl}/terms`,
+    cancellationUrl: `${baseUrl}/cancellation`,
+  };
+}
+
+export function buildQuoteFinalOfferEmailParams(
+  quote: QuoteRecordForOffer,
+  offer: OfferRecordForEmail
+): Record<string, string> {
+  const baseUrl = getAppBaseUrl();
+  const contactEmail = getQuoteContactEmail();
+  const referenceId = quote.id ? quote.id.slice(0, 8).toUpperCase() : "ON FILE";
+  const terms = offer.termsAndConditions?.trim() || getDefaultOfferTerms(quote.propertyType);
+  const specialNotes = offer.specialNotes?.trim() || "No additional notes for this quote.";
+  const timeline = offer.timeline?.trim() || quote.timeline?.trim() || "To be confirmed upon acceptance";
+  const propertyLabel = getPropertyTypeLabel(quote.propertyType).toLowerCase();
+
+  return {
+    firstName: getCustomerFirstName(quote.name, quote.email),
+    logoUrl: EMAIL_LOGO_URL,
+    introText: `Thank you for your interest in Bin Blast Co. We've prepared a final ${propertyLabel} service quote based on your request.`,
+    referenceId,
+    propertyType: getPropertyTypeLabel(quote.propertyType),
+    serviceAddress: quote.address?.trim() || "On file",
+    finalPrice: `$${Number(offer.customizedPrice || 0).toLocaleString()}/month`,
+    serviceFrequency: getQuoteFrequency(quote, offer),
+    serviceDetails: buildQuoteServiceDetails(quote, offer),
+    timeline,
+    specialNotes,
+    termsAndConditions: terms,
+    acceptInstructions:
+      "To accept this quote or ask questions, reply to this email or call us. Once approved, we'll send a secure link to set up billing and schedule your first service.",
+    replySubject: encodeURIComponent(`Accept quote ${referenceId} — Bin Blast Co.`),
+    contactPhone: CONTACT_PHONE,
+    contactPhoneTel: CONTACT_PHONE_TEL,
+    contactEmail,
+    termsUrl: `${baseUrl}/terms`,
+    cancellationUrl: `${baseUrl}/cancellation`,
+  };
 }

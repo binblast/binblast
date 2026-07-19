@@ -8,7 +8,8 @@ import {
   getStaffLoginUrl,
 } from "@/lib/email-template-config";
 import {
-  buildCustomQuoteOfferEmailHtml,
+  buildQuoteEstimateEmailParams,
+  buildQuoteFinalOfferEmailParams,
   type OfferRecordForEmail,
   type QuoteRecordForOffer,
 } from "@/lib/custom-quote-offer";
@@ -431,6 +432,41 @@ export async function notifyCleaningComplete(customerData: {
 }
 
 /**
+ * Send initial estimate email when a customer submits a custom quote request.
+ */
+export async function notifyCustomQuoteEstimate(params: {
+  quote: QuoteRecordForOffer;
+  referenceId: string;
+  requiresManualReview?: boolean;
+  recommendedBundle?: string | null;
+  preferredContact?: string | null;
+  bestTimeToContact?: string | null;
+}): Promise<{ success: boolean; error?: string }> {
+  const email = params.quote.email?.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { success: false, error: "Valid customer email is required to send an estimate." };
+  }
+
+  const templateParams = buildQuoteEstimateEmailParams(params.quote, {
+    referenceId: params.referenceId,
+    requiresManualReview: params.requiresManualReview,
+    recommendedBundle: params.recommendedBundle,
+    preferredContact: params.preferredContact,
+    bestTimeToContact: params.bestTimeToContact,
+  });
+
+  const emailSubject = params.requiresManualReview
+    ? "We received your custom quote — next steps"
+    : getEmailSubject("CUSTOM_QUOTE_ESTIMATE");
+
+  return sendEmailJS(getEmailTemplateId("CUSTOM_QUOTE_ESTIMATE"), {
+    to_email: email.toLowerCase(),
+    email_subject: emailSubject,
+    ...templateParams,
+  });
+}
+
+/**
  * Send a customized quote offer email to a customer (commercial, HOA, or residential).
  */
 export async function notifyCustomQuoteOffer(params: {
@@ -442,38 +478,12 @@ export async function notifyCustomQuoteOffer(params: {
     return { success: false, error: "Valid customer email is required to send an offer." };
   }
 
-  const propertyLabel =
-    params.quote.propertyType === "commercial"
-      ? "Commercial"
-      : params.quote.propertyType === "hoa"
-        ? "HOA"
-        : "Custom";
+  const templateParams = buildQuoteFinalOfferEmailParams(params.quote, params.offer);
 
-  const subject = `Your ${propertyLabel} Service Offer — Bin Blast Co.`;
-  const messageHtml = buildCustomQuoteOfferEmailHtml(params.quote, params.offer);
-  const nameParts = (params.quote.name || email.split("@")[0] || "Customer").trim().split(/\s+/);
-
-  return sendEmailJS(getEmailTemplateId("GENERIC_MESSAGE"), {
+  return sendEmailJS(getEmailTemplateId("CUSTOM_QUOTE_FINAL_OFFER"), {
     to_email: email.toLowerCase(),
-    email_subject: subject,
-    firstName: nameParts[0] || "there",
-    lastName: nameParts.slice(1).join(" "),
-    planName: "Bin Blast Co.",
-    addressLine1: params.quote.address || "",
-    addressLine2: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    confirmationTitle: "Your Custom Service Offer",
-    confirmationMessage: messageHtml,
-    confirmationDetails: "",
-    buttonText: "Visit Bin Blast Co.",
-    buttonColor: "#16a34a",
-    dashboardLink: getAppBaseUrl(),
-    preferredServiceDate: "",
-    preferredTimeWindow: "",
-    preferredDayOfWeek: "",
-    logoUrl: EMAIL_LOGO_URL,
+    email_subject: getEmailSubject("CUSTOM_QUOTE_FINAL_OFFER"),
+    ...templateParams,
   });
 }
 

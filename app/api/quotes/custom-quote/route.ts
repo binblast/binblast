@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { calculatePricingWithSafeguards, PricingInput } from "@/lib/pricing-safeguards";
+import { notifyCustomQuoteEstimate } from "@/lib/email-utils";
 
 function getPropertyTypeLabel(type: string) {
   switch (type) {
@@ -153,41 +154,39 @@ export async function POST(request: NextRequest) {
         })
       }).catch(() => {}); // Silently fail if email service is not configured
 
-      // Customer confirmation email
-      const calendlyUrl = process.env.NEXT_PUBLIC_CALENDLY_URL?.trim();
-      const scheduleCallBlock = calendlyUrl
-        ? `<p><a href="${calendlyUrl}" style="color:#16a34a;font-weight:600;">Schedule a call with our team</a> or wait for us to reach out.</p>`
-        : `<p>Call us at <a href="tel:+14703050823">(470) 305-0823</a> if you'd like to talk sooner.</p>`;
-
-      const customerEmailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/email/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: formData.email,
-          subject: requiresManualReview
-            ? "We received your custom quote — next steps"
-            : "Thank you for your custom quote request - Bin Blast",
-          html: `
-            <h2>Thank you for your interest!</h2>
-            <p>Hi ${formData.name},</p>
-            <p>${
-              requiresManualReview
-                ? "We've received your custom quote request. Because of the scope of your property, our team will prepare a tailored offer for you."
-                : "We've received your custom quote request and our team will review it shortly."
-            }</p>
-            <p><strong>Reference:</strong> ${docRef.id.slice(0, 8).toUpperCase()}</p>
-            <p><strong>Property Type:</strong> ${getPropertyTypeLabel(formData.propertyType)}</p>
-            <p><strong>Estimated Price Range:</strong> $${lowEstimate.toLocaleString()} - $${highEstimate.toLocaleString()}/month</p>
-            ${recommendedBundle ? `<p><strong>Recommended Bundle:</strong> ${recommendedBundle}</p>` : ''}
-            <p>We'll contact you via ${formData.preferredContact || "email"}${
-              formData.bestTimeToContact ? ` during ${formData.bestTimeToContact}` : " within 24 hours"
-            }.</p>
-            ${scheduleCallBlock}
-            <p>After we finalize pricing, you'll receive a secure link to accept your offer and set up payment.</p>
-            <p>Best regards,<br>The Bin Blast Team</p>
-          `
-        })
-      }).catch(() => {}); // Silently fail if email service is not configured
+      // Customer estimate email
+      await notifyCustomQuoteEstimate({
+        quote: {
+          propertyType: formData.propertyType,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          commercialType: formData.commercialType,
+          commercialBins: formData.commercialBins,
+          dumpsterPadCleaning: formData.dumpsterPadCleaning,
+          commercialFrequency: formData.commercialFrequency,
+          commercialSpecialRequirements: formData.commercialSpecialRequirements,
+          residentialBins: formData.residentialBins,
+          residentialFrequency: formData.residentialFrequency,
+          residentialSpecialRequirements: formData.residentialSpecialRequirements,
+          hoaUnits: formData.hoaUnits,
+          hoaBins: formData.hoaBins,
+          hoaFrequency: formData.hoaFrequency,
+          communityAccessRequirements: formData.communityAccessRequirements,
+          specialInstructions: formData.specialInstructions,
+          estimatedPrice,
+          estimatedPriceLow: lowEstimate,
+          estimatedPriceHigh: highEstimate,
+        },
+        referenceId: docRef.id.slice(0, 8).toUpperCase(),
+        requiresManualReview,
+        recommendedBundle,
+        preferredContact: formData.preferredContact,
+        bestTimeToContact: formData.bestTimeToContact,
+      }).catch((error) => {
+        console.error("Error sending customer estimate email:", error);
+      });
     } catch (error) {
       // Email failures should not block the quote submission
       console.error("Error sending notification emails:", error);
