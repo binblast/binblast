@@ -437,6 +437,13 @@ service cloud.firestore {
         // No deletions allowed
         allow delete: if false;
       }
+
+      // Partner slices for multi-partner commercial/HOA quotes
+      match /partnerAssignments/{assignmentId} {
+        allow read, list: if isAdminOrOperator() || request.auth == null;
+        allow create, update: if request.auth == null;
+        allow delete: if false;
+      }
     }
 
     // Site lead capture - visitor intake from the public website modal

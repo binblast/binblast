@@ -9,6 +9,7 @@ import { PartnerPayroll } from "@/components/PartnerDashboard/PartnerPayroll";
 import { PartnerLeadsPanel } from "@/components/PartnerDashboard/PartnerLeadsPanel";
 import { PartnerReferralsPanel } from "@/components/PartnerDashboard/PartnerReferralsPanel";
 import { PartnerOverflowPanel } from "@/components/PartnerDashboard/PartnerOverflowPanel";
+import { PartnerQuoteAssignmentsPanel } from "@/components/PartnerDashboard/PartnerQuoteAssignmentsPanel";
 import {
   buildPartnerBookingLink,
   buildPartnerTeamLoginLink,
@@ -1254,6 +1255,7 @@ export default function PartnerDashboardPage() {
 
             <PartnerLeadsPanel partnerCode={partnerCode} />
             <PartnerReferralsPanel />
+            <PartnerQuoteAssignmentsPanel />
             <PartnerOverflowPanel />
 
             {/* Booking Link & Partner Signup Link Cards */}

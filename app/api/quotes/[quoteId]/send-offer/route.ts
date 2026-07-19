@@ -23,7 +23,16 @@ export async function POST(
     }
 
     const firestore = await safeImportFirestore();
-    const { doc, getDoc, updateDoc, serverTimestamp } = firestore;
+    const {
+      doc,
+      getDoc,
+      updateDoc,
+      serverTimestamp,
+      collection,
+      getDocs,
+      query,
+      where,
+    } = firestore;
 
     const quoteRef = doc(db, "customQuotes", quoteId);
     const quoteSnap = await getDoc(quoteRef);
@@ -96,6 +105,20 @@ export async function POST(
       sentAt: serverTimestamp(),
       emailSentTo: customerEmail.toLowerCase(),
     });
+
+    const assignmentQuery = query(
+      collection(db, "customQuotes", quoteId, "partnerAssignments"),
+      where("offerId", "==", offerId)
+    );
+    const assignmentSnapshot = await getDocs(assignmentQuery);
+    await Promise.all(
+      assignmentSnapshot.docs.map((assignmentDoc) =>
+        updateDoc(assignmentDoc.ref, {
+          status: "active",
+          updatedAt: serverTimestamp(),
+        })
+      )
+    );
 
     await updateDoc(quoteRef, {
       status: "quoted",

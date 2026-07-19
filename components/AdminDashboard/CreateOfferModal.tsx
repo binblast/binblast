@@ -3,6 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { buildOfferFormPrefill, getPropertyTypeLabel } from "@/lib/custom-quote-offer";
+import { QuotePartnerAssignmentsSection } from "./QuotePartnerAssignmentsSection";
+import { QuotePartnerAssignmentInput } from "@/lib/quote-partner-assignments";
 
 interface CustomQuote {
   id: string;
@@ -41,10 +43,12 @@ export function CreateOfferModal({
 }: CreateOfferModalProps) {
   const [formData, setFormData] = useState(() => buildOfferFormPrefill(quote));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [partnerAssignments, setPartnerAssignments] = useState<QuotePartnerAssignmentInput[]>([]);
 
   useEffect(() => {
     if (isOpen && quote) {
       setFormData(buildOfferFormPrefill(quote));
+      setPartnerAssignments([]);
     }
   }, [isOpen, quote]);
 
@@ -73,6 +77,9 @@ export function CreateOfferModal({
         timeline: formData.timeline,
         termsAndConditions: formData.termsAndConditions,
         sendEmail,
+        partnerAssignments: partnerAssignments.filter(
+          (row) => row.partnerId && row.partnerName
+        ),
       };
 
       const response = await fetch(`/api/quotes/${quote.id}/create-offer`, {
@@ -442,6 +449,13 @@ export function CreateOfferModal({
               </div>
             </div>
           )}
+
+          <QuotePartnerAssignmentsSection
+            propertyType={quote.propertyType}
+            offerMonthlyPrice={formData.customizedPrice}
+            assignments={partnerAssignments}
+            onChange={setPartnerAssignments}
+          />
 
           {/* Special Notes */}
           <div style={{ marginBottom: "1.5rem" }}>

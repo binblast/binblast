@@ -2,6 +2,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import {
+  buildAssignmentFirestorePayload,
+  normalizeAssignmentInput,
+  QuotePartnerAssignmentInput,
+} from "@/lib/quote-partner-assignments";
 
 export async function POST(
   request: NextRequest,
@@ -58,6 +63,39 @@ export async function POST(
     const offerRef = await addDoc(offersRef, offerData);
     const offerId = offerRef.id;
 
+    const partnerAssignments: QuotePartnerAssignmentInput[] = [];
+    if (Array.isArray(body.partnerAssignments)) {
+      for (const rawRow of body.partnerAssignments) {
+        const normalized = normalizeAssignmentInput(rawRow);
+        if (normalized) {
+          partnerAssignments.push(normalized);
+        }
+      }
+    }
+
+    if (partnerAssignments.length > 0) {
+      const assignmentsRef = collection(
+        db,
+        "customQuotes",
+        quoteId,
+        "partnerAssignments"
+      );
+      const assignmentStatus = body.sendEmail ? "active" : "draft";
+
+      for (const row of partnerAssignments) {
+        await addDoc(assignmentsRef, {
+          ...buildAssignmentFirestorePayload(
+            quoteId,
+            offerId,
+            row,
+            assignmentStatus
+          ),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+    }
+
     // Get current quote data to calculate offer count
     const currentQuoteData = quoteSnap.data();
     const currentOfferCount = currentQuoteData.offerCount || 0;
@@ -66,6 +104,8 @@ export async function POST(
     await updateDoc(quoteRef, {
       latestOfferId: offerId,
       offerCount: currentOfferCount + 1,
+      hasPartnerSplit: partnerAssignments.length > 0,
+      partnerAssignmentCount: partnerAssignments.length,
       updatedAt: serverTimestamp(),
     });
 
