@@ -838,7 +838,7 @@ function RegisterForm() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: "calc(100vh - 80px)", padding: "4rem 0", background: "var(--bg-white)" }}>
+      <main className="page-main portal-login-shell" style={{ minHeight: "calc(100vh - 80px)", background: "var(--bg-white)" }}>
         <div className="container">
           <div style={{ maxWidth: "600px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
@@ -997,7 +997,7 @@ function RegisterForm() {
                 </Link>
               </div>
             ) : loadingPartnerPrefill ? null : (
-              <div style={{
+              <div className="register-form-card" style={{
                 background: "#ffffff",
                 borderRadius: "20px",
                 padding: "2.5rem",
@@ -1057,7 +1057,7 @@ function RegisterForm() {
                   )}
 
                   {!hasPrefilledOnboarding && !hasPrefilledPartner && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <div className="mobile-stack-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                     <div>
                       <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text-dark)" }}>
                         First Name

@@ -304,7 +304,7 @@ export default function HomePage() {
               margin: "0 auto",
               textAlign: "center"
             }}>
-              <h3 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
+              <h3 style={{ fontSize: "clamp(1.25rem, 4vw, 1.75rem)", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
                 Perfect For Service Businesses
               </h3>
               <p style={{ fontSize: "clamp(1rem, 3vw, 1.125rem)", color: "#0c4a6e", marginBottom: "clamp(1.5rem, 4vw, 2rem)", lineHeight: "1.6", padding: "0 clamp(1rem, 3vw, 1.5rem)" }}>

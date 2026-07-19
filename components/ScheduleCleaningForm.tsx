@@ -1007,7 +1007,7 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
                   marginBottom: "0.75rem"
                 }}
               />
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "0.75rem" }}>
+              <div className="mobile-stack-grid-3" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "0.75rem" }}>
                 <input
                   type="text"
                   placeholder="City"

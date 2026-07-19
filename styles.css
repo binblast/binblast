@@ -3008,13 +3008,15 @@ html {
     }
 
     .hero-buttons {
+        flex-direction: column;
+        align-items: stretch;
         gap: 1rem;
         padding: 0 0.5rem;
     }
 
     .hero-buttons .btn {
         width: 100%;
-        max-width: 400px;
+        max-width: none;
     }
 
     section {

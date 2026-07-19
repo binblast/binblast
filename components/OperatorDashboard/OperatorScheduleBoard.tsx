@@ -529,6 +529,7 @@ function JobCard({
 
   return (
     <div
+      className="operator-job-card"
       style={{
         padding: "1rem",
         background: job.readinessStatus === "ready_today" ? "#f0fdf4" : "#f9fafb",
@@ -606,7 +607,7 @@ function JobCard({
         )}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", alignItems: "flex-end", minWidth: "220px" }}>
+      <div className="operator-job-actions" style={{ display: "flex", flexDirection: "column", gap: "0.65rem", alignItems: "flex-end", minWidth: "220px" }}>
         <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
           <span
             style={{

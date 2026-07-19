@@ -198,6 +198,7 @@ export function CustomerOnboardingWizard({
 
   return (
     <div
+      className="onboarding-wizard-overlay"
       style={{
         position: "fixed",
         top: 0,
@@ -218,6 +219,7 @@ export function CustomerOnboardingWizard({
       }}
     >
       <div
+        className="onboarding-wizard-dialog"
         style={{
           background: "#ffffff",
           borderRadius: "12px",
@@ -231,6 +233,7 @@ export function CustomerOnboardingWizard({
       >
         {/* Header */}
         <div
+          className="onboarding-wizard-header"
           style={{
             padding: "24px",
             borderBottom: "1px solid #e5e7eb",
@@ -243,7 +246,10 @@ export function CustomerOnboardingWizard({
             Complete Your Order
           </h2>
           <button
+            type="button"
+            className="onboarding-wizard-close"
             onClick={onClose}
+            aria-label="Close checkout"
             style={{
               background: "none",
               border: "none",
@@ -264,6 +270,7 @@ export function CustomerOnboardingWizard({
 
         {/* Progress Steps */}
         <div
+          className="onboarding-wizard-progress"
           style={{
             padding: "20px 24px",
             borderBottom: "1px solid #e5e7eb",
@@ -335,7 +342,7 @@ export function CustomerOnboardingWizard({
         </div>
 
         {/* Content */}
-        <div style={{ padding: "24px" }}>
+        <div className="onboarding-wizard-body" style={{ padding: "24px" }}>
           {/* Step 1: Personal Information */}
           {step === 1 && (
             <div>
@@ -343,7 +350,7 @@ export function CustomerOnboardingWizard({
                 Personal Information
               </h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div className="mobile-stack-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div>
                     <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
                       First Name *
@@ -542,7 +549,7 @@ export function CustomerOnboardingWizard({
                     placeholder="Apt, Suite, Unit, etc."
                   />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "16px" }}>
+                <div className="mobile-stack-grid-3" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "16px" }}>
                   <div>
                     <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "600", color: "#374151" }}>
                       City *
@@ -747,6 +754,7 @@ export function CustomerOnboardingWizard({
 
           {/* Navigation Buttons */}
           <div
+            className="onboarding-wizard-actions"
             style={{
               display: "flex",
               justifyContent: "space-between",

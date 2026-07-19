@@ -674,4 +674,125 @@ body.nav-menu-open {
   .customer-dashboard [style*="justifyContent: \"flex-end\""] > button {
     width: 100% !important;
   }
+
+  /* Checkout onboarding wizard */
+  .onboarding-wizard-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .onboarding-wizard-dialog {
+    max-height: min(92dvh, 92vh) !important;
+    border-radius: 20px 20px 0 0 !important;
+    max-width: 100% !important;
+  }
+
+  .onboarding-wizard-header,
+  .onboarding-wizard-progress,
+  .onboarding-wizard-body {
+    padding-left: clamp(1rem, 4vw, 1.5rem) !important;
+    padding-right: clamp(1rem, 4vw, 1.5rem) !important;
+  }
+
+  .onboarding-wizard-header h2 {
+    font-size: clamp(1.125rem, 4.5vw, 1.5rem) !important;
+  }
+
+  .onboarding-wizard-close {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    touch-action: manipulation;
+  }
+
+  .onboarding-wizard-progress span {
+    font-size: 0.625rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .onboarding-wizard-actions {
+    flex-direction: column-reverse !important;
+    gap: 0.75rem !important;
+  }
+
+  .onboarding-wizard-actions button {
+    width: 100% !important;
+    min-height: var(--touch-min) !important;
+  }
+
+  /* Three-column address grids (city/state/zip) */
+  .mobile-stack-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Register / portal forms */
+  .register-form-card {
+    padding: clamp(1.25rem, 5vw, 2.5rem) !important;
+    border-radius: 16px !important;
+  }
+
+  .page-main.portal-login-shell {
+    padding-top: clamp(1.5rem, 5vw, 3rem) !important;
+    padding-bottom: calc(clamp(2rem, 6vw, 4rem) + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .portal-login-shell input,
+  .portal-login-shell select,
+  .portal-login-shell textarea,
+  .register-form-card input,
+  .register-form-card select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .portal-login-shell .btn,
+  .register-form-card .btn {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  /* Operator schedule job cards */
+  .operator-job-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .operator-job-actions {
+    align-items: stretch !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .operator-job-actions button,
+  .operator-job-actions select {
+    width: 100% !important;
+    min-height: var(--touch-min) !important;
+  }
+
+  /* Hero CTA stack */
+  .hero-buttons {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .hero-buttons .btn {
+    max-width: none !important;
+  }
+}
+
+/* Portal login cards — touch + desktop hover */
+.portal-picker-card:active,
+.portal-picker-card:focus-visible {
+  border-color: #16a34a !important;
+  box-shadow: 0 8px 24px rgba(22, 163, 74, 0.12) !important;
+  outline: none;
+}
+
+@media (hover: hover) {
+  .portal-picker-card:hover {
+    border-color: #16a34a !important;
+    box-shadow: 0 8px 24px rgba(22, 163, 74, 0.12) !important;
+  }
 }

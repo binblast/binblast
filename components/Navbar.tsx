@@ -149,9 +149,9 @@ export function Navbar() {
   useEffect(() => {
     if (isMenuOpen) {
       document.body.classList.add("nav-menu-open");
-      setIsSignInOpen(true);
     } else {
       document.body.classList.remove("nav-menu-open");
+      setIsSignInOpen(false);
     }
     return () => {
       document.body.classList.remove("nav-menu-open");
@@ -499,7 +499,13 @@ export function Navbar() {
             priority={isHomePage}
           />
         </Link>
-        <ul className={`nav-links nav-links--segmented${isMenuOpen ? " active nav-mobile-menu" : ""}`}>
+        <ul
+          id="mobile-nav-menu"
+          role={isMenuOpen ? "dialog" : undefined}
+          aria-modal={isMenuOpen ? true : undefined}
+          aria-label={isMenuOpen ? "Site navigation" : undefined}
+          className={`nav-links nav-links--segmented${isMenuOpen ? " active nav-mobile-menu" : ""}`}
+        >
           <li>
             {isLoggedIn ? (
               <Link href={homeRootHref} className={navPillClass(isHomeActive)}>
@@ -591,7 +597,14 @@ export function Navbar() {
             </Link>
           </li>
         </ul>
-        <button className="nav-toggle" onClick={toggleMenu} aria-label="Toggle menu" aria-expanded={isMenuOpen}>
+        <button
+          type="button"
+          className="nav-toggle"
+          onClick={toggleMenu}
+          aria-label="Toggle menu"
+          aria-expanded={isMenuOpen}
+          aria-controls="mobile-nav-menu"
+        >
           <span></span>
           <span></span>
           <span></span>

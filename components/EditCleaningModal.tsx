@@ -350,7 +350,7 @@ export function EditCleaningModal({ cleaning, userId, isOpen, onClose, onUpdated
           </div>
 
           {/* City, State, Zip */}
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+          <div className="mobile-stack-grid-3" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
             <div>
               <label
                 style={{

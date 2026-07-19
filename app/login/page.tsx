@@ -75,6 +75,7 @@ function LoginForm() {
                     )}
                     <Link
                       href={portal.path}
+                      className="portal-picker-card"
                       style={{
                         display: "block",
                         background: "#ffffff",
@@ -84,14 +85,6 @@ function LoginForm() {
                         border: "1px solid #e5e7eb",
                         textDecoration: "none",
                         transition: "all 0.2s ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = "#16a34a";
-                        e.currentTarget.style.boxShadow = "0 8px 24px rgba(22, 163, 74, 0.12)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = "#e5e7eb";
-                        e.currentTarget.style.boxShadow = "0 4px 16px rgba(0, 0, 0, 0.06)";
                       }}
                     >
                       <div style={{
