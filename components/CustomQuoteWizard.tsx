@@ -9,6 +9,7 @@ import { QuoteStep2HOA } from "./QuoteSteps/QuoteStep2HOA";
 import { QuoteStep3Contact } from "./QuoteSteps/QuoteStep3Contact";
 import { QuoteStep4Details } from "./QuoteSteps/QuoteStep4Details";
 import { QuoteStep5Review } from "./QuoteSteps/QuoteStep5Review";
+import { QuoteStepSuccess } from "./QuoteSteps/QuoteStepSuccess";
 
 export interface QuoteFormData {
   propertyType?: "residential" | "commercial" | "hoa";
@@ -50,12 +51,18 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<QuoteFormData>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState<{
+    quoteId: string;
+    requiresManualReview: boolean;
+  } | null>(null);
 
   // Load saved progress or apply a deep-link preset when the wizard opens
   useEffect(() => {
     if (!isOpen) {
       return;
     }
+
+    setSubmissionResult(null);
 
     if (initialPropertyType) {
       setFormData({ propertyType: initialPropertyType });
@@ -116,19 +123,18 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
         body: JSON.stringify(formData),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to submit quote");
+        throw new Error(result.error || "Failed to submit quote");
       }
 
       localStorage.removeItem("customQuoteProgress");
-
-      setTimeout(() => {
-        setIsSubmitting(false);
-        onClose();
-        setFormData({});
-        setCurrentStep(1);
-      }, 2000);
+      setSubmissionResult({
+        quoteId: result.quoteId,
+        requiresManualReview: Boolean(result.requiresManualReview),
+      });
+      setIsSubmitting(false);
     } catch (error: any) {
       console.error("Error submitting quote:", error);
       alert(error.message || "Failed to submit quote. Please try again.");
@@ -138,7 +144,18 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
 
   const getTotalSteps = () => 5;
 
+  const handleSuccessClose = () => {
+    setSubmissionResult(null);
+    setFormData({});
+    setCurrentStep(1);
+    onClose();
+  };
+
   const getStepTitle = () => {
+    if (submissionResult) {
+      return "You're all set";
+    }
+
     switch (currentStep) {
       case 1:
         return "What type of property?";
@@ -160,7 +177,7 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
 
   if (!isOpen) return null;
 
-  const progress = (currentStep / getTotalSteps()) * 100;
+  const progress = submissionResult ? 100 : (currentStep / getTotalSteps()) * 100;
 
   return (
     <div
@@ -177,7 +194,7 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
             <div className="quote-wizard__badge-wrap">
               <span className="quote-wizard__badge">Custom Quote</span>
               <span className="quote-wizard__step-count">
-                Step {currentStep} of {getTotalSteps()}
+                {submissionResult ? "Complete" : `Step ${currentStep} of ${getTotalSteps()}`}
               </span>
             </div>
             <button
@@ -201,7 +218,16 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
         </div>
 
         <div className="quote-wizard__body">
-          {currentStep === 1 && (
+          {submissionResult ? (
+            <QuoteStepSuccess
+              formData={formData}
+              quoteId={submissionResult.quoteId}
+              requiresManualReview={submissionResult.requiresManualReview}
+              onClose={handleSuccessClose}
+            />
+          ) : null}
+
+          {!submissionResult && currentStep === 1 && (
             <QuoteStep1PropertyType
               formData={formData}
               updateFormData={updateFormData}
@@ -209,7 +235,7 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
             />
           )}
 
-          {currentStep === 2 && formData.propertyType === "residential" && (
+          {!submissionResult && currentStep === 2 && formData.propertyType === "residential" && (
             <QuoteStep2Residential
               formData={formData}
               updateFormData={updateFormData}
@@ -218,7 +244,7 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
             />
           )}
 
-          {currentStep === 2 && formData.propertyType === "commercial" && (
+          {!submissionResult && currentStep === 2 && formData.propertyType === "commercial" && (
             <QuoteStep2Commercial
               formData={formData}
               updateFormData={updateFormData}
@@ -227,7 +253,7 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
             />
           )}
 
-          {currentStep === 2 && formData.propertyType === "hoa" && (
+          {!submissionResult && currentStep === 2 && formData.propertyType === "hoa" && (
             <QuoteStep2HOA
               formData={formData}
               updateFormData={updateFormData}
@@ -236,7 +262,7 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
             />
           )}
 
-          {currentStep === 3 && (
+          {!submissionResult && currentStep === 3 && (
             <QuoteStep3Contact
               formData={formData}
               updateFormData={updateFormData}
@@ -245,7 +271,7 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
             />
           )}
 
-          {currentStep === 4 && (
+          {!submissionResult && currentStep === 4 && (
             <QuoteStep4Details
               formData={formData}
               updateFormData={updateFormData}
@@ -254,7 +280,7 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
             />
           )}
 
-          {currentStep === 5 && (
+          {!submissionResult && currentStep === 5 && (
             <QuoteStep5Review
               formData={formData}
               updateFormData={updateFormData}

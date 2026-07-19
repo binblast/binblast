@@ -154,21 +154,36 @@ export async function POST(request: NextRequest) {
       }).catch(() => {}); // Silently fail if email service is not configured
 
       // Customer confirmation email
+      const calendlyUrl = process.env.NEXT_PUBLIC_CALENDLY_URL?.trim();
+      const scheduleCallBlock = calendlyUrl
+        ? `<p><a href="${calendlyUrl}" style="color:#16a34a;font-weight:600;">Schedule a call with our team</a> or wait for us to reach out.</p>`
+        : `<p>Call us at <a href="tel:+14703050823">(470) 305-0823</a> if you'd like to talk sooner.</p>`;
+
       const customerEmailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/email/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           to: formData.email,
-          subject: "Thank you for your custom quote request - Bin Blast",
+          subject: requiresManualReview
+            ? "We received your custom quote — next steps"
+            : "Thank you for your custom quote request - Bin Blast",
           html: `
             <h2>Thank you for your interest!</h2>
             <p>Hi ${formData.name},</p>
-            <p>We've received your custom quote request and our team will review it shortly.</p>
+            <p>${
+              requiresManualReview
+                ? "We've received your custom quote request. Because of the scope of your property, our team will prepare a tailored offer for you."
+                : "We've received your custom quote request and our team will review it shortly."
+            }</p>
+            <p><strong>Reference:</strong> ${docRef.id.slice(0, 8).toUpperCase()}</p>
             <p><strong>Property Type:</strong> ${getPropertyTypeLabel(formData.propertyType)}</p>
             <p><strong>Estimated Price Range:</strong> $${lowEstimate.toLocaleString()} - $${highEstimate.toLocaleString()}/month</p>
             ${recommendedBundle ? `<p><strong>Recommended Bundle:</strong> ${recommendedBundle}</p>` : ''}
-            <p>We'll contact you via ${formData.preferredContact || "email"} within 24 hours to discuss your needs and provide a final quote.</p>
-            <p>If you have any questions, feel free to reach out to us.</p>
+            <p>We'll contact you via ${formData.preferredContact || "email"}${
+              formData.bestTimeToContact ? ` during ${formData.bestTimeToContact}` : " within 24 hours"
+            }.</p>
+            ${scheduleCallBlock}
+            <p>After we finalize pricing, you'll receive a secure link to accept your offer and set up payment.</p>
             <p>Best regards,<br>The Bin Blast Team</p>
           `
         })
@@ -181,7 +196,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       quoteId: docRef.id,
-      message: "Quote request submitted successfully"
+      requiresManualReview,
+      message: requiresManualReview
+        ? "Quote submitted for custom review"
+        : "Quote request submitted successfully",
     });
   } catch (error: any) {
     console.error("Error submitting custom quote:", error);

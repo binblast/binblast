@@ -430,7 +430,8 @@ export function QuoteStep5Review({
               marginBottom: "1rem",
               lineHeight: "1.5"
             }}>
-              Your quote requires a custom review. You can fix the issues below to enable instant approval, or submit as-is for manual review.
+              Large or complex jobs need a tailored price. Submit below and our team will review your details,
+              then contact you with a final quote. You can also use the quick fixes to adjust counts if needed.
             </div>
 
             {/* Review Reasons with Fix Suggestions */}
@@ -1038,11 +1039,11 @@ export function QuoteStep5Review({
           isSubmitting
             ? "Submitting..."
             : estimatedPrice.requiresManualReview
-              ? "Manual Review Required"
+              ? "Submit for Custom Review"
               : "Submit Quote Request"
         }
         backDisabled={isSubmitting}
-        nextDisabled={isSubmitting || estimatedPrice.requiresManualReview}
+        nextDisabled={isSubmitting}
       />
 
       {isSubmitting && (
