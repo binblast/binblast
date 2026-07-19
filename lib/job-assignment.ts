@@ -136,8 +136,8 @@ export async function autoAssignJobsForToday(): Promise<JobAssignment[]> {
             const partnerSnap = await getDoc(doc(db, "partners", jobPartnerId));
             if (partnerSnap.exists()) {
               partnerRecord = {
-                id: jobPartnerId,
                 ...(partnerSnap.data() as OverflowPartnerRecord),
+                id: jobPartnerId,
               };
               partnerRecords.set(jobPartnerId, partnerRecord);
             }

@@ -4,6 +4,11 @@ import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export const dynamic = "force-dynamic";
 
+interface FirestoreDocument {
+  id: string;
+  data: () => Record<string, unknown>;
+}
+
 const ALLOWED_STATUSES = new Set(["pending", "assigned", "converted", "rejected", "paid"]);
 
 function serializeReferral(data: Record<string, unknown>, id: string) {
@@ -47,7 +52,7 @@ export async function GET(req: NextRequest) {
 
     const db = await getAdminFirestore();
     const snapshot = await db.collection("partnerReferrals").get();
-    const referrals = snapshot.docs
+    const referrals = (snapshot.docs as FirestoreDocument[])
       .map((doc) => serializeReferral(doc.data(), doc.id))
       .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 

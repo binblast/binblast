@@ -5,6 +5,11 @@ import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export const dynamic = "force-dynamic";
 
+interface FirestoreDocument {
+  id: string;
+  data: () => Record<string, unknown>;
+}
+
 function serializeReferral(data: Record<string, unknown>, id: string) {
   const serializeTimestamp = (value: unknown): string | null => {
     if (!value) return null;
@@ -47,7 +52,7 @@ export async function GET(req: NextRequest) {
       .where("referringPartnerId", "==", auth.partner.id)
       .get();
 
-    const referrals = snapshot.docs
+    const referrals = (snapshot.docs as FirestoreDocument[])
       .map((doc) => serializeReferral(doc.data(), doc.id))
       .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 

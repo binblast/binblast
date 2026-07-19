@@ -171,8 +171,8 @@ export async function createOverflowOffersForJob(jobId: string): Promise<string[
     query(collection(db, "partners"), where("status", "==", "active"))
   );
   const partners = partnersSnapshot.docs.map((partnerDoc) => ({
-    id: partnerDoc.id,
     ...(partnerDoc.data() as OverflowPartnerRecord),
+    id: partnerDoc.id,
   }));
 
   const eligiblePartners = findEligibleOverflowPartners(partners, job);
@@ -234,7 +234,7 @@ async function updateDocSafe(
   if (!db) return;
   const firestore = await safeImportFirestore();
   const { updateDoc } = firestore;
-  await updateDoc(ref as never, data);
+  await updateDoc(ref as never, data as never);
 }
 
 export async function processUnassignedJobsForOverflow(
@@ -322,7 +322,7 @@ export async function acceptOverflowOffer(
 
   const partnerData = partnerSnap.data() as OverflowPartnerRecord;
   const atCapacity = await isPartnerAtCapacity(
-    { id: partnerId, ...partnerData },
+    { ...partnerData, id: partnerId },
     String(offer.scheduledDate || jobData.scheduledDate || "")
   );
   if (atCapacity) {

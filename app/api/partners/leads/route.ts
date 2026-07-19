@@ -9,6 +9,11 @@ import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export const dynamic = "force-dynamic";
 
+interface FirestoreDocument {
+  id: string;
+  data: () => Record<string, unknown>;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const auth = await checkPartnerAccess(req);
@@ -22,7 +27,7 @@ export async function GET(req: NextRequest) {
       .where("assignedPartnerId", "==", auth.partner.id)
       .get();
 
-    const leads = snapshot.docs
+    const leads = (snapshot.docs as FirestoreDocument[])
       .map((doc) => serializeLeadForPartner(doc.data(), doc.id))
       .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 

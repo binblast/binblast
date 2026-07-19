@@ -5,6 +5,11 @@ import { resolveLeadAssignment } from "@/lib/partner-leads";
 
 export const dynamic = "force-dynamic";
 
+interface FirestoreDocument {
+  id: string;
+  data: () => Record<string, unknown>;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -34,9 +39,9 @@ export async function POST(req: NextRequest) {
     const admin = await import("firebase-admin");
 
     const partnersSnapshot = await db.collection("partners").where("status", "==", "active").get();
-    const partners = partnersSnapshot.docs.map((doc) => ({
-      id: doc.id,
+    const partners = (partnersSnapshot.docs as FirestoreDocument[]).map((doc) => ({
       ...(doc.data() as Record<string, unknown>),
+      id: doc.id,
     }));
 
     const assignment = resolveLeadAssignment(partners, {
