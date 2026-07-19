@@ -453,6 +453,13 @@ service cloud.firestore {
       allow create, update: if request.auth == null;
       allow delete: if false;
     }
+
+    // Overflow job offers routed to partner network
+    match /overflowOffers/{offerId} {
+      allow read, list: if isAdmin() || request.auth == null;
+      allow create, update: if request.auth == null;
+      allow delete: if false;
+    }
     
     // Employee schedules collection - for weekly work schedules
     match /employeeSchedules/{scheduleId} {

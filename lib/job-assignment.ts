@@ -4,6 +4,11 @@
 import { getDbInstance } from "./firebase";
 import { safeImportFirestore } from "./firebase-module-loader";
 import { getAllEmployees, getTodayDateString, getEmployeeData, isPartnerEmployee } from "./employee-utils";
+import {
+  createOverflowOffersForJob,
+  isPartnerAtCapacity,
+  type OverflowPartnerRecord,
+} from "./partner-overflow";
 
 export interface JobAssignment {
   jobId: string;
@@ -70,6 +75,7 @@ export async function autoAssignJobsForToday(): Promise<JobAssignment[]> {
 
     const assignments: JobAssignment[] = [];
     const employeeJobCounts = new Map<string, number>();
+    const partnerRecords = new Map<string, OverflowPartnerRecord>();
 
     // Initialize job counts for each employee
     employees.forEach((emp) => {
@@ -118,7 +124,33 @@ export async function autoAssignJobsForToday(): Promise<JobAssignment[]> {
 
         if (availableEmployees.length === 0) {
           console.log(`No matching employees found for job ${jobDoc.id} in area: ${city}, ${zipCode}${jobPartnerId ? ` (partner: ${jobPartnerId})` : " (Bin Blast)"}`);
+          await createOverflowOffersForJob(jobDoc.id);
           continue;
+        }
+
+        if (jobPartnerId) {
+          let partnerRecord = partnerRecords.get(jobPartnerId);
+          if (!partnerRecord) {
+            const firestorePartners = await safeImportFirestore();
+            const { doc, getDoc } = firestorePartners;
+            const partnerSnap = await getDoc(doc(db, "partners", jobPartnerId));
+            if (partnerSnap.exists()) {
+              partnerRecord = {
+                id: jobPartnerId,
+                ...(partnerSnap.data() as OverflowPartnerRecord),
+              };
+              partnerRecords.set(jobPartnerId, partnerRecord);
+            }
+          }
+
+          if (partnerRecord) {
+            const atCapacity = await isPartnerAtCapacity(partnerRecord, today);
+            if (atCapacity) {
+              console.log(`Partner ${jobPartnerId} at capacity for ${today}, offering overflow for job ${jobDoc.id}`);
+              await createOverflowOffersForJob(jobDoc.id);
+              continue;
+            }
+          }
         }
 
         // Sort employees by current job count (for even distribution)

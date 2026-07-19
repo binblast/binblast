@@ -19,6 +19,7 @@ import { metroAtlZones } from "@/data/metroAtlZones";
 import { PartnerMiniProfile } from "./PartnerMiniProfile";
 import { PlatformRevenuePanel } from "./PlatformRevenuePanel";
 import { PartnerReferralsAdminPanel } from "./PartnerReferralsAdminPanel";
+import { AdminOverflowPanel } from "./AdminOverflowPanel";
 import { ToastContainer } from "@/components/EmployeeDashboard/Toast";
 import { useAdminToast } from "./useAdminToast";
 import { ConfirmDialog } from "./AdminDialog";
@@ -76,7 +77,7 @@ interface Partner {
 }
 
 type ApplicationStatus = PartnerApplication["status"];
-type PartnerViewTab = "queue" | "partners" | "all" | "revenue" | "referrals";
+type PartnerViewTab = "queue" | "partners" | "all" | "revenue" | "referrals" | "overflow";
 
 function formatRelativeDate(date: unknown): string {
   const raw = date as { toDate?: () => Date } | string | number | Date | null | undefined;
@@ -866,8 +867,15 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
           >
             Partner Referrals
           </button>
+          <button
+            type="button"
+            className={`pp-tab ${activeView === "overflow" ? "active" : ""}`}
+            onClick={() => setActiveView("overflow")}
+          >
+            Overflow
+          </button>
         </div>
-        {activeView !== "revenue" && activeView !== "referrals" && (
+        {activeView !== "revenue" && activeView !== "referrals" && activeView !== "overflow" && (
           <input
             type="text"
             className="pp-search"
@@ -991,6 +999,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
 
       {activeView === "revenue" && <PlatformRevenuePanel />}
       {activeView === "referrals" && <PartnerReferralsAdminPanel />}
+      {activeView === "overflow" && <AdminOverflowPanel />}
 
       {activeView === "partners" && (
         <>

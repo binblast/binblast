@@ -8,6 +8,7 @@ import { AddTeamMemberModal } from "@/components/PartnerDashboard/AddTeamMemberM
 import { PartnerPayroll } from "@/components/PartnerDashboard/PartnerPayroll";
 import { PartnerLeadsPanel } from "@/components/PartnerDashboard/PartnerLeadsPanel";
 import { PartnerReferralsPanel } from "@/components/PartnerDashboard/PartnerReferralsPanel";
+import { PartnerOverflowPanel } from "@/components/PartnerDashboard/PartnerOverflowPanel";
 import {
   buildPartnerBookingLink,
   buildPartnerTeamLoginLink,
@@ -1253,6 +1254,7 @@ export default function PartnerDashboardPage() {
 
             <PartnerLeadsPanel partnerCode={partnerCode} />
             <PartnerReferralsPanel />
+            <PartnerOverflowPanel />
 
             {/* Booking Link & Partner Signup Link Cards */}
             <div style={{
