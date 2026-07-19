@@ -1,11 +1,17 @@
 import { CURB_PLACEMENT_MESSAGE } from "@/lib/cleaning-readiness";
 import {
   formatEmailDate,
+  getAppBaseUrl,
   getCustomerDashboardUrl,
   getEmailSubject,
   getEmailTemplateId,
   getStaffLoginUrl,
 } from "@/lib/email-template-config";
+import {
+  buildCustomQuoteOfferEmailHtml,
+  type OfferRecordForEmail,
+  type QuoteRecordForOffer,
+} from "@/lib/custom-quote-offer";
 
 export const EMAIL_LOGO_URL =
   process.env.NEXT_PUBLIC_EMAIL_LOGO_URL || "https://www.binblastco.com/bin-blast-email-logo.png";
@@ -421,6 +427,53 @@ export async function notifyCleaningComplete(customerData: {
     logoUrl: EMAIL_LOGO_URL,
   }).catch((error) => {
     console.error("[Notify Cleaning Complete] Failed to send email:", error?.message || error);
+  });
+}
+
+/**
+ * Send a customized quote offer email to a customer (commercial, HOA, or residential).
+ */
+export async function notifyCustomQuoteOffer(params: {
+  quote: QuoteRecordForOffer;
+  offer: OfferRecordForEmail;
+}): Promise<{ success: boolean; error?: string }> {
+  const email = params.quote.email?.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { success: false, error: "Valid customer email is required to send an offer." };
+  }
+
+  const propertyLabel =
+    params.quote.propertyType === "commercial"
+      ? "Commercial"
+      : params.quote.propertyType === "hoa"
+        ? "HOA"
+        : "Custom";
+
+  const subject = `Your ${propertyLabel} Service Offer — Bin Blast Co.`;
+  const messageHtml = buildCustomQuoteOfferEmailHtml(params.quote, params.offer);
+  const nameParts = (params.quote.name || email.split("@")[0] || "Customer").trim().split(/\s+/);
+
+  return sendEmailJS(getEmailTemplateId("GENERIC_MESSAGE"), {
+    to_email: email.toLowerCase(),
+    email_subject: subject,
+    firstName: nameParts[0] || "there",
+    lastName: nameParts.slice(1).join(" "),
+    planName: "Bin Blast Co.",
+    addressLine1: params.quote.address || "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    confirmationTitle: "Your Custom Service Offer",
+    confirmationMessage: messageHtml,
+    confirmationDetails: "",
+    buttonText: "Visit Bin Blast Co.",
+    buttonColor: "#16a34a",
+    dashboardLink: getAppBaseUrl(),
+    preferredServiceDate: "",
+    preferredTimeWindow: "",
+    preferredDayOfWeek: "",
+    logoUrl: EMAIL_LOGO_URL,
   });
 }
 

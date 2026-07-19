@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { buildOfferFormPrefill, getPropertyTypeLabel } from "@/lib/custom-quote-offer";
 
 interface CustomQuote {
   id: string;
@@ -38,43 +39,21 @@ export function CreateOfferModal({
   onClose,
   onOfferCreated,
 }: CreateOfferModalProps) {
-  const [formData, setFormData] = useState({
-    customizedPrice: quote.estimatedPrice || quote.estimatedPriceLow || 0,
-    customizedPriceLow: quote.estimatedPriceLow || 0,
-    customizedPriceHigh: quote.estimatedPriceHigh || 0,
-    customizedFrequency: quote.commercialFrequency || quote.residentialFrequency || quote.hoaFrequency || "Monthly",
-    dumpsterCount: quote.commercialBins || 1,
-    hasDumpsterPad: quote.dumpsterPadCleaning || false,
-    residentialBins: quote.residentialBins || 1,
-    hoaUnits: quote.hoaUnits || 1,
-    hoaBins: quote.hoaBins || 1,
-    specialNotes: "",
-    timeline: "",
-    termsAndConditions: "",
-  });
+  const [formData, setFormData] = useState(() => buildOfferFormPrefill(quote));
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [saveAsDraft, setSaveAsDraft] = useState(false);
 
   useEffect(() => {
     if (isOpen && quote) {
-      setFormData({
-        customizedPrice: quote.estimatedPrice || quote.estimatedPriceLow || 0,
-        customizedPriceLow: quote.estimatedPriceLow || 0,
-        customizedPriceHigh: quote.estimatedPriceHigh || 0,
-        customizedFrequency: quote.commercialFrequency || quote.residentialFrequency || quote.hoaFrequency || "Monthly",
-        dumpsterCount: quote.commercialBins || 1,
-        hasDumpsterPad: quote.dumpsterPadCleaning || false,
-        residentialBins: quote.residentialBins || 1,
-        hoaUnits: quote.hoaUnits || 1,
-        hoaBins: quote.hoaBins || 1,
-        specialNotes: "",
-        timeline: "",
-        termsAndConditions: "",
-      });
+      setFormData(buildOfferFormPrefill(quote));
     }
   }, [isOpen, quote]);
 
   const handleSubmit = async (sendEmail: boolean) => {
+    if (sendEmail && !quote.email?.trim()) {
+      alert("This quote is missing a customer email. Add an email on the quote before sending.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const offerData = {
@@ -110,16 +89,23 @@ export function CreateOfferModal({
       const result = await response.json();
       
       if (sendEmail && result.offerId) {
-        // Send email
         const emailResponse = await fetch(`/api/quotes/${quote.id}/send-offer`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ offerId: result.offerId }),
         });
 
+        const emailResult = await emailResponse.json();
         if (!emailResponse.ok) {
-          console.error("Failed to send email, but offer was created");
+          throw new Error(
+            emailResult.error ||
+              "Offer was saved, but the customer email failed to send. Try again from the quote details."
+          );
         }
+
+        alert(`Offer sent to ${quote.email}`);
+      } else {
+        alert("Offer saved as draft.");
       }
 
       onOfferCreated();
@@ -216,7 +202,9 @@ export function CreateOfferModal({
             color: "#6b7280",
             marginTop: "0.5rem"
           }}>
-            For: {quote.name} • {quote.email}
+            For: {quote.name} • {quote.email || "No email on file"}
+            {quote.propertyType ? ` • ${getPropertyTypeLabel(quote.propertyType)}` : ""}
+            {quote.commercialType ? ` (${quote.commercialType})` : ""}
           </div>
         </div>
 
@@ -307,8 +295,13 @@ export function CreateOfferModal({
                 color: "var(--text-dark)",
                 marginBottom: "0.75rem"
               }}>
-                Services
+                Commercial Services
               </label>
+              {quote.commercialType ? (
+                <p style={{ margin: "0 0 0.75rem", fontSize: "0.8125rem", color: "#6b7280" }}>
+                  Business type from quote: <strong>{quote.commercialType}</strong>
+                </p>
+              ) : null}
               <div style={{
                 display: "flex",
                 flexDirection: "column",
@@ -464,7 +457,7 @@ export function CreateOfferModal({
             <textarea
               value={formData.specialNotes}
               onChange={(e) => setFormData({ ...formData, specialNotes: e.target.value })}
-              placeholder="Add any special instructions or notes for this offer..."
+              placeholder="Prefilled from the customer's quote request. Edit before sending if needed."
               style={{
                 width: "100%",
                 padding: "0.75rem",
@@ -519,7 +512,7 @@ export function CreateOfferModal({
             <textarea
               value={formData.termsAndConditions}
               onChange={(e) => setFormData({ ...formData, termsAndConditions: e.target.value })}
-              placeholder="Add any custom terms and conditions..."
+              placeholder="Standard Bin Blast terms are prefilled. Edit for this customer if needed."
               style={{
                 width: "100%",
                 padding: "0.75rem",
@@ -527,10 +520,13 @@ export function CreateOfferModal({
                 borderRadius: "8px",
                 fontSize: "0.875rem",
                 background: "#ffffff",
-                minHeight: "80px",
+                minHeight: "120px",
                 resize: "vertical"
               }}
             />
+            <p style={{ margin: "0.5rem 0 0", fontSize: "0.75rem", color: "#6b7280" }}>
+              Included in the customer email. Links to your Terms and Cancellation pages are added automatically.
+            </p>
           </div>
 
           {/* Actions */}
@@ -577,7 +573,7 @@ export function CreateOfferModal({
             </button>
             <button
               onClick={() => handleSubmit(true)}
-              disabled={isSubmitting || !formData.customizedPrice}
+              disabled={isSubmitting || !formData.customizedPrice || !quote.email?.trim()}
               style={{
                 padding: "0.75rem 1.5rem",
                 background: isSubmitting || !formData.customizedPrice

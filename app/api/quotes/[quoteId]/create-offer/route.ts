@@ -51,8 +51,8 @@ export async function POST(
       termsAndConditions: body.termsAndConditions || "",
       createdBy,
       createdAt: serverTimestamp(),
-      status: body.sendEmail ? "sent" : "draft",
-      sentAt: body.sendEmail ? serverTimestamp() : null,
+      status: "draft",
+      sentAt: null,
     };
 
     const offerRef = await addDoc(offersRef, offerData);
@@ -64,7 +64,6 @@ export async function POST(
 
     // Update quote status and link to latest offer
     await updateDoc(quoteRef, {
-      status: body.sendEmail ? "quoted" : "pending",
       latestOfferId: offerId,
       offerCount: currentOfferCount + 1,
       updatedAt: serverTimestamp(),
@@ -73,7 +72,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       offerId,
-      message: body.sendEmail ? "Offer created and sent" : "Offer saved as draft",
+      message: body.sendEmail ? "Offer draft created" : "Offer saved as draft",
     });
   } catch (error: any) {
     console.error("Error creating offer:", error);
