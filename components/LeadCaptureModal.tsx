@@ -10,6 +10,7 @@ import {
   persistSiteLeadProfile,
   validateSiteLeadCapture,
 } from "@/lib/site-leads";
+import { persistSiteLeadId } from "@/lib/partner-leads";
 import { persistCapturedPartnerCode, persistCapturedReferralCode } from "@/lib/referral-attribution";
 
 interface LeadCaptureModalProps {
@@ -110,6 +111,10 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Failed to save your information");
+      }
+
+      if (typeof data.leadId === "string" && data.leadId) {
+        persistSiteLeadId(data.leadId);
       }
 
       persistCodesFromAttribution();

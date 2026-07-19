@@ -26,10 +26,19 @@ export default function PartnerSlugPage() {
 
         const partnersQuery = query(
           collection(db, "partners"),
-          where("partnerSlug", "==", slug),
+          where("bookingLinkSlug", "==", slug.toLowerCase()),
           where("status", "==", "active")
         );
-        const partnersSnapshot = await getDocs(partnersQuery);
+        let partnersSnapshot = await getDocs(partnersQuery);
+
+        if (partnersSnapshot.empty) {
+          const slugQuery = query(
+            collection(db, "partners"),
+            where("partnerSlug", "==", slug.toLowerCase()),
+            where("status", "==", "active")
+          );
+          partnersSnapshot = await getDocs(slugQuery);
+        }
 
         if (!partnersSnapshot.empty) {
           const partnerDoc = partnersSnapshot.docs[0];

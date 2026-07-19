@@ -9,6 +9,7 @@ import { CustomerOnboardingWizard, type OnboardingCompletePayload } from "./Cust
 import { usePlatformPricing } from "@/hooks/usePlatformPricing";
 import { useFirebase } from "@/lib/firebase-context";
 import { getCapturedReferralCode, getCapturedPartnerCode, persistSiteLeadProfile } from "@/lib/site-leads";
+import { getPersistedSiteLeadId } from "@/lib/partner-leads";
 import {
   captureReferralCodeFromLocation,
   capturePartnerCodeFromLocation,
@@ -398,6 +399,7 @@ export function PricingSection() {
           applyCredit: applyCredit && availableCredit > 0,
           referralCode: resolvedReferralCode,
           partnerCode: resolvedPartnerCode,
+          leadId: getPersistedSiteLeadId() || undefined,
           onboardingData: onboardingData || undefined,
         }),
       });

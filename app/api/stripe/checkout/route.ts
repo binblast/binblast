@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { planId, userId, applyCredit, referralCode, partnerCode, onboardingData } = body; // onboardingData: customer info collected before checkout
+    const { planId, userId, applyCredit, referralCode, partnerCode, onboardingData, leadId } = body; // onboardingData: customer info collected before checkout
 
     if (!planId) {
       return NextResponse.json(
@@ -360,6 +360,10 @@ export async function POST(req: NextRequest) {
       sessionParams.metadata.source = "partner_link";
     } else {
       sessionParams.metadata.source = "direct";
+    }
+
+    if (typeof leadId === "string" && leadId.trim()) {
+      sessionParams.metadata.leadId = leadId.trim();
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);

@@ -4,9 +4,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 
-const PARTNER_REVENUE_SHARE = 0.6; // 60% to partner
-const PLATFORM_REVENUE_SHARE = 0.4; // 40% to platform
-
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> | { id: string } }
@@ -26,7 +23,7 @@ export async function POST(
         { status: 400 }
       );
     }
-    const { serviceAreas, revenueSharePartner, revenueSharePlatform } = body;
+    const { serviceAreas, revenueSharePartner, revenueSharePlatform, partnerTier } = body;
 
     if (!applicationId) {
       return NextResponse.json(
@@ -43,9 +40,14 @@ export async function POST(
       );
     }
 
+    const { getDefaultRevenueSplitForTier, getPartnerTierDefinition, isPartnerTier } = await import("@/lib/partner-types");
+    const resolvedTier = isPartnerTier(partnerTier) ? partnerTier : "operator";
+    const tierDefaults = getPartnerTierDefinition(resolvedTier);
+    const tierSplit = getDefaultRevenueSplitForTier(resolvedTier);
+
     // Validate revenue split
-    const partnerShare = revenueSharePartner || PARTNER_REVENUE_SHARE;
-    const platformShare = revenueSharePlatform || PLATFORM_REVENUE_SHARE;
+    const partnerShare = revenueSharePartner ?? tierSplit.revenueSharePartner;
+    const platformShare = revenueSharePlatform ?? tierSplit.revenueSharePlatform;
     
     if (Math.abs(partnerShare + platformShare - 1) > 0.01) {
       return NextResponse.json(
@@ -140,6 +142,7 @@ export async function POST(
     // Note: userId might be null if application was submitted before user registered
     // In that case, userId will be linked when user registers and signs up
     const partnerRef = doc(collection(db, "partners"));
+    const slugValue = referralCode.toLowerCase();
     const partnerData = {
       userId: applicationData.userId || null, // Can be null if user hasn't registered yet
       businessName: applicationData.businessName,
@@ -149,10 +152,15 @@ export async function POST(
       serviceType: applicationData.serviceType,
       serviceArea: applicationData.serviceArea, // Keep for backward compatibility
       serviceAreas: serviceAreas, // New: array of service areas
+      partnerTier: resolvedTier,
+      receivesLeads: tierDefaults.receivesLeads,
+      acceptsOverflow: tierDefaults.acceptsOverflow,
+      referralFeePercent: tierDefaults.referralFeePercent,
       status: "active", // Changed: Set to active immediately (was pending_agreement)
       referralCode,
       partnerCode: referralCode, // Alias for referralCode
-      bookingLinkSlug: referralCode.toLowerCase(),
+      bookingLinkSlug: slugValue,
+      partnerSlug: slugValue,
       stripeConnected: false,
       revenueSharePartner: partnerShare,
       revenueSharePlatform: platformShare,
@@ -184,6 +192,7 @@ export async function POST(
           serviceAreas,
           revenueSharePartner: partnerShare,
           revenueSharePlatform: platformShare,
+          partnerTier: resolvedTier,
         },
       }
     );

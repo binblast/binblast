@@ -54,6 +54,12 @@ export async function GET(req: NextRequest) {
           status: asString(data.status) || "new",
           notes: asString(data.notes),
           source: asString(data.source),
+          assignedPartnerId: asString(data.assignedPartnerId),
+          assignedPartnerName: asString(data.assignedPartnerName),
+          assignmentSource: asString(data.assignmentSource),
+          serviceCity: asString(data.serviceCity),
+          serviceZipCode: asString(data.serviceZipCode),
+          convertedBookingId: asString(data.convertedBookingId),
           createdAt: serializeTimestamp(data.createdAt),
         };
       })

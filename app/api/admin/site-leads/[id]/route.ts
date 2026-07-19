@@ -4,7 +4,15 @@ import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED_STATUSES = new Set(["new", "contacted", "converted", "archived", "spam"]);
+const ALLOWED_STATUSES = new Set([
+  "new",
+  "contacted",
+  "quoted",
+  "converted",
+  "lost",
+  "archived",
+  "spam",
+]);
 
 export async function PATCH(
   req: NextRequest,
@@ -35,6 +43,18 @@ export async function PATCH(
 
     if (typeof body.notes === "string") {
       updates.notes = body.notes.trim();
+    }
+
+    if (typeof body.assignedPartnerId === "string") {
+      updates.assignedPartnerId = body.assignedPartnerId.trim() || null;
+    }
+
+    if (typeof body.assignedPartnerName === "string") {
+      updates.assignedPartnerName = body.assignedPartnerName.trim() || null;
+    }
+
+    if (typeof body.assignmentSource === "string") {
+      updates.assignmentSource = body.assignmentSource.trim() || "admin";
     }
 
     if (Object.keys(updates).length === 0) {

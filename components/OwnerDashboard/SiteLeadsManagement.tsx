@@ -22,7 +22,15 @@ interface SiteLead {
   status: string;
   notes: string;
   source: string;
+  assignedPartnerId: string;
+  assignedPartnerName: string;
+  assignmentSource: string;
   createdAt: string | null;
+}
+
+interface PartnerOption {
+  id: string;
+  businessName: string;
 }
 
 type SortField = "createdAt" | "name" | "email" | "heardAboutUs" | "referredBy" | "status";
@@ -31,7 +39,9 @@ type SortDirection = "asc" | "desc";
 const STATUS_OPTIONS = [
   { value: "new", label: "New", color: "#166534", bg: "#ecfdf5", border: "#bbf7d0" },
   { value: "contacted", label: "Contacted", color: "#1d4ed8", bg: "#eff6ff", border: "#bfdbfe" },
+  { value: "quoted", label: "Quoted", color: "#0f766e", bg: "#ecfdf5", border: "#99f6e4" },
   { value: "converted", label: "Converted", color: "#6d28d9", bg: "#f5f3ff", border: "#ddd6fe" },
+  { value: "lost", label: "Lost", color: "#b45309", bg: "#fffbeb", border: "#fde68a" },
   { value: "archived", label: "Archived", color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
   { value: "spam", label: "Spam", color: "#b91c1c", bg: "#fef2f2", border: "#fecaca" },
 ] as const;
@@ -42,6 +52,7 @@ function getStatusStyle(status: string) {
 
 export function SiteLeadsManagement() {
   const [leads, setLeads] = useState<SiteLead[]>([]);
+  const [partners, setPartners] = useState<PartnerOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -58,12 +69,24 @@ export function SiteLeadsManagement() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetchWithAuth("/api/admin/site-leads");
-      const data = await response.json();
-      if (!response.ok) {
+      const [leadsResponse, partnersResponse] = await Promise.all([
+        fetchWithAuth("/api/admin/site-leads"),
+        fetchWithAuth("/api/admin/partners/list"),
+      ]);
+      const data = await leadsResponse.json();
+      const partnersData = await partnersResponse.json();
+      if (!leadsResponse.ok) {
         throw new Error(data.error || "Failed to load site leads");
       }
       setLeads(data.leads || []);
+      setPartners(
+        (partnersData.partners || [])
+          .filter((partner: { status?: string }) => partner.status === "active")
+          .map((partner: { id: string; businessName?: string }) => ({
+            id: partner.id,
+            businessName: partner.businessName || "Partner",
+          }))
+      );
       setSelectedIds(new Set());
     } catch (loadError: unknown) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load site leads");
@@ -188,6 +211,47 @@ export function SiteLeadsManagement() {
       );
     } catch (updateError: unknown) {
       setActionError(updateError instanceof Error ? updateError.message : "Failed to update lead");
+    } finally {
+      setBusyIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
+  async function assignPartner(id: string, assignedPartnerId: string) {
+    setActionError(null);
+    setBusyIds((current) => new Set(current).add(id));
+    try {
+      const partner = partners.find((item) => item.id === assignedPartnerId);
+      const response = await fetchWithAuth(`/api/admin/site-leads/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignedPartnerId: assignedPartnerId || null,
+          assignedPartnerName: partner?.businessName || null,
+          assignmentSource: assignedPartnerId ? "admin" : "unassigned",
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to assign partner");
+      }
+      setLeads((current) =>
+        current.map((lead) =>
+          lead.id === id
+            ? {
+                ...lead,
+                assignedPartnerId: assignedPartnerId || "",
+                assignedPartnerName: partner?.businessName || "",
+                assignmentSource: assignedPartnerId ? "admin" : "unassigned",
+              }
+            : lead
+        )
+      );
+    } catch (assignError: unknown) {
+      setActionError(assignError instanceof Error ? assignError.message : "Failed to assign partner");
     } finally {
       setBusyIds((current) => {
         const next = new Set(current);
@@ -519,6 +583,7 @@ export function SiteLeadsManagement() {
                   { label: "Heard About Us", field: "heardAboutUs" as SortField },
                   { label: "Referred By", field: "referredBy" as SortField },
                   { label: "Status", field: "status" as SortField },
+                  { label: "Assigned Partner", field: "name" as SortField },
                 ].map(({ label, field }) => (
                   <th
                     key={label}
@@ -612,6 +677,33 @@ export function SiteLeadsManagement() {
                           </option>
                         ))}
                       </select>
+                    </td>
+                    <td style={{ padding: "0.75rem", minWidth: "180px" }}>
+                      <select
+                        value={lead.assignedPartnerId || ""}
+                        disabled={isBusy}
+                        onChange={(e) => assignPartner(lead.id, e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "0.35rem 0.5rem",
+                          borderRadius: "8px",
+                          border: "1px solid #e5e7eb",
+                          fontSize: "0.75rem",
+                          background: "#ffffff",
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {partners.map((partner) => (
+                          <option key={partner.id} value={partner.id}>
+                            {partner.businessName}
+                          </option>
+                        ))}
+                      </select>
+                      {lead.assignmentSource && (
+                        <div style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: "0.25rem" }}>
+                          via {lead.assignmentSource}
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: "0.75rem", fontSize: "0.75rem", color: "#6b7280" }}>
                       {lead.referralCode && <div>Ref: {lead.referralCode}</div>}

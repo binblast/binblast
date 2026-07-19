@@ -406,6 +406,20 @@ export async function POST(req: NextRequest) {
                     transferId,
                     commissionStatus,
                   });
+
+                  if (session.metadata?.leadId) {
+                    try {
+                      const leadRef = doc(db, "siteLeads", session.metadata.leadId);
+                      await updateDoc(leadRef, {
+                        status: "converted",
+                        convertedBookingId: bookingRef.id,
+                        convertedPartnerBookingId: partnerBookingRef.id,
+                        updatedAt: serverTimestamp(),
+                      });
+                    } catch (leadUpdateError) {
+                      console.error("[Webhook] Failed to mark site lead converted:", leadUpdateError);
+                    }
+                  }
                 } else {
                   console.warn("[Webhook] Partner not active, skipping revenue share calculation:", {
                     partnerId,
@@ -448,6 +462,19 @@ export async function POST(req: NextRequest) {
                 bookingId: bookingRef.id,
                 grossAmount,
               });
+
+              if (session.metadata?.leadId) {
+                try {
+                  const leadRef = doc(db, "siteLeads", session.metadata.leadId);
+                  await updateDoc(leadRef, {
+                    status: "converted",
+                    convertedBookingId: bookingRef.id,
+                    updatedAt: serverTimestamp(),
+                  });
+                } catch (leadUpdateError) {
+                  console.error("[Webhook] Failed to mark site lead converted:", leadUpdateError);
+                }
+              }
             } catch (bookingError) {
               console.error("[Webhook] Error creating direct booking:", bookingError);
             }

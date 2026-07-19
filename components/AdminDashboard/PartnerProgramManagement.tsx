@@ -7,12 +7,18 @@ import {
   buildPartnerApprovalEmailParams,
   sendPartnerApprovalEmailClient,
 } from "@/lib/partner-approval-email";
+import {
+  PARTNER_TIER_OPTIONS,
+  getDefaultRevenueSplitForTier,
+  type PartnerTier,
+} from "@/lib/partner-types";
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { georgiaCounties } from "@/data/gaCounties";
 import { metroAtlZones } from "@/data/metroAtlZones";
 import { PartnerMiniProfile } from "./PartnerMiniProfile";
 import { PlatformRevenuePanel } from "./PlatformRevenuePanel";
+import { PartnerReferralsAdminPanel } from "./PartnerReferralsAdminPanel";
 import { ToastContainer } from "@/components/EmployeeDashboard/Toast";
 import { useAdminToast } from "./useAdminToast";
 import { ConfirmDialog } from "./AdminDialog";
@@ -70,7 +76,7 @@ interface Partner {
 }
 
 type ApplicationStatus = PartnerApplication["status"];
-type PartnerViewTab = "queue" | "partners" | "all" | "revenue";
+type PartnerViewTab = "queue" | "partners" | "all" | "revenue" | "referrals";
 
 function formatRelativeDate(date: unknown): string {
   const raw = date as { toDate?: () => Date } | string | number | Date | null | undefined;
@@ -213,6 +219,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
   const [approveServiceAreas, setApproveServiceAreas] = useState<string[]>([]);
   const [approvePartnerShare, setApprovePartnerShare] = useState(60);
   const [approvePlatformShare, setApprovePlatformShare] = useState(40);
+  const [approvePartnerTier, setApprovePartnerTier] = useState<PartnerTier>("operator");
 
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string;
@@ -445,6 +452,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
           // Pre-populate service areas from application
           const areas = app.serviceArea ? app.serviceArea.split(",").map(s => s.trim()).filter(s => s) : [];
           setApproveServiceAreas(areas);
+          setApprovePartnerTier("operator");
           setApprovePartnerShare(60);
           setApprovePlatformShare(40);
           setShowApproveModal(true);
@@ -524,6 +532,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
           serviceAreas: approveServiceAreas,
           revenueSharePartner: approvePartnerShare / 100,
           revenueSharePlatform: approvePlatformShare / 100,
+          partnerTier: approvePartnerTier,
         }),
       });
       
@@ -850,8 +859,15 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
           >
             Platform Revenue
           </button>
+          <button
+            type="button"
+            className={`pp-tab ${activeView === "referrals" ? "active" : ""}`}
+            onClick={() => setActiveView("referrals")}
+          >
+            Partner Referrals
+          </button>
         </div>
-        {activeView !== "revenue" && (
+        {activeView !== "revenue" && activeView !== "referrals" && (
           <input
             type="text"
             className="pp-search"
@@ -974,6 +990,7 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
       )}
 
       {activeView === "revenue" && <PlatformRevenuePanel />}
+      {activeView === "referrals" && <PartnerReferralsAdminPanel />}
 
       {activeView === "partners" && (
         <>
@@ -1100,6 +1117,13 @@ export function PartnerProgramManagement({ userId }: PartnerProgramManagementPro
           setPartnerShare={setApprovePartnerShare}
           platformShare={approvePlatformShare}
           setPlatformShare={setApprovePlatformShare}
+          partnerTier={approvePartnerTier}
+          setPartnerTier={(tier) => {
+            setApprovePartnerTier(tier);
+            const split = getDefaultRevenueSplitForTier(tier);
+            setApprovePartnerShare(Math.round(split.revenueSharePartner * 100));
+            setApprovePlatformShare(Math.round(split.revenueSharePlatform * 100));
+          }}
           onApprove={() => handleApprove(selectedApplication.id)}
           onClose={() => {
             setShowApproveModal(false);
@@ -1203,6 +1227,8 @@ function ApproveModal({
   setPartnerShare,
   platformShare,
   setPlatformShare,
+  partnerTier,
+  setPartnerTier,
   onApprove,
   onClose,
 }: {
@@ -1213,6 +1239,8 @@ function ApproveModal({
   setPartnerShare: (share: number) => void;
   platformShare: number;
   setPlatformShare: (share: number) => void;
+  partnerTier: PartnerTier;
+  setPartnerTier: (tier: PartnerTier) => void;
   onApprove: () => void;
   onClose: () => void;
 }) {
@@ -1340,6 +1368,32 @@ function ApproveModal({
           />
           <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#6b7280" }}>
             Separate multiple areas with commas
+          </div>
+        </div>
+
+        <div style={{ marginBottom: "1.5rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", fontSize: "0.875rem" }}>
+            Partner Tier
+          </label>
+          <select
+            value={partnerTier}
+            onChange={(e) => setPartnerTier(e.target.value as PartnerTier)}
+            style={{
+              width: "100%",
+              padding: "0.75rem",
+              border: "1px solid #e5e7eb",
+              borderRadius: "6px",
+              fontSize: "0.875rem",
+            }}
+          >
+            {PARTNER_TIER_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#6b7280" }}>
+            {PARTNER_TIER_OPTIONS.find((option) => option.value === partnerTier)?.description}
           </div>
         </div>
 

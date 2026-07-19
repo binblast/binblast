@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { AddTeamMemberModal } from "@/components/PartnerDashboard/AddTeamMemberModal";
 import { PartnerPayroll } from "@/components/PartnerDashboard/PartnerPayroll";
+import { PartnerLeadsPanel } from "@/components/PartnerDashboard/PartnerLeadsPanel";
+import { PartnerReferralsPanel } from "@/components/PartnerDashboard/PartnerReferralsPanel";
 import {
   buildPartnerBookingLink,
   buildPartnerTeamLoginLink,
@@ -1248,6 +1250,9 @@ export default function PartnerDashboardPage() {
                 </p>
               </div>
             )}
+
+            <PartnerLeadsPanel partnerCode={partnerCode} />
+            <PartnerReferralsPanel />
 
             {/* Booking Link & Partner Signup Link Cards */}
             <div style={{
