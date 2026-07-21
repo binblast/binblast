@@ -1,7 +1,7 @@
 // app/partners/dashboard/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { AddTeamMemberModal } from "@/components/PartnerDashboard/AddTeamMemberModal";
@@ -16,6 +16,12 @@ import {
   resolvePartnerCode,
 } from "@/lib/partner-links";
 import { PortalBrandHeader } from "@/components/PortalBrandHeader";
+import {
+  downloadPartnerActiveSubscriptionsCsv,
+  downloadPartnerCustomersCsv,
+  downloadPartnerEarningsCsv,
+  downloadPartnerPayoutCsv,
+} from "@/lib/partner-dashboard-exports";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
   ssr: false,
@@ -54,6 +60,7 @@ interface PartnerBooking {
   status: "active" | "cancelled" | "refunded" | "trial";
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
+  commissionStatus?: string;
   createdAt: any;
   updatedAt: any;
   nextServiceDate: any | null;
@@ -953,6 +960,49 @@ export default function PartnerDashboardPage() {
     : new Date(now.getFullYear(), now.getMonth(), 25);
   const daysUntilPayout = Math.ceil((nextPayoutDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
+  function handleStatCardKeyDown(
+    event: KeyboardEvent<HTMLDivElement>,
+    action: () => void
+  ) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      action();
+    }
+  }
+
+  function downloadEarningsReport() {
+    if (!partnerData) return;
+    downloadPartnerEarningsCsv(partnerData.businessName, bookings);
+  }
+
+  function downloadCustomersReport() {
+    if (!partnerData) return;
+    downloadPartnerCustomersCsv(partnerData.businessName, customers);
+  }
+
+  function downloadActiveSubscriptionsReport() {
+    if (!partnerData) return;
+    downloadPartnerActiveSubscriptionsCsv(partnerData.businessName, bookings);
+  }
+
+  function downloadPayoutReport() {
+    if (!partnerData) return;
+    downloadPartnerPayoutCsv({
+      businessName: partnerData.businessName,
+      pendingCommissionsCents: stats.pendingCommissions,
+      heldCommissionsCents: stats.heldCommissions,
+      paidCommissionsCents: stats.totalCommissionsPaid,
+      payouts,
+      nextPayoutDate,
+    });
+  }
+
+  const statCardHintStyle = {
+    fontSize: "0.75rem",
+    color: "#9ca3af",
+    marginTop: "0.35rem",
+  } as const;
+
   // Group upcoming jobs by date
   const jobsToday = upcomingCleanings.filter(j => {
     const jobDate = new Date(j.date);
@@ -1059,21 +1109,31 @@ export default function PartnerDashboardPage() {
               marginBottom: "2rem"
             }}>
               {/* This Month's Earnings */}
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "16px",
-                padding: "1.5rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-                border: "2px solid #dcfce7",
-                transition: "all 0.3s ease",
-                cursor: "pointer"
-              }} onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.12)";
-                e.currentTarget.style.borderColor = "#86efac";
-              }} onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "0 4px 16px rgba(0, 0, 0, 0.08)";
-                e.currentTarget.style.borderColor = "#dcfce7";
-              }}>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="Download earnings report for this month"
+                title="Download earnings CSV"
+                onClick={downloadEarningsReport}
+                onKeyDown={(event) => handleStatCardKeyDown(event, downloadEarningsReport)}
+                style={{
+                  background: "#ffffff",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+                  border: "2px solid #dcfce7",
+                  transition: "all 0.3s ease",
+                  cursor: "pointer",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.12)";
+                  e.currentTarget.style.borderColor = "#86efac";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(0, 0, 0, 0.08)";
+                  e.currentTarget.style.borderColor = "#dcfce7";
+                }}
+              >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
                   <div style={{ padding: "0.75rem", background: "#dcfce7", borderRadius: "12px" }}>
                     <svg style={{ width: "24px", height: "24px", color: "#16a34a" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1086,24 +1146,35 @@ export default function PartnerDashboardPage() {
                   ${(stats.thisMonthEarnings / 100).toFixed(2)}
                 </div>
                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>Earnings this month</div>
+                <div style={statCardHintStyle}>Click to download CSV</div>
               </div>
 
               {/* Total Customers */}
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "16px",
-                padding: "1.5rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-                border: "2px solid #dbeafe",
-                transition: "all 0.3s ease",
-                cursor: "pointer"
-              }} onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.12)";
-                e.currentTarget.style.borderColor = "#93c5fd";
-              }} onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "0 4px 16px rgba(0, 0, 0, 0.08)";
-                e.currentTarget.style.borderColor = "#dbeafe";
-              }}>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="Download referred customers report"
+                title="Download customers CSV"
+                onClick={downloadCustomersReport}
+                onKeyDown={(event) => handleStatCardKeyDown(event, downloadCustomersReport)}
+                style={{
+                  background: "#ffffff",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+                  border: "2px solid #dbeafe",
+                  transition: "all 0.3s ease",
+                  cursor: "pointer",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.12)";
+                  e.currentTarget.style.borderColor = "#93c5fd";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(0, 0, 0, 0.08)";
+                  e.currentTarget.style.borderColor = "#dbeafe";
+                }}
+              >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
                   <div style={{ padding: "0.75rem", background: "#dbeafe", borderRadius: "12px" }}>
                     <svg style={{ width: "24px", height: "24px", color: "#2563eb" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1116,24 +1187,37 @@ export default function PartnerDashboardPage() {
                   {stats.totalCustomers}
                 </div>
                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>Total referred</div>
+                <div style={statCardHintStyle}>Click to download CSV</div>
               </div>
 
               {/* Active Subscriptions */}
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "16px",
-                padding: "1.5rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-                border: "2px solid #e9d5ff",
-                transition: "all 0.3s ease",
-                cursor: "pointer"
-              }} onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.12)";
-                e.currentTarget.style.borderColor = "#c084fc";
-              }} onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "0 4px 16px rgba(0, 0, 0, 0.08)";
-                e.currentTarget.style.borderColor = "#e9d5ff";
-              }}>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="Download active subscriptions report"
+                title="Download active subscriptions CSV"
+                onClick={downloadActiveSubscriptionsReport}
+                onKeyDown={(event) =>
+                  handleStatCardKeyDown(event, downloadActiveSubscriptionsReport)
+                }
+                style={{
+                  background: "#ffffff",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+                  border: "2px solid #e9d5ff",
+                  transition: "all 0.3s ease",
+                  cursor: "pointer",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.12)";
+                  e.currentTarget.style.borderColor = "#c084fc";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(0, 0, 0, 0.08)";
+                  e.currentTarget.style.borderColor = "#e9d5ff";
+                }}
+              >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
                   <div style={{ padding: "0.75rem", background: "#e9d5ff", borderRadius: "12px" }}>
                     <svg style={{ width: "24px", height: "24px", color: "#9333ea" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1146,24 +1230,35 @@ export default function PartnerDashboardPage() {
                   {stats.activeSubscriptions}
                 </div>
                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>Active subscriptions</div>
+                <div style={statCardHintStyle}>Click to download CSV</div>
               </div>
 
               {/* Next Payout */}
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "16px",
-                padding: "1.5rem",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-                border: "2px solid #fed7aa",
-                transition: "all 0.3s ease",
-                cursor: "pointer"
-              }} onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.12)";
-                e.currentTarget.style.borderColor = "#fdba74";
-              }} onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "0 4px 16px rgba(0, 0, 0, 0.08)";
-                e.currentTarget.style.borderColor = "#fed7aa";
-              }}>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="Download payout summary report"
+                title="Download payout summary CSV"
+                onClick={downloadPayoutReport}
+                onKeyDown={(event) => handleStatCardKeyDown(event, downloadPayoutReport)}
+                style={{
+                  background: "#ffffff",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+                  border: "2px solid #fed7aa",
+                  transition: "all 0.3s ease",
+                  cursor: "pointer",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.12)";
+                  e.currentTarget.style.borderColor = "#fdba74";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(0, 0, 0, 0.08)";
+                  e.currentTarget.style.borderColor = "#fed7aa";
+                }}
+              >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
                   <div style={{ padding: "0.75rem", background: "#fed7aa", borderRadius: "12px" }}>
                     <svg style={{ width: "24px", height: "24px", color: "#ea580c" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1176,6 +1271,7 @@ export default function PartnerDashboardPage() {
                   {daysUntilPayout} days
                 </div>
                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>{nextPayoutDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+                <div style={statCardHintStyle}>Click to download CSV</div>
               </div>
             </div>
 
