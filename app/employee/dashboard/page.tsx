@@ -24,6 +24,7 @@ import {
   ClockInRecord,
   Employee,
 } from "@/lib/employee-utils";
+import { getCurrentPathWithSearch } from "@/lib/auth-session";
 import { getDbInstance } from "@/lib/firebase";
 import { safeImportFirestore } from "@/lib/firebase-module-loader";
 import { getAuthInstance } from "@/lib/firebase";
@@ -122,14 +123,16 @@ export default function EmployeeDashboardPage() {
           } else {
             // No user, redirect to login
             setLoading(false);
-            router.push("/login?redirect=/employee/dashboard");
+            const redirect = encodeURIComponent(getCurrentPathWithSearch());
+            router.push(`/login?redirect=${redirect}`);
           }
         });
       } catch (error) {
         console.error("Error setting up auth listener:", error);
         if (isMounted) {
           setLoading(false);
-          router.push("/login?redirect=/employee/dashboard");
+          const redirect = encodeURIComponent(getCurrentPathWithSearch());
+          router.push(`/login?redirect=${redirect}`);
         }
       }
     }

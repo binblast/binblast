@@ -1,8 +1,8 @@
 // app/employee/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   PortalLoadingShell,
@@ -10,9 +10,12 @@ import {
   PortalWrongRoleMessage,
 } from "@/components/PortalLoginShell";
 import { resolveUserPortal } from "@/lib/user-portal";
+import { getSafeRedirectPath, subscribeAuthState } from "@/lib/auth-session";
 
-export default function EmployeePortalPage() {
+function EmployeePortalContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = getSafeRedirectPath(searchParams.get("redirect"), "/employee/dashboard");
   const [userId, setUserId] = useState<string | null>(null);
   const [wrongRole, setWrongRole] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -23,10 +26,7 @@ export default function EmployeePortalPage() {
 
     async function checkAuth() {
       try {
-        const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
-        const auth = await getAuthInstance();
-
-        async function handleUser(user: { uid: string; email: string | null } | null) {
+        unsubscribe = await subscribeAuthState(async (user) => {
           if (!mounted) return;
 
           if (!user) {
@@ -40,22 +40,12 @@ export default function EmployeePortalPage() {
           const userPortal = await resolveUserPortal(user.uid, user.email);
 
           if (userPortal === "employee") {
-            router.push("/employee/dashboard");
+            router.push(redirectPath);
             return;
           }
 
           setWrongRole(true);
           setLoading(false);
-        }
-
-        if (auth?.currentUser) {
-          await handleUser(auth.currentUser);
-        } else {
-          setLoading(false);
-        }
-
-        unsubscribe = await onAuthStateChanged(async (user) => {
-          await handleUser(user);
         });
       } catch (err) {
         console.error("Error checking auth:", err);
@@ -69,7 +59,7 @@ export default function EmployeePortalPage() {
       mounted = false;
       if (unsubscribe) unsubscribe();
     };
-  }, [router]);
+  }, [router, redirectPath]);
 
   if (loading) {
     return <PortalLoadingShell />;
@@ -89,7 +79,7 @@ export default function EmployeePortalPage() {
       title="Employee Portal"
       portalName="Employee Portal"
       expectedRole="employee"
-      redirectPath="/employee/dashboard"
+      redirectPath={redirectPath}
       footerNote={
         <>
           Need employee access?{" "}
@@ -99,5 +89,13 @@ export default function EmployeePortalPage() {
         </>
       }
     />
+  );
+}
+
+export default function EmployeePortalPage() {
+  return (
+    <Suspense fallback={<PortalLoadingShell />}>
+      <EmployeePortalContent />
+    </Suspense>
   );
 }

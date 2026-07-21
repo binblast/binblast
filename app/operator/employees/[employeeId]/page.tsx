@@ -17,6 +17,7 @@ import { TrainingStatus } from "@/components/OperatorDashboard/EmployeeDetail/Tr
 import { EmployeeIssuesPanel } from "@/components/OperatorDashboard/EmployeeDetail/EmployeeIssuesPanel";
 import { EmployeeTaxDocuments } from "@/components/OperatorDashboard/EmployeeDetail/EmployeeTaxDocuments";
 import { canAccessBusinessCommandCenter } from "@/lib/owner-auth";
+import { getCurrentPathWithSearch, subscribeAuthState } from "@/lib/auth-session";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => ({ default: mod.Navbar })), {
   ssr: false,
@@ -62,8 +63,65 @@ export default function EmployeeDetailPage() {
   const [terminateReason, setTerminateReason] = useState("");
 
   useEffect(() => {
-    checkAccess();
-  }, []);
+    let mounted = true;
+    let unsubscribe: (() => void) | undefined;
+
+    async function setupAccessCheck() {
+      unsubscribe = await subscribeAuthState(async (user) => {
+        if (!mounted) return;
+
+        if (!user) {
+          const redirect = encodeURIComponent(getCurrentPathWithSearch());
+          router.push(`/login?redirect=${redirect}`);
+          return;
+        }
+
+        try {
+          const { getDbInstance } = await import("@/lib/firebase");
+          const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
+          const firestore = await safeImportFirestore();
+          const { doc, getDoc } = firestore;
+
+          const db = await getDbInstance();
+          if (!db) {
+            setLoading(false);
+            return;
+          }
+
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (!userDoc.exists()) {
+            const redirect = encodeURIComponent(getCurrentPathWithSearch());
+            router.push(`/login?redirect=${redirect}`);
+            return;
+          }
+
+          const userData = userDoc.data();
+          const role = userData.role;
+          const email = user.email;
+
+          if (!canAccessBusinessCommandCenter(email, role)) {
+            router.push("/dashboard");
+            return;
+          }
+
+          setUserRole(role);
+          setManagerId(user.uid);
+          setLoading(false);
+        } catch (error) {
+          console.error("Error checking access:", error);
+          const redirect = encodeURIComponent(getCurrentPathWithSearch());
+          router.push(`/login?redirect=${redirect}`);
+        }
+      });
+    }
+
+    setupAccessCheck();
+
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+    };
+  }, [router]);
 
   useEffect(() => {
     if (employeeId && userRole) {
@@ -89,47 +147,6 @@ export default function EmployeeDetailPage() {
       clearInterval(stopsInterval);
     };
   }, [employeeId, userRole]);
-
-  const checkAccess = async () => {
-    try {
-      // Check user role from Firebase auth
-      const { getAuthInstance } = await import("@/lib/firebase");
-      const auth = await getAuthInstance();
-      if (!auth || !auth.currentUser) {
-        router.push("/login?redirect=/operator/employees/" + employeeId);
-        return;
-      }
-
-      // Get user role from Firestore
-      const { getDbInstance } = await import("@/lib/firebase");
-      const { safeImportFirestore } = await import("@/lib/firebase-module-loader");
-      const firestore = await safeImportFirestore();
-      const { doc, getDoc } = firestore;
-
-      const db = await getDbInstance();
-      if (!db) return;
-
-      const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const role = userData.role;
-        const email = auth.currentUser.email;
-
-        if (!canAccessBusinessCommandCenter(email, role)) {
-          router.push("/dashboard");
-          return;
-        }
-
-        setUserRole(role);
-        setManagerId(auth.currentUser.uid);
-      } else {
-        router.push("/login?redirect=/operator/employees/" + employeeId);
-      }
-    } catch (error) {
-      console.error("Error checking access:", error);
-      router.push("/login?redirect=/operator/employees/" + employeeId);
-    }
-  };
 
   const loadEmployeeData = async () => {
     try {

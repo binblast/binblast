@@ -39,6 +39,7 @@ import { CustomerUpcomingCleanings } from "@/components/CustomerDashboard/Custom
 import { ScheduleLimitBanner } from "@/components/CustomerDashboard/ScheduleLimitBanner";
 import { CleaningLimitModal } from "@/components/CleaningLimitModal";
 import { formatRecurringScheduleSummary } from "@/lib/recurring-preference";
+import { getCurrentPathWithSearch } from "@/lib/auth-session";
 
 const OwnerCommandCenter = dynamic(
   () => import("@/components/OwnerDashboard/OwnerCommandCenter").then((m) => m.OwnerCommandCenter),
@@ -659,7 +660,8 @@ function DashboardPageContent() {
               setIsAdmin(false);
               setIsOperator(false);
               setIsOwner(false);
-              router.push("/login");
+              const redirect = encodeURIComponent(getCurrentPathWithSearch());
+              router.push(`/login?redirect=${redirect}`);
             }
             return;
           }
@@ -757,34 +759,35 @@ function DashboardPageContent() {
               
               // Mark role as determined AFTER state updates
               setRoleDetermined(true);
-              
-              // If user is an operator, don't check for partner redirects
-              if (newIsOperator) {
-                // Operator stays on dashboard - no redirect needed
-                redirectingRef.current = false; // Reset redirect flag
-              } else {
-                // Check if user is a partner and redirect accordingly (unless admin or operator)
-                // Prevent redirect loops by checking if we're already redirecting
-                if (!redirectingRef.current) {
-                  try {
-                    const { getDashboardUrl } = await import("@/lib/partner-auth");
-                    const dashboardUrl = await getDashboardUrl(firebaseUser.uid, firebaseUser.email);
-                    
-                    // If user is a partner and not on admin email, redirect to partner dashboard
-                    if (dashboardUrl !== "/dashboard" && firebaseUser.email !== ADMIN_EMAIL) {
-                      if (mounted) {
-                        redirectingRef.current = true; // Set flag before redirect
-                        router.push(dashboardUrl);
-                      }
-                      return;
-                    } else {
-                      redirectingRef.current = false; // Reset if no redirect needed
+
+              if (userRole === "employee") {
+                if (mounted) {
+                  router.push("/employee/dashboard");
+                }
+                return;
+              }
+
+              // Operators, admins, and owners stay on the command center dashboard.
+              if (newIsOperator || newIsAdmin || newIsOwner) {
+                redirectingRef.current = false;
+              } else if (!redirectingRef.current) {
+                // Customers with partner accounts go to the partner dashboard.
+                try {
+                  const { getDashboardUrl } = await import("@/lib/partner-auth");
+                  const dashboardUrl = await getDashboardUrl(firebaseUser.uid, firebaseUser.email);
+
+                  if (dashboardUrl !== "/dashboard" && firebaseUser.email !== ADMIN_EMAIL) {
+                    if (mounted) {
+                      redirectingRef.current = true;
+                      router.push(dashboardUrl);
                     }
-                  } catch (partnerCheckErr) {
-                    console.warn("[Dashboard] Error checking partner status:", partnerCheckErr);
-                    redirectingRef.current = false; // Reset on error
-                    // Continue with regular dashboard if partner check fails
+                    return;
                   }
+
+                  redirectingRef.current = false;
+                } catch (partnerCheckErr) {
+                  console.warn("[Dashboard] Error checking partner status:", partnerCheckErr);
+                  redirectingRef.current = false;
                 }
               }
             } else {

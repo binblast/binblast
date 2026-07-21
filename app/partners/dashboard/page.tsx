@@ -17,6 +17,7 @@ import {
   resolvePartnerCode,
 } from "@/lib/partner-links";
 import { PortalBrandHeader } from "@/components/PortalBrandHeader";
+import { getCurrentPathWithSearch, subscribeAuthState } from "@/lib/auth-session";
 import {
   buildPartnerStatSheet,
   type PartnerStatReportType,
@@ -323,35 +324,35 @@ export default function PartnerDashboardPage() {
   const [statReportSheet, setStatReportSheet] = useState<PartnerStatSheet | null>(null);
 
   useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    let mounted = true;
+
     async function checkAuth() {
       try {
-        const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
-        const auth = await getAuthInstance();
-        
-        if (auth?.currentUser) {
-          setUserId(auth.currentUser.uid);
-          loadPartnerData(auth.currentUser.uid);
-        }
-        
-        const unsubscribe = await onAuthStateChanged((user) => {
+        unsubscribe = await subscribeAuthState((user) => {
+          if (!mounted) return;
+
           if (user) {
             setUserId(user.uid);
             loadPartnerData(user.uid);
-          } else {
-            router.push("/login?redirect=/partners/dashboard");
+            return;
           }
+
+          const redirect = encodeURIComponent(getCurrentPathWithSearch());
+          router.push(`/login?redirect=${redirect}`);
         });
-        
-        return () => {
-          if (unsubscribe) unsubscribe();
-        };
       } catch (err) {
         console.error("Error checking auth:", err);
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
-    
+
     checkAuth();
+
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+    };
   }, [router]);
 
   async function loadPartnerData(uid: string) {

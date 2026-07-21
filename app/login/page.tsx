@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { PORTAL_INFO } from "@/lib/user-portal";
 import { PortalBrandMark } from "@/components/PortalBrandHeader";
+import { appendRedirectParam } from "@/lib/auth-session";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
   ssr: false,
@@ -19,6 +20,7 @@ const PORTAL_ORDER = ["customer", "partner", "employee", "operator"] as const;
 function LoginForm() {
   const searchParams = useSearchParams();
   const passwordReset = searchParams.get("passwordReset") === "true";
+  const redirect = searchParams.get("redirect");
 
   return (
     <>
@@ -74,7 +76,7 @@ function LoginForm() {
                       }} />
                     )}
                     <Link
-                      href={portal.path}
+                      href={appendRedirectParam(portal.path, redirect)}
                       className="portal-picker-card"
                       style={{
                         display: "block",

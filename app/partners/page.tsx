@@ -1,8 +1,8 @@
 // app/partners/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   PortalLoadingShell,
@@ -11,9 +11,12 @@ import {
 } from "@/components/PortalLoginShell";
 import { resolveUserPortal } from "@/lib/user-portal";
 import { getDashboardUrl } from "@/lib/partner-auth";
+import { getSafeRedirectPath, subscribeAuthState } from "@/lib/auth-session";
 
-export default function PartnersPage() {
+function PartnersPortalContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = getSafeRedirectPath(searchParams.get("redirect"), "/partners/dashboard");
   const [userId, setUserId] = useState<string | null>(null);
   const [wrongRole, setWrongRole] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -24,10 +27,7 @@ export default function PartnersPage() {
 
     async function checkAuth() {
       try {
-        const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
-        const auth = await getAuthInstance();
-
-        async function handleUser(user: { uid: string; email: string | null } | null) {
+        unsubscribe = await subscribeAuthState(async (user) => {
           if (!mounted) return;
 
           if (!user) {
@@ -41,6 +41,11 @@ export default function PartnersPage() {
           const userPortal = await resolveUserPortal(user.uid, user.email);
 
           if (userPortal === "partner") {
+            if (redirectPath !== "/partners/dashboard") {
+              router.push(redirectPath);
+              return;
+            }
+
             const dashboardUrl = await getDashboardUrl(user.uid, user.email);
             router.push(dashboardUrl);
             return;
@@ -48,16 +53,6 @@ export default function PartnersPage() {
 
           setWrongRole(true);
           setLoading(false);
-        }
-
-        if (auth?.currentUser) {
-          await handleUser(auth.currentUser);
-        } else {
-          setLoading(false);
-        }
-
-        unsubscribe = await onAuthStateChanged(async (user) => {
-          await handleUser(user);
         });
       } catch (err) {
         console.error("Error checking auth:", err);
@@ -71,7 +66,7 @@ export default function PartnersPage() {
       mounted = false;
       if (unsubscribe) unsubscribe();
     };
-  }, [router]);
+  }, [router, redirectPath]);
 
   if (loading) {
     return <PortalLoadingShell />;
@@ -91,7 +86,7 @@ export default function PartnersPage() {
       title="Partner Portal"
       portalName="Partner Portal"
       expectedRole="partner"
-      redirectPath="/partners/dashboard"
+      redirectPath={redirectPath}
       footerNote={
         <>
           Interested in becoming a partner?{" "}
@@ -101,5 +96,13 @@ export default function PartnersPage() {
         </>
       }
     />
+  );
+}
+
+export default function PartnersPage() {
+  return (
+    <Suspense fallback={<PortalLoadingShell />}>
+      <PartnersPortalContent />
+    </Suspense>
   );
 }

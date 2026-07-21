@@ -1,17 +1,20 @@
 // app/customer/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   PortalLoadingShell,
   PortalLoginShell,
   PortalWrongRoleMessage,
 } from "@/components/PortalLoginShell";
 import { resolveUserPortal } from "@/lib/user-portal";
+import { getSafeRedirectPath, subscribeAuthState } from "@/lib/auth-session";
 
-export default function CustomerPortalPage() {
+function CustomerPortalContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = getSafeRedirectPath(searchParams.get("redirect"), "/dashboard");
   const [userId, setUserId] = useState<string | null>(null);
   const [wrongRole, setWrongRole] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -22,10 +25,7 @@ export default function CustomerPortalPage() {
 
     async function checkAuth() {
       try {
-        const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
-        const auth = await getAuthInstance();
-
-        async function handleUser(user: { uid: string; email: string | null } | null) {
+        unsubscribe = await subscribeAuthState(async (user) => {
           if (!mounted) return;
 
           if (!user) {
@@ -39,22 +39,12 @@ export default function CustomerPortalPage() {
           const userPortal = await resolveUserPortal(user.uid, user.email);
 
           if (userPortal === "customer") {
-            router.push("/dashboard");
+            router.push(redirectPath);
             return;
           }
 
           setWrongRole(true);
           setLoading(false);
-        }
-
-        if (auth?.currentUser) {
-          await handleUser(auth.currentUser);
-        } else {
-          setLoading(false);
-        }
-
-        unsubscribe = await onAuthStateChanged(async (user) => {
-          await handleUser(user);
         });
       } catch (err) {
         console.error("Error checking auth:", err);
@@ -68,7 +58,7 @@ export default function CustomerPortalPage() {
       mounted = false;
       if (unsubscribe) unsubscribe();
     };
-  }, [router]);
+  }, [router, redirectPath]);
 
   if (loading) {
     return <PortalLoadingShell />;
@@ -88,7 +78,15 @@ export default function CustomerPortalPage() {
       title="Customer Portal"
       portalName="Customer Portal"
       expectedRole="customer"
-      redirectPath="/dashboard"
+      redirectPath={redirectPath}
     />
+  );
+}
+
+export default function CustomerPortalPage() {
+  return (
+    <Suspense fallback={<PortalLoadingShell />}>
+      <CustomerPortalContent />
+    </Suspense>
   );
 }

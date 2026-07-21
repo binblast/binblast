@@ -1,17 +1,20 @@
 // app/operator/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   PortalLoadingShell,
   PortalLoginShell,
   PortalWrongRoleMessage,
 } from "@/components/PortalLoginShell";
 import { resolveUserPortal } from "@/lib/user-portal";
+import { getSafeRedirectPath, subscribeAuthState } from "@/lib/auth-session";
 
-export default function OperatorPortalPage() {
+function OperatorPortalContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = getSafeRedirectPath(searchParams.get("redirect"), "/dashboard");
   const [userId, setUserId] = useState<string | null>(null);
   const [wrongRole, setWrongRole] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -22,10 +25,7 @@ export default function OperatorPortalPage() {
 
     async function checkAuth() {
       try {
-        const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
-        const auth = await getAuthInstance();
-
-        async function handleUser(user: { uid: string; email: string | null } | null) {
+        unsubscribe = await subscribeAuthState(async (user) => {
           if (!mounted) return;
 
           if (!user) {
@@ -39,22 +39,12 @@ export default function OperatorPortalPage() {
           const userPortal = await resolveUserPortal(user.uid, user.email);
 
           if (userPortal === "operator") {
-            router.push("/dashboard");
+            router.push(redirectPath);
             return;
           }
 
           setWrongRole(true);
           setLoading(false);
-        }
-
-        if (auth?.currentUser) {
-          await handleUser(auth.currentUser);
-        } else {
-          setLoading(false);
-        }
-
-        unsubscribe = await onAuthStateChanged(async (user) => {
-          await handleUser(user);
         });
       } catch (err) {
         console.error("Error checking auth:", err);
@@ -68,7 +58,7 @@ export default function OperatorPortalPage() {
       mounted = false;
       if (unsubscribe) unsubscribe();
     };
-  }, [router]);
+  }, [router, redirectPath]);
 
   if (loading) {
     return <PortalLoadingShell />;
@@ -88,8 +78,16 @@ export default function OperatorPortalPage() {
       title="Blast Command"
       portalName="Blast Command Portal"
       expectedRole="operator"
-      redirectPath="/dashboard"
+      redirectPath={redirectPath}
       footerNote="Administrative access is provided by your system administrator."
     />
+  );
+}
+
+export default function OperatorPortalPage() {
+  return (
+    <Suspense fallback={<PortalLoadingShell />}>
+      <OperatorPortalContent />
+    </Suspense>
   );
 }
