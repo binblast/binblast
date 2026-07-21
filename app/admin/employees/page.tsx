@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import { EmployeeContactList } from "@/components/AdminDashboard/EmployeeContactList";
 import { HireEmployeeForm } from "@/components/AdminDashboard/HireEmployeeForm";
 import { EmployeeApplications } from "@/components/AdminDashboard/EmployeeApplications";
+import { CareerApplicationsHub } from "@/components/AdminDashboard/CareerApplicationsHub";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
   ssr: false,
@@ -41,7 +42,7 @@ export default function AdminEmployeesPage() {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState<"list" | "hire" | "applications">("list");
+  const [activeView, setActiveView] = useState<"list" | "hire" | "applications" | "careers">("list");
   const [showHireForm, setShowHireForm] = useState(false);
 
   useEffect(() => {
@@ -139,7 +140,25 @@ export default function AdminEmployeesPage() {
                   Manage employees, schedules, and hiring
                 </p>
               </div>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => {
+                    setActiveView("list");
+                    setShowHireForm(false);
+                  }}
+                  style={{
+                    padding: "0.75rem 1.5rem",
+                    background: activeView === "list" && !showHireForm ? "#16a34a" : "white",
+                    color: activeView === "list" && !showHireForm ? "white" : "#6b7280",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    fontSize: "0.95rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  Employees
+                </button>
                 <button
                   onClick={() => {
                     setActiveView("applications");
@@ -157,6 +176,24 @@ export default function AdminEmployeesPage() {
                   }}
                 >
                   Applications
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveView("careers");
+                    setShowHireForm(false);
+                  }}
+                  style={{
+                    padding: "0.75rem 1.5rem",
+                    background: activeView === "careers" ? "#16a34a" : "white",
+                    color: activeView === "careers" ? "white" : "#6b7280",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    fontSize: "0.95rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  Careers
                 </button>
                 <button
                   onClick={() => {
@@ -212,6 +249,19 @@ export default function AdminEmployeesPage() {
                 border: "1px solid #e5e7eb"
               }}>
                 <EmployeeApplications />
+              </div>
+            )}
+
+            {/* Career Applications View */}
+            {activeView === "careers" && (
+              <div style={{
+                padding: "2rem",
+                background: "white",
+                borderRadius: "12px",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+                border: "1px solid #e5e7eb"
+              }}>
+                <CareerApplicationsHub />
               </div>
             )}
 

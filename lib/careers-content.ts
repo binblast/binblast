@@ -1,31 +1,42 @@
-export type CareerOpeningStatus = "open" | "future";
-
-export interface CareerOpening {
-  id: string;
-  title: string;
-  status: CareerOpeningStatus;
-  location: string;
-  schedule: string;
-  summary: string;
-  responsibilities: string[];
-  requirements: string[];
-  paySummary?: string;
-}
+import type { CareerOpening } from "@/lib/careers-types";
 
 export const CAREERS_HERO = {
-  title: "Careers at Bin Blast Co.",
+  title: "Join the Bin Blast Co. Team",
   subtitle:
-    "Help keep Metro Atlanta cleaner — one curbside bin at a time. We hire reliable people who take pride in quality work and serving their community.",
+    "Help us build the cleanest neighborhoods in America while building a career you can grow with.",
+};
+
+export const CAREERS_MISSION = {
+  headline: "Why Work Here",
+  body:
+    "At Bin Blast Co., we're building more than a trash bin cleaning company. We're building a technology-driven service company focused on customer experience, reliability, and creating career opportunities across Metro Atlanta.",
 };
 
 export const CAREERS_BENEFITS = [
-  "Paid per completed stop — residential pay starts at $8 for the first bin and $3 for each additional bin at the same stop",
-  "Commercial routes include commission-based pay with a $30 minimum per completed job",
-  "Flexible route schedules — Monday through Saturday (Saturday routes end by 2:00 PM)",
-  "Training provided on equipment, safety, and photo documentation",
-  "Performance bonuses available for quality, reliability, and customer satisfaction",
-  "Be part of a growing local company focused on cleaner neighborhoods",
+  "Competitive Pay",
+  "Performance Bonuses",
+  "Career Growth",
+  "Leadership Opportunities",
+  "Flexible Scheduling",
+  "Paid Training",
+  "Team Culture",
+  "Modern Equipment",
+  "Technology-Driven Operations",
 ] as const;
+
+export const HIRING_TIMELINE_STEPS = [
+  { title: "Submit Application", detail: "Complete the 7-step online application." },
+  { title: "Application Review", detail: "Our recruiting team reviews your experience and availability." },
+  { title: "Phone Interview", detail: "Short conversation about the role, schedule, and expectations." },
+  { title: "In-Person Interview", detail: "Meet the team and learn about routes, equipment, and culture." },
+  { title: "Background & Driving Record Review", detail: "Required for route technician roles when applicable." },
+  { title: "Job Offer", detail: "Qualified candidates receive a written offer." },
+  { title: "Paid Training", detail: "Hands-on training on safety, quality, and documentation." },
+  { title: "First Route", detail: "Start earning on your assigned route with ongoing support." },
+] as const;
+
+export const HIRING_TIMELINE_NOTE =
+  "Most candidates receive a decision within 5–10 business days.";
 
 export const CAREER_OPENINGS: CareerOpening[] = [
   {
@@ -33,9 +44,11 @@ export const CAREER_OPENINGS: CareerOpening[] = [
     title: "Route Technician — Bin Cleaning",
     status: "open",
     location: "Metro Atlanta (Fayette County and expanding routes)",
-    schedule: "Part-time and full-time routes available · Mon–Sat",
+    employmentType: "Part-time or Full-time",
+    schedule: "Mon–Sat routes · Saturday ends by 2:00 PM",
     summary:
       "Drive assigned routes, clean and sanitize curbside trash bins, and submit required job photos after each stop.",
+    payRange: "$8 first bin + $3/additional bin per stop · Commercial 20% labor ($30 min/job)",
     responsibilities: [
       "Complete residential and commercial cleaning stops on schedule",
       "Follow Bin Blast safety, chemical, and equipment procedures",
@@ -50,16 +63,17 @@ export const CAREER_OPENINGS: CareerOpening[] = [
       "Strong work ethic and attention to detail",
       "Must pass background review before first route assignment",
     ],
-    paySummary: "Residential: $8 first bin + $3 each additional bin per stop · Commercial: 20% of labor revenue ($30 minimum per job)",
   },
   {
     id: "route-supervisor",
     title: "Route Supervisor",
     status: "future",
     location: "Metro Atlanta",
-    schedule: "Full-time · future opening",
+    employmentType: "Full-time",
+    schedule: "Future opening",
     summary:
       "Lead daily field operations, support technicians, and help maintain route quality as we grow.",
+    payRange: "Competitive salary + leadership bonus (opening soon)",
     responsibilities: [
       "Support route planning and daily dispatch",
       "Coach technicians on quality standards and documentation",
@@ -75,9 +89,11 @@ export const CAREER_OPENINGS: CareerOpening[] = [
     title: "Commercial Account Specialist",
     status: "future",
     location: "Metro Atlanta",
-    schedule: "Part-time or full-time · future opening",
+    employmentType: "Part-time or Full-time",
+    schedule: "Future opening",
     summary:
       "Support restaurants, HOAs, apartments, and commercial properties with recurring bin cleaning service.",
+    payRange: "Commission-based commercial pay + performance bonuses",
     responsibilities: [
       "Complete commercial cleaning jobs to company standards",
       "Document heavy-grease or specialty jobs accurately",
@@ -92,3 +108,7 @@ export const CAREER_OPENINGS: CareerOpening[] = [
 
 export const OPEN_CAREER_OPENINGS = CAREER_OPENINGS.filter((job) => job.status === "open");
 export const FUTURE_CAREER_OPENINGS = CAREER_OPENINGS.filter((job) => job.status === "future");
+
+export function getCareerOpeningById(id: string): CareerOpening | undefined {
+  return CAREER_OPENINGS.find((job) => job.id === id);
+}
