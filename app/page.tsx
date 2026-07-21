@@ -68,7 +68,19 @@ export default function HomePage() {
       <main className="bg-white marketing-main">
         {/* Hero Section */}
         <section id="home" className="hero hero--split">
-          <div className="hero__backdrop" aria-hidden="true" />
+          <div className="hero__backdrop" aria-hidden="true">
+            <picture>
+              <source media="(min-width: 1280px)" srcSet="/website-cover.jpg" />
+              <img
+                src="/website-cover-1920.jpg"
+                alt=""
+                className="hero__backdrop-image"
+                decoding="async"
+                fetchPriority="high"
+              />
+            </picture>
+            <div className="hero__backdrop-overlay" />
+          </div>
           <div className="container hero__grid">
             <div className="hero__copy">
               <p className="hero-eyebrow">Cleaner bins. Cleaner communities.</p>
