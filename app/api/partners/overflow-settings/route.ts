@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkPartnerAccess } from "@/lib/partner-api-auth";
 import { DEFAULT_MAX_JOBS_PER_DAY } from "@/lib/partner-overflow";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -13,19 +12,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json({ error: "Database not available" }, { status: 500 });
-    }
-
-    const firestore = await safeImportFirestore();
-    const { doc, getDoc } = firestore;
-    const partnerSnap = await getDoc(doc(db, "partners", auth.partner.id));
-    if (!partnerSnap.exists()) {
+    const db = await getAdminFirestore();
+    const partnerSnap = await db.collection("partners").doc(auth.partner.id).get();
+    if (!partnerSnap.exists) {
       return NextResponse.json({ error: "Partner not found" }, { status: 404 });
     }
 
-    const data = partnerSnap.data();
+    const data = partnerSnap.data() || {};
     return NextResponse.json({
       success: true,
       settings: {
@@ -70,16 +63,11 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json({ error: "Database not available" }, { status: 500 });
-    }
-
-    const firestore = await safeImportFirestore();
-    const { doc, updateDoc, serverTimestamp } = firestore;
-    await updateDoc(doc(db, "partners", auth.partner.id), {
+    const admin = await import("firebase-admin");
+    const db = await getAdminFirestore();
+    await db.collection("partners").doc(auth.partner.id).update({
       ...updates,
-      updatedAt: serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     return NextResponse.json({ success: true, ...updates });

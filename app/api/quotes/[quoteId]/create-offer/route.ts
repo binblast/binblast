@@ -25,7 +25,7 @@ export async function POST(
     }
 
     const firestore = await safeImportFirestore();
-    const { collection, doc, addDoc, updateDoc, serverTimestamp, getDoc } = firestore;
+    const { collection, doc, addDoc, updateDoc, setDoc, serverTimestamp, getDoc } = firestore;
 
     // Verify quote exists
     const quoteRef = doc(db, "customQuotes", quoteId);
@@ -83,7 +83,7 @@ export async function POST(
       const assignmentStatus = body.sendEmail ? "active" : "draft";
 
       for (const row of partnerAssignments) {
-        await addDoc(assignmentsRef, {
+        const assignmentPayload = {
           ...buildAssignmentFirestorePayload(
             quoteId,
             offerId,
@@ -92,7 +92,13 @@ export async function POST(
           ),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-        });
+        };
+
+        const assignmentRef = await addDoc(assignmentsRef, assignmentPayload);
+        await setDoc(
+          doc(db, "partners", row.partnerId, "quoteAssignments", assignmentRef.id),
+          assignmentPayload
+        );
       }
     }
 

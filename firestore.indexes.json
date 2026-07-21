@@ -7,6 +7,13 @@
         { "fieldPath": "employeeId", "order": "ASCENDING" },
         { "fieldPath": "date", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "partnerAssignments",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "partnerId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

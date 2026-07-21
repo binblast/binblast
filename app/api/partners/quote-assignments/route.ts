@@ -10,6 +10,30 @@ interface FirestoreDocument {
   data: () => Record<string, unknown>;
 }
 
+async function loadPartnerQuoteAssignments(partnerId: string) {
+  const db = await getAdminFirestore();
+  const snapshot = await db
+    .collection("partners")
+    .doc(partnerId)
+    .collection("quoteAssignments")
+    .get();
+
+  if (!snapshot.empty) {
+    return snapshot.docs as FirestoreDocument[];
+  }
+
+  try {
+    const legacySnapshot = await db
+      .collectionGroup("partnerAssignments")
+      .where("partnerId", "==", partnerId)
+      .get();
+    return legacySnapshot.docs as FirestoreDocument[];
+  } catch (queryError: unknown) {
+    console.warn("[Partner Quote Assignments GET] Legacy collectionGroup query failed:", queryError);
+    return [];
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const access = await checkPartnerAccess(req);
@@ -19,29 +43,9 @@ export async function GET(req: NextRequest) {
 
     const partnerId = access.partner.id;
     const db = await getAdminFirestore();
+    const docs = await loadPartnerQuoteAssignments(partnerId);
 
-    let snapshot;
-    try {
-      snapshot = await db
-        .collectionGroup("partnerAssignments")
-        .where("partnerId", "==", partnerId)
-        .get();
-    } catch (queryError: unknown) {
-      const message =
-        queryError instanceof Error ? queryError.message : String(queryError);
-      if (message.includes("index")) {
-        return NextResponse.json(
-          {
-            error:
-              "Firestore index required for partner quote assignments. Create a collection group index on partnerAssignments.partnerId.",
-          },
-          { status: 500 }
-        );
-      }
-      throw queryError;
-    }
-
-    const assignments = (snapshot.docs as FirestoreDocument[])
+    const assignments = docs
       .map((doc) => serializeQuotePartnerAssignment(doc.data(), doc.id))
       .filter((row) => row.status !== "cancelled")
       .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));

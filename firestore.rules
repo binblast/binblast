@@ -339,6 +339,20 @@ service cloud.firestore {
       
       // No deletions allowed (admin only via server-side)
       allow delete: if false;
+
+      // Partner-visible slices of multi-partner custom quotes
+      match /quoteAssignments/{assignmentId} {
+        allow read, list: if (
+          (isAuthenticated() && (
+            get(/databases/$(database)/documents/partners/$(partnerId)).data.userId == request.auth.uid ||
+            get(/databases/$(database)/documents/partners/$(partnerId)).data.email == request.auth.token.email
+          ))
+          || isAdminOrOperator()
+          || request.auth == null
+        );
+        allow create, update: if request.auth == null;
+        allow delete: if false;
+      }
     }
     
     // PartnerBookings collection - tracks bookings tied to partners

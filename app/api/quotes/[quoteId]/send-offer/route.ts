@@ -112,12 +112,31 @@ export async function POST(
     );
     const assignmentSnapshot = await getDocs(assignmentQuery);
     await Promise.all(
-      assignmentSnapshot.docs.map((assignmentDoc) =>
-        updateDoc(assignmentDoc.ref, {
+      assignmentSnapshot.docs.map(async (assignmentDoc) => {
+        const assignmentData = assignmentDoc.data();
+        const updates = {
           status: "active",
           updatedAt: serverTimestamp(),
-        })
-      )
+        };
+
+        await updateDoc(assignmentDoc.ref, updates);
+
+        const partnerId = String(assignmentData.partnerId || "").trim();
+        if (partnerId) {
+          try {
+            await updateDoc(
+              doc(db, "partners", partnerId, "quoteAssignments", assignmentDoc.id),
+              updates
+            );
+          } catch (mirrorError) {
+            console.warn(
+              "[Send Offer] Partner quote assignment mirror missing:",
+              assignmentDoc.id,
+              mirrorError
+            );
+          }
+        }
+      })
     );
 
     await updateDoc(quoteRef, {

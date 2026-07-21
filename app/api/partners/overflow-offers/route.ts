@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkPartnerAccess } from "@/lib/partner-api-auth";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 import { serializeOverflowOffer } from "@/lib/partner-overflow";
-import { getDbInstance } from "@/lib/firebase";
-import { safeImportFirestore } from "@/lib/firebase-module-loader";
 
 export const dynamic = "force-dynamic";
+
+interface FirestoreDocument {
+  id: string;
+  data: () => Record<string, unknown>;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,22 +17,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const db = await getDbInstance();
-    if (!db) {
-      return NextResponse.json({ error: "Database not available" }, { status: 500 });
-    }
+    const db = await getAdminFirestore();
+    const snapshot = await db
+      .collection("overflowOffers")
+      .where("offeredToPartnerId", "==", auth.partner.id)
+      .get();
 
-    const firestore = await safeImportFirestore();
-    const { collection, query, where, getDocs } = firestore;
-
-    const offersQuery = query(
-      collection(db, "overflowOffers"),
-      where("offeredToPartnerId", "==", auth.partner.id)
-    );
-    const snapshot = await getDocs(offersQuery);
-
-    const offers = snapshot.docs
-      .map((docSnap) => serializeOverflowOffer(docSnap.data() as Record<string, unknown>, docSnap.id))
+    const offers = (snapshot.docs as FirestoreDocument[])
+      .map((docSnap) => serializeOverflowOffer(docSnap.data(), docSnap.id))
       .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 
     return NextResponse.json({
