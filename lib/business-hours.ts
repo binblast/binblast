@@ -120,3 +120,13 @@ export function getBusinessHoursHint(dateValue: string): string {
 export function getMinSelectableDate(): string {
   return formatDateInput(new Date());
 }
+
+/** Public-facing hours copy for footer, chat, and marketing pages. */
+export const BUSINESS_HOURS_LINES = [
+  "Monday – Friday: 8:00 AM – 6:00 PM",
+  "Saturday: 8:00 AM – 2:00 PM",
+  "Sunday: Closed",
+] as const;
+
+export const BUSINESS_HOURS_DISPLAY =
+  "Monday – Friday: 8:00 AM – 6:00 PM. Saturday: 8:00 AM – 2:00 PM. Sunday: closed.";

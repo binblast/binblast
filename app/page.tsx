@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import Link from "next/link";
+import { BUSINESS_HOURS_LINES } from "@/lib/business-hours";
 import { PRIMARY_SERVICE_AREAS, METRO_ATLANTA_TAGLINE } from "@/lib/service-areas";
 import { buildSiteMetadata } from "@/lib/site-metadata";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -573,8 +574,9 @@ export default function HomePage() {
                 </div>
                 <div className="footer-section">
                   <h3 className="footer-heading">Hours</h3>
-                  <p>Monday – Saturday: 8:00 AM – 6:00 PM</p>
-                  <p>Sunday: Closed</p>
+                  {BUSINESS_HOURS_LINES.map((line) => (
+                    <p key={line}>{line}</p>
+                  ))}
                 </div>
                 <div className="footer-section">
                   <h3 className="footer-heading">Service Areas</h3>

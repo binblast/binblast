@@ -4,11 +4,12 @@ import {
   ADDITIONAL_METRO_ATLANTA_AREAS,
   SERVICE_AREA_SUMMARY,
 } from "@/lib/service-areas";
+import { BUSINESS_HOURS_DISPLAY } from "@/lib/business-hours";
 
 export const SUPPORT_PHONE = "(470) 305-0823";
 export const SUPPORT_PHONE_TEL = "+14703050823";
 export const SUPPORT_EMAIL = "support@binblastco.com";
-export const BUSINESS_HOURS = "Monday – Saturday: 8:00 AM – 6:00 PM. Sunday: closed.";
+export const BUSINESS_HOURS = BUSINESS_HOURS_DISPLAY;
 
 export interface AssistantResponse {
   text: string;
