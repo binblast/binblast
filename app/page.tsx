@@ -1,7 +1,6 @@
 // app/page.tsx
 
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import { Suspense } from "react";
 import Link from "next/link";
 import { BUSINESS_HOURS_LINES } from "@/lib/business-hours";
@@ -84,16 +83,6 @@ export default function HomePage() {
                   Commercial Services
                 </Link>
               </div>
-            </div>
-            <div className="hero__visual">
-              <Image
-                src="/website-cover.png"
-                alt="Bin Blast Co. truck cleaning curbside bins — deep clean, sanitize, and eco-friendly service"
-                width={1200}
-                height={630}
-                priority
-                className="hero__visual-image"
-              />
             </div>
           </div>
         </section>
