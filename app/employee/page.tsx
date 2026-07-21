@@ -88,7 +88,7 @@ function EmployeePortalContent() {
           </Link>
           {" · "}
           <Link href="/employee/register" style={{ color: "var(--primary-color)", fontWeight: "600", textDecoration: "none" }}>
-            Apply now
+            Apply to become a Bin Blaster
           </Link>
         </>
       }

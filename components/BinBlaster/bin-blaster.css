@@ -1,0 +1,176 @@
+.bin-blaster-page {
+  min-height: calc(100vh - 80px);
+  padding: clamp(2rem, 5vw, 4rem) 0;
+  background: #f9fafb;
+}
+
+.bin-blaster-shell {
+  width: min(760px, calc(100% - 2rem));
+  margin: 0 auto;
+}
+
+.bin-blaster-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.bin-blaster-header h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 800;
+  color: #111827;
+}
+
+.bin-blaster-header p {
+  margin: 0;
+  color: #6b7280;
+  line-height: 1.7;
+}
+
+.bin-blaster-notice {
+  margin-top: 1rem !important;
+  padding: 0.875rem 1rem;
+  border-radius: 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a !important;
+  font-size: 0.925rem;
+}
+
+.bin-blaster-section-title {
+  margin: 0 0 1.25rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.bin-blaster-stack {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.bin-blaster-pay-card {
+  padding: 1.25rem;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.bin-blaster-pay-card h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  color: #111827;
+}
+
+.bin-blaster-pay-card p,
+.bin-blaster-pay-card li {
+  margin: 0 0 0.75rem;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.bin-blaster-pay-card ul {
+  margin: 0 0 0.75rem 1.25rem;
+  padding: 0;
+}
+
+.bin-blaster-pay-card__loading {
+  margin: 0;
+  color: #6b7280;
+}
+
+.bin-blaster-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.bin-blaster-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  font-size: 0.925rem;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.bin-blaster-checkbox input {
+  margin-top: 0.2rem;
+  accent-color: #16a34a;
+}
+
+.bin-blaster-review {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.bin-blaster-review h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.bin-blaster-review p {
+  margin: 0 0 0.25rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.bin-blaster-agreements {
+  display: grid;
+  gap: 0.875rem;
+  margin-top: 1.25rem;
+}
+
+.bin-blaster-error {
+  margin-top: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  font-size: 0.925rem;
+}
+
+.bin-blaster-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.bin-blaster-actions .btn {
+  min-width: 140px;
+}
+
+.bin-blaster-confirmation {
+  text-align: center;
+}
+
+.bin-blaster-confirmation h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.75rem;
+  color: #16a34a;
+}
+
+.bin-blaster-confirmation p {
+  margin: 0 0 0.75rem;
+  color: #4b5563;
+  line-height: 1.7;
+}
+
+@media (max-width: 720px) {
+  .bin-blaster-checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bin-blaster-actions {
+    flex-direction: column;
+  }
+
+  .bin-blaster-actions .btn {
+    width: 100%;
+  }
+}

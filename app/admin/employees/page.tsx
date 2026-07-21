@@ -7,7 +7,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { EmployeeContactList } from "@/components/AdminDashboard/EmployeeContactList";
 import { HireEmployeeForm } from "@/components/AdminDashboard/HireEmployeeForm";
-import { EmployeeApplications } from "@/components/AdminDashboard/EmployeeApplications";
+import { BinBlasterApplicationsHub } from "@/components/AdminDashboard/BinBlasterApplicationsHub";
 import { CareerApplicationsHub } from "@/components/AdminDashboard/CareerApplicationsHub";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
@@ -175,7 +175,7 @@ export default function AdminEmployeesPage() {
                     cursor: "pointer",
                   }}
                 >
-                  Applications
+                  Bin Blaster Apps
                 </button>
                 <button
                   onClick={() => {
@@ -248,7 +248,7 @@ export default function AdminEmployeesPage() {
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
                 border: "1px solid #e5e7eb"
               }}>
-                <EmployeeApplications />
+                <BinBlasterApplicationsHub />
               </div>
             )}
 

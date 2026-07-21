@@ -739,10 +739,10 @@ const INTENTS: IntentHandler[] = [
     if (!hasAny(input, [/\bcareer/, /\bjob\b/, /\bhiring\b/, /\bwork\s+for\b/, /\bapply\b.*\b(?:job|work|bin)/])) return null;
     return {
       text:
-        "We're hiring route technicians to clean bins across Metro Atlanta.\n\n" +
-        "• Open now: Route Technician — Bin Cleaning\n" +
-        "• Future openings: Route Supervisor, Commercial Account Specialist\n\n" +
-        "Residential pay starts at $8 for the first bin and $3 for each additional bin at the same stop.\n\n" +
+        "We're hiring Bin Blasters to clean bins across Metro Atlanta.\n\n" +
+        "• Apply to become a Bin Blaster on assigned routes\n" +
+        "• View corporate careers openings on our careers page\n\n" +
+        "Residential pay starts at $8 for the first bin and $2 for each additional bin at the same stop (admin-configurable).\n\n" +
         "View openings: binblastco.com/careers\n" +
         "Apply: binblastco.com/employee/register",
       quickReplies: ["View careers page", "Apply now", "Employee sign in"],

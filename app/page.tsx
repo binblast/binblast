@@ -565,7 +565,7 @@ export default function HomePage() {
                 <div className="footer-section">
                   <h3 className="footer-heading">Careers</h3>
                   <p><Link href="/careers" style={{ color: "inherit", textDecoration: "none" }}>Join Our Team</Link></p>
-                  <p><Link href="/employee/register" style={{ color: "inherit", textDecoration: "none" }}>Apply to Clean Bins</Link></p>
+                  <p><Link href="/employee/register" style={{ color: "inherit", textDecoration: "none" }}>Apply to Become a Bin Blaster</Link></p>
                   <p><Link href="/employee" style={{ color: "inherit", textDecoration: "none" }}>Employee Sign In</Link></p>
                 </div>
                 <div className="footer-section">
