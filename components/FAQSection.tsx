@@ -3,35 +3,9 @@
 
 import { useState } from "react";
 
-const faqData = [
-  {
-    question: "How long does the cleaning process take?",
-    answer: "Our cleaning process typically takes about 10-15 minutes per bin. We use high-pressure hot water and eco-friendly cleaning solutions to ensure a thorough clean."
-  },
-  {
-    question: "Do I need to be home during the cleaning?",
-    answer: "No, you don't need to be home! Just leave your bins at the curb or in your driveway, and we'll take care of the rest. We'll send you a notification when we're done."
-  },
-  {
-    question: "What cleaning products do you use?",
-    answer: "We use eco-friendly, biodegradable cleaning solutions that are safe for the environment and effective at removing odors and bacteria. All products are EPA-approved."
-  },
-  {
-    question: "Can you clean both trash and recycling bins?",
-    answer: "Yes! We clean all types of bins including trash, recycling, and compost bins. Just let us know what you need when you book your service."
-  },
-  {
-    question: "How do I cancel or reschedule my appointment?",
-    answer:
-      "You can reschedule an upcoming cleaning from your dashboard when it is more than 24 hours away. Within 24 hours, rescheduling and cancellation are locked. Plan upgrades may still be available until 4 hours before your visit. Extra cleanings beyond your package require payment at your plan rate.",
-  },
-  {
-    question: "What payment methods do you accept?",
-    answer: "We accept all major credit cards, debit cards, and digital payment methods. For subscription plans, we can set up automatic billing for your convenience."
-  }
-];
+import { HOME_FAQ_ITEMS } from "@/lib/seo/faq-data";
 
-export function FAQSection() {
+export function FAQSection({ items = HOME_FAQ_ITEMS }: { items?: typeof HOME_FAQ_ITEMS }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggleFAQ = (index: number) => {
@@ -43,7 +17,7 @@ export function FAQSection() {
       <div className="container">
         <h2 className="section-title">Frequently Asked Questions</h2>
         <div className="faq-list">
-          {faqData.map((item, index) => (
+          {items.map((item, index) => (
             <div key={index} className={`faq-item ${openIndex === index ? 'active' : ''}`}>
               <button 
                 className="faq-question"

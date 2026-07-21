@@ -1,12 +1,14 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { HIRING_TIMELINE_NOTE, HIRING_TIMELINE_STEPS } from "@/lib/careers-content";
-import { buildSiteMetadata } from "@/lib/site-metadata";
+import { buildPageMetadata } from "@/lib/seo/metadata-helpers";
 import "../../careers.css";
 
-export const metadata = buildSiteMetadata({
+export const metadata = buildPageMetadata({
+  path: "/careers/apply/confirmation",
   title: "Application Received — Bin Blast Co. Careers",
   description: "Your Bin Blast Co. career application has been received. Review next steps in our hiring process.",
+  noIndex: true,
 });
 
 const Navbar = dynamic(() => import("@/components/Navbar").then((mod) => mod.Navbar), {

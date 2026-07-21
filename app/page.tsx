@@ -5,20 +5,31 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { BUSINESS_HOURS_LINES } from "@/lib/business-hours";
 import { PRIMARY_SERVICE_AREAS, METRO_ATLANTA_TAGLINE } from "@/lib/service-areas";
-import { buildSiteMetadata } from "@/lib/site-metadata";
+import { buildPageMetadata } from "@/lib/seo/metadata-helpers";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { HomeCityLinks, HomeServiceLinks } from "@/components/seo/HomeServiceLinks";
+import { faqPageSchema } from "@/lib/seo/schema";
+import { HOME_FAQ_ITEMS } from "@/lib/seo/faq-data";
 import { BrandLogo } from "@/components/BrandLogo";
 import { WhoWeServeSection } from "@/components/WhoWeServeSection";
 import { CommercialServicesSection } from "@/components/CommercialServicesSection";
+import "@/components/seo/seo-marketing.css";
 
-export const metadata = buildSiteMetadata({
+export const metadata = buildPageMetadata({
+  path: "/",
+  title: "Trash Can Cleaning in South Metro Atlanta | Bin Blast Co.",
+  description:
+    "Professional trash can cleaning, sanitizing, and deodorizing for homes, HOAs, restaurants, and businesses across South Metro Atlanta.",
   keywords: [
-    "Metro Atlanta trash bin cleaning",
-    "Atlanta trash can cleaning",
-    "residential bin cleaning",
-    "HOA bin cleaning",
+    "trash can cleaning near me",
+    "trash can cleaning Fayetteville GA",
+    "garbage can cleaning Peachtree City GA",
+    "trash bin cleaning South Atlanta",
+    "trash can sanitizing",
+    "residential trash can cleaning",
+    "HOA trash can cleaning",
     "restaurant trash bin cleaning",
     "commercial bin cleaning",
-    "curbside trash can cleaning",
   ],
 });
 
@@ -64,6 +75,7 @@ const MetroAtlantaServiceAreas = dynamic(
 export default function HomePage() {
   return (
     <>
+      <JsonLd data={faqPageSchema(HOME_FAQ_ITEMS)} />
       <Navbar />
       <main className="bg-white marketing-main">
         {/* Hero Section */}
@@ -73,10 +85,12 @@ export default function HomePage() {
               <source media="(min-width: 1280px)" srcSet="/website-cover.jpg" />
               <img
                 src="/website-cover-1920.jpg"
-                alt=""
+                alt="Bin Blast Co. truck cleaning and sanitizing a residential trash can in South Metro Atlanta, Georgia"
                 className="hero__backdrop-image"
                 decoding="async"
                 fetchPriority="high"
+                width={1920}
+                height={1071}
               />
             </picture>
             <div className="hero__backdrop-overlay" />
@@ -84,9 +98,9 @@ export default function HomePage() {
           <div className="container hero__grid">
             <div className="hero__copy">
               <p className="hero-eyebrow">Cleaner bins. Cleaner communities.</p>
-              <h1 className="hero-headline">Professional Trash Bin Cleaning for Homes, Communities &amp; Businesses</h1>
+              <h1 className="hero-headline">Professional Trash Can Cleaning in South Metro Atlanta</h1>
               <p className="hero-subheadline">
-                Bin Blast Co. provides convenient curbside trash bin cleaning, sanitizing, and deodorizing for homeowners, HOAs, restaurants, apartment communities, and commercial properties across Metro Atlanta.
+                Bin Blast Co. cleans, sanitizes, and deodorizes residential and commercial trash bins throughout Fayetteville, Peachtree City, Tyrone, Newnan, and surrounding communities.
               </p>
               <p className="hero-service-areas">{METRO_ATLANTA_TAGLINE}</p>
               <div className="hero-buttons">
@@ -101,7 +115,7 @@ export default function HomePage() {
 
         <section id="environment" className="environment-section">
           <div className="container">
-            <h2 className="section-title">Cleaner Bins. Cleaner Communities.</h2>
+            <h2 className="section-title">A Cleaner, Fresher Trash Bin Without the Hassle</h2>
             <p className="section-subtitle environment-section__subtitle">
               Every cleaned bin means less odor, bacteria, and buildup at the curb — helping Metro Atlanta neighborhoods stay fresher and more sanitary.
             </p>
@@ -129,13 +143,27 @@ export default function HomePage() {
         {/* Service Areas Section */}
         <section id="service-areas" className="service-areas-section">
           <div className="container">
-            <h2 className="section-title">Serving Metro Atlanta</h2>
+            <h2 className="section-title">Areas We Serve</h2>
             <p className="section-subtitle service-areas-subtitle">
               We are based in Fayette County and continue to expand our residential and commercial service routes throughout Metro Atlanta.
             </p>
             <MetroAtlantaServiceAreas />
           </div>
         </section>
+
+        <section id="hoa-services" className="environment-section" style={{ background: "#ffffff", borderBottom: "1px solid #e5e7eb" }}>
+          <div className="container" style={{ maxWidth: "860px", textAlign: "center" }}>
+            <h2 className="section-title">HOA and Neighborhood Bin Cleaning</h2>
+            <p className="section-subtitle environment-section__subtitle">
+              Give boards and residents a professional option for neighborhood trash can cleaning, bin sanitizing, and recurring curbside service.
+            </p>
+            <Link href="/hoa-trash-can-cleaning" className="btn btn-primary btn-large">
+              Learn About HOA Bin Cleaning
+            </Link>
+          </div>
+        </section>
+
+        <HomeServiceLinks />
 
         <WhoWeServeSection />
 
@@ -144,7 +172,7 @@ export default function HomePage() {
         {/* Why Bin Blast Co. Is Different Section */}
         <section id="why-different" className="benefits" style={{ padding: "clamp(3rem, 8vw, 5rem) 0", background: "#f9fafb" }}>
           <div className="container">
-            <h2 className="section-title">The Bin Blast Co. Advantage</h2>
+            <h2 className="section-title">Why Customers Choose Bin Blast Co.</h2>
             <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "clamp(2rem, 5vw, 3rem)", color: "var(--text-light)", fontSize: "clamp(0.95rem, 3vw, 1.125rem)" }}>
               More than a cleaning truck. Customers get a modern Metro Atlanta trash bin cleaning experience with smart scheduling, loyalty rewards, and easy account management.
             </p>
@@ -254,7 +282,7 @@ export default function HomePage() {
         {/* How It Works Section */}
         <section id="how-it-works" className="how-it-works">
           <div className="container">
-            <h2 className="section-title">How It Works</h2>
+            <h2 className="section-title">How Bin Blast Co. Works</h2>
             <div className="steps-grid">
               <div className="step-card">
                 <div className="step-number">1</div>
@@ -281,117 +309,17 @@ export default function HomePage() {
         </Suspense>
 
         {/* Business Partner Program Section */}
-        <section id="partners" style={{ padding: "clamp(3rem, 8vw, 5rem) 0", background: "#f0f9ff", borderTop: "2px solid #bae6fd" }}>
-          <div className="container">
-            <h2 className="section-title" style={{ textAlign: "center" }}>Add Bin Cleaning to Your Service Business</h2>
-            <p className="section-subtitle" style={{ textAlign: "center", marginBottom: "clamp(2rem, 5vw, 3rem)", color: "var(--text-light)", fontSize: "clamp(0.95rem, 3vw, 1.125rem)" }}>
-              Local pressure washing and service businesses can use the Bin Blast Co. system to add recurring bin-cleaning revenue.
+        <section id="partners" style={{ padding: "2.5rem 0", background: "#f0f9ff", borderTop: "1px solid #bae6fd" }}>
+          <div className="container" style={{ maxWidth: "760px", margin: "0 auto", textAlign: "center" }}>
+            <h2 className="section-title" style={{ fontSize: "clamp(1.25rem, 4vw, 1.5rem)" }}>
+              Service Business Partners
+            </h2>
+            <p style={{ color: "var(--text-light)", lineHeight: 1.7, marginBottom: "1.25rem" }}>
+              Local pressure washing, detailing, and service businesses can add recurring bin-cleaning revenue through the Bin Blast Co. partner program.
             </p>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
-              gap: "clamp(1.5rem, 4vw, 2rem)",
-              maxWidth: "1200px",
-              margin: "0 auto",
-              marginBottom: "clamp(2rem, 5vw, 3rem)",
-              padding: "0 clamp(1rem, 3vw, 1.5rem)"
-            }}>
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "clamp(16px, 4vw, 20px)",
-                padding: "clamp(1.5rem, 4vw, 2.5rem)",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb"
-              }}>
-                <h3 style={{ fontSize: "clamp(1.25rem, 5vw, 1.5rem)", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
-                  60% Revenue Share
-                </h3>
-                <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem", fontSize: "clamp(0.9rem, 3vw, 0.95rem)" }}>
-                  Earn 60% of every booking that comes through your unique partner link. No upfront costs, no monthly fees, no contracts. Example: $35 booking = $21 to you.
-                </p>
-              </div>
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "clamp(16px, 4vw, 20px)",
-                padding: "clamp(1.5rem, 4vw, 2.5rem)",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb"
-              }}>
-                <h3 style={{ fontSize: "clamp(1.25rem, 5vw, 1.5rem)", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
-                  Your Own Booking Link
-                </h3>
-                <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem", fontSize: "clamp(0.9rem, 3vw, 0.95rem)" }}>
-                  Get a unique booking link branded with Bin Blast Co. and tied to your account. Share it by text, email, social media, or from your website.
-                </p>
-              </div>
-              <div style={{
-                background: "#ffffff",
-                borderRadius: "clamp(16px, 4vw, 20px)",
-                padding: "clamp(1.5rem, 4vw, 2.5rem)",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-                border: "1px solid #e5e7eb"
-              }}>
-                <h3 style={{ fontSize: "clamp(1.25rem, 5vw, 1.5rem)", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
-                  Partner Dashboard
-                </h3>
-                <p style={{ color: "var(--text-light)", lineHeight: "1.6", marginBottom: "1rem", fontSize: "clamp(0.9rem, 3vw, 0.95rem)" }}>
-                  Track bookings, view earnings, and monitor performance in a dedicated partner dashboard with real-time reporting.
-                </p>
-              </div>
-            </div>
-            <div className="partner-highlight-box" style={{
-              background: "#ffffff",
-              borderRadius: "20px",
-              padding: "clamp(1.25rem, 4vw, 3rem)",
-              border: "2px solid #bae6fd",
-              maxWidth: "900px",
-              margin: "0 auto",
-              textAlign: "center"
-            }}>
-              <h3 style={{ fontSize: "clamp(1.25rem, 4vw, 1.75rem)", fontWeight: "700", marginBottom: "1rem", color: "#0369a1" }}>
-                Perfect For Service Businesses
-              </h3>
-              <p style={{ fontSize: "clamp(1rem, 3vw, 1.125rem)", color: "#0c4a6e", marginBottom: "clamp(1.5rem, 4vw, 2rem)", lineHeight: "1.6", padding: "0 clamp(1rem, 3vw, 1.5rem)" }}>
-                Car detailers, pressure washers, landscapers, property managers, HVAC companies, and other service pros can easily add curbside bin cleaning as an upsell or standalone service.
-              </p>
-              <div style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "clamp(0.75rem, 2vw, 1rem)",
-                justifyContent: "center",
-                marginBottom: "clamp(1.5rem, 4vw, 2rem)",
-                padding: "0 clamp(1rem, 3vw, 1.5rem)"
-              }}>
-                {["Car Detailers", "Pressure Washers", "Landscapers", "Property Managers", "HVAC Companies", "Other Service Businesses"].map((business) => (
-                  <span key={business} style={{
-                    padding: "clamp(0.5rem, 2vw, 0.625rem) clamp(0.875rem, 3vw, 1rem)",
-                    background: "#f0f9ff",
-                    borderRadius: "8px",
-                    color: "#0369a1",
-                    fontSize: "clamp(0.8rem, 2.5vw, 0.875rem)",
-                    fontWeight: "600"
-                  }}>
-                    {business}
-                  </span>
-                ))}
-              </div>
-              <Link 
-                href="/partners" 
-                className="btn btn-primary"
-                style={{
-                  display: "inline-block",
-                  padding: "clamp(0.75rem, 3vw, 0.875rem) clamp(1.5rem, 5vw, 2rem)",
-                  fontSize: "clamp(0.95rem, 3vw, 1rem)",
-                  fontWeight: "600",
-                  minHeight: "44px"
-                }}
-              >
-                Explore the Partner Program
-              </Link>
-              <p style={{ fontSize: "0.875rem", color: "#0c4a6e", marginTop: "1rem", margin: 0 }}>
-                We'll review your application and help you plug into our system step by step.
-              </p>
-            </div>
+            <Link href="/partners" className="btn btn-secondary btn-large">
+              Explore the Partner Program
+            </Link>
           </div>
         </section>
 
@@ -577,12 +505,14 @@ export default function HomePage() {
           </div>
         </section>
 
+        <HomeCityLinks />
+
         <FAQSection />
 
         {/* CTA Box Section */}
         <section className="cta-box">
           <div className="cta-content">
-            <h2 className="cta-title">Ready for Fresh, Sanitized Bins?</h2>
+            <h2 className="cta-title">Schedule Your Trash Can Cleaning</h2>
             <p className="cta-sub">
               Book residential curbside trash can cleaning or request a commercial quote for restaurants, HOAs, apartments, and properties throughout Metro Atlanta.
             </p>

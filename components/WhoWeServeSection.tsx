@@ -84,10 +84,9 @@ export function WhoWeServeSection() {
   return (
     <section id="who-we-serve" className="who-we-serve-section">
       <div className="container">
-        <h2 className="section-title">Who We Serve</h2>
+        <h2 className="section-title">Residential Trash Can Cleaning</h2>
         <p className="section-subtitle who-we-serve-subtitle">
-          Metro Atlanta trash bin cleaning for homes, neighborhoods, restaurants, apartments, and
-          commercial properties — with curbside service designed to stay convenient and consistent.
+          Curbside garbage can cleaning for homeowners and townhomes across South Metro Atlanta — with sanitizing and deodorizing built into every visit.
         </p>
         <div className="who-we-serve-grid">
           {AUDIENCES.map((item) => (

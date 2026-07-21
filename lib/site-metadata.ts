@@ -9,10 +9,10 @@ export const SITE_NAME = "Bin Blast Co.";
 export const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID?.trim() || "";
 
 export const DEFAULT_TITLE =
-  "Trash Bin Cleaning in Metro Atlanta | Bin Blast Co.";
+  "Trash Can Cleaning in South Metro Atlanta | Bin Blast Co.";
 
 export const DEFAULT_DESCRIPTION =
-  "Bin Blast Co. provides professional residential, HOA, restaurant, apartment, and commercial trash bin cleaning throughout Metro Atlanta. Book curbside service or request a commercial quote.";
+  "Professional trash can cleaning, sanitizing, and deodorizing for homes, HOAs, restaurants, and businesses across South Metro Atlanta.";
 
 export const DEFAULT_OG_IMAGE = {
   url: "/og-image.png",
@@ -25,7 +25,7 @@ export function buildSiteMetadata(overrides?: Metadata): Metadata {
   const title = overrides?.title ?? DEFAULT_TITLE;
   const description = overrides?.description ?? DEFAULT_DESCRIPTION;
 
-  return {
+  const merged: Metadata = {
     metadataBase: new URL(SITE_URL),
     title,
     description,
@@ -48,4 +48,29 @@ export function buildSiteMetadata(overrides?: Metadata): Metadata {
     },
     ...overrides,
   };
+
+  if (overrides?.openGraph) {
+    merged.openGraph = {
+      title: typeof title === "string" ? title : DEFAULT_TITLE,
+      description: typeof description === "string" ? description : DEFAULT_DESCRIPTION,
+      url: SITE_URL,
+      siteName: SITE_NAME,
+      images: [DEFAULT_OG_IMAGE],
+      locale: "en_US",
+      type: "website",
+      ...overrides.openGraph,
+    };
+  }
+
+  if (overrides?.twitter) {
+    merged.twitter = {
+      card: "summary_large_image",
+      title: typeof title === "string" ? title : DEFAULT_TITLE,
+      description: typeof description === "string" ? description : DEFAULT_DESCRIPTION,
+      images: [DEFAULT_OG_IMAGE.url],
+      ...overrides.twitter,
+    };
+  }
+
+  return merged;
 }

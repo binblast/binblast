@@ -3,6 +3,8 @@ import dynamic from "next/dynamic";
 import "./globals.css";
 import { FirebaseGate } from "@/components/FirebaseGate";
 import { FirebaseErrorBoundary } from "@/components/FirebaseErrorBoundary";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { globalSchemas } from "@/lib/seo/schema";
 import { buildSiteMetadata, FACEBOOK_APP_ID } from "@/lib/site-metadata";
 // CRITICAL: Do NOT statically import firebase-client.ts here
 // Static imports cause webpack to bundle firebase-client.ts into page chunks
@@ -48,6 +50,7 @@ export default function RootLayout({
         ) : null}
       </head>
       <body>
+        <JsonLd data={globalSchemas()} />
         {/* Error boundary to catch Firebase errors and allow site to render */}
         <FirebaseErrorBoundary>
           <FirebaseGate>

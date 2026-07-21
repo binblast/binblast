@@ -7,6 +7,7 @@ import {
   PRIMARY_SERVICE_AREAS,
   SERVICE_AREAS_WITH_HISTORY,
 } from "@/lib/service-areas";
+import { CITY_NAME_TO_SEO_SLUG } from "@/lib/seo/home-links";
 import { SERVICE_AREA_PROFILES, type ServiceAreaProfile } from "@/data/serviceAreaHistory";
 
 type HistoryCity = (typeof SERVICE_AREAS_WITH_HISTORY)[number];
@@ -26,6 +27,7 @@ export function MetroAtlantaServiceAreas() {
 
   function renderChip(city: string, interactive: boolean) {
     const isActive = activeArea?.name === city;
+    const citySlug = CITY_NAME_TO_SEO_SLUG[city];
     const className = interactive
       ? `service-area-chip service-area-chip--interactive${isActive ? " active" : ""}`
       : "service-area-chip service-area-chip--expanding";
@@ -42,6 +44,14 @@ export function MetroAtlantaServiceAreas() {
         >
           {city}
         </button>
+      );
+    }
+
+    if (citySlug) {
+      return (
+        <Link key={city} href={`/${citySlug}`} className={`${className} service-area-chip--link`}>
+          {city}
+        </Link>
       );
     }
 

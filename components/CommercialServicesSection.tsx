@@ -13,7 +13,7 @@ export function CommercialServicesSection() {
   return (
     <section id="commercial-services" className="commercial-services-section">
       <div className="container">
-        <h2 className="section-title">Commercial Bin Cleaning</h2>
+        <h2 className="section-title">Commercial and Restaurant Bin Cleaning</h2>
         <p className="section-subtitle commercial-services-subtitle">
           Food waste, grease, leaking bags, and heavy use can leave commercial bins with strong
           odors, residue, flies, and unsanitary buildup. Bin Blast Co. offers recurring and one-time
