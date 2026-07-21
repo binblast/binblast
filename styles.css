@@ -350,6 +350,106 @@ html, body {
     padding: 0;
 }
 
+.hero--split {
+    background: linear-gradient(135deg, #0f172a 0%, #14532d 42%, #1e3a5f 100%);
+    text-align: left;
+    min-height: auto;
+    padding: clamp(5.5rem, 12vw, 7rem) 0 clamp(3rem, 8vw, 4.5rem);
+}
+
+.hero--split::before {
+    display: none;
+}
+
+.hero__backdrop {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 15% 20%, rgba(34, 197, 94, 0.18), transparent 45%),
+        radial-gradient(circle at 85% 75%, rgba(37, 99, 235, 0.16), transparent 42%);
+    pointer-events: none;
+}
+
+.hero__grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: clamp(1.5rem, 4vw, 3rem);
+    align-items: center;
+}
+
+.hero__copy {
+    max-width: 640px;
+}
+
+.hero__visual {
+    width: 100%;
+}
+
+.hero__visual-image {
+    width: 100%;
+    height: auto;
+    border-radius: clamp(14px, 3vw, 20px);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hero-eyebrow {
+    display: inline-block;
+    margin: 0 0 0.875rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(134, 239, 172, 0.35);
+    color: #bbf7d0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.environment-section {
+    padding: clamp(3rem, 8vw, 4.5rem) 0;
+    background: #f0fdf4;
+    border-bottom: 1px solid #bbf7d0;
+}
+
+.environment-section__subtitle {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.environment-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(1rem, 3vw, 1.25rem);
+    margin-top: clamp(1.75rem, 5vw, 2.5rem);
+}
+
+.environment-card {
+    background: #ffffff;
+    border: 1px solid #dcfce7;
+    border-radius: 14px;
+    padding: clamp(1.125rem, 3vw, 1.5rem);
+    box-shadow: 0 4px 16px rgba(22, 163, 74, 0.08);
+}
+
+.environment-card h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #14532d;
+}
+
+.environment-card p {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.6;
+    font-size: 0.9375rem;
+}
+
 .hero::before {
     content: '';
     position: absolute;
@@ -1457,6 +1557,23 @@ html, body {
     justify-content: center;
     flex-wrap: wrap;
     padding: 0 clamp(0.5rem, 2vw, 1rem);
+}
+
+.hero--split .hero-buttons {
+    justify-content: flex-start;
+    padding: 0;
+}
+
+.hero--split .hero-headline,
+.hero--split .hero-subheadline,
+.hero--split .hero-service-areas {
+    text-align: left;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.hero--split .hero-service-areas {
+    display: inline-flex;
 }
 
 /* Button Styles */
@@ -2759,7 +2876,7 @@ html {
         border: none;
         background:
             linear-gradient(165deg, rgba(15, 23, 42, 0.94) 0%, rgba(20, 83, 45, 0.9) 42%, rgba(30, 58, 95, 0.94) 100%),
-            url("/cover-picture.png") center 30% / cover no-repeat;
+            url("/website-cover.png") center 30% / cover no-repeat;
         background-blend-mode: overlay, normal;
     }
 
@@ -2986,9 +3103,33 @@ html {
         padding: clamp(5.5rem, 14vw, 7rem) 0 clamp(2.5rem, 8vw, 3.5rem);
     }
 
+    .hero__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hero__visual {
+        order: -1;
+    }
+
+    .hero--split .hero-headline,
+    .hero--split .hero-subheadline,
+    .hero--split .hero-service-areas {
+        text-align: center;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero--split .hero-buttons {
+        justify-content: center;
+    }
+
+    .environment-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     /* Hero logo responsive sizing for tablet */
-    .hero .container > div img,
-    .hero img {
+    .hero .container > div img:not(.hero__visual-image),
+    .hero img:not(.hero__visual-image) {
         width: 200px !important;
         height: auto !important;
         max-width: 100%;
@@ -3166,11 +3307,20 @@ html {
     }
 
     /* Hero logo responsive sizing for mobile */
-    .hero .container > div img,
-    .hero img {
+    .hero .container > div img:not(.hero__visual-image),
+    .hero img:not(.hero__visual-image) {
         width: 150px !important;
         height: auto !important;
         max-width: 100%;
+    }
+
+    .hero__visual-image {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .environment-grid {
+        grid-template-columns: 1fr;
     }
 
     .hero-headline {

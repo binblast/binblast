@@ -734,6 +734,21 @@ const INTENTS: IntentHandler[] = [
     };
   },
 
+  // Careers / jobs
+  (input) => {
+    if (!hasAny(input, [/\bcareer/, /\bjob\b/, /\bhiring\b/, /\bwork\s+for\b/, /\bapply\b.*\b(?:job|work|bin)/])) return null;
+    return {
+      text:
+        "We're hiring route technicians to clean bins across Metro Atlanta.\n\n" +
+        "• Open now: Route Technician — Bin Cleaning\n" +
+        "• Future openings: Route Supervisor, Commercial Account Specialist\n\n" +
+        "Residential pay starts at $8 for the first bin and $3 for each additional bin at the same stop.\n\n" +
+        "View openings: binblastco.com/careers\n" +
+        "Apply: binblastco.com/employee/register",
+      quickReplies: ["View careers page", "Apply now", "Employee sign in"],
+    };
+  },
+
   // Hours
   (input) => {
     if (!hasAny(input, [/\bhours\b/, /\bopen\b/, /\bclosed\b/, /\bwhen\s+are\s+you\b/])) return null;
@@ -859,6 +874,15 @@ export function resolveQuickReplyAction(reply: string): QuickReplyAction {
   }
   if (lower.includes("referral")) {
     return { type: "message", text: "How does the referral program work?" };
+  }
+  if (lower.includes("careers")) {
+    return { type: "navigate", href: "/careers" };
+  }
+  if (lower.includes("apply now") || lower.includes("apply for")) {
+    return { type: "navigate", href: "/employee/register" };
+  }
+  if (lower.includes("employee sign in")) {
+    return { type: "navigate", href: "/employee" };
   }
   if (lower.includes("sign up")) {
     return { type: "message", text: "How do I sign up?" };

@@ -110,10 +110,10 @@ export default function EmployeeRegisterPage() {
         <div className="container">
           <div style={{ maxWidth: "600px", margin: "0 auto" }}>
             <h1 className="section-title" style={{ textAlign: "center", marginBottom: "1rem" }}>
-              Register New Employee
+              Apply to Join Bin Blast Co.
             </h1>
-            <p style={{ textAlign: "center", color: "#6b7280", marginBottom: "2rem" }}>
-              Create a new employee account for field operations
+            <p style={{ textAlign: "center", color: "#6b7280", marginBottom: "2rem", lineHeight: 1.6 }}>
+              Submit your application to clean bins on Metro Atlanta routes. Applications are reviewed before route assignment.
             </p>
 
             {success ? (

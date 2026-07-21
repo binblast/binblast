@@ -83,8 +83,12 @@ function EmployeePortalContent() {
       footerNote={
         <>
           Need employee access?{" "}
+          <Link href="/careers" style={{ color: "var(--primary-color)", fontWeight: "600", textDecoration: "none" }}>
+            View careers
+          </Link>
+          {" · "}
           <Link href="/employee/register" style={{ color: "var(--primary-color)", fontWeight: "600", textDecoration: "none" }}>
-            Request access
+            Apply now
           </Link>
         </>
       }

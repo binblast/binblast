@@ -1,6 +1,7 @@
 // app/page.tsx
 
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { Suspense } from "react";
 import Link from "next/link";
 import { BUSINESS_HOURS_LINES } from "@/lib/business-hours";
@@ -66,19 +67,60 @@ export default function HomePage() {
     <>
       <Navbar />
       <main className="bg-white marketing-main">
-        {/* Hero Section with Background Image */}
-        <section id="home" className="hero">
+        {/* Hero Section */}
+        <section id="home" className="hero hero--split">
+          <div className="hero__backdrop" aria-hidden="true" />
+          <div className="container hero__grid">
+            <div className="hero__copy">
+              <p className="hero-eyebrow">Cleaner bins. Cleaner communities.</p>
+              <h1 className="hero-headline">Professional Trash Bin Cleaning for Homes, Communities &amp; Businesses</h1>
+              <p className="hero-subheadline">
+                Bin Blast Co. provides convenient curbside trash bin cleaning, sanitizing, and deodorizing for homeowners, HOAs, restaurants, apartment communities, and commercial properties across Metro Atlanta.
+              </p>
+              <p className="hero-service-areas">{METRO_ATLANTA_TAGLINE}</p>
+              <div className="hero-buttons">
+                <Link href="#pricing" className="btn btn-primary btn-large">Book a Cleaning</Link>
+                <Link href="/?openQuote=commercial#pricing" className="btn btn-secondary btn-large">
+                  Commercial Services
+                </Link>
+              </div>
+            </div>
+            <div className="hero__visual">
+              <Image
+                src="/website-cover.png"
+                alt="Bin Blast Co. truck cleaning curbside bins — deep clean, sanitize, and eco-friendly service"
+                width={1200}
+                height={630}
+                priority
+                className="hero__visual-image"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section id="environment" className="environment-section">
           <div className="container">
-            <h1 className="hero-headline">Professional Trash Bin Cleaning for Homes, Communities &amp; Businesses</h1>
-            <p className="hero-subheadline">
-              Bin Blast Co. provides convenient curbside trash bin cleaning, sanitizing, and deodorizing for homeowners, HOAs, restaurants, apartment communities, and commercial properties across Metro Atlanta.
+            <h2 className="section-title">Cleaner Bins. Cleaner Communities.</h2>
+            <p className="section-subtitle environment-section__subtitle">
+              Every cleaned bin means less odor, bacteria, and buildup at the curb — helping Metro Atlanta neighborhoods stay fresher and more sanitary.
             </p>
-            <p className="hero-service-areas">
-              {METRO_ATLANTA_TAGLINE}
-            </p>
-            <div className="hero-buttons">
-              <Link href="#pricing" className="btn btn-primary btn-large">Book a Cleaning</Link>
-              <Link href="/?openQuote=commercial#pricing" className="btn btn-secondary btn-large">Commercial Services</Link>
+            <div className="environment-grid">
+              <div className="environment-card">
+                <h3>Deep Clean &amp; Sanitize</h3>
+                <p>High-pressure cleaning removes grime, residue, and bacteria that attract pests and create strong odors.</p>
+              </div>
+              <div className="environment-card">
+                <h3>Eco-Conscious Process</h3>
+                <p>We use a professional cleaning process designed to be safe for families, pets, and the environment.</p>
+              </div>
+              <div className="environment-card">
+                <h3>Healthier Curbsides</h3>
+                <p>Regular service keeps residential, HOA, and commercial bins fresh instead of letting waste residue build up.</p>
+              </div>
+              <div className="environment-card">
+                <h3>Local Metro Atlanta Service</h3>
+                <p>Based in Fayette County and expanding routes to help more communities stay clean year-round.</p>
+              </div>
             </div>
           </div>
         </section>
@@ -588,6 +630,12 @@ export default function HomePage() {
                       <span key={area} className="footer-service-area-chip">{area}</span>
                     ))}
                   </div>
+                </div>
+                <div className="footer-section">
+                  <h3 className="footer-heading">Careers</h3>
+                  <p><Link href="/careers" style={{ color: "inherit", textDecoration: "none" }}>Join Our Team</Link></p>
+                  <p><Link href="/employee/register" style={{ color: "inherit", textDecoration: "none" }}>Apply to Clean Bins</Link></p>
+                  <p><Link href="/employee" style={{ color: "inherit", textDecoration: "none" }}>Employee Sign In</Link></p>
                 </div>
                 <div className="footer-section">
                   <h3 className="footer-heading">For Businesses</h3>

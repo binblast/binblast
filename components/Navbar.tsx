@@ -455,6 +455,7 @@ export function Navbar() {
   };
 
   const isHomeActive = pathname === "/";
+  const isCareersActive = pathname === "/careers";
   const isDashboardActive =
     pathname === accountUrl ||
     (pathname === "/dashboard" && isLoggedIn) ||
@@ -527,6 +528,11 @@ export function Navbar() {
                 Services
               </Link>
             )}
+          </li>
+          <li>
+            <Link href="/careers" className={navPillClass(isCareersActive)}>
+              Careers
+            </Link>
           </li>
           <li
             ref={signInRef}
