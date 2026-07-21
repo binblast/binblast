@@ -8,53 +8,53 @@ export const PRICING_ANSWER =
 
 export const HOME_FAQ_ITEMS: FaqItem[] = [
   {
-    question: "How much does trash can cleaning cost?",
-    answer: PRICING_ANSWER,
+    question: "How does trash can cleaning work?",
+    answer:
+      "Bin Blast Co. uses professional curbside equipment to deep clean, sanitize, and deodorize your bins at the agreed service location. We remove residue and odors so your containers stay fresher between collection days.",
   },
   {
-    question: "How often should trash cans be professionally cleaned?",
+    question: "Do I need to be home during service?",
     answer:
-      "Most homeowners choose monthly or quarterly service, while restaurants, HOAs, and commercial properties often need weekly or bi-weekly cleaning based on volume and odor buildup.",
-  },
-  {
-    question: "Do you sanitize and deodorize the bins?",
-    answer:
-      "Yes. Bin Blast Co. deep cleans, sanitizes, and deodorizes trash and recycling bins using professional equipment and a process designed to remove residue and odors.",
-  },
-  {
-    question: "Do I need to be home during the cleaning?",
-    answer:
-      "No. Leave your bins at the curb or in an agreed location on your service day. We notify you when the job is complete.",
-  },
-  {
-    question: "Do you clean recycling bins?",
-    answer:
-      "Yes. We clean trash, recycling, and many specialty curbside containers. Let us know what you need when you book.",
+      "No. Leave your bins accessible at the curb or in an agreed location after trash collection. We notify you when the service is complete.",
   },
   {
     question: "Do you offer one-time cleaning?",
     answer:
-      "Yes. One-time trash can cleaning is available for move-ins, seasonal refreshes, and special events.",
+      "Yes. One-time trash can cleaning is available for move-ins, seasonal refreshes, special events, and first-time customers.",
   },
   {
-    question: "Do you offer recurring service?",
+    question: "Do you offer recurring cleaning?",
     answer:
-      "Yes. Recurring plans are available for homeowners, HOAs, restaurants, apartments, and commercial properties.",
+      "Yes. Recurring plans are available for homeowners, HOAs, restaurants, apartments, and commercial properties based on your schedule and bin count.",
   },
   {
-    question: "Can Bin Blast Co. service an entire HOA?",
+    question: "Can you clean more than one bin?",
+    answer:
+      "Yes. We clean multiple trash, recycling, and specialty bins at the same service location. Pricing depends on the number of bins and service frequency.",
+  },
+  {
+    question: "Do you service HOAs and neighborhoods?",
     answer:
       "Yes. We work with HOAs and neighborhood communities on group programs, preferred vendor arrangements, and resident signup options.",
   },
   {
-    question: "Do you clean bins for restaurants and commercial properties?",
+    question: "Do you clean bins for restaurants and businesses?",
     answer:
       "Yes. We serve restaurants, property managers, offices, retail locations, and other commercial accounts with scheduled bin cleaning.",
   },
   {
-    question: "What areas does Bin Blast Co. serve?",
+    question: "What areas do you serve?",
     answer:
-      "We serve South Metro Atlanta and surrounding Georgia communities, including Fayetteville, Peachtree City, Tyrone, Newnan, Senoia, Sharpsburg, Jonesboro, Hampton, Stockbridge, McDonough, East Point, and Atlanta.",
+      "We serve select communities in South Metro Atlanta, including Fayetteville, Peachtree City, Tyrone, Newnan, Senoia, Sharpsburg, Jonesboro, Hampton, Stockbridge, McDonough, East Point, and Atlanta. Booking confirms availability for your address.",
+  },
+  {
+    question: "How do I prepare my bins for cleaning?",
+    answer:
+      "Leave empty bins accessible after trash collection at the agreed location. Remove loose bags or items inside the bin when possible, and let us know about any access instructions when you book.",
+  },
+  {
+    question: "How much does trash can cleaning cost?",
+    answer: PRICING_ANSWER,
   },
 ];
 

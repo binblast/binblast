@@ -129,6 +129,7 @@ function PortalDropdownItem({
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [accountUrl, setAccountUrl] = useState("/dashboard");
   const [isEmployee, setIsEmployee] = useState(false);
@@ -445,6 +446,16 @@ export function Navbar() {
     setIsMenuOpen(false);
   }, [pathname, closeSignIn]);
 
+  useEffect(() => {
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 12);
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const toggleMenu = () => {
     setIsMenuOpen((prev) => !prev);
     closeSignIn();
@@ -455,6 +466,8 @@ export function Navbar() {
   };
 
   const isHomeActive = pathname === "/";
+  const isResidentialActive = pathname === "/residential-trash-can-cleaning";
+  const isCommercialActive = pathname === "/commercial-trash-bin-cleaning";
   const isCareersActive = pathname === "/careers";
   const isDashboardActive =
     pathname === accountUrl ||
@@ -478,8 +491,35 @@ export function Navbar() {
     }
   };
 
+  const guestSignInItems: PortalMenuItem[] = [
+    {
+      id: "customer",
+      title: "Customer Sign In",
+      subtitle: "Manage cleanings, billing, and account details",
+      href: "/login",
+      icon: "customer",
+    },
+    {
+      id: "employee",
+      title: "Employee Sign In",
+      subtitle: "Access routes, jobs, and employee tools",
+      href: "/employee",
+      icon: "employee",
+    },
+    {
+      id: "command",
+      title: "Admin Sign In",
+      subtitle: "Owner and operator portal access",
+      href: "/login",
+      icon: "command",
+      showDividerBefore: true,
+    },
+  ];
+
+  const signInMenuItems = isLoggedIn ? portalMenuItems : guestSignInItems;
+
   return (
-    <nav className={`navbar${isMenuOpen ? " nav-open" : ""}`}>
+    <nav className={`navbar${isMenuOpen ? " nav-open" : ""}${isScrolled ? " navbar--scrolled" : ""}`}>
       {isMenuOpen && (
         <button
           type="button"
@@ -519,15 +559,19 @@ export function Navbar() {
             )}
           </li>
           <li>
-            {isLoggedIn ? (
-              <Link href={buildAttributedHomeHref("pricing")} className={navPillClass(false)}>
-                Services
-              </Link>
-            ) : (
-              <Link href={getHomeSectionHref("pricing")} className={navPillClass(false)}>
-                Services
-              </Link>
-            )}
+            <Link href="/residential-trash-can-cleaning" className={navPillClass(isResidentialActive)}>
+              Residential
+            </Link>
+          </li>
+          <li>
+            <Link href="/commercial-trash-bin-cleaning" className={navPillClass(isCommercialActive)}>
+              Commercial
+            </Link>
+          </li>
+          <li>
+            <Link href={getHomeSectionHref("service-areas")} className={navPillClass(false)}>
+              Service Areas
+            </Link>
           </li>
           <li>
             <Link href="/careers" className={navPillClass(isCareersActive)}>
@@ -571,7 +615,7 @@ export function Navbar() {
                   aria-labelledby="sign-in-button"
                   className="sign-in-dropdown"
                 >
-                  {portalMenuItems.map((item) => (
+                  {signInMenuItems.map((item) => (
                     <PortalDropdownItem
                       key={item.id}
                       item={item}

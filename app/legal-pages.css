@@ -23,14 +23,14 @@
 }
 
 .brand-logo--nav {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
 }
 
 .brand-logo--nav-home {
-  width: 72px;
-  height: 72px;
+  width: 84px;
+  height: 84px;
 }
 
 .brand-logo--hero {
@@ -39,8 +39,8 @@
 }
 
 .brand-logo--footer {
-  width: clamp(96px, 24vw, 128px);
-  height: clamp(96px, 24vw, 128px);
+  width: clamp(112px, 24vw, 148px);
+  height: clamp(112px, 24vw, 148px);
 }
 
 .brand-logo--sidebar {

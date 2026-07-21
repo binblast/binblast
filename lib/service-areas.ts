@@ -41,7 +41,7 @@ export const SERVICE_AREAS = PRIMARY_SERVICE_AREAS;
 /** Used by service area history data */
 export type ServiceArea = ServiceAreaWithHistory;
 
-export const METRO_ATLANTA_TAGLINE = "Serving Metro Atlanta • Based in Fayette County";
+export const METRO_ATLANTA_TAGLINE = "Locally Based in Fayette County • Serving South Metro Atlanta";
 
 export const SERVICE_AREA_SUMMARY =
   "Bin Blast Co. is based in Fayette County and provides residential, HOA, restaurant, apartment, and commercial curbside trash bin cleaning throughout Metro Atlanta.";
