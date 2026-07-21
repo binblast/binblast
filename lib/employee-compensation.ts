@@ -80,7 +80,7 @@ export const DEFAULT_COMMERCIAL_BONUS_DEFAULTS: CommercialBonusDefaults = {
 export const DEFAULT_COMPENSATION_SETTINGS: CompensationSettings = {
   payModel: "per_bin",
   residentialFirstBinPay: 8,
-  residentialAdditionalBinPay: 2,
+  residentialAdditionalBinPay: 3,
   commercialFirstContainerPay: 8,
   commercialAdditionalContainerPay: 2,
   dumpsterPay: 25,
@@ -161,6 +161,7 @@ export function isJobEligibleForCompensation(
 ): boolean {
   if (isJobCancelled(data)) return false;
   if (!isJobCompleted(data)) return false;
+  if (data.requiresRework === true || (Array.isArray(data.flags) && data.flags.includes("rework_required"))) return false;
   if (!hasRequiredJobPhotos(data)) return false;
 
   if (settings.customerSignatureRequired) {
@@ -286,6 +287,13 @@ export function calculateBaseJobCompensationAmount(
     default:
       if (category === "dumpster") return settings.dumpsterPay;
       if (category === "commercial") {
+        const laborRevenue = Number(
+          data.customerPrice || data.price || data.jobPrice || data.invoiceLabor || 0
+        );
+        if (laborRevenue > 0) {
+          const commission = laborRevenue * 0.2;
+          return Math.max(30, Math.round(commission * 100) / 100);
+        }
         return Math.round(calculateCommercialPerContainerPay(bins, settings) * 100) / 100;
       }
       return Math.round(calculateResidentialPerBinPay(bins, settings) * 100) / 100;

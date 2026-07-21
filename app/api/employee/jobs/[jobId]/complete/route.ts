@@ -4,6 +4,12 @@ import { getAdminFirestore } from "@/lib/firebase-admin";
 import { getJobPhotos } from "@/lib/job-photo-upload";
 import { scheduleNextCleaningIfNeeded } from "@/lib/cleaning-schedule-admin";
 import { recordJobCompensationSnapshot } from "@/lib/employee-compensation-server";
+import {
+  buildJobEconomicsInputFromCleaning,
+  loadProfitFirstSettings,
+  markPartnerFirstServiceComplete,
+  recordJobEconomicsSnapshot,
+} from "@/lib/profit-first-server";
 
 export async function POST(
   req: NextRequest,
@@ -145,6 +151,39 @@ export async function POST(
       compensationAmount = compensation?.amount ?? 0;
     } catch (compensationError: unknown) {
       console.error("Error recording job compensation:", compensationError);
+    }
+
+    try {
+      const profitSettings = await loadProfitFirstSettings();
+      const economicsInput = buildJobEconomicsInputFromCleaning(
+        {
+          ...jobData,
+          ...updateData,
+          jobStatus: "completed",
+          status: "completed",
+          hasRequiredPhotos: true,
+          insidePhotoUrl,
+          outsidePhotoUrl,
+          completionDocsSubmitted: true,
+        },
+        profitSettings
+      );
+      await recordJobEconomicsSnapshot({
+        jobId,
+        input: economicsInput,
+        updatedBy: employeeId,
+      });
+    } catch (economicsError: unknown) {
+      console.error("Error recording job economics:", economicsError);
+    }
+
+    try {
+      await markPartnerFirstServiceComplete({
+        partnerId: jobData.partnerId ? String(jobData.partnerId) : null,
+        customerEmail: jobData.userEmail ? String(jobData.userEmail) : null,
+      });
+    } catch (partnerError: unknown) {
+      console.error("Error marking partner first service complete:", partnerError);
     }
 
     let nextCleaningId: string | null = null;

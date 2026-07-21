@@ -5,6 +5,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { calculatePartnerEmployeeCosts } from "@/lib/partner-payroll";
+import {
+  evaluatePartnerBookingPayability,
+  loadProfitFirstSettings,
+} from "@/lib/profit-first-server";
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +47,7 @@ export async function POST(req: NextRequest) {
     const partnersSnapshot = await getDocs(partnersQuery);
 
     const results = [];
+    const profitSettings = await loadProfitFirstSettings();
 
     for (const partnerDoc of partnersSnapshot.docs) {
       const partnerData = partnerDoc.data();
@@ -65,16 +70,22 @@ export async function POST(req: NextRequest) {
 
       let totalPayoutAmount = 0;
       const commissionIds: string[] = [];
+      const skippedCommissions: Array<{ id: string; reason?: string }> = [];
 
       commissionsSnapshot.forEach((commissionDoc) => {
         const commissionData = commissionDoc.data();
-        const createdAt = commissionData.createdAt?.toDate?.() || new Date(commissionData.createdAt?.seconds * 1000);
-        
-        // Only include commissions from at least 7 days ago (hold period)
-        if (createdAt <= oneWeekAgo) {
-          totalPayoutAmount += commissionData.partnerShareAmount || 0;
-          commissionIds.push(commissionDoc.id);
+        const payability = evaluatePartnerBookingPayability(commissionData, profitSettings);
+
+        if (!payability.payable) {
+          skippedCommissions.push({
+            id: commissionDoc.id,
+            reason: payability.reason,
+          });
+          return;
         }
+
+        totalPayoutAmount += commissionData.partnerShareAmount || 0;
+        commissionIds.push(commissionDoc.id);
       });
 
       // Calculate employee payroll costs for the same period
@@ -145,6 +156,7 @@ export async function POST(req: NextRequest) {
             employeeCosts: employeeCosts.totalCost,
             netAmount: netPayoutAmount,
             commissionsCount: commissionIds.length,
+            skippedCount: skippedCommissions.length,
             transferId: transfer.id,
             status: 'success',
           });

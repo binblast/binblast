@@ -2,6 +2,7 @@
 
 import { PayrollSummary } from "@/components/OwnerDashboard/PayrollSummary";
 import { FinancialAnalytics } from "@/components/OwnerDashboard/FinancialAnalytics";
+import { ProfitFirstHub } from "@/components/OwnerDashboard/ProfitFirstHub";
 
 interface OwnerFinancialsHubProps {
   userId: string;
@@ -27,7 +28,7 @@ export function OwnerFinancialsHub({ userId, onOpenCompensation }: OwnerFinancia
               Employee Payroll
             </h2>
             <p style={{ margin: "0.35rem 0 0", color: "#6b7280", fontSize: "0.9rem", lineHeight: 1.5 }}>
-              Live employee gross pay from completed jobs. Independent from customer pricing.
+              Live employee pay from completed jobs, tied to contribution profit and margin targets.
             </p>
           </div>
           {onOpenCompensation && (
@@ -50,6 +51,10 @@ export function OwnerFinancialsHub({ userId, onOpenCompensation }: OwnerFinancia
           )}
         </div>
         <PayrollSummary />
+      </div>
+
+      <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "2rem" }}>
+        <ProfitFirstHub />
       </div>
 
       <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "2rem" }}>

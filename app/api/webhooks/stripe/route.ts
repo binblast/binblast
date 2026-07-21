@@ -289,11 +289,28 @@ export async function POST(req: NextRequest) {
                   const grossAmount = amountTotal / 100; // Convert to dollars for display
                   
                   // Calculate revenue share (in cents)
-                  const revenueSharePartner = partnerData.revenueSharePartner || 0.6; // Default 60%
-                  const revenueSharePlatform = partnerData.revenueSharePlatform || 0.4; // Default 40%
-                  
-                  const partnerShareAmountCents = Math.round(bookingAmountCents * revenueSharePartner);
-                  const platformShareAmountCents = Math.round(bookingAmountCents * revenueSharePlatform);
+                  const partnerTier = partnerData.partnerTier || "operator";
+                  let partnerShareAmountCents = 0;
+                  let platformShareAmountCents = bookingAmountCents;
+                  let commissionStatus = "pending";
+                  let commissionModel: "referral_flat" | "service_revenue_share" = "service_revenue_share";
+
+                  if (partnerTier === "referral") {
+                    const { loadProfitFirstSettings } = await import("@/lib/profit-first-server");
+                    const profitSettings = await loadProfitFirstSettings();
+                    partnerShareAmountCents = profitSettings.referralSignupCommissionCents;
+                    platformShareAmountCents = Math.max(
+                      0,
+                      bookingAmountCents - partnerShareAmountCents
+                    );
+                    commissionModel = "referral_flat";
+                    commissionStatus = "pending";
+                  } else {
+                    const revenueSharePartner = partnerData.revenueSharePartner || 0.6;
+                    const revenueSharePlatform = partnerData.revenueSharePlatform || 0.4;
+                    partnerShareAmountCents = Math.round(bookingAmountCents * revenueSharePartner);
+                    platformShareAmountCents = Math.round(bookingAmountCents * revenueSharePlatform);
+                  }
                   
                   // Get plan name from planId
                   let planName = session.metadata?.planId || "Unknown Plan";
@@ -318,7 +335,7 @@ export async function POST(req: NextRequest) {
                   // Check if partner has Stripe Connect account for automatic payouts
                   const stripeConnectedAccountId = partnerData.stripeConnectedAccountId;
                   let transferId: string | null = null;
-                  let commissionStatus = 'pending'; // 'pending' | 'held' | 'paid' | 'failed'
+                  // commissionStatus already set above: pending | held | paid | failed
                   
                   // If partner has connected account, create a transfer hold (we'll release weekly)
                   if (stripeConnectedAccountId) {
@@ -366,6 +383,11 @@ export async function POST(req: NextRequest) {
                     stripeSessionId: session.id,
                     stripeTransferId: transferId,
                     commissionStatus: commissionStatus,
+                    commissionModel,
+                    paymentCollected: true,
+                    paymentCleared: true,
+                    firstServiceCompleted: false,
+                    refundHoldPassed: false,
                     status: subscriptionId ? "active" : "trial", // "active" | "cancelled" | "refunded" | "trial"
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),

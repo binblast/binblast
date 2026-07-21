@@ -13,10 +13,10 @@ export interface PartnerTierDefinition {
 export const PARTNER_TIER_DEFINITIONS: Record<PartnerTier, PartnerTierDefinition> = {
   referral: {
     label: "Referral Partner",
-    description: "Sends out-of-area leads and earns a referral fee on conversions.",
-    revenueSharePartner: 0.15,
-    revenueSharePlatform: 0.85,
-    referralFeePercent: 0.15,
+    description: "Refers residential customers and earns a flat signup commission after first completed service.",
+    revenueSharePartner: 0,
+    revenueSharePlatform: 1,
+    referralFeePercent: 0,
     acceptsOverflow: false,
     receivesLeads: false,
   },
