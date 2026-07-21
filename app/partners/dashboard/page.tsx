@@ -10,6 +10,7 @@ import { PartnerLeadsPanel } from "@/components/PartnerDashboard/PartnerLeadsPan
 import { PartnerReferralsPanel } from "@/components/PartnerDashboard/PartnerReferralsPanel";
 import { PartnerOverflowPanel } from "@/components/PartnerDashboard/PartnerOverflowPanel";
 import { PartnerQuoteAssignmentsPanel } from "@/components/PartnerDashboard/PartnerQuoteAssignmentsPanel";
+import { PartnerStatReportModal } from "@/components/PartnerDashboard/PartnerStatReportModal";
 import {
   buildPartnerBookingLink,
   buildPartnerTeamLoginLink,
@@ -17,10 +18,9 @@ import {
 } from "@/lib/partner-links";
 import { PortalBrandHeader } from "@/components/PortalBrandHeader";
 import {
-  downloadPartnerActiveSubscriptionsCsv,
-  downloadPartnerCustomersCsv,
-  downloadPartnerEarningsCsv,
-  downloadPartnerPayoutCsv,
+  buildPartnerStatSheet,
+  type PartnerStatReportType,
+  type PartnerStatSheet,
 } from "@/lib/partner-dashboard-exports";
 
 const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
@@ -319,6 +319,8 @@ export default function PartnerDashboardPage() {
   const [loadingPayouts, setLoadingPayouts] = useState(false);
   const [expandedPayoutId, setExpandedPayoutId] = useState<string | null>(null);
   const [loadingStripeLink, setLoadingStripeLink] = useState(false);
+  const [openStatReport, setOpenStatReport] = useState<PartnerStatReportType | null>(null);
+  const [statReportSheet, setStatReportSheet] = useState<PartnerStatSheet | null>(null);
 
   useEffect(() => {
     async function checkAuth() {
@@ -970,31 +972,25 @@ export default function PartnerDashboardPage() {
     }
   }
 
-  function downloadEarningsReport() {
+  function openStatReportModal(type: PartnerStatReportType) {
     if (!partnerData) return;
-    downloadPartnerEarningsCsv(partnerData.businessName, bookings);
-  }
-
-  function downloadCustomersReport() {
-    if (!partnerData) return;
-    downloadPartnerCustomersCsv(partnerData.businessName, customers);
-  }
-
-  function downloadActiveSubscriptionsReport() {
-    if (!partnerData) return;
-    downloadPartnerActiveSubscriptionsCsv(partnerData.businessName, bookings);
-  }
-
-  function downloadPayoutReport() {
-    if (!partnerData) return;
-    downloadPartnerPayoutCsv({
+    const sheet = buildPartnerStatSheet(type, {
       businessName: partnerData.businessName,
+      bookings,
+      customers,
       pendingCommissionsCents: stats.pendingCommissions,
       heldCommissionsCents: stats.heldCommissions,
       paidCommissionsCents: stats.totalCommissionsPaid,
       payouts,
       nextPayoutDate,
     });
+    setStatReportSheet(sheet);
+    setOpenStatReport(type);
+  }
+
+  function closeStatReportModal() {
+    setOpenStatReport(null);
+    setStatReportSheet(null);
   }
 
   const statCardHintStyle = {
@@ -1040,6 +1036,11 @@ export default function PartnerDashboardPage() {
   return (
     <>
       <Navbar />
+      <PartnerStatReportModal
+        sheet={statReportSheet}
+        isOpen={openStatReport !== null}
+        onClose={closeStatReportModal}
+      />
       <main className="page-main partners-dashboard-shell" style={{ background: "linear-gradient(to bottom right, #f9fafb, #eff6ff, #f9fafb)" }}>
         {/* Hero Section */}
         <div style={{
@@ -1112,10 +1113,10 @@ export default function PartnerDashboardPage() {
               <div
                 role="button"
                 tabIndex={0}
-                aria-label="Download earnings report for this month"
-                title="Download earnings CSV"
-                onClick={downloadEarningsReport}
-                onKeyDown={(event) => handleStatCardKeyDown(event, downloadEarningsReport)}
+                aria-label="View earnings report for this month"
+                title="View earnings report"
+                onClick={() => openStatReportModal("earnings")}
+                onKeyDown={(event) => handleStatCardKeyDown(event, () => openStatReportModal("earnings"))}
                 style={{
                   background: "#ffffff",
                   borderRadius: "16px",
@@ -1146,17 +1147,17 @@ export default function PartnerDashboardPage() {
                   ${(stats.thisMonthEarnings / 100).toFixed(2)}
                 </div>
                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>Earnings this month</div>
-                <div style={statCardHintStyle}>Click to download CSV</div>
+                <div style={statCardHintStyle}>Click to view report</div>
               </div>
 
               {/* Total Customers */}
               <div
                 role="button"
                 tabIndex={0}
-                aria-label="Download referred customers report"
-                title="Download customers CSV"
-                onClick={downloadCustomersReport}
-                onKeyDown={(event) => handleStatCardKeyDown(event, downloadCustomersReport)}
+                aria-label="View referred customers report"
+                title="View customers report"
+                onClick={() => openStatReportModal("customers")}
+                onKeyDown={(event) => handleStatCardKeyDown(event, () => openStatReportModal("customers"))}
                 style={{
                   background: "#ffffff",
                   borderRadius: "16px",
@@ -1187,19 +1188,17 @@ export default function PartnerDashboardPage() {
                   {stats.totalCustomers}
                 </div>
                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>Total referred</div>
-                <div style={statCardHintStyle}>Click to download CSV</div>
+                <div style={statCardHintStyle}>Click to view report</div>
               </div>
 
               {/* Active Subscriptions */}
               <div
                 role="button"
                 tabIndex={0}
-                aria-label="Download active subscriptions report"
-                title="Download active subscriptions CSV"
-                onClick={downloadActiveSubscriptionsReport}
-                onKeyDown={(event) =>
-                  handleStatCardKeyDown(event, downloadActiveSubscriptionsReport)
-                }
+                aria-label="View active subscriptions report"
+                title="View active subscriptions report"
+                onClick={() => openStatReportModal("active")}
+                onKeyDown={(event) => handleStatCardKeyDown(event, () => openStatReportModal("active"))}
                 style={{
                   background: "#ffffff",
                   borderRadius: "16px",
@@ -1230,17 +1229,17 @@ export default function PartnerDashboardPage() {
                   {stats.activeSubscriptions}
                 </div>
                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>Active subscriptions</div>
-                <div style={statCardHintStyle}>Click to download CSV</div>
+                <div style={statCardHintStyle}>Click to view report</div>
               </div>
 
               {/* Next Payout */}
               <div
                 role="button"
                 tabIndex={0}
-                aria-label="Download payout summary report"
-                title="Download payout summary CSV"
-                onClick={downloadPayoutReport}
-                onKeyDown={(event) => handleStatCardKeyDown(event, downloadPayoutReport)}
+                aria-label="View payout summary report"
+                title="View payout summary"
+                onClick={() => openStatReportModal("payout")}
+                onKeyDown={(event) => handleStatCardKeyDown(event, () => openStatReportModal("payout"))}
                 style={{
                   background: "#ffffff",
                   borderRadius: "16px",
@@ -1271,7 +1270,7 @@ export default function PartnerDashboardPage() {
                   {daysUntilPayout} days
                 </div>
                 <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>{nextPayoutDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
-                <div style={statCardHintStyle}>Click to download CSV</div>
+                <div style={statCardHintStyle}>Click to view report</div>
               </div>
             </div>
 
