@@ -352,10 +352,11 @@ html, body {
 
 .hero--split {
     background: transparent;
-    text-align: left;
+    text-align: center;
     min-height: clamp(520px, 72vh, 760px);
     padding: clamp(5.5rem, 12vw, 7rem) 0 clamp(3rem, 8vw, 4.5rem);
     align-items: center;
+    justify-content: center;
 }
 
 .hero--split::before {
@@ -378,10 +379,13 @@ html, body {
     grid-template-columns: minmax(0, 1fr);
     gap: clamp(1.5rem, 4vw, 3rem);
     align-items: center;
+    justify-items: center;
+    text-align: center;
 }
 
 .hero__copy {
-    max-width: min(720px, 100%);
+    max-width: min(820px, 100%);
+    margin: 0 auto;
 }
 
 .hero-eyebrow {
@@ -1549,16 +1553,16 @@ html, body {
 }
 
 .hero--split .hero-buttons {
-    justify-content: flex-start;
+    justify-content: center;
     padding: 0;
 }
 
 .hero--split .hero-headline,
 .hero--split .hero-subheadline,
 .hero--split .hero-service-areas {
-    text-align: left;
-    margin-left: 0;
-    margin-right: 0;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .hero--split .hero-service-areas {
