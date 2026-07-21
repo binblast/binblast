@@ -71,20 +71,6 @@ function formatAddress(proof: Proof): string {
     .join(", ");
 }
 
-function getPhotoTypeLabel(type: string): string {
-  switch (type) {
-    case "inside":
-      return "Inside";
-    case "outside":
-      return "Outside";
-    case "dumpster_pad":
-      return "Dumpster Pad";
-    case "sticker_placement":
-      return "Sticker";
-    default:
-      return type;
-  }
-}
 
 export function ProofOfWorkSection({
   employeeId,
@@ -177,7 +163,7 @@ export function ProofOfWorkSection({
             Cleaning Photos
           </h3>
           <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0 }}>
-            Photos employees take at each job to confirm the bins were cleaned. Review these to verify quality.
+            Photos employees take at each job to confirm the bins were cleaned. Click a stop to expand its photos.
           </p>
         </div>
         {lastSync && (
@@ -208,7 +194,12 @@ export function ProofOfWorkSection({
           <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "1rem", color: "#374151" }}>
             Proof for This Stop
           </h4>
-          <ProofDetailCard proof={proof} expanded onToggleExpand={() => undefined} />
+          <ProofDetailCard
+            proof={proof}
+            expanded
+            onToggleExpand={() => undefined}
+            collapsible={false}
+          />
         </div>
       ) : (
         <div>
@@ -241,219 +232,193 @@ export function ProofOfWorkSection({
   );
 }
 
+function getPhotoSummary(proof: Proof): string {
+  const photos = proof.photos || [];
+  const count = photos.length || (proof.previewPhotoUrl ? 1 : 0);
+
+  if (proof.operatorSkipPhotos) {
+    return "Cleared — no photos required";
+  }
+  if (count === 0) {
+    return "No photos uploaded";
+  }
+  if (count === 1) {
+    return "1 photo";
+  }
+  return `${count} photos`;
+}
+
 function ProofDetailCard({
   proof,
   expanded,
   onToggleExpand,
+  collapsible = true,
 }: {
   proof: Proof;
   expanded: boolean;
   onToggleExpand: () => void;
+  collapsible?: boolean;
 }) {
   const photos = proof.photos || [];
   const hasPhotos = photos.length > 0 || !!proof.previewPhotoUrl;
+  const isOpen = collapsible ? expanded : true;
+  const photoSummary = getPhotoSummary(proof);
 
   return (
     <div
       style={{
-        padding: "1rem",
         border: "1px solid #e5e7eb",
         borderRadius: "12px",
-        background: "#f9fafb",
+        background: "#ffffff",
+        overflow: "hidden",
       }}
     >
-      <div
+      <button
+        type="button"
+        onClick={collapsible ? onToggleExpand : undefined}
+        disabled={!collapsible}
+        aria-expanded={isOpen}
         style={{
+          width: "100%",
           display: "flex",
+          alignItems: "flex-start",
           justifyContent: "space-between",
           gap: "1rem",
-          flexWrap: "wrap",
-          marginBottom: "0.75rem",
+          padding: "1rem",
+          background: isOpen ? "#f9fafb" : "#ffffff",
+          border: "none",
+          textAlign: "left",
+          cursor: collapsible ? "pointer" : "default",
         }}
       >
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: "1rem", fontWeight: "700", color: "#111827" }}>
             {proof.customerName || "Customer"}
           </div>
           <div style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.2rem" }}>
             {formatAddress(proof) || "Address unavailable"}
           </div>
-        </div>
-        <div style={{ textAlign: "right", fontSize: "0.8125rem", color: "#6b7280" }}>
-          <div>
-            <strong>Scheduled:</strong> {formatDateLabel(proof.scheduledDate)}
+          <div style={{ fontSize: "0.8125rem", color: "#6b7280", marginTop: "0.35rem" }}>
+            {formatDateLabel(proof.scheduledDate)}
             {proof.scheduledTime ? ` · ${proof.scheduledTime}` : ""}
+            {" · "}
+            Completed {formatCompletedAt(proof.completedAt)}
           </div>
-          <div style={{ marginTop: "0.2rem" }}>
-            <strong>Completed:</strong> {formatCompletedAt(proof.completedAt)}
-          </div>
-        </div>
-      </div>
-
-      {proof.operatorSkipPhotos && (
-        <div
-          style={{
-            marginBottom: "0.75rem",
-            padding: "0.65rem 0.75rem",
-            background: "#fffbeb",
-            border: "1px solid #fde68a",
-            borderRadius: "8px",
-            color: "#92400e",
-            fontSize: "0.8125rem",
-            fontWeight: "600",
-          }}
-        >
-          Cleared by operator — photos not required
-        </div>
-      )}
-
-      {!hasPhotos && !proof.operatorSkipPhotos ? (
-        <div
-          style={{
-            padding: "1.25rem",
-            background: "#fef2f2",
-            border: "1px solid #fecaca",
-            borderRadius: "8px",
-            textAlign: "center",
-            color: "#991b1b",
-            fontSize: "0.875rem",
-          }}
-        >
-          No photos uploaded for this stop.
-        </div>
-      ) : photos.length > 0 ? (
-        expanded ? (
-          <JobPhotosViewer cleaningId={proof.cleaningId} />
-        ) : (
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-              gap: "0.75rem",
-            }}
-          >
-            {photos.slice(0, 4).map((photo) => (
-              <ProofPhotoThumbnail key={photo.id} photo={photo} />
-            ))}
-          </div>
-        )
-      ) : proof.previewPhotoUrl ? (
-        <ProofPhotoThumbnail
-          photo={{
-            id: proof.cleaningId,
-            photoType: "proof",
-            storageUrl: proof.previewPhotoUrl,
-            timestamp: proof.completedAt || "",
-          }}
-        />
-      ) : null}
-
-      {photos.length > 0 && (
-        <button
-          type="button"
-          onClick={onToggleExpand}
-          style={{
-            marginTop: "0.75rem",
-            padding: "0.45rem 0.75rem",
-            background: "#ffffff",
-            border: "1px solid #d1d5db",
-            borderRadius: "8px",
-            fontSize: "0.8125rem",
-            fontWeight: "600",
-            color: "#374151",
-            cursor: "pointer",
-          }}
-        >
-          {expanded ? "Show photo previews" : `View all ${photos.length} photos`}
-        </button>
-      )}
-
-      {(proof.employeeNotes || proof.operatorNotes) && (
-        <div style={{ marginTop: "0.75rem", display: "grid", gap: "0.5rem" }}>
-          {proof.employeeNotes && (
-            <div style={{ fontSize: "0.8125rem", color: "#4b5563" }}>
-              <strong>Employee notes:</strong> {proof.employeeNotes}
-            </div>
-          )}
-          {proof.operatorNotes && (
-            <div style={{ fontSize: "0.8125rem", color: "#4b5563" }}>
-              <strong>Operator notes:</strong> {proof.operatorNotes}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ProofPhotoThumbnail({ photo }: { photo: ProofPhoto }) {
-  const [failed, setFailed] = useState(false);
-
-  return (
-    <div
-      style={{
-        border: "1px solid #e5e7eb",
-        borderRadius: "8px",
-        overflow: "hidden",
-        background: "#ffffff",
-      }}
-    >
-      <div
-        style={{
-          position: "relative",
-          paddingTop: "75%",
-          background: "#f3f4f6",
-        }}
-      >
-        {!failed ? (
-          <img
-            src={photo.storageUrl}
-            alt={getPhotoTypeLabel(photo.photoType)}
-            onError={() => setFailed(true)}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "0.5rem",
-              textAlign: "center",
+              display: "inline-flex",
+              marginTop: "0.5rem",
+              padding: "0.2rem 0.55rem",
+              borderRadius: "999px",
               fontSize: "0.75rem",
-              color: "#991b1b",
+              fontWeight: "600",
+              background: proof.operatorSkipPhotos
+                ? "#fffbeb"
+                : hasPhotos
+                  ? "#ecfdf5"
+                  : "#fef2f2",
+              color: proof.operatorSkipPhotos
+                ? "#92400e"
+                : hasPhotos
+                  ? "#047857"
+                  : "#991b1b",
+              border: `1px solid ${
+                proof.operatorSkipPhotos ? "#fde68a" : hasPhotos ? "#bbf7d0" : "#fecaca"
+              }`,
             }}
           >
-            Photo unavailable
+            {photoSummary}
           </div>
+        </div>
+        {collapsible && (
+          <span
+            aria-hidden="true"
+            style={{
+              flexShrink: 0,
+              fontSize: "0.875rem",
+              fontWeight: "700",
+              color: "#6b7280",
+              marginTop: "0.15rem",
+            }}
+          >
+            {isOpen ? "▲" : "▼"}
+          </span>
         )}
+      </button>
+
+      {isOpen && (
         <div
           style={{
-            position: "absolute",
-            top: "0.4rem",
-            left: "0.4rem",
-            background: "rgba(17, 24, 39, 0.78)",
-            color: "#ffffff",
-            padding: "0.2rem 0.45rem",
-            borderRadius: "4px",
-            fontSize: "0.7rem",
-            fontWeight: "600",
+            padding: "0 1rem 1rem",
+            borderTop: "1px solid #e5e7eb",
+            background: "#f9fafb",
           }}
         >
-          {getPhotoTypeLabel(photo.photoType)}
-        </div>
-      </div>
-      {photo.timestamp && (
-        <div style={{ padding: "0.45rem 0.5rem", fontSize: "0.7rem", color: "#6b7280" }}>
-          {formatCompletedAt(photo.timestamp)}
+          {proof.operatorSkipPhotos && (
+            <div
+              style={{
+                marginTop: "1rem",
+                padding: "0.65rem 0.75rem",
+                background: "#fffbeb",
+                border: "1px solid #fde68a",
+                borderRadius: "8px",
+                color: "#92400e",
+                fontSize: "0.8125rem",
+                fontWeight: "600",
+              }}
+            >
+              Cleared by operator — photos not required
+            </div>
+          )}
+
+          {!hasPhotos && !proof.operatorSkipPhotos ? (
+            <div
+              style={{
+                marginTop: "1rem",
+                padding: "1.25rem",
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: "8px",
+                textAlign: "center",
+                color: "#991b1b",
+                fontSize: "0.875rem",
+              }}
+            >
+              No photos uploaded for this stop.
+            </div>
+          ) : photos.length > 0 ? (
+            <div style={{ marginTop: "1rem" }}>
+              <JobPhotosViewer cleaningId={proof.cleaningId} />
+            </div>
+          ) : proof.previewPhotoUrl ? (
+            <div style={{ marginTop: "1rem" }}>
+              <img
+                src={proof.previewPhotoUrl}
+                alt="Job proof photo"
+                style={{
+                  width: "100%",
+                  maxWidth: "320px",
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb",
+                }}
+              />
+            </div>
+          ) : null}
+
+          {(proof.employeeNotes || proof.operatorNotes) && (
+            <div style={{ marginTop: "1rem", display: "grid", gap: "0.5rem" }}>
+              {proof.employeeNotes && (
+                <div style={{ fontSize: "0.8125rem", color: "#4b5563" }}>
+                  <strong>Employee notes:</strong> {proof.employeeNotes}
+                </div>
+              )}
+              {proof.operatorNotes && (
+                <div style={{ fontSize: "0.8125rem", color: "#4b5563" }}>
+                  <strong>Operator notes:</strong> {proof.operatorNotes}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

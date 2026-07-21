@@ -46,21 +46,6 @@ export function JobPhotosViewer({ cleaningId }: JobPhotosViewerProps) {
     }
   };
 
-  const getPhotoTypeLabel = (type: string) => {
-    switch (type) {
-      case "inside":
-        return "Inside Bin";
-      case "outside":
-        return "Outside Bin";
-      case "dumpster_pad":
-        return "Dumpster Pad";
-      case "sticker_placement":
-        return "Sticker Placement";
-      default:
-        return type;
-    }
-  };
-
   const handleFlagPhoto = (photoId: string, issue: string) => {
     const newFlagged = new Set(flaggedPhotos);
     if (issue === "clear") {
@@ -105,72 +90,31 @@ export function JobPhotosViewer({ cleaningId }: JobPhotosViewerProps) {
 
   return (
     <div style={{ marginBottom: "1.5rem" }}>
-      {/* Required Photos */}
       {requiredPhotos.length > 0 && (
-        <div style={{ marginBottom: "1.5rem" }}>
-          <h5
-            style={{
-              fontSize: "0.875rem",
-              fontWeight: "600",
-              color: "#111827",
-              marginBottom: "0.75rem",
-            }}
-          >
-            Required Photos ({requiredPhotos.length})
-          </h5>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-              gap: "1rem",
-            }}
-          >
-            {requiredPhotos.map((photo) => (
-              <PhotoThumbnail
-                key={photo.id}
-                photo={photo}
-                isExpanded={expandedPhoto === photo.id}
-                onExpand={() => setExpandedPhoto(expandedPhoto === photo.id ? null : photo.id)}
-                isFlagged={flaggedPhotos.has(photo.id)}
-                onFlag={handleFlagPhoto}
-              />
-            ))}
-          </div>
-        </div>
+        <PhotoGroupDropdown
+          title={`Required Photos (${requiredPhotos.length})`}
+          defaultOpen
+          photos={requiredPhotos}
+          expandedPhoto={expandedPhoto}
+          onExpandPhoto={(photoId) =>
+            setExpandedPhoto(expandedPhoto === photoId ? null : photoId)
+          }
+          flaggedPhotos={flaggedPhotos}
+          onFlagPhoto={handleFlagPhoto}
+        />
       )}
 
-      {/* Optional Photos */}
       {optionalPhotos.length > 0 && (
-        <div>
-          <h5
-            style={{
-              fontSize: "0.875rem",
-              fontWeight: "600",
-              color: "#111827",
-              marginBottom: "0.75rem",
-            }}
-          >
-            Optional Photos ({optionalPhotos.length})
-          </h5>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-              gap: "1rem",
-            }}
-          >
-            {optionalPhotos.map((photo) => (
-              <PhotoThumbnail
-                key={photo.id}
-                photo={photo}
-                isExpanded={expandedPhoto === photo.id}
-                onExpand={() => setExpandedPhoto(expandedPhoto === photo.id ? null : photo.id)}
-                isFlagged={flaggedPhotos.has(photo.id)}
-                onFlag={handleFlagPhoto}
-              />
-            ))}
-          </div>
-        </div>
+        <PhotoGroupDropdown
+          title={`Optional Photos (${optionalPhotos.length})`}
+          photos={optionalPhotos}
+          expandedPhoto={expandedPhoto}
+          onExpandPhoto={(photoId) =>
+            setExpandedPhoto(expandedPhoto === photoId ? null : photoId)
+          }
+          flaggedPhotos={flaggedPhotos}
+          onFlagPhoto={handleFlagPhoto}
+        />
       )}
 
       {/* Expanded Photo Modal */}
@@ -226,6 +170,94 @@ export function JobPhotosViewer({ cleaningId }: JobPhotosViewerProps) {
               }}
             />
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface PhotoGroupDropdownProps {
+  title: string;
+  photos: JobPhoto[];
+  expandedPhoto: string | null;
+  onExpandPhoto: (photoId: string) => void;
+  flaggedPhotos: Set<string>;
+  onFlagPhoto: (photoId: string, issue: string) => void;
+  defaultOpen?: boolean;
+}
+
+function PhotoGroupDropdown({
+  title,
+  photos,
+  expandedPhoto,
+  onExpandPhoto,
+  flaggedPhotos,
+  onFlagPhoto,
+  defaultOpen = false,
+}: PhotoGroupDropdownProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div
+      style={{
+        marginBottom: "0.75rem",
+        border: "1px solid #e5e7eb",
+        borderRadius: "8px",
+        overflow: "hidden",
+        background: "#ffffff",
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        aria-expanded={isOpen}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "0.75rem",
+          padding: "0.75rem 1rem",
+          background: isOpen ? "#f9fafb" : "#ffffff",
+          border: "none",
+          cursor: "pointer",
+          textAlign: "left",
+        }}
+      >
+        <span
+          style={{
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            color: "#111827",
+          }}
+        >
+          {title}
+        </span>
+        <span style={{ fontSize: "0.75rem", fontWeight: "700", color: "#6b7280" }}>
+          {isOpen ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {isOpen && (
+        <div
+          style={{
+            padding: "0.75rem 1rem 1rem",
+            borderTop: "1px solid #e5e7eb",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+            gap: "1rem",
+          }}
+        >
+          {photos.map((photo) => (
+            <PhotoThumbnail
+              key={photo.id}
+              photo={photo}
+              isExpanded={expandedPhoto === photo.id}
+              onExpand={() => onExpandPhoto(photo.id)}
+              isFlagged={flaggedPhotos.has(photo.id)}
+              onFlag={onFlagPhoto}
+            />
+          ))}
         </div>
       )}
     </div>
