@@ -101,6 +101,8 @@ export const SERVICE_PAGES: SeoPageDefinition[] = [
     ],
     primaryCta: { label: "Book a Cleaning", href: "/#pricing" },
     secondaryCta: { label: "View recurring plans", href: "/recurring-trash-can-cleaning" },
+    heroImage: "/residential-bin-service.jpg",
+    heroImageAlt: "Bin Blast Co. technician power washing a residential trash bin at the curb",
   },
   {
     slug: "hoa-trash-can-cleaning",

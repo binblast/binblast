@@ -6,8 +6,8 @@ const SERVICE_TYPES = [
     title: "Residential Bin Cleaning",
     description: "Professional cleaning for household trash and recycling bins.",
     href: "/residential-trash-can-cleaning",
-    image: "/website-cover-1920.jpg",
-    imageAlt: "Bin Blast Co. truck cleaning residential trash bins in South Metro Atlanta",
+    image: "/residential-bin-service.jpg",
+    imageAlt: "Bin Blast Co. technician power washing a residential trash bin at the curb",
   },
   {
     title: "HOA & Neighborhood Service",
