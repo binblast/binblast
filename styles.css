@@ -2934,9 +2934,9 @@ html {
         border: none;
         padding: 0;
         margin: 0;
-        background: rgba(15, 23, 42, 0.55);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
+        background: rgba(8, 15, 28, 0.82);
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
         z-index: 1001;
         cursor: pointer;
         animation: navBackdropIn 0.25s ease;
@@ -2966,10 +2966,12 @@ html {
         -webkit-overflow-scrolling: touch;
         z-index: 1002;
         border: none;
-        background:
-            linear-gradient(165deg, rgba(15, 23, 42, 0.94) 0%, rgba(20, 83, 45, 0.9) 42%, rgba(30, 58, 95, 0.94) 100%),
-            url("/website-cover-1920.jpg") center 30% / cover no-repeat;
-        background-blend-mode: overlay, normal;
+        background-color: #0a1018;
+        background-image:
+            radial-gradient(circle at 14% 10%, rgba(34, 197, 94, 0.34) 0%, transparent 44%),
+            radial-gradient(circle at 92% 82%, rgba(59, 130, 246, 0.26) 0%, transparent 48%),
+            radial-gradient(circle at 50% 105%, rgba(20, 83, 45, 0.42) 0%, transparent 58%),
+            linear-gradient(175deg, #0f172a 0%, #14532d 40%, #1e3a5f 76%, #0b1220 100%);
     }
 
     .nav-links:not(.active) {
@@ -2981,10 +2983,29 @@ html {
         position: absolute;
         inset: 0;
         background:
-            radial-gradient(circle at 20% 15%, rgba(34, 197, 94, 0.22), transparent 42%),
-            radial-gradient(circle at 85% 75%, rgba(37, 99, 235, 0.2), transparent 45%);
+            repeating-linear-gradient(
+                -52deg,
+                transparent,
+                transparent 26px,
+                rgba(255, 255, 255, 0.018) 26px,
+                rgba(255, 255, 255, 0.018) 27px
+            );
         pointer-events: none;
         z-index: 0;
+    }
+
+    .nav-links::after {
+        content: "";
+        position: absolute;
+        right: -2%;
+        bottom: 5%;
+        width: min(50vw, 230px);
+        height: min(50vw, 230px);
+        background: url("/bin-blast-mascot.png") center / contain no-repeat;
+        opacity: 0.11;
+        pointer-events: none;
+        z-index: 0;
+        filter: saturate(0.9);
     }
 
     .nav-links > li {
@@ -2998,10 +3019,6 @@ html {
         border: none;
         border-radius: 0;
         box-shadow: -12px 0 40px rgba(0, 0, 0, 0.35);
-        background:
-            linear-gradient(165deg, rgba(15, 23, 42, 0.94) 0%, rgba(20, 83, 45, 0.9) 42%, rgba(30, 58, 95, 0.94) 100%),
-            url("/website-cover-1920.jpg") center 30% / cover no-repeat;
-        background-blend-mode: overlay, normal;
     }
 
     .nav-links.active {
@@ -3067,11 +3084,11 @@ html {
         min-height: 50px;
         font-size: 1rem;
         border-radius: 12px;
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.1);
         color: #f8fafc;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
     }
 
     .nav-pill:hover {
