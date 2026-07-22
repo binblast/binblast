@@ -201,6 +201,8 @@ export const SERVICE_PAGES: SeoPageDefinition[] = [
       { href: "/trash-can-cleaning-stockbridge-ga", label: "Stockbridge, GA" },
     ],
     primaryCta: { label: "Request a Commercial Quote", href: "/?openQuote=commercial#pricing" },
+    heroImage: "/commercial-bin-service.jpg",
+    heroImageAlt: "Bin Blast Co. technician power washing a row of commercial trash bins at a business property",
   },
   {
     slug: "restaurant-trash-bin-cleaning",

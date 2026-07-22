@@ -27,8 +27,8 @@ const SERVICE_TYPES = [
     title: "Commercial Bin Cleaning",
     description: "Custom service plans for apartments, offices, property managers, and commercial locations.",
     href: "/commercial-trash-bin-cleaning",
-    image: "/website-cover-1920.jpg",
-    imageAlt: "Bin Blast Co. commercial bin cleaning trailer",
+    image: "/commercial-bin-service.jpg",
+    imageAlt: "Bin Blast Co. technician power washing a row of commercial trash bins at a business property",
   },
 ] as const;
 
