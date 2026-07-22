@@ -551,6 +551,28 @@
     grid-template-columns: 1fr;
   }
 
+  .footer-enhanced .footer-brand-block,
+  .footer-enhanced .footer-brand-block p {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .footer-enhanced .footer-brand-block .btn {
+    display: inline-flex;
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
+  }
+
+  .footer-enhanced .footer-section {
+    text-align: center;
+  }
+
+  .footer-enhanced .footer-bottom {
+    text-align: center;
+  }
+
   .home-final-cta__actions {
     flex-direction: column;
     align-items: stretch;

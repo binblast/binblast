@@ -905,7 +905,7 @@ html, body {
 .quote-wizard__overlay {
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: 10100;
     background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
@@ -977,12 +977,17 @@ html, body {
     border: none;
     background: #f3f4f6;
     color: #6b7280;
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
     border-radius: 8px;
     font-size: 1.1rem;
     cursor: pointer;
     line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
 }
 
 .quote-wizard__close:disabled {

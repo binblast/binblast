@@ -138,6 +138,7 @@ export function Navbar() {
   const [loading, setLoading] = useState(true);
   const signInRef = useRef<HTMLLIElement>(null);
   const signInButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileNavRef = useRef<HTMLUListElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const isHomePage = pathname === "/";
@@ -157,6 +158,16 @@ export function Navbar() {
     return () => {
       document.body.classList.remove("nav-menu-open");
     };
+  }, [isMenuOpen]);
+
+  useEffect(() => {
+    const menu = mobileNavRef.current;
+    if (!menu) return;
+
+    menu.setAttribute("aria-hidden", isMenuOpen ? "false" : "true");
+    if ("inert" in menu) {
+      (menu as HTMLElement & { inert: boolean }).inert = !isMenuOpen;
+    }
   }, [isMenuOpen]);
 
   const portalMenuItems: PortalMenuItem[] = [
@@ -541,9 +552,11 @@ export function Navbar() {
           />
         </Link>
         <ul
+          ref={mobileNavRef}
           id="mobile-nav-menu"
           role={isMenuOpen ? "dialog" : undefined}
           aria-modal={isMenuOpen ? true : undefined}
+          aria-hidden={!isMenuOpen}
           aria-label={isMenuOpen ? "Site navigation" : undefined}
           className={`nav-links nav-links--segmented${isMenuOpen ? " active nav-mobile-menu" : ""}`}
         >

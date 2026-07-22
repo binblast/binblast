@@ -1,0 +1,270 @@
+/* Marketing site mobile optimizations — loads after styles.css and site-mobile.css */
+
+@media (max-width: 1024px) {
+  .environment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  /* Prevent horizontal scroll on marketing pages */
+  .marketing-main,
+  .seo-page {
+    overflow-x: clip;
+  }
+
+  /* Nav drawer: hide from assistive tech when closed */
+  .nav-links:not(.active) {
+    pointer-events: none;
+  }
+
+  .nav-links.active .nav-pill,
+  .nav-links.active .nav-login,
+  .nav-links.active button.nav-pill {
+    min-height: 44px;
+    text-align: left !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Hero */
+  .hero--split {
+    min-height: auto;
+  }
+
+  .hero--split .hero__grid {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .hero--split .hero__copy {
+    margin: 0 0.25rem;
+    padding: 1.25rem 1rem;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.75rem;
+  }
+
+  .hero-note {
+    text-align: center;
+    padding: 0 0.5rem;
+  }
+
+  /* Trust bar & feature cards */
+  .home-trust-bar__item,
+  .environment-card--link {
+    min-height: 44px;
+  }
+
+  .home-trust-bar__title,
+  .environment-card h3 {
+    font-size: 1rem;
+  }
+
+  /* Service type cards */
+  .home-service-type-card__body {
+    padding: 1rem 1.1rem 1.25rem;
+  }
+
+  .home-service-type-card__body h3 {
+    font-size: 1.05rem;
+  }
+
+  /* Before / after */
+  .home-before-after__caption {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  /* Reviews */
+  .home-review-card {
+    padding: 1.15rem 1rem 1.25rem;
+  }
+
+  .home-reviews__button {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  /* Service areas */
+  .home-service-area-section__grid {
+    gap: 0.5rem;
+  }
+
+  /* Pricing */
+  .pricing-section {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .pricing-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  .pricing-card.card-link,
+  .pricing-card.card-link.featured {
+    transform: none !important;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .pricing-tier-badge {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.25;
+    max-width: calc(100% - 1rem);
+  }
+
+  .pricing-more-services-wrap .btn {
+    width: 100%;
+  }
+
+  /* Quote wizard above mobile nav */
+  .quote-wizard__overlay {
+    z-index: 10100;
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .quote-wizard {
+    max-width: 100%;
+    max-height: min(94dvh, 94vh);
+    border-radius: 20px 20px 0 0;
+    margin-top: auto;
+  }
+
+  .quote-wizard__close {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+  }
+
+  .quote-wizard__body {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* FAQ */
+  .faq-question {
+    min-height: 44px;
+    padding: 1rem 1.1rem;
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .faq-answer p {
+    font-size: 0.925rem;
+    padding: 0 1.1rem 1rem;
+  }
+
+  /* Footer */
+  .footer-enhanced .footer-brand-block,
+  .footer-enhanced .footer-brand-block p {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .footer-enhanced .footer-brand-block .btn {
+    display: inline-flex;
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
+  }
+
+  .footer-enhanced .footer-section {
+    text-align: center;
+  }
+
+  .footer-enhanced .footer-bottom {
+    text-align: center;
+  }
+
+  /* SEO / blog pages */
+  .seo-page__container {
+    width: min(860px, calc(100% - 1.25rem));
+    padding: calc(5.5rem + env(safe-area-inset-top, 0px)) 0
+      calc(3rem + env(safe-area-inset-bottom, 0px) + 4.5rem);
+  }
+
+  .seo-page__hero h1 {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+  }
+
+  .seo-page__intro {
+    font-size: 1rem;
+  }
+
+  .seo-page__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .seo-page__actions .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .seo-links-grid,
+  .seo-blog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .seo-link-card,
+  .seo-blog-card {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .seo-cta {
+    padding: 1.25rem;
+  }
+
+  .seo-cta h2 {
+    font-size: 1.25rem;
+  }
+
+  .seo-faq__item summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Chat FAB clearance on all pages with widget */
+  .seo-page,
+  .marketing-main {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .marketing-main .footer,
+  .seo-page + .footer-enhanced,
+  body:has(.chat-widget-fab) .seo-page__container {
+    scroll-margin-bottom: 5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .environment-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-trust-bar__inner {
+    gap: 0.625rem;
+  }
+
+  .section-title {
+    font-size: clamp(1.35rem, 6.5vw, 1.75rem);
+  }
+
+  .home-before-after__badge {
+    font-size: 0.6875rem;
+    top: 0.65rem;
+    left: 0.65rem;
+  }
+}

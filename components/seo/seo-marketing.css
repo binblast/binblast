@@ -224,3 +224,41 @@
     text-align: center;
   }
 }
+
+@media (max-width: 767px) {
+  .seo-page__container {
+    width: min(860px, calc(100% - 1.25rem));
+    padding-top: calc(5.5rem + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px) + 4.5rem);
+  }
+
+  .seo-page__hero-image {
+    border-radius: 14px;
+  }
+
+  .seo-section__title {
+    font-size: 1.2rem;
+  }
+
+  .seo-links-grid,
+  .seo-blog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .seo-link-card,
+  .seo-blog-card {
+    min-height: 44px;
+  }
+
+  .seo-cta {
+    padding: 1.25rem;
+  }
+
+  .seo-cta .seo-page__actions .btn {
+    width: 100%;
+  }
+
+  .seo-faq__item summary {
+    min-height: 44px;
+  }
+}

@@ -11,6 +11,7 @@
 @import './customer-dashboard.css';
 @import './legal-pages.css';
 @import './chat-widget.css';
+@import './marketing-mobile.css';
 
 /* Ensure full screen coverage */
 html {
