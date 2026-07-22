@@ -13,8 +13,8 @@ const SERVICE_TYPES = [
     title: "HOA & Neighborhood Service",
     description: "Scheduled service options for communities that want cleaner and more presentable curbsides.",
     href: "/hoa-trash-can-cleaning",
-    image: "/website-cover-1920.jpg",
-    imageAlt: "Bin Blast Co. neighborhood trash bin cleaning service",
+    image: "/hoa-neighborhood-service.jpg",
+    imageAlt: "Bin Blast Co. branded trash bins lined up along a neighborhood curb for HOA service",
   },
   {
     title: "Restaurant Bin Cleaning",

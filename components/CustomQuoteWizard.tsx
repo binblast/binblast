@@ -45,9 +45,15 @@ interface CustomQuoteWizardProps {
   isOpen: boolean;
   onClose: () => void;
   initialPropertyType?: QuoteFormData["propertyType"];
+  startAtStepOne?: boolean;
 }
 
-export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: CustomQuoteWizardProps) {
+export function CustomQuoteWizard({
+  isOpen,
+  onClose,
+  initialPropertyType,
+  startAtStepOne = false,
+}: CustomQuoteWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<QuoteFormData>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,6 +69,12 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
     }
 
     setSubmissionResult(null);
+
+    if (startAtStepOne) {
+      setFormData({});
+      setCurrentStep(1);
+      return;
+    }
 
     if (initialPropertyType) {
       setFormData({ propertyType: initialPropertyType });
@@ -80,7 +92,7 @@ export function CustomQuoteWizard({ isOpen, onClose, initialPropertyType }: Cust
         console.error("Error loading saved progress:", e);
       }
     }
-  }, [isOpen, initialPropertyType]);
+  }, [isOpen, initialPropertyType, startAtStepOne]);
 
   // Save progress to localStorage
   useEffect(() => {

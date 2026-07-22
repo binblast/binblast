@@ -26,6 +26,8 @@ export interface SeoPageDefinition {
   relatedCities?: SeoLink[];
   primaryCta: { label: string; href: string };
   secondaryCta?: { label: string; href: string };
+  heroImage?: string;
+  heroImageAlt?: string;
 }
 
 const sharedProcess: SeoSection = {
@@ -149,6 +151,8 @@ export const SERVICE_PAGES: SeoPageDefinition[] = [
       { href: "/trash-can-cleaning-fayetteville-ga", label: "Fayetteville, GA" },
     ],
     primaryCta: { label: "Get an HOA Quote", href: "/?openQuote=commercial#pricing" },
+    heroImage: "/hoa-neighborhood-service.jpg",
+    heroImageAlt: "Bin Blast Co. branded trash bins lined up along a neighborhood curb for HOA service",
   },
   {
     slug: "commercial-trash-bin-cleaning",

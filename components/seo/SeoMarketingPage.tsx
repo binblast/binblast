@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 import type { FaqItem } from "@/lib/seo/faq-data";
 import type { SeoPageDefinition } from "@/lib/seo/service-pages";
@@ -66,6 +67,17 @@ export function SeoMarketingPage({ page }: { page: SeoPageDefinition }) {
           />
 
           <header className="seo-page__hero">
+            {page.heroImage ? (
+              <div className="seo-page__hero-image">
+                <Image
+                  src={page.heroImage}
+                  alt={page.heroImageAlt ?? page.h1}
+                  fill
+                  sizes="(max-width: 860px) 100vw, 860px"
+                  priority
+                />
+              </div>
+            ) : null}
             <p className="seo-page__eyebrow">
               {page.type === "city" ? "South Metro Atlanta Service Area" : "Bin Blast Co. Services"}
             </p>

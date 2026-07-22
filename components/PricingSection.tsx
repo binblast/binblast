@@ -135,6 +135,7 @@ export function PricingSection() {
   const [quoteWizardPreset, setQuoteWizardPreset] = useState<
     "residential" | "commercial" | "hoa" | undefined
   >();
+  const [quoteWizardFreshStart, setQuoteWizardFreshStart] = useState(false);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const [onboardingData, setOnboardingData] = useState<any>(null);
   const [creatingAccount, setCreatingAccount] = useState(false);
@@ -155,8 +156,10 @@ export function PricingSection() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (searchParams.get("openQuote") === "commercial") {
-      setQuoteWizardPreset("commercial");
+    const openQuote = searchParams.get("openQuote");
+    if (openQuote === "custom" || openQuote === "commercial") {
+      setQuoteWizardPreset(undefined);
+      setQuoteWizardFreshStart(true);
       setShowQuoteWizard(true);
       requestAnimationFrame(() => {
         document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -167,8 +170,10 @@ export function PricingSection() {
   const handleCloseQuoteWizard = () => {
     setShowQuoteWizard(false);
     setQuoteWizardPreset(undefined);
+    setQuoteWizardFreshStart(false);
 
-    if (searchParams.get("openQuote") === "commercial") {
+    const openQuote = searchParams.get("openQuote");
+    if (openQuote === "commercial" || openQuote === "custom") {
       router.replace("/#pricing", { scroll: false });
     }
   };
@@ -262,6 +267,7 @@ export function PricingSection() {
     console.log("[PricingSection] Plan clicked:", planId);
     
     if (planId === "commercial") {
+      setQuoteWizardFreshStart(false);
       setQuoteWizardPreset("commercial");
       setShowQuoteWizard(true);
       return;
@@ -503,6 +509,7 @@ export function PricingSection() {
         isOpen={showQuoteWizard}
         onClose={handleCloseQuoteWizard}
         initialPropertyType={quoteWizardPreset}
+        startAtStepOne={quoteWizardFreshStart}
       />
       <section id="pricing" className="pricing-section">
 

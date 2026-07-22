@@ -39,6 +39,21 @@
   margin-bottom: 2.5rem;
 }
 
+.seo-page__hero-image {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 1.5rem;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #0f172a;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+}
+
+.seo-page__hero-image img {
+  object-fit: cover;
+  object-position: center;
+}
+
 .seo-page__eyebrow {
   display: inline-block;
   margin: 0 0 0.75rem;

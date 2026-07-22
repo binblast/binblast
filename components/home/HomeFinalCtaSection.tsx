@@ -12,8 +12,8 @@ export function HomeFinalCtaSection() {
           <Link href="#pricing" className="btn btn-primary btn-large">
             Book a Cleaning
           </Link>
-          <Link href="/?openQuote=commercial#pricing" className="btn btn-secondary btn-large">
-            Request a Commercial Quote
+          <Link href="/?openQuote=custom#pricing" className="btn btn-secondary btn-large">
+            Get a Custom Quote
           </Link>
         </div>
       </div>

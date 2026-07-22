@@ -143,8 +143,8 @@ export default function HomePage() {
               <p className="hero-service-areas">{METRO_ATLANTA_TAGLINE}</p>
               <div className="hero-buttons">
                 <Link href="#pricing" className="btn btn-primary btn-large">Book a Cleaning</Link>
-                <Link href="/?openQuote=commercial#pricing" className="btn btn-secondary btn-large">
-                  Get a Commercial Quote
+                <Link href="/?openQuote=custom#pricing" className="btn btn-secondary btn-large">
+                  Get a Custom Quote
                 </Link>
               </div>
               <p className="hero-note">One-time and recurring cleaning options available.</p>
@@ -251,7 +251,7 @@ export default function HomePage() {
                 <h3 className="footer-heading">Commercial Services</h3>
                 <p><Link href="/commercial-trash-bin-cleaning">Commercial Bin Cleaning</Link></p>
                 <p><Link href="/restaurant-trash-bin-cleaning">Restaurant Bin Cleaning</Link></p>
-                <p><Link href="/?openQuote=commercial#pricing">Request a Commercial Quote</Link></p>
+                <p><Link href="/?openQuote=custom#pricing">Get a Custom Quote</Link></p>
               </div>
               <div className="footer-section">
                 <h3 className="footer-heading">Service Areas</h3>
