@@ -220,8 +220,58 @@
 .home-before-after__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  margin: 1.75rem 0;
+  gap: 1.25rem;
+  margin: 1.75rem 0 2rem;
+}
+
+.home-before-after__card {
+  margin: 0;
+  text-align: left;
+}
+
+.home-before-after__media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0f172a;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+}
+
+.home-before-after__media img {
+  object-fit: cover;
+  object-position: center;
+}
+
+.home-before-after__badge {
+  position: absolute;
+  top: 0.85rem;
+  left: 0.85rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.home-before-after__badge--before {
+  background: rgba(15, 23, 42, 0.82);
+}
+
+.home-before-after__badge--after {
+  background: #2563eb;
+}
+
+.home-before-after__caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin-top: 0.75rem;
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
 .home-before-after__slot {
