@@ -10,6 +10,7 @@ import { faqPageSchema } from "@/lib/seo/schema";
 import { HOME_FAQ_ITEMS } from "@/lib/seo/faq-data";
 import { BrandLogo } from "@/components/BrandLogo";
 import { HomeTrustBar } from "@/components/home/HomeTrustBar";
+import { HomeEnvironmentSection } from "@/components/home/HomeEnvironmentSection";
 import { HomeServiceTypesSection } from "@/components/home/HomeServiceTypesSection";
 import { HomeBeforeAfterSection } from "@/components/home/HomeBeforeAfterSection";
 import { HomeReviewsSection } from "@/components/home/HomeReviewsSection";
@@ -59,57 +60,6 @@ const ChatWidget = dynamic(() => import("@/components/ChatWidget").then(mod => (
   loading: () => null,
 });
 
-const ENVIRONMENT_CARDS = [
-  {
-    title: "Deep Cleaning",
-    description:
-      "High-pressure cleaning helps remove grime, residue, spills, and buildup from inside and outside the bin.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-        <path d="M12 3v3" />
-        <path d="M8 6h8" />
-        <path d="M7 9h10l-1 11H8L7 9z" />
-      </svg>
-    ),
-  },
-  {
-    title: "Sanitizing & Deodorizing",
-    description:
-      "Our process helps reduce unpleasant odors and leaves your trash bins feeling fresher after service.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-        <path d="M12 2v4" />
-        <path d="M8 6h8" />
-        <path d="M9 10h6" />
-        <path d="M10 14h4" />
-        <path d="M11 18h2" />
-      </svg>
-    ),
-  },
-  {
-    title: "Convenient Curbside Service",
-    description:
-      "Leave your bins accessible after collection day, and our team handles the cleaning at your location.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-        <path d="M3 10.5 12 3l9 7.5" />
-        <path d="M5 9.5V20h14V9.5" />
-      </svg>
-    ),
-  },
-  {
-    title: "Local, Reliable Service",
-    description:
-      "Bin Blast Co. serves homeowners, communities, and businesses throughout South Metro Atlanta.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-        <path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z" />
-        <circle cx="12" cy="10" r="2.5" />
-      </svg>
-    ),
-  },
-] as const;
-
 export default function HomePage() {
   return (
     <>
@@ -154,23 +104,7 @@ export default function HomePage() {
 
         <HomeTrustBar />
 
-        <section id="environment" className="environment-section">
-          <div className="container">
-            <h2 className="section-title">A Cleaner, Fresher Trash Bin Without the Hassle</h2>
-            <p className="section-subtitle environment-section__subtitle">
-              Your trash cans collect more than waste. Bin Blast Co. helps remove built-up grime, unpleasant odors, and residue so your bins and curbside area feel cleaner and more presentable.
-            </p>
-            <div className="environment-grid">
-              {ENVIRONMENT_CARDS.map((card) => (
-                <div key={card.title} className="environment-card">
-                  <span className="environment-card__icon">{card.icon}</span>
-                  <h3>{card.title}</h3>
-                  <p>{card.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <HomeEnvironmentSection />
 
         <section id="how-it-works" className="how-it-works">
           <div className="container">
