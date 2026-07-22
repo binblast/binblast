@@ -69,18 +69,6 @@ export default function HomePage() {
         {/* Hero Section */}
         <section id="home" className="hero hero--split">
           <div className="hero__backdrop" aria-hidden="true">
-            <picture>
-              <source media="(min-width: 1280px)" srcSet="/website-cover.jpg" />
-              <img
-                src="/website-cover-1920.jpg"
-                alt="Bin Blast Co. truck cleaning and sanitizing a residential trash can in South Metro Atlanta, Georgia"
-                className="hero__backdrop-image"
-                decoding="async"
-                fetchPriority="high"
-                width={1920}
-                height={1071}
-              />
-            </picture>
             <div className="hero__backdrop-overlay" />
           </div>
           <div className="container hero__grid">

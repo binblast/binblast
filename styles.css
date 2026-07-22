@@ -381,27 +381,18 @@ html, body {
     inset: 0;
     overflow: hidden;
     pointer-events: none;
+    background-color: #0f172a;
+    background-image: url("/website-cover-1920.jpg");
+    background-size: cover;
+    background-position: center 35%;
+    background-repeat: no-repeat;
 }
 
-.hero__backdrop picture {
-    position: absolute;
-    inset: 0;
-    display: block;
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-}
-
-.hero__backdrop-image {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    object-fit: cover;
-    object-position: 58% 42%;
-    transform: translateZ(0);
+@media (min-width: 1280px) {
+    .hero__backdrop {
+        background-image: url("/website-cover.jpg");
+        background-position: 58% 42%;
+    }
 }
 
 .hero__backdrop-overlay {
@@ -2928,6 +2919,11 @@ html {
         padding: 0 clamp(1rem, 4vw, 1.25rem);
     }
 
+    .navbar {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
     .navbar.nav-open {
         z-index: 1004;
     }
@@ -2954,10 +2950,10 @@ html {
     .nav-links {
         position: fixed;
         inset: 0;
-        left: auto;
+        left: 0;
         right: 0;
-        width: min(100%, 100vw);
-        max-width: 100%;
+        width: 100%;
+        max-width: 100vw;
         flex-direction: column;
         text-align: left;
         transform: translateX(100%);
@@ -3242,8 +3238,8 @@ html {
     }
 
     /* Hero logo responsive sizing for tablet */
-    .hero .container > div img:not(.hero__visual-image),
-    .hero img:not(.hero__visual-image) {
+    .hero .container > div img:not(.hero__visual-image):not(.hero__backdrop-image),
+    .hero img:not(.hero__visual-image):not(.hero__backdrop-image) {
         width: 200px !important;
         height: auto !important;
         max-width: 100%;
@@ -3421,8 +3417,8 @@ html {
     }
 
     /* Hero logo responsive sizing for mobile */
-    .hero .container > div img:not(.hero__visual-image),
-    .hero img:not(.hero__visual-image) {
+    .hero .container > div img:not(.hero__visual-image):not(.hero__backdrop-image),
+    .hero img:not(.hero__visual-image):not(.hero__backdrop-image) {
         width: 150px !important;
         height: auto !important;
         max-width: 100%;

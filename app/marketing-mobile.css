@@ -22,28 +22,22 @@
     pointer-events: auto;
   }
 
-  /* Hero background must cover full section on phones */
-  .hero__backdrop,
-  .hero__backdrop picture {
+  /* Hero background uses CSS background-image (not img) so global img rules cannot shrink it */
+  .hero__backdrop {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-  }
-
-  .hero__backdrop-image {
-    position: absolute !important;
-    inset: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    max-width: none !important;
-    min-height: 100% !important;
-    object-fit: cover !important;
-    object-position: center 35% !important;
+    background-size: cover !important;
+    background-position: center 35% !important;
   }
 
   .hero--split {
     min-height: min(92dvh, 920px);
+  }
+
+  .hero--split .hero-buttons {
+    padding-right: 4.25rem;
   }
 
   .nav-links.active .nav-pill,

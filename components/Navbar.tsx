@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
 import { useFirebase } from "@/lib/firebase-context";
 import { PORTAL_INFO } from "@/lib/user-portal";
@@ -130,6 +131,8 @@ export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileNav, setIsMobileNav] = useState(false);
+  const [portalReady, setPortalReady] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [accountUrl, setAccountUrl] = useState("/dashboard");
   const [isEmployee, setIsEmployee] = useState(false);
@@ -146,6 +149,22 @@ export function Navbar() {
 
   const closeSignIn = useCallback(() => {
     setIsSignInOpen(false);
+  }, []);
+
+  useEffect(() => {
+    setPortalReady(true);
+    const mq = window.matchMedia("(max-width: 768px)");
+    const syncViewport = () => {
+      const mobile = mq.matches;
+      setIsMobileNav(mobile);
+      if (!mobile) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    syncViewport();
+    mq.addEventListener("change", syncViewport);
+    return () => mq.removeEventListener("change", syncViewport);
   }, []);
 
   useEffect(() => {
@@ -529,8 +548,120 @@ export function Navbar() {
 
   const signInMenuItems = isLoggedIn ? portalMenuItems : guestSignInItems;
 
-  return (
-    <nav className={`navbar${isMenuOpen ? " nav-open" : ""}${isScrolled ? " navbar--scrolled" : ""}`}>
+  const navLinks = (
+    <ul
+      ref={mobileNavRef}
+      id="mobile-nav-menu"
+      role={isMenuOpen ? "dialog" : undefined}
+      aria-modal={isMenuOpen ? true : undefined}
+      aria-hidden={!isMenuOpen}
+      aria-label={isMenuOpen ? "Site navigation" : undefined}
+      className={`nav-links nav-links--segmented${isMobileNav ? " nav-links--mobile-portal" : ""}${isMenuOpen ? " active nav-mobile-menu" : ""}`}
+    >
+      <li>
+        {isLoggedIn ? (
+          <Link href={homeRootHref} className={navPillClass(isHomeActive)}>
+            Home
+          </Link>
+        ) : (
+          <Link href={getHomeSectionHref("home")} className={navPillClass(isHomeActive)}>
+            Home
+          </Link>
+        )}
+      </li>
+      <li>
+        <Link href="/residential-trash-can-cleaning" className={navPillClass(isResidentialActive)}>
+          Residential
+        </Link>
+      </li>
+      <li>
+        <Link href="/commercial-trash-bin-cleaning" className={navPillClass(isCommercialActive)}>
+          Commercial
+        </Link>
+      </li>
+      <li>
+        <Link href={getHomeSectionHref("service-areas")} className={navPillClass(false)}>
+          Service Areas
+        </Link>
+      </li>
+      <li>
+        <Link href="/careers" className={navPillClass(isCareersActive)}>
+          Careers
+        </Link>
+      </li>
+      <li
+        ref={signInRef}
+        className="nav-sign-in-item"
+        onMouseEnter={() => {
+          if (!isMenuOpen) {
+            setIsSignInOpen(true);
+          }
+        }}
+        onMouseLeave={() => {
+          if (!isMenuOpen) {
+            closeSignIn();
+          }
+        }}
+      >
+        <button
+          ref={signInButtonRef}
+          type="button"
+          onClick={toggleSignIn}
+          aria-haspopup="menu"
+          aria-expanded={isSignInOpen}
+          aria-controls="sign-in-menu"
+          id="sign-in-button"
+          className={navPillClass(isSignInOpen && isMenuOpen, "nav-pill--ghost nav-sign-in-toggle")}
+        >
+          <span>{isMenuOpen ? "Portals" : "Sign In"}</span>
+          <span className="nav-pill__chevron" aria-hidden="true">
+            {isSignInOpen ? "▲" : "▼"}
+          </span>
+        </button>
+        {isSignInOpen && (
+          <div className="sign-in-dropdown-wrap">
+            <div
+              id="sign-in-menu"
+              role="menu"
+              aria-labelledby="sign-in-button"
+              className="sign-in-dropdown"
+            >
+              {signInMenuItems.map((item) => (
+                <PortalDropdownItem
+                  key={item.id}
+                  item={item}
+                  isMobileMenu={isMenuOpen}
+                  onNavigate={handlePortalNavigate}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </li>
+      {!loading && isLoggedIn && dashboardNavLabel && (
+        <li>
+          <Link href={accountUrl} className={navPillClass(isDashboardActive)}>
+            {dashboardNavLabel}
+          </Link>
+        </li>
+      )}
+      {!loading && isLoggedIn && (
+        <li>
+          <button type="button" onClick={handleLogout} className="nav-pill nav-pill--ghost">
+            Logout
+          </button>
+        </li>
+      )}
+      <li>
+        <Link href={getHomeSectionHref("pricing")} className="nav-login">
+          Get Started
+        </Link>
+      </li>
+    </ul>
+  );
+
+  const mobileNavLayer = (
+    <>
       {isMenuOpen && (
         <button
           type="button"
@@ -539,140 +670,41 @@ export function Navbar() {
           onClick={() => setIsMenuOpen(false)}
         />
       )}
-      <div className="nav-container">
-        <Link
-          href={homeRootHref}
-          className={`nav-logo${isHomePage ? " nav-logo--home" : ""}`}
-        >
-          <BrandLogo
-            variant="nav"
-            tone="none"
-            className={isHomePage ? "brand-logo--nav-home" : ""}
-            priority={isHomePage}
-          />
-        </Link>
-        <ul
-          ref={mobileNavRef}
-          id="mobile-nav-menu"
-          role={isMenuOpen ? "dialog" : undefined}
-          aria-modal={isMenuOpen ? true : undefined}
-          aria-hidden={!isMenuOpen}
-          aria-label={isMenuOpen ? "Site navigation" : undefined}
-          className={`nav-links nav-links--segmented${isMenuOpen ? " active nav-mobile-menu" : ""}`}
-        >
-          <li>
-            {isLoggedIn ? (
-              <Link href={homeRootHref} className={navPillClass(isHomeActive)}>
-                Home
-              </Link>
-            ) : (
-              <Link href={getHomeSectionHref("home")} className={navPillClass(isHomeActive)}>
-                Home
-              </Link>
-            )}
-          </li>
-          <li>
-            <Link href="/residential-trash-can-cleaning" className={navPillClass(isResidentialActive)}>
-              Residential
-            </Link>
-          </li>
-          <li>
-            <Link href="/commercial-trash-bin-cleaning" className={navPillClass(isCommercialActive)}>
-              Commercial
-            </Link>
-          </li>
-          <li>
-            <Link href={getHomeSectionHref("service-areas")} className={navPillClass(false)}>
-              Service Areas
-            </Link>
-          </li>
-          <li>
-            <Link href="/careers" className={navPillClass(isCareersActive)}>
-              Careers
-            </Link>
-          </li>
-          <li
-            ref={signInRef}
-            className="nav-sign-in-item"
-            onMouseEnter={() => {
-              if (!isMenuOpen) {
-                setIsSignInOpen(true);
-              }
-            }}
-            onMouseLeave={() => {
-              if (!isMenuOpen) {
-                closeSignIn();
-              }
-            }}
+      {navLinks}
+    </>
+  );
+
+  return (
+    <>
+      <nav className={`navbar${isMenuOpen ? " nav-open" : ""}${isScrolled ? " navbar--scrolled" : ""}`}>
+        <div className="nav-container">
+          <Link
+            href={homeRootHref}
+            className={`nav-logo${isHomePage ? " nav-logo--home" : ""}`}
           >
-            <button
-              ref={signInButtonRef}
-              type="button"
-              onClick={toggleSignIn}
-              aria-haspopup="menu"
-              aria-expanded={isSignInOpen}
-              aria-controls="sign-in-menu"
-              id="sign-in-button"
-              className={navPillClass(isSignInOpen && isMenuOpen, "nav-pill--ghost nav-sign-in-toggle")}
-            >
-              <span>{isMenuOpen ? "Portals" : "Sign In"}</span>
-              <span className="nav-pill__chevron" aria-hidden="true">
-                {isSignInOpen ? "▲" : "▼"}
-              </span>
-            </button>
-            {isSignInOpen && (
-              <div className="sign-in-dropdown-wrap">
-                <div
-                  id="sign-in-menu"
-                  role="menu"
-                  aria-labelledby="sign-in-button"
-                  className="sign-in-dropdown"
-                >
-                  {signInMenuItems.map((item) => (
-                    <PortalDropdownItem
-                      key={item.id}
-                      item={item}
-                      isMobileMenu={isMenuOpen}
-                      onNavigate={handlePortalNavigate}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </li>
-          {!loading && isLoggedIn && dashboardNavLabel && (
-            <li>
-              <Link href={accountUrl} className={navPillClass(isDashboardActive)}>
-                {dashboardNavLabel}
-              </Link>
-            </li>
-          )}
-          {!loading && isLoggedIn && (
-            <li>
-              <button type="button" onClick={handleLogout} className="nav-pill nav-pill--ghost">
-                Logout
-              </button>
-            </li>
-          )}
-          <li>
-            <Link href={getHomeSectionHref("pricing")} className="nav-login">
-              Get Started
-            </Link>
-          </li>
-        </ul>
-        <button
-          type="button"
-          className="nav-toggle"
-          onClick={toggleMenu}
-          aria-label="Toggle menu"
-          aria-expanded={isMenuOpen}
-          aria-controls="mobile-nav-menu"
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-      </div>
-    </nav>
+            <BrandLogo
+              variant="nav"
+              tone="none"
+              className={isHomePage ? "brand-logo--nav-home" : ""}
+              priority={isHomePage}
+            />
+          </Link>
+          {!isMobileNav && navLinks}
+          <button
+            type="button"
+            className="nav-toggle"
+            onClick={toggleMenu}
+            aria-label="Toggle menu"
+            aria-expanded={isMenuOpen}
+            aria-controls="mobile-nav-menu"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+      </nav>
+      {portalReady && isMobileNav && createPortal(mobileNavLayer, document.body)}
+    </>
   );
 }
