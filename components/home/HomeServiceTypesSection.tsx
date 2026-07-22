@@ -20,8 +20,8 @@ const SERVICE_TYPES = [
     title: "Restaurant Bin Cleaning",
     description: "Cleaning options for businesses dealing with food residue, odors, and frequent waste use.",
     href: "/restaurant-trash-bin-cleaning",
-    image: "/website-cover-1920.jpg",
-    imageAlt: "Bin Blast Co. commercial trash bin cleaning equipment",
+    image: "/restaurant-bin-service.jpg",
+    imageAlt: "Bin Blast Co. technician power washing a commercial dumpster behind a restaurant",
   },
   {
     title: "Commercial Bin Cleaning",

@@ -246,6 +246,8 @@ export const SERVICE_PAGES: SeoPageDefinition[] = [
       { href: "/trash-can-cleaning-fayetteville-ga", label: "Fayetteville, GA" },
     ],
     primaryCta: { label: "Request a Restaurant Quote", href: "/?openQuote=commercial#pricing" },
+    heroImage: "/restaurant-bin-service.jpg",
+    heroImageAlt: "Bin Blast Co. technician power washing a commercial dumpster behind a restaurant",
   },
   {
     slug: "trash-can-sanitizing",
