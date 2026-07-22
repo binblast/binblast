@@ -787,11 +787,17 @@ body.nav-menu-open {
   /* Hero CTA stack */
   .hero-buttons {
     flex-direction: column !important;
-    align-items: stretch !important;
+    align-items: center !important;
+  }
+
+  .hero--split .hero-buttons {
+    align-items: center !important;
   }
 
   .hero-buttons .btn {
-    max-width: none !important;
+    max-width: min(100%, 22rem) !important;
+    width: 100% !important;
+    margin-inline: auto;
   }
 }
 

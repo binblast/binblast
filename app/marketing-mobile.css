@@ -37,7 +37,18 @@
   }
 
   .hero--split .hero-buttons {
-    padding-right: 4.25rem;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100%;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    margin-inline: auto;
+  }
+
+  .hero--split .hero-buttons .btn {
+    width: min(100%, 22rem);
+    max-width: 100%;
+    margin-inline: auto;
   }
 
   .nav-links.active .nav-pill,
