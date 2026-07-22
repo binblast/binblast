@@ -13,9 +13,37 @@
     overflow-x: clip;
   }
 
-  /* Nav drawer: hide from assistive tech when closed */
+  /* Nav drawer: hide closed menu without breaking slide animation */
   .nav-links:not(.active) {
     pointer-events: none;
+  }
+
+  .nav-links.active {
+    pointer-events: auto;
+  }
+
+  /* Hero background must cover full section on phones */
+  .hero__backdrop,
+  .hero__backdrop picture {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hero__backdrop-image {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    min-height: 100% !important;
+    object-fit: cover !important;
+    object-position: center 35% !important;
+  }
+
+  .hero--split {
+    min-height: min(92dvh, 920px);
   }
 
   .nav-links.active .nav-pill,
@@ -26,11 +54,7 @@
     justify-content: flex-start !important;
   }
 
-  /* Hero */
-  .hero--split {
-    min-height: auto;
-  }
-
+  /* Hero content spacing */
   .hero--split .hero__grid {
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;

@@ -630,7 +630,7 @@ body.nav-menu-open {
   }
 
   /* Prevent horizontal overflow site-wide */
-  img,
+  img:not(.hero__backdrop-image):not(.brand-logo__image),
   video,
   svg,
   canvas {
