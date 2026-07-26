@@ -68,6 +68,13 @@ export async function PATCH(
     if (body.clearAssignment === true) {
       updates.assignedEmployeeId = admin.firestore.FieldValue.delete();
       updates.assignedEmployeeName = admin.firestore.FieldValue.delete();
+      updates.jobStatus = admin.firestore.FieldValue.delete();
+    } else if (
+      typeof body.assignedEmployeeId === "string" &&
+      body.assignedEmployeeId.length > 0
+    ) {
+      updates.jobStatus = "pending";
+      updates.assignmentSource = "manual";
     }
 
     await docRef.update(updates);
