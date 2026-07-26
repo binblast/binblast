@@ -267,8 +267,8 @@ export function PricingSection() {
     console.log("[PricingSection] Plan clicked:", planId);
     
     if (planId === "commercial") {
-      setQuoteWizardFreshStart(false);
-      setQuoteWizardPreset("commercial");
+      setQuoteWizardPreset(undefined);
+      setQuoteWizardFreshStart(true);
       setShowQuoteWizard(true);
       return;
     }
