@@ -183,11 +183,19 @@ export function Navbar() {
     const menu = mobileNavRef.current;
     if (!menu) return;
 
-    menu.setAttribute("aria-hidden", isMenuOpen ? "false" : "true");
-    if ("inert" in menu) {
-      (menu as HTMLElement & { inert: boolean }).inert = !isMenuOpen;
+    if (isMobileNav) {
+      menu.setAttribute("aria-hidden", isMenuOpen ? "false" : "true");
+      if ("inert" in menu) {
+        (menu as HTMLElement & { inert: boolean }).inert = !isMenuOpen;
+      }
+      return;
     }
-  }, [isMenuOpen]);
+
+    menu.removeAttribute("aria-hidden");
+    if ("inert" in menu) {
+      (menu as HTMLElement & { inert: boolean }).inert = false;
+    }
+  }, [isMenuOpen, isMobileNav]);
 
   const portalMenuItems: PortalMenuItem[] = [
     {
@@ -554,7 +562,7 @@ export function Navbar() {
       id="mobile-nav-menu"
       role={isMenuOpen ? "dialog" : undefined}
       aria-modal={isMenuOpen ? true : undefined}
-      aria-hidden={!isMenuOpen}
+      aria-hidden={isMobileNav ? !isMenuOpen : undefined}
       aria-label={isMenuOpen ? "Site navigation" : undefined}
       className={`nav-links nav-links--segmented${isMobileNav ? " nav-links--mobile-portal" : ""}${isMenuOpen ? " active nav-mobile-menu" : ""}`}
     >
