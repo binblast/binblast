@@ -1,39 +1,40 @@
-import Link from "next/link";
-
 const TRUST_ITEMS = [
   {
-    label: "Residential & Commercial Service",
-    detail: "Homes, HOAs, restaurants, and businesses",
-    href: "/#services-overview",
+    label: "⭐⭐⭐⭐⭐ Customer Reviews",
+    detail: "Trusted by homeowners across South Metro Atlanta",
   },
   {
-    label: "One-Time & Recurring Plans",
-    detail: "Flexible scheduling for every property",
-    href: "/blog/one-time-vs-recurring-trash-can-cleaning",
-  },
-  {
-    label: "Local Metro Atlanta Team",
+    label: "Locally Owned",
     detail: "Based in Fayette County, GA",
-    href: "/#service-areas",
   },
   {
-    label: "Easy Online Booking",
-    detail: "Book or quote in minutes online",
-    href: "/#pricing",
+    label: "Eco-Friendly Cleaning",
+    detail: "Professional process, safer for your property",
+  },
+  {
+    label: "Reliable Service",
+    detail: "On-time curbside visits you can count on",
+  },
+  {
+    label: "Professional Equipment",
+    detail: "Built for deep bin cleaning at your curb",
+  },
+  {
+    label: "Fully Sanitized",
+    detail: "Cleaned, sanitized, and deodorized every visit",
   },
 ] as const;
 
 export function HomeTrustBar() {
   return (
-    <section className="home-trust-bar" aria-label="Why customers choose Bin Blast Co.">
+    <section className="home-trust-bar" aria-label="Why customers trust Bin Blast Co.">
       <div className="container">
         <div className="home-trust-bar__inner">
           {TRUST_ITEMS.map((item) => (
-            <Link key={item.label} href={item.href} className="home-trust-bar__item">
+            <div key={item.label} className="home-trust-bar__item">
               <p className="home-trust-bar__title">{item.label}</p>
               <p className="home-trust-bar__detail">{item.detail}</p>
-              <span className="home-trust-bar__link">Learn more →</span>
-            </Link>
+            </div>
           ))}
         </div>
       </div>

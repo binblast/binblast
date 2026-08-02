@@ -14,6 +14,7 @@ import {
   captureReferralCodeFromLocation,
   capturePartnerCodeFromLocation,
 } from "@/lib/referral-attribution";
+import { resolveUserPortal, type UserPortalType } from "@/lib/user-portal";
 
 
 
@@ -128,6 +129,7 @@ export function PricingSection() {
   const [showMoreServices, setShowMoreServices] = useState(false);
   const [loadingPlanId, setLoadingPlanId] = useState<PlanId | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userPortal, setUserPortal] = useState<UserPortalType | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null);
   const [availableCredit, setAvailableCredit] = useState<number>(0);
   const [loadingCredit, setLoadingCredit] = useState(false);
@@ -204,6 +206,29 @@ export function PricingSection() {
     let unsubscribe: (() => void) | null = null;
     let mounted = true;
 
+    async function syncAuthUser(user: { uid: string; email: string | null } | null) {
+      if (!mounted) return;
+
+      if (!user) {
+        setUserId(null);
+        setUserPortal(null);
+        return;
+      }
+
+      setUserId(user.uid);
+      try {
+        const portal = await resolveUserPortal(user.uid, user.email);
+        if (mounted) {
+          setUserPortal(portal);
+        }
+      } catch (err) {
+        console.warn("[PricingSection] Error resolving user portal:", err);
+        if (mounted) {
+          setUserPortal(null);
+        }
+      }
+    }
+
     async function getCurrentUserId() {
       try {
         const { getAuthInstance, onAuthStateChanged } = await import("@/lib/firebase");
@@ -212,21 +237,16 @@ export function PricingSection() {
         if (!mounted) return;
         
         if (auth && typeof auth === "object" && "currentUser" in auth) {
-          // Get current user immediately if available
           if (auth.currentUser && mounted) {
-            setUserId(auth.currentUser.uid);
+            await syncAuthUser(auth.currentUser);
           }
           
-          // Also listen for auth state changes using safe wrapper
-          unsubscribe = await onAuthStateChanged((user) => {
-            if (mounted) {
-              setUserId(user?.uid || null);
-            }
+          unsubscribe = await onAuthStateChanged(async (user) => {
+            await syncAuthUser(user);
           });
         }
       } catch (err) {
         console.warn("[PricingSection] Error getting user ID:", err);
-        // Continue without userId - checkout will work without referral credits
       }
     }
     
@@ -261,7 +281,10 @@ export function PricingSection() {
     }
 
     loadAvailableCredit();
-  }, [userId]);
+  }, [userId, userPortal]);
+
+  const canBookAsCustomer = Boolean(userId && userPortal === "customer");
+  const isStaffTestingPricing = Boolean(userId && userPortal && userPortal !== "customer");
 
   const handlePlanClick = (planId: PlanId) => {
     console.log("[PricingSection] Plan clicked:", planId);
@@ -273,16 +296,14 @@ export function PricingSection() {
       return;
     }
 
-    // If user is not logged in, show onboarding wizard first
-    if (!userId) {
-      console.log("[PricingSection] User not logged in, showing onboarding wizard");
+    if (!canBookAsCustomer) {
+      console.log("[PricingSection] Guest or staff session — starting customer onboarding");
       setSelectedPlanId(planId);
       setShowOnboardingWizard(true);
       return;
     }
 
-    // If user is logged in, show confirmation modal
-    console.log("[PricingSection] User logged in, showing confirmation modal");
+    console.log("[PricingSection] Customer logged in, showing confirmation modal");
     setSelectedPlanId(planId);
   };
 
@@ -291,6 +312,13 @@ export function PricingSection() {
     setCreatingAccount(true);
 
     try {
+      if (isStaffTestingPricing) {
+        const { signOut } = await import("@/lib/firebase");
+        await signOut();
+        setUserId(null);
+        setUserPortal(null);
+      }
+
       const {
         createUserWithEmailAndPassword,
         signInWithEmailAndPassword,
@@ -313,6 +341,14 @@ export function PricingSection() {
           createErr.code === "auth/email-already-exists"
         ) {
           userCredential = await signInWithEmailAndPassword(accountEmail, password);
+          const portal = await resolveUserPortal(userCredential.user.uid, accountEmail);
+          if (portal !== "customer") {
+            const { signOut } = await import("@/lib/firebase");
+            await signOut();
+            throw new Error(
+              "That email is tied to a staff or partner account. Use a different email for the customer booking test."
+            );
+          }
         } else {
           throw createErr;
         }
@@ -361,6 +397,7 @@ export function PricingSection() {
       }
 
       setUserId(userCredential.user.uid);
+      setUserPortal("customer");
       setOnboardingData(data);
       setShowOnboardingWizard(false);
       persistSiteLeadProfile({
@@ -381,7 +418,7 @@ export function PricingSection() {
     referralCode?: string,
     partnerCode?: string
   ) => {
-    if (!selectedPlanId || !userId) return;
+    if (!selectedPlanId || !canBookAsCustomer || !userId) return;
 
     setLoadingPlanId(selectedPlanId);
     setLoadingCredit(true);
@@ -492,7 +529,7 @@ export function PricingSection() {
           creatingAccount={creatingAccount}
         />
       )}
-      {selectedPlanId && selectedPlanId !== "commercial" && !showOnboardingWizard && userId && (
+      {selectedPlanId && selectedPlanId !== "commercial" && !showOnboardingWizard && canBookAsCustomer && userId && (
         <PlanConfirmationModal
           planId={selectedPlanId}
           isOpen={true}
@@ -516,6 +553,30 @@ export function PricingSection() {
       <div className="container">
 
         <h2 className="section-title">Plans & Pricing</h2>
+
+        {isStaffTestingPricing && (
+          <div
+            style={{
+              maxWidth: "720px",
+              margin: "0 auto 1.5rem",
+              padding: "1rem 1.125rem",
+              borderRadius: "12px",
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+              color: "#1e3a8a",
+              fontSize: "0.925rem",
+              lineHeight: 1.6,
+              textAlign: "center",
+            }}
+          >
+            You&apos;re signed in to Blast Command. To test the customer booking flow, use a separate
+            customer email in the steps below, or open{" "}
+            <a href="/admin/test-flow" style={{ color: "#1d4ed8", fontWeight: 700 }}>
+              Test Flow Setup
+            </a>{" "}
+            for ready-made test accounts.
+          </div>
+        )}
         
         <div style={{ textAlign: "center", marginBottom: "0.5rem" }}>
           <span style={{ 

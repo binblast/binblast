@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const CUSTOMER_REVIEWS = [
   {
     name: "Jessica T.",
@@ -52,7 +54,7 @@ export function HomeReviewsSection() {
     <section id="testimonials" className="home-reviews">
       <div className="container">
         <h2 className="section-title" style={{ textAlign: "center" }}>
-          What Customers Are Saying
+          ⭐⭐⭐⭐⭐ What Customers Are Saying
         </h2>
         <div className="home-reviews__grid">
           {CUSTOMER_REVIEWS.map((review) => {
@@ -77,14 +79,9 @@ export function HomeReviewsSection() {
           })}
         </div>
         <div className="home-reviews__cta">
-          <a
-            href="https://www.google.com/search?q=Bin+Blast+Co+reviews"
-            className="home-reviews__button"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View More Reviews
-          </a>
+          <Link href="#pricing" className="btn btn-primary btn-large">
+            Book Your Cleaning
+          </Link>
         </div>
       </div>
     </section>

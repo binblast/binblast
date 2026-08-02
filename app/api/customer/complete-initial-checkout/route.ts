@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { generateReadableReferralCode } from "@/lib/referral-code-format";
+import { isStaffRole } from "@/lib/user-portal";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,14 @@ export async function POST(req: NextRequest) {
     }
 
     const userData = userDoc.data() || {};
+
+    if (isStaffRole(userData.role, userData.email)) {
+      return NextResponse.json(
+        { error: "Staff accounts cannot complete customer checkout. Use a separate customer account." },
+        { status: 403 }
+      );
+    }
+
     if (userData.initialCheckoutCompleted && userData.stripeSubscriptionId) {
       return NextResponse.json({ success: true, alreadyCompleted: true });
     }

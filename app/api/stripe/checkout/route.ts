@@ -13,6 +13,14 @@ import {
   validateReferralCode,
 } from "@/lib/referral-service";
 import type Stripe from "stripe";
+import { getAdminFirestore } from "@/lib/firebase-admin";
+import { isStaffRole } from "@/lib/user-portal";
+
+function onboardingEmail(onboardingData: unknown): string | null {
+  if (!onboardingData || typeof onboardingData !== "object") return null;
+  const email = (onboardingData as { email?: unknown }).email;
+  return typeof email === "string" ? email : null;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -46,7 +54,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (onboardingData && !userId) {
+    let checkoutUserId = typeof userId === "string" && userId.trim() ? userId.trim() : "";
+
+    if (checkoutUserId) {
+      try {
+        const db = await getAdminFirestore();
+        const userDoc = await db.collection("users").doc(checkoutUserId).get();
+        const userData = userDoc.exists ? userDoc.data() : null;
+        if (
+          isStaffRole(userData?.role, userData?.email || onboardingEmail(onboardingData))
+        ) {
+          console.log("[Checkout] Staff account detected — treating checkout as new customer flow");
+          checkoutUserId = "";
+        }
+      } catch (staffCheckError) {
+        console.warn("[Checkout] Could not verify staff status for userId:", staffCheckError);
+      }
+    }
+
+    if (onboardingData && !checkoutUserId) {
       return NextResponse.json(
         { error: "Please create your account before checkout." },
         { status: 400 }
@@ -63,8 +89,8 @@ export async function POST(req: NextRequest) {
     if (referralCode) {
       successUrlParams.push(`ref=${encodeURIComponent(referralCode)}`);
     }
-    const successPath = userId ? "/dashboard" : "/register";
-    if (userId) {
+    const successPath = checkoutUserId ? "/dashboard" : "/register";
+    if (checkoutUserId) {
       successUrlParams.push("initial_checkout=1");
     }
     const successUrl = `${origin}${successPath}?${successUrlParams.join("&")}`;
@@ -111,8 +137,8 @@ export async function POST(req: NextRequest) {
       try {
         const normalizedCode = normalizeReferralCode(referralCode);
 
-        if (userId) {
-          const alreadyUsedDifferentCode = await hasUserUsedAnotherReferralCode(userId, normalizedCode);
+        if (checkoutUserId) {
+          const alreadyUsedDifferentCode = await hasUserUsedAnotherReferralCode(checkoutUserId, normalizedCode);
           if (alreadyUsedDifferentCode) {
             return NextResponse.json(
               { error: "You have already used a referral code" },
@@ -153,9 +179,9 @@ export async function POST(req: NextRequest) {
     let discountAmount = 0;
     let creditsToUse: string[] = [];
     
-    if (userId && applyCredit === true) {
+    if (checkoutUserId && applyCredit === true) {
       try {
-        const { credits } = await getUnusedCreditsForUser(userId);
+        const { credits } = await getUnusedCreditsForUser(checkoutUserId);
 
         if (credits.length > 0) {
           const planPriceInCents = plan.price * 100;
@@ -341,7 +367,7 @@ export async function POST(req: NextRequest) {
     // Store credit information, referral code, and partner info in metadata (will be used after payment)
     sessionParams.metadata = {
       ...sessionParams.metadata,
-      userId: userId || "",
+      userId: checkoutUserId || "",
     };
     
     if (discountAmount > 0 && creditsToUse.length > 0) {

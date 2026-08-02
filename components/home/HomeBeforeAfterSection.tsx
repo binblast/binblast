@@ -3,15 +3,15 @@ import Link from "next/link";
 
 const BEFORE_AFTER = [
   {
-    label: "Before",
+    label: "Dirty Bin",
     image: "/bin-before.jpg",
     alt: "Dirty trash bin interior before Bin Blast Co. cleaning",
     badgeClass: "home-before-after__badge--before",
   },
   {
-    label: "After",
+    label: "Professionally Cleaned Bin",
     image: "/bin-after.jpg",
-    alt: "Clean trash bin interior after Bin Blast Co. cleaning",
+    alt: "Professionally cleaned trash bin after Bin Blast Co. service",
     badgeClass: "home-before-after__badge--after",
   },
 ] as const;
@@ -19,34 +19,53 @@ const BEFORE_AFTER = [
 export function HomeBeforeAfterSection() {
   return (
     <section id="results" className="home-before-after">
-      <div className="container" style={{ maxWidth: "920px", textAlign: "center" }}>
-        <h2 className="section-title">See the Bin Blast Difference</h2>
-        <p className="section-subtitle" style={{ margin: "0.75rem auto 0" }}>
-          Real before-and-after photos from Bin Blast Co. service visits.
+      <div className="container home-before-after__container">
+        <h2 className="section-title">See the Difference</h2>
+        <p className="section-subtitle">
+          Real before-and-after results from Bin Blast Co. service visits.
         </p>
+
         <div className="home-before-after__grid">
-          {BEFORE_AFTER.map((photo) => (
-            <figure key={photo.label} className="home-before-after__card">
-              <div className="home-before-after__media">
-                <Image
-                  src={photo.image}
-                  alt={photo.alt}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 440px"
-                  loading="lazy"
-                />
-                <span className={`home-before-after__badge ${photo.badgeClass}`}>{photo.label}</span>
-              </div>
-              <figcaption className="home-before-after__caption">
-                <span>Peachtree City, GA</span>
-                <span>Residential Cleaning</span>
-              </figcaption>
-            </figure>
-          ))}
+          <figure className="home-before-after__card">
+            <div className="home-before-after__media">
+              <Image
+                src={BEFORE_AFTER[0].image}
+                alt={BEFORE_AFTER[0].alt}
+                fill
+                sizes="(max-width: 768px) 100vw, 440px"
+                loading="lazy"
+              />
+              <span className={`home-before-after__badge ${BEFORE_AFTER[0].badgeClass}`}>
+                {BEFORE_AFTER[0].label}
+              </span>
+            </div>
+          </figure>
+
+          <div className="home-before-after__arrow" aria-hidden="true">
+            ↓
+          </div>
+
+          <figure className="home-before-after__card">
+            <div className="home-before-after__media">
+              <Image
+                src={BEFORE_AFTER[1].image}
+                alt={BEFORE_AFTER[1].alt}
+                fill
+                sizes="(max-width: 768px) 100vw, 440px"
+                loading="lazy"
+              />
+              <span className={`home-before-after__badge ${BEFORE_AFTER[1].badgeClass}`}>
+                {BEFORE_AFTER[1].label}
+              </span>
+            </div>
+          </figure>
         </div>
-        <Link href="#pricing" className="btn btn-primary btn-large">
-          Book a Cleaning
-        </Link>
+
+        <div className="home-section-cta">
+          <Link href="#pricing" className="btn btn-primary btn-large">
+            Book Your Cleaning
+          </Link>
+        </div>
       </div>
     </section>
   );

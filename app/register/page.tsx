@@ -105,15 +105,34 @@ function RegisterForm() {
   useEffect(() => {
     async function checkAuth() {
       try {
-        const { getAuthInstance } = await import("@/lib/firebase");
+        const { getAuthInstance, getDbInstance, signOut } = await import("@/lib/firebase");
         const auth = await getAuthInstance();
         
         if (auth?.currentUser) {
           setIsLoggedIn(true);
           
-          // If user is logged in and has session_id, they just paid
-          // Their account already exists, so redirect them to dashboard
           if (sessionId) {
+            const db = await getDbInstance();
+            let isStaffSession = false;
+
+            if (db) {
+              const { doc, getDoc } = await import("firebase/firestore");
+              const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+              const userData = userDoc.exists() ? userDoc.data() : null;
+              const { isStaffRole } = await import("@/lib/user-portal");
+              isStaffSession = isStaffRole(
+                userData?.role,
+                userData?.email || auth.currentUser.email
+              );
+            }
+
+            if (isStaffSession) {
+              console.log("[Register] Staff session after customer payment — signing out for registration");
+              await signOut();
+              setIsLoggedIn(false);
+              return;
+            }
+
             console.log("[Register] User is logged in and has payment session, redirecting to dashboard");
             router.push("/dashboard");
             return;

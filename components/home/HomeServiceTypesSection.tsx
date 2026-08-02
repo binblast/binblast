@@ -62,6 +62,11 @@ export function HomeServiceTypesSection() {
             </Link>
           ))}
         </div>
+        <div className="home-section-cta">
+          <Link href="#pricing" className="btn btn-primary btn-large">
+            Book Your Cleaning
+          </Link>
+        </div>
       </div>
     </section>
   );

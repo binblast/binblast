@@ -4,16 +4,17 @@ export function HomeFinalCtaSection() {
   return (
     <section className="home-final-cta">
       <div className="container home-final-cta__inner">
-        <h2>Ready for Cleaner, Fresher Trash Bins?</h2>
+        <h2>Ready for a Fresh, Sanitized Trash Bin?</h2>
         <p>
-          Book your Bin Blast Co. service online or request a custom quote for your community or business.
+          Book online in minutes. We serve homeowners and businesses across Fayetteville,
+          Peachtree City, and South Metro Atlanta.
         </p>
         <div className="home-final-cta__actions">
           <Link href="#pricing" className="btn btn-primary btn-large">
-            Book a Cleaning
+            Book Your Cleaning
           </Link>
-          <Link href="/?openQuote=custom#pricing" className="btn btn-secondary btn-large">
-            Get a Custom Quote
+          <Link href="#pricing" className="btn btn-secondary btn-large">
+            View Pricing
           </Link>
         </div>
       </div>

@@ -8,19 +8,39 @@ export const PRICING_ANSWER =
 
 export const HOME_FAQ_ITEMS: FaqItem[] = [
   {
-    question: "How does trash can cleaning work?",
+    question: "Do I need to be home during service?",
+    answer:
+      "No. Leave your empty bins accessible at the curb or in an agreed location after trash collection. We notify you when the service is complete.",
+  },
+  {
+    question: "How often should trash bins be cleaned?",
+    answer:
+      "Most homeowners choose monthly or bi-weekly service to keep odors and bacteria under control. Businesses with heavy use often schedule weekly or custom recurring plans.",
+  },
+  {
+    question: "Do you clean inside and outside the bin?",
+    answer:
+      "Yes. We deep-clean both the interior and exterior, then sanitize and deodorize so your bins look and smell fresh.",
+  },
+  {
+    question: "What areas do you service?",
+    answer:
+      "We serve select communities in South Metro Atlanta, including Fayetteville, Peachtree City, Tyrone, Newnan, Senoia, Sharpsburg, Jonesboro, Hampton, Stockbridge, McDonough, East Point, and Atlanta. Booking confirms availability for your address.",
+  },
+  {
+    question: "How long does cleaning take?",
+    answer:
+      "Most curbside cleanings take about 10–15 minutes per bin, depending on size and condition.",
+  },
+  {
+    question: "How does trash bin cleaning work?",
     answer:
       "Bin Blast Co. uses professional curbside equipment to deep clean, sanitize, and deodorize your bins at the agreed service location. We remove residue and odors so your containers stay fresher between collection days.",
   },
   {
-    question: "Do I need to be home during service?",
-    answer:
-      "No. Leave your bins accessible at the curb or in an agreed location after trash collection. We notify you when the service is complete.",
-  },
-  {
     question: "Do you offer one-time cleaning?",
     answer:
-      "Yes. One-time trash can cleaning is available for move-ins, seasonal refreshes, special events, and first-time customers.",
+      "Yes. One-time trash bin cleaning is available for move-ins, seasonal refreshes, special events, and first-time customers.",
   },
   {
     question: "Do you offer recurring cleaning?",
@@ -28,32 +48,12 @@ export const HOME_FAQ_ITEMS: FaqItem[] = [
       "Yes. Recurring plans are available for homeowners, HOAs, restaurants, apartments, and commercial properties based on your schedule and bin count.",
   },
   {
-    question: "Can you clean more than one bin?",
-    answer:
-      "Yes. We clean multiple trash, recycling, and specialty bins at the same service location. Pricing depends on the number of bins and service frequency.",
-  },
-  {
-    question: "Do you service HOAs and neighborhoods?",
-    answer:
-      "Yes. We work with HOAs and neighborhood communities on group programs, preferred vendor arrangements, and resident signup options.",
-  },
-  {
     question: "Do you clean bins for restaurants and businesses?",
     answer:
       "Yes. We serve restaurants, property managers, offices, retail locations, and other commercial accounts with scheduled bin cleaning.",
   },
   {
-    question: "What areas do you serve?",
-    answer:
-      "We serve select communities in South Metro Atlanta, including Fayetteville, Peachtree City, Tyrone, Newnan, Senoia, Sharpsburg, Jonesboro, Hampton, Stockbridge, McDonough, East Point, and Atlanta. Booking confirms availability for your address.",
-  },
-  {
-    question: "How do I prepare my bins for cleaning?",
-    answer:
-      "Leave empty bins accessible after trash collection at the agreed location. Remove loose bags or items inside the bin when possible, and let us know about any access instructions when you book.",
-  },
-  {
-    question: "How much does trash can cleaning cost?",
+    question: "How much does trash bin cleaning cost?",
     answer: PRICING_ANSWER,
   },
 ];

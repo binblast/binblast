@@ -106,3 +106,24 @@ export function portalMatchesExpected(
 ): boolean {
   return userPortal === expectedRoleToPortal(expectedRole);
 }
+
+/** Staff portals should not reuse the logged-in session for new customer checkout. */
+export function isStaffPortal(portal: UserPortalType): boolean {
+  return portal === "operator" || portal === "employee";
+}
+
+export function isStaffRole(role?: string, email?: string | null): boolean {
+  const adminEmail = (
+    typeof process !== "undefined" && process.env.NEXT_PUBLIC_ADMIN_EMAIL
+      ? process.env.NEXT_PUBLIC_ADMIN_EMAIL
+      : ADMIN_EMAIL
+  ).toLowerCase();
+
+  return (
+    role === "operator" ||
+    role === "admin" ||
+    role === "owner" ||
+    role === "employee" ||
+    email?.toLowerCase() === adminEmail
+  );
+}

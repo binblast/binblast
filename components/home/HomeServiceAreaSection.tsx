@@ -17,7 +17,7 @@ export function HomeServiceAreaSection() {
           ))}
         </div>
         <Link href="#pricing" className="btn btn-primary btn-large">
-          Check Service Availability
+          Book Your Cleaning
         </Link>
       </div>
     </section>

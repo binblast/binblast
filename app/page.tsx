@@ -3,16 +3,19 @@
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import Link from "next/link";
-import { METRO_ATLANTA_TAGLINE } from "@/lib/service-areas";
+import Image from "next/image";
 import { buildPageMetadata } from "@/lib/seo/metadata-helpers";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { faqPageSchema } from "@/lib/seo/schema";
 import { HOME_FAQ_ITEMS } from "@/lib/seo/faq-data";
 import { BrandLogo } from "@/components/BrandLogo";
 import { HomeTrustBar } from "@/components/home/HomeTrustBar";
-import { HomeEnvironmentSection } from "@/components/home/HomeEnvironmentSection";
-import { HomeServiceTypesSection } from "@/components/home/HomeServiceTypesSection";
+import { HomeProblemSection } from "@/components/home/HomeProblemSection";
 import { HomeBeforeAfterSection } from "@/components/home/HomeBeforeAfterSection";
+import { HomeHowItWorksSection } from "@/components/home/HomeHowItWorksSection";
+import { HomeBenefitsSection } from "@/components/home/HomeBenefitsSection";
+import { HomeWhyChooseSection } from "@/components/home/HomeWhyChooseSection";
+import { HomeServiceTypesSection } from "@/components/home/HomeServiceTypesSection";
 import { HomeReviewsSection } from "@/components/home/HomeReviewsSection";
 import { HomeServiceAreaSection } from "@/components/home/HomeServiceAreaSection";
 import { HomeFinalCtaSection } from "@/components/home/HomeFinalCtaSection";
@@ -21,44 +24,54 @@ import "@/components/seo/seo-marketing.css";
 
 export const metadata = buildPageMetadata({
   path: "/",
-  title: "Trash Can Cleaning in South Metro Atlanta | Bin Blast Co.",
+  title: "Trash Bin Cleaning & Sanitizing | Bin Blast Co. | South Metro Atlanta",
   description:
-    "Professional trash can cleaning, sanitizing, and deodorizing for homes, HOAs, restaurants, and businesses across South Metro Atlanta.",
+    "Professional trash bin cleaning, trash can cleaning, and bin sanitizing for homes and businesses in Fayetteville, Peachtree City, and South Metro Atlanta. Book online today.",
   keywords: [
+    "trash bin cleaning",
+    "trash can cleaning",
+    "garbage can cleaning",
+    "residential trash bin cleaning",
+    "commercial trash bin cleaning",
+    "bin sanitizing",
+    "Fayette County trash bin cleaning",
+    "Peachtree City trash bin cleaning",
+    "Fayetteville trash bin cleaning",
     "trash can cleaning near me",
-    "trash can cleaning Fayetteville GA",
-    "garbage can cleaning Peachtree City GA",
-    "trash bin cleaning South Atlanta",
     "trash can sanitizing",
-    "residential trash can cleaning",
     "HOA trash can cleaning",
     "restaurant trash bin cleaning",
-    "commercial bin cleaning",
   ],
 });
 
-// CRITICAL: Dynamically import all components that use Firebase to prevent import-time errors
-// This ensures Firebase is initialized before these components load
-const Navbar = dynamic(() => import("@/components/Navbar").then(mod => mod.Navbar), {
+const Navbar = dynamic(() => import("@/components/Navbar").then((mod) => mod.Navbar), {
   ssr: false,
   loading: () => <nav className="navbar" style={{ minHeight: "80px" }} />,
 });
 
-const PricingSection = dynamic(() => import("@/components/PricingSection").then(mod => ({ default: mod.PricingSection })), {
-  ssr: false,
-  loading: () => <div style={{ minHeight: "400px", padding: "4rem 0" }} />,
-});
+const PricingSection = dynamic(
+  () => import("@/components/PricingSection").then((mod) => ({ default: mod.PricingSection })),
+  {
+    ssr: false,
+    loading: () => <div style={{ minHeight: "400px", padding: "4rem 0" }} />,
+  }
+);
 
-const FAQSection = dynamic(() => import("@/components/FAQSection").then(mod => ({ default: mod.FAQSection })), {
-  ssr: false,
-  loading: () => <div style={{ minHeight: "400px", padding: "4rem 0" }} />,
-});
+const FAQSection = dynamic(
+  () => import("@/components/FAQSection").then((mod) => ({ default: mod.FAQSection })),
+  {
+    ssr: false,
+    loading: () => <div style={{ minHeight: "400px", padding: "4rem 0" }} />,
+  }
+);
 
-// Dynamically import ChatWidget to prevent SSR issues
-const ChatWidget = dynamic(() => import("@/components/ChatWidget").then(mod => ({ default: mod.ChatWidget })), {
-  ssr: false,
-  loading: () => null,
-});
+const ChatWidget = dynamic(
+  () => import("@/components/ChatWidget").then((mod) => ({ default: mod.ChatWidget })),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
 export default function HomePage() {
   return (
@@ -66,81 +79,72 @@ export default function HomePage() {
       <JsonLd data={faqPageSchema(HOME_FAQ_ITEMS)} />
       <Navbar />
       <main className="bg-white marketing-main">
-        {/* Hero Section */}
-        <section id="home" className="hero hero--split">
-          <div className="hero__backdrop" aria-hidden="true">
-            <div className="hero__backdrop-overlay" />
-          </div>
-          <div className="container hero__grid">
-            <div className="hero__copy">
-              <p className="hero-eyebrow">Cleaner Bins. Cleaner Communities.</p>
-              <h1 className="hero-headline">Professional Trash Can Cleaning in South Metro Atlanta</h1>
-              <p className="hero-subheadline">
-                Bin Blast Co. cleans, sanitizes, and deodorizes residential and commercial trash bins throughout Fayetteville, Peachtree City, Tyrone, Newnan, and surrounding communities.
+        <section id="home" className="hero hero--conversion">
+          <div className="container hero__grid hero__grid--conversion">
+            <div className="hero__copy hero__copy--conversion">
+              <p className="hero-eyebrow hero-eyebrow--dark">
+                Residential &amp; Commercial · South Metro Atlanta
               </p>
-              <p className="hero-service-areas">{METRO_ATLANTA_TAGLINE}</p>
+              <h1 className="hero-headline hero-headline--dark">
+                Professional Trash Bin Cleaning &amp; Sanitizing
+              </h1>
+              <p className="hero-subheadline hero-subheadline--dark">
+                Keep your trash cans fresh, odor-free, and bacteria-free without lifting a finger.
+              </p>
               <div className="hero-buttons">
-                <Link href="#pricing" className="btn btn-primary btn-large">Book a Cleaning</Link>
-                <Link href="/?openQuote=custom#pricing" className="btn btn-secondary btn-large">
-                  Get a Custom Quote
+                <Link href="#pricing" className="btn btn-primary btn-large">
+                  Book Your Cleaning
+                </Link>
+                <Link href="#pricing" className="btn btn-secondary btn-large">
+                  View Pricing
                 </Link>
               </div>
-              <p className="hero-note">One-time and recurring cleaning options available.</p>
+              <p className="hero-note hero-note--dark">
+                Serving Fayetteville, Peachtree City, Tyrone, Newnan &amp; surrounding areas.
+              </p>
+            </div>
+            <div className="hero__visual">
+              <Image
+                src="/residential-bin-service.jpg"
+                alt="Bin Blast Co. technician professionally cleaning a residential trash bin at the curb"
+                width={720}
+                height={540}
+                priority
+                className="hero__visual-image"
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
             </div>
           </div>
         </section>
 
         <HomeTrustBar />
-
-        <HomeEnvironmentSection />
-
-        <section id="how-it-works" className="how-it-works">
-          <div className="container">
-            <h2 className="section-title">Clean Bins in Three Simple Steps</h2>
-            <div className="steps-grid">
-              <div className="step-card">
-                <div className="step-number">1</div>
-                <h3 className="step-title">Choose Your Service</h3>
-                <p className="step-description">Select a one-time or recurring cleaning option based on your needs.</p>
-              </div>
-              <div className="step-card">
-                <div className="step-number">2</div>
-                <h3 className="step-title">Leave Your Bins Accessible</h3>
-                <p className="step-description">Place your empty bins at the agreed service location after trash collection.</p>
-              </div>
-              <div className="step-card">
-                <div className="step-number">3</div>
-                <h3 className="step-title">We Clean and Refresh Them</h3>
-                <p className="step-description">Our team cleans, sanitizes, and deodorizes your bins before marking the service complete.</p>
-              </div>
-            </div>
-            <div style={{ textAlign: "center", marginTop: "2rem" }}>
-              <Link href="#pricing" className="btn btn-primary btn-large">Book a Cleaning</Link>
-            </div>
-          </div>
-        </section>
-
-        <HomeServiceTypesSection />
+        <HomeProblemSection />
         <HomeBeforeAfterSection />
+        <HomeHowItWorksSection />
+        <HomeBenefitsSection />
+        <HomeWhyChooseSection />
+        <HomeServiceTypesSection />
         <HomeReviewsSection />
         <HomeServiceAreaSection />
 
-        {/* Plans & Pricing Section */}
         <Suspense fallback={<div style={{ minHeight: "400px", padding: "4rem 0" }} />}>
           <PricingSection />
         </Suspense>
 
-        {/* Business Partner Program Section */}
-        <section id="partners" style={{ padding: "2.5rem 0", background: "#f0f9ff", borderTop: "1px solid #bae6fd" }}>
+        <section
+          id="partners"
+          style={{ padding: "2.5rem 0", background: "#f0f9ff", borderTop: "1px solid #bae6fd" }}
+        >
           <div className="container" style={{ maxWidth: "760px", margin: "0 auto", textAlign: "center" }}>
             <h2 className="section-title" style={{ fontSize: "clamp(1.25rem, 4vw, 1.5rem)" }}>
-              Service Business Partners
+              Business Owner?
             </h2>
             <p style={{ color: "var(--text-light)", lineHeight: 1.7, marginBottom: "1.25rem" }}>
-              Local pressure washing, detailing, and service businesses can add recurring bin-cleaning revenue through the Bin Blast Co. partner program.
+              Restaurants, property managers, and HOAs can request a custom quote for recurring
+              commercial trash bin cleaning.
             </p>
-            <Link href="/partners" className="btn btn-secondary btn-large">
-              Explore the Partner Program
+            <Link href="/?openQuote=custom#pricing" className="btn btn-secondary btn-large">
+              Get a Custom Quote
             </Link>
           </div>
         </section>
@@ -149,47 +153,81 @@ export default function HomePage() {
 
         <HomeFinalCtaSection />
 
-        {/* Footer */}
         <footer id="book-now" className="footer footer-enhanced">
           <div className="container">
             <div className="footer-content">
               <div className="footer-brand-block">
                 <BrandLogo variant="footer" tone="dark" href="/" />
                 <p>
-                  Bin Blast Co. provides professional trash can cleaning, sanitizing, and deodorizing for homes, HOAs, restaurants, and businesses throughout South Metro Atlanta.
+                  Bin Blast Co. provides professional trash bin cleaning, sanitizing, and deodorizing
+                  for homes and businesses throughout South Metro Atlanta.
                 </p>
                 <Link href="#pricing" className="btn btn-primary" style={{ marginTop: "1rem" }}>
-                  Book a Cleaning
+                  Book Your Cleaning
                 </Link>
               </div>
               <div className="footer-section">
                 <h3 className="footer-heading">Residential Services</h3>
-                <p><Link href="/residential-trash-can-cleaning">Residential Bin Cleaning</Link></p>
-                <p><Link href="/hoa-trash-can-cleaning">HOA Bin Cleaning</Link></p>
-                <p><Link href="/one-time-trash-can-cleaning">One-Time Cleaning</Link></p>
-                <p><Link href="/recurring-trash-can-cleaning">Recurring Cleaning</Link></p>
+                <p>
+                  <Link href="/residential-trash-can-cleaning">Residential Bin Cleaning</Link>
+                </p>
+                <p>
+                  <Link href="/hoa-trash-can-cleaning">HOA Bin Cleaning</Link>
+                </p>
+                <p>
+                  <Link href="/one-time-trash-can-cleaning">One-Time Cleaning</Link>
+                </p>
+                <p>
+                  <Link href="/recurring-trash-can-cleaning">Recurring Cleaning</Link>
+                </p>
               </div>
               <div className="footer-section">
                 <h3 className="footer-heading">Commercial Services</h3>
-                <p><Link href="/commercial-trash-bin-cleaning">Commercial Bin Cleaning</Link></p>
-                <p><Link href="/restaurant-trash-bin-cleaning">Restaurant Bin Cleaning</Link></p>
-                <p><Link href="/?openQuote=custom#pricing">Get a Custom Quote</Link></p>
+                <p>
+                  <Link href="/commercial-trash-bin-cleaning">Commercial Bin Cleaning</Link>
+                </p>
+                <p>
+                  <Link href="/restaurant-trash-bin-cleaning">Restaurant Bin Cleaning</Link>
+                </p>
+                <p>
+                  <Link href="/?openQuote=custom#pricing">Get a Custom Quote</Link>
+                </p>
               </div>
               <div className="footer-section">
                 <h3 className="footer-heading">Service Areas</h3>
-                <p><Link href="/trash-can-cleaning-fayetteville-ga">Fayetteville</Link></p>
-                <p><Link href="/trash-can-cleaning-peachtree-city-ga">Peachtree City</Link></p>
-                <p><Link href="/trash-can-cleaning-atlanta-ga">Atlanta</Link></p>
-                <p><Link href="#service-areas">View All Service Areas</Link></p>
+                <p>
+                  <Link href="/trash-can-cleaning-fayetteville-ga">Fayetteville</Link>
+                </p>
+                <p>
+                  <Link href="/trash-can-cleaning-peachtree-city-ga">Peachtree City</Link>
+                </p>
+                <p>
+                  <Link href="/trash-can-cleaning-atlanta-ga">Atlanta</Link>
+                </p>
+                <p>
+                  <Link href="#service-areas">View All Service Areas</Link>
+                </p>
               </div>
               <div className="footer-section">
                 <h3 className="footer-heading">Company</h3>
-                <p><Link href="/careers">Join Our Team</Link></p>
-                <p><Link href="/employee/register">Apply to Become a Bin Blaster</Link></p>
-                <p><Link href="/login">Customer Sign In</Link></p>
-                <p><Link href="/employee">Employee Sign In</Link></p>
-                <p>Phone: <a href="tel:+14703050823">(470) 305-0823</a></p>
-                <p>Email: <a href="mailto:support@binblastco.com">support@binblastco.com</a></p>
+                <p>
+                  <Link href="/careers">Join Our Team</Link>
+                </p>
+                <p>
+                  <Link href="/employee/register">Apply to Become a Bin Blaster</Link>
+                </p>
+                <p>
+                  <Link href="/login">Customer Sign In</Link>
+                </p>
+                <p>
+                  <Link href="/employee">Employee Sign In</Link>
+                </p>
+                <p>
+                  Phone: <a href="tel:+14703050823">(470) 305-0823</a>
+                </p>
+                <p>
+                  Email: <a href="mailto:support@binblastco.com">support@binblastco.com</a>
+                </p>
               </div>
             </div>
             <div className="footer-bottom">
