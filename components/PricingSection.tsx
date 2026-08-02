@@ -490,7 +490,7 @@ export function PricingSection() {
 
       <h3 className="plan-name">{plan.name}</h3>
 
-      <p className={`price-big ${typeof plan.price === "string" ? "custom" : ""}`}>
+      <p className={`price-big ${typeof plan.price === "string" ? "custom" : ""}${plan.highlight ? " price-big--highlight" : ""}`}>
         {typeof plan.price === "number" ? `$${plan.price}` : plan.price}
         {plan.priceSuffix && typeof plan.price === "number" && (
           <span className="price-small">{plan.priceSuffix}</span>
