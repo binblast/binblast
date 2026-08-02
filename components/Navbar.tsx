@@ -142,6 +142,9 @@ export function Navbar() {
   const signInRef = useRef<HTMLLIElement>(null);
   const signInButtonRef = useRef<HTMLButtonElement>(null);
   const mobileNavRef = useRef<HTMLUListElement>(null);
+  const savedScrollYRef = useRef(0);
+  const pendingSectionScrollRef = useRef<string | null>(null);
+  const menuLockActiveRef = useRef(false);
   const router = useRouter();
   const pathname = usePathname();
   const isHomePage = pathname === "/";
@@ -169,13 +172,38 @@ export function Navbar() {
 
   useEffect(() => {
     if (isMenuOpen) {
+      savedScrollYRef.current = window.scrollY;
+      menuLockActiveRef.current = true;
       document.body.classList.add("nav-menu-open");
+      document.body.style.top = `-${savedScrollYRef.current}px`;
     } else {
       document.body.classList.remove("nav-menu-open");
+      document.body.style.top = "";
       setIsSignInOpen(false);
+
+      if (menuLockActiveRef.current) {
+        menuLockActiveRef.current = false;
+
+        if (pendingSectionScrollRef.current) {
+          const sectionId = pendingSectionScrollRef.current;
+          pendingSectionScrollRef.current = null;
+          window.scrollTo(0, savedScrollYRef.current);
+          requestAnimationFrame(() => {
+            const targetElement = document.getElementById(sectionId);
+            if (targetElement) {
+              targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+              window.history.replaceState(null, "", `#${sectionId}`);
+            }
+          });
+        } else {
+          window.scrollTo(0, savedScrollYRef.current);
+        }
+      }
     }
+
     return () => {
       document.body.classList.remove("nav-menu-open");
+      document.body.style.top = "";
     };
   }, [isMenuOpen]);
 
@@ -393,57 +421,67 @@ export function Navbar() {
     return isHomePage ? `#${sectionId}` : buildAttributedHomeHref(sectionId);
   };
 
+  const scrollToHomeSection = useCallback(
+    (sectionId: string) => {
+      if (!sectionId) return;
+
+      closeSignIn();
+
+      if (isMenuOpen) {
+        pendingSectionScrollRef.current = sectionId;
+        setIsMenuOpen(false);
+        return;
+      }
+
+      const targetElement = document.getElementById(sectionId);
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.history.replaceState(null, "", `#${sectionId}`);
+      }
+    },
+    [closeSignIn, isMenuOpen]
+  );
+
   const homeRootHref = isHomePage ? "/" : buildAttributedHomeHref();
 
   useEffect(() => {
     const handleAnchorClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const anchor = target.closest('a[href^="#"]') as HTMLAnchorElement;
-      if (anchor && anchor.getAttribute("href")?.startsWith("#")) {
-        const href = anchor.getAttribute("href") || "";
-        if (isHomePage && href.startsWith("#") && !href.startsWith("/#")) {
-          e.preventDefault();
-          const targetId = href.slice(1);
-          const targetElement = document.getElementById(targetId || "");
-          if (targetElement) {
-            const offsetTop = targetElement.offsetTop - 80;
-            window.scrollTo({
-              top: offsetTop,
-              behavior: "smooth",
-            });
-            setIsMenuOpen(false);
-            closeSignIn();
-          }
-        }
-      }
+      if (!anchor) return;
+
+      const href = anchor.getAttribute("href") || "";
+      if (!href.startsWith("#") || href.startsWith("/#")) return;
+      if (!isHomePage) return;
+
+      e.preventDefault();
+      const targetId = href.slice(1).split("?")[0];
+      scrollToHomeSection(targetId);
     };
 
     document.addEventListener("click", handleAnchorClick);
     return () => document.removeEventListener("click", handleAnchorClick);
-  }, [isHomePage, closeSignIn]);
+  }, [isHomePage, scrollToHomeSection]);
 
   useEffect(() => {
-    if (isHomePage && typeof window !== "undefined") {
-      const hash = window.location.hash;
-      if (hash) {
-        const scrollToSection = () => {
-          const hashValue = hash.slice(1);
-          const targetId = hashValue.split("?")[0];
-          const targetElement = document.getElementById(targetId);
-          if (targetElement) {
-            const offsetTop = targetElement.offsetTop - 80;
-            window.scrollTo({
-              top: offsetTop,
-              behavior: "smooth",
-            });
-          }
-        };
+    if (!isHomePage || typeof window === "undefined") return;
 
-        scrollToSection();
-        setTimeout(scrollToSection, 100);
-        setTimeout(scrollToSection, 500);
+    const hash = window.location.hash;
+    if (!hash) return;
+
+    const targetId = hash.slice(1).split("?")[0];
+    if (!targetId) return;
+
+    const scrollToHash = () => {
+      const targetElement = document.getElementById(targetId);
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
       }
-    }
+    };
+
+    requestAnimationFrame(scrollToHash);
+    const timer = window.setTimeout(scrollToHash, 150);
+    return () => window.clearTimeout(timer);
   }, [isHomePage, pathname]);
 
   useEffect(() => {
@@ -588,7 +626,16 @@ export function Navbar() {
         </Link>
       </li>
       <li>
-        <Link href={getHomeSectionHref("service-areas")} className={navPillClass(false)}>
+        <Link
+          href={getHomeSectionHref("service-areas")}
+          className={navPillClass(false)}
+          onClick={(e) => {
+            if (isHomePage) {
+              e.preventDefault();
+              scrollToHomeSection("service-areas");
+            }
+          }}
+        >
           Service Areas
         </Link>
       </li>

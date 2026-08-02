@@ -4,6 +4,10 @@
   font-size: 1.025rem;
 }
 
+.marketing-main [id] {
+  scroll-margin-top: 88px;
+}
+
 .marketing-main .section-title {
   font-weight: 800;
   letter-spacing: -0.02em;
