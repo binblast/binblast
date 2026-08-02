@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
-import { useFirebase } from "@/lib/firebase-context";
 import { PORTAL_INFO } from "@/lib/user-portal";
 import { buildAttributedHomeHref } from "@/lib/referral-attribution";
 import {
@@ -23,6 +22,47 @@ interface PortalMenuItem {
   href: string;
   icon: PortalIconType;
   showDividerBefore?: boolean;
+}
+
+const AUTH_NAV_CACHE_KEY = "binblast:nav-auth";
+
+type AuthNavCache = {
+  isLoggedIn: boolean;
+  isEmployee: boolean;
+  isOperator: boolean;
+  isStandardCustomer: boolean;
+  accountUrl: string;
+};
+
+function readAuthNavCache(): AuthNavCache | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(AUTH_NAV_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as AuthNavCache;
+    if (typeof parsed?.isLoggedIn !== "boolean") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeAuthNavCache(cache: AuthNavCache) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(AUTH_NAV_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Ignore quota / private-mode failures
+  }
+}
+
+function clearAuthNavCache() {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(AUTH_NAV_CACHE_KEY);
+  } catch {
+    // Ignore storage failures
+  }
 }
 
 function PortalIcon({ type }: { type: PortalIconType }) {
@@ -114,12 +154,16 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileNav, setIsMobileNav] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [accountUrl, setAccountUrl] = useState("/dashboard");
-  const [isEmployee, setIsEmployee] = useState(false);
-  const [isOperator, setIsOperator] = useState(false);
-  const [isStandardCustomer, setIsStandardCustomer] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // Hydrate from session cache so remounts don't hide Blast Command / Logout
+  // while Firebase auth re-resolves (Navbar remounts on each page navigation).
+  const [isLoggedIn, setIsLoggedIn] = useState(() => readAuthNavCache()?.isLoggedIn ?? false);
+  const [accountUrl, setAccountUrl] = useState(() => readAuthNavCache()?.accountUrl || "/dashboard");
+  const [isEmployee, setIsEmployee] = useState(() => readAuthNavCache()?.isEmployee ?? false);
+  const [isOperator, setIsOperator] = useState(() => readAuthNavCache()?.isOperator ?? false);
+  const [isStandardCustomer, setIsStandardCustomer] = useState(
+    () => readAuthNavCache()?.isStandardCustomer ?? false
+  );
+  const [authResolved, setAuthResolved] = useState(() => Boolean(readAuthNavCache()));
   const signInRef = useRef<HTMLLIElement>(null);
   const signInButtonRef = useRef<HTMLButtonElement>(null);
   const mobileNavRef = useRef<HTMLUListElement>(null);
@@ -129,7 +173,6 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const isHomePage = pathname === "/";
-  const { isReady: firebaseReady } = useFirebase();
 
   const closeSignIn = useCallback(() => {
     setIsSignInOpen(false);
@@ -254,17 +297,22 @@ export function Navbar() {
   };
 
   useEffect(() => {
-    // Check Firebase auth state - only on client side
-    if (typeof window === "undefined") {
-      setLoading(false);
-      return;
-    }
+    if (typeof window === "undefined") return;
 
     let unsubscribe: (() => void) | null = null;
     let mounted = true;
     let retryCount = 0;
     const maxRetries = 5;
     const retryDelay = 500;
+
+    function applyLoggedOutState() {
+      setIsLoggedIn(false);
+      setIsEmployee(false);
+      setIsOperator(false);
+      setIsStandardCustomer(false);
+      setAccountUrl("/dashboard");
+      clearAuthNavCache();
+    }
 
     async function updateUserNavigation(user: { uid: string; email: string | null }) {
       try {
@@ -273,10 +321,18 @@ export function Navbar() {
         const db = await getDbInstance();
 
         if (!db) {
+          // Keep logged-in shell; only roles/url stay at defaults until next successful fetch.
           setIsEmployee(false);
           setIsOperator(false);
           setIsStandardCustomer(false);
           setAccountUrl("/dashboard");
+          writeAuthNavCache({
+            isLoggedIn: true,
+            isEmployee: false,
+            isOperator: false,
+            isStandardCustomer: false,
+            accountUrl: "/dashboard",
+          });
           return;
         }
 
@@ -284,35 +340,43 @@ export function Navbar() {
         const { doc, getDoc } = firestore;
         const userDoc = await getDoc(doc(db, "users", user.uid));
 
+        let nextEmployee = false;
+        let nextOperator = false;
+        let nextStandardCustomer = true;
+        let nextAccountUrl = "/dashboard";
+
         if (userDoc.exists()) {
           const userData = userDoc.data();
           const role = userData.role;
           const userEmail = user.email || "";
           const ADMIN_EMAIL = "binblastcompany@gmail.com";
-          const isOperatorRole = role === "operator" || role === "admin" || userEmail === ADMIN_EMAIL;
-          const isEmployeeRole = role === "employee";
-
-          setIsEmployee(isEmployeeRole);
-          setIsOperator(isOperatorRole);
+          nextOperator = role === "operator" || role === "admin" || userEmail === ADMIN_EMAIL;
+          nextEmployee = role === "employee";
 
           const { getDashboardUrl } = await import("@/lib/partner-auth");
           const dashboardUrl = await getDashboardUrl(user.uid, userEmail);
-          setAccountUrl(isEmployeeRole ? "/employee/dashboard" : dashboardUrl);
+          nextAccountUrl = nextEmployee ? "/employee/dashboard" : dashboardUrl;
 
-          const isPartner = dashboardUrl !== "/dashboard" && !isEmployeeRole;
-          setIsStandardCustomer(!isEmployeeRole && !isPartner && !isOperatorRole);
-        } else {
-          setIsEmployee(false);
-          setIsOperator(false);
-          setIsStandardCustomer(true);
-          setAccountUrl("/dashboard");
+          const isPartner = dashboardUrl !== "/dashboard" && !nextEmployee;
+          nextStandardCustomer = !nextEmployee && !isPartner && !nextOperator;
         }
+
+        if (!mounted) return;
+
+        setIsEmployee(nextEmployee);
+        setIsOperator(nextOperator);
+        setIsStandardCustomer(nextStandardCustomer);
+        setAccountUrl(nextAccountUrl);
+        writeAuthNavCache({
+          isLoggedIn: true,
+          isEmployee: nextEmployee,
+          isOperator: nextOperator,
+          isStandardCustomer: nextStandardCustomer,
+          accountUrl: nextAccountUrl,
+        });
       } catch (err) {
         console.error("[Navbar] Error getting dashboard URL:", err);
-        setIsEmployee(false);
-        setIsOperator(false);
-        setIsStandardCustomer(false);
-        setAccountUrl("/dashboard");
+        // Do not wipe logged-in UI on transient Firestore errors.
       }
     }
 
@@ -324,62 +388,48 @@ export function Navbar() {
         if (!mounted) return;
 
         if (auth && typeof auth === "object" && "currentUser" in auth) {
-          if (auth.currentUser && mounted) {
+          // Optimistic hydrate if Firebase already has a user, but never treat
+          // a temporary null currentUser as logout before the first auth callback.
+          if (auth.currentUser) {
             setIsLoggedIn(true);
             await updateUserNavigation(auth.currentUser);
-            setLoading(false);
-            console.log("[Navbar] User is logged in:", auth.currentUser.email);
-          } else if (mounted) {
-            setIsLoggedIn(false);
-            setIsEmployee(false);
-            setIsOperator(false);
-            setIsStandardCustomer(false);
-            setAccountUrl("/dashboard");
-            setLoading(false);
-            console.log("[Navbar] No user logged in");
           }
 
           unsubscribe = await onAuthStateChanged(async (user) => {
-            if (mounted) {
-              setIsLoggedIn(!!user);
+            if (!mounted) return;
 
-              if (user) {
-                await updateUserNavigation(user);
-              } else {
-                setIsEmployee(false);
-                setIsOperator(false);
-                setIsStandardCustomer(false);
-                setAccountUrl("/dashboard");
-              }
-
-              setLoading(false);
-              console.log("[Navbar] Auth state changed:", user ? user.email : "logged out");
+            if (user) {
+              setIsLoggedIn(true);
+              await updateUserNavigation(user);
+            } else {
+              applyLoggedOutState();
             }
+
+            setAuthResolved(true);
           });
-        } else {
-          if (retryCount < maxRetries && mounted) {
-            retryCount++;
-            console.log(`[Navbar] Auth not ready, retrying (${retryCount}/${maxRetries})...`);
-            setTimeout(checkAuthState, retryDelay);
-          } else {
-            if (mounted) {
-              setIsLoggedIn(false);
-              setLoading(false);
-              console.log("[Navbar] Auth check failed after retries");
-            }
+        } else if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(checkAuthState, retryDelay);
+        } else if (mounted) {
+          // Only clear if we never had a cached logged-in session.
+          if (!readAuthNavCache()?.isLoggedIn) {
+            applyLoggedOutState();
           }
+          setAuthResolved(true);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (retryCount < maxRetries && mounted) {
           retryCount++;
-          console.log(`[Navbar] Auth check error, retrying (${retryCount}/${maxRetries}):`, err?.message || err);
           setTimeout(checkAuthState, retryDelay);
-        } else {
-          console.warn("[Navbar] Firebase auth check failed after retries:", err?.message || err);
-          if (mounted) {
-            setIsLoggedIn(false);
-            setLoading(false);
+        } else if (mounted) {
+          console.warn(
+            "[Navbar] Firebase auth check failed after retries:",
+            err instanceof Error ? err.message : err
+          );
+          if (!readAuthNavCache()?.isLoggedIn) {
+            applyLoggedOutState();
           }
+          setAuthResolved(true);
         }
       }
     }
@@ -530,13 +580,22 @@ export function Navbar() {
     `nav-pill${active ? " nav-pill--active" : ""}${extra ? ` ${extra}` : ""}`;
 
   const handleLogout = async () => {
+    // Clear UI immediately so remounts don't restore a stale logged-in cache.
+    setIsLoggedIn(false);
+    setIsEmployee(false);
+    setIsOperator(false);
+    setIsStandardCustomer(false);
+    setAccountUrl("/dashboard");
+    clearAuthNavCache();
+    setAuthResolved(true);
+
     try {
       const { signOut } = await import("@/lib/firebase");
       await signOut();
       router.push("/");
       router.refresh();
-    } catch (err: any) {
-      console.warn("[Navbar] Logout failed:", err?.message || err);
+    } catch (err: unknown) {
+      console.warn("[Navbar] Logout failed:", err instanceof Error ? err.message : err);
       router.push("/");
       router.refresh();
     }
@@ -641,7 +700,7 @@ export function Navbar() {
           Careers
         </Link>
       </li>
-      {!loading && !isLoggedIn && (
+      {authResolved && !isLoggedIn && (
       <li
         ref={signInRef}
         className="nav-sign-in-item"
@@ -696,7 +755,7 @@ export function Navbar() {
         </div>
       </li>
       )}
-      {!loading && isLoggedIn && dashboardNavLabel && (
+      {isLoggedIn && dashboardNavLabel && (
         <li>
           <Link
             href={accountUrl}
@@ -710,7 +769,7 @@ export function Navbar() {
           </Link>
         </li>
       )}
-      {!loading && isLoggedIn && (
+      {isLoggedIn && (
         <li>
           <button
             type="button"
