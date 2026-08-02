@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { BookCleaningLink } from "./BookCleaningLink";
+import { HomeSectionLink } from "./HomeSectionLink";
 
 export function HomeFinalCtaSection() {
   return (
@@ -10,12 +11,10 @@ export function HomeFinalCtaSection() {
           Peachtree City, and South Metro Atlanta.
         </p>
         <div className="home-final-cta__actions">
-          <Link href="#pricing" className="btn btn-primary btn-large">
-            Book Your Cleaning
-          </Link>
-          <Link href="#pricing" className="btn btn-secondary btn-large">
+          <BookCleaningLink />
+          <HomeSectionLink sectionId="pricing" className="btn btn-secondary btn-large">
             View Pricing
-          </Link>
+          </HomeSectionLink>
         </div>
       </div>
     </section>

@@ -548,7 +548,7 @@ export function PricingSection() {
         initialPropertyType={quoteWizardPreset}
         startAtStepOne={quoteWizardFreshStart}
       />
-      <section id="pricing" className="pricing-section">
+      <section className="pricing-section">
 
       <div className="container">
 

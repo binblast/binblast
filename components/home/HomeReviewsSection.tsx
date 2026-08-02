@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BookCleaningLink } from "./BookCleaningLink";
 
 const CUSTOMER_REVIEWS = [
   {
@@ -79,9 +80,7 @@ export function HomeReviewsSection() {
           })}
         </div>
         <div className="home-reviews__cta">
-          <Link href="#pricing" className="btn btn-primary btn-large">
-            Book Your Cleaning
-          </Link>
+          <BookCleaningLink />
         </div>
       </div>
     </section>

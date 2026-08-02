@@ -8,6 +8,10 @@ import { useRouter, usePathname } from "next/navigation";
 import { useFirebase } from "@/lib/firebase-context";
 import { PORTAL_INFO } from "@/lib/user-portal";
 import { buildAttributedHomeHref } from "@/lib/referral-attribution";
+import {
+  HOME_SECTION_NAV_EVENT,
+  scrollToHomeSectionElement,
+} from "@/lib/home-section-scroll";
 import { BrandLogo } from "@/components/BrandLogo";
 
 type PortalIconType = "customer" | "partner" | "employee" | "command";
@@ -78,14 +82,6 @@ function PortalDropdownItem({
   isMobileMenu: boolean;
   onNavigate: () => void;
 }) {
-  const router = useRouter();
-
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    onNavigate();
-    router.push(item.href);
-  };
-
   return (
     <>
       {item.showDividerBefore && (
@@ -97,23 +93,8 @@ function PortalDropdownItem({
       <Link
         href={item.href}
         role="menuitem"
-        onClick={handleClick}
+        onClick={onNavigate}
         className={`portal-menu-item${isMobileMenu ? " portal-menu-item--mobile" : ""}`}
-        onMouseEnter={(e) => {
-          if (!isMobileMenu) e.currentTarget.style.backgroundColor = "#f3f4f6";
-        }}
-        onMouseLeave={(e) => {
-          if (!isMobileMenu) e.currentTarget.style.backgroundColor = "transparent";
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.backgroundColor = isMobileMenu ? "rgba(255, 255, 255, 0.1)" : "#f3f4f6";
-          e.currentTarget.style.outline = "2px solid #16a34a";
-          e.currentTarget.style.outlineOffset = "-2px";
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.backgroundColor = "transparent";
-          e.currentTarget.style.outline = "none";
-        }}
       >
         <span className="portal-menu-item__icon">
           <PortalIcon type={item.icon} />
@@ -189,11 +170,7 @@ export function Navbar() {
           pendingSectionScrollRef.current = null;
           window.scrollTo(0, savedScrollYRef.current);
           requestAnimationFrame(() => {
-            const targetElement = document.getElementById(sectionId);
-            if (targetElement) {
-              targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
-              window.history.replaceState(null, "", `#${sectionId}`);
-            }
+            scrollToHomeSectionElement(sectionId);
           });
         } else {
           window.scrollTo(0, savedScrollYRef.current);
@@ -435,33 +412,34 @@ export function Navbar() {
 
       const targetElement = document.getElementById(sectionId);
       if (targetElement) {
-        targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
-        window.history.replaceState(null, "", `#${sectionId}`);
+        scrollToHomeSectionElement(sectionId);
       }
     },
     [closeSignIn, isMenuOpen]
   );
 
-  const homeRootHref = isHomePage ? "/" : buildAttributedHomeHref();
+  const handleSectionNavClick = (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    sectionId: string
+  ) => {
+    if (!isHomePage) return;
+    event.preventDefault();
+    scrollToHomeSection(sectionId);
+  };
 
   useEffect(() => {
-    const handleAnchorClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const anchor = target.closest('a[href^="#"]') as HTMLAnchorElement;
-      if (!anchor) return;
-
-      const href = anchor.getAttribute("href") || "";
-      if (!href.startsWith("#") || href.startsWith("/#")) return;
-      if (!isHomePage) return;
-
-      e.preventDefault();
-      const targetId = href.slice(1).split("?")[0];
-      scrollToHomeSection(targetId);
+    const handleRequestedScroll = (event: Event) => {
+      const sectionId = (event as CustomEvent<{ sectionId?: string }>).detail?.sectionId;
+      if (sectionId) {
+        scrollToHomeSection(sectionId);
+      }
     };
 
-    document.addEventListener("click", handleAnchorClick);
-    return () => document.removeEventListener("click", handleAnchorClick);
-  }, [isHomePage, scrollToHomeSection]);
+    window.addEventListener(HOME_SECTION_NAV_EVENT, handleRequestedScroll);
+    return () => window.removeEventListener(HOME_SECTION_NAV_EVENT, handleRequestedScroll);
+  }, [scrollToHomeSection]);
+
+  const homeRootHref = isHomePage ? "/" : buildAttributedHomeHref();
 
   useEffect(() => {
     if (!isHomePage || typeof window === "undefined") return;
@@ -473,10 +451,7 @@ export function Navbar() {
     if (!targetId) return;
 
     const scrollToHash = () => {
-      const targetElement = document.getElementById(targetId);
-      if (targetElement) {
-        targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      scrollToHomeSectionElement(targetId);
     };
 
     requestAnimationFrame(scrollToHash);
@@ -610,18 +585,37 @@ export function Navbar() {
             Home
           </Link>
         ) : (
-          <Link href={getHomeSectionHref("home")} className={navPillClass(isHomeActive)}>
+          <Link
+            href={getHomeSectionHref("home")}
+            className={navPillClass(isHomeActive)}
+            scroll={false}
+            onClick={(e) => handleSectionNavClick(e, "home")}
+          >
             Home
           </Link>
         )}
       </li>
       <li>
-        <Link href="/residential-trash-can-cleaning" className={navPillClass(isResidentialActive)}>
+        <Link
+          href="/residential-trash-can-cleaning"
+          className={navPillClass(isResidentialActive)}
+          onClick={() => {
+            closeSignIn();
+            if (isMobileNav) setIsMenuOpen(false);
+          }}
+        >
           Residential
         </Link>
       </li>
       <li>
-        <Link href="/commercial-trash-bin-cleaning" className={navPillClass(isCommercialActive)}>
+        <Link
+          href="/commercial-trash-bin-cleaning"
+          className={navPillClass(isCommercialActive)}
+          onClick={() => {
+            closeSignIn();
+            if (isMobileNav) setIsMenuOpen(false);
+          }}
+        >
           Commercial
         </Link>
       </li>
@@ -629,35 +623,42 @@ export function Navbar() {
         <Link
           href={getHomeSectionHref("service-areas")}
           className={navPillClass(false)}
-          onClick={(e) => {
-            if (isHomePage) {
-              e.preventDefault();
-              scrollToHomeSection("service-areas");
-            }
-          }}
+          scroll={false}
+          onClick={(e) => handleSectionNavClick(e, "service-areas")}
         >
           Service Areas
         </Link>
       </li>
       <li>
-        <Link href="/careers" className={navPillClass(isCareersActive)}>
+        <Link
+          href="/careers"
+          className={navPillClass(isCareersActive)}
+          onClick={() => {
+            closeSignIn();
+            if (isMobileNav) setIsMenuOpen(false);
+          }}
+        >
           Careers
         </Link>
       </li>
+      {!loading && !isLoggedIn && (
       <li
         ref={signInRef}
         className="nav-sign-in-item"
-        onMouseEnter={() => {
-          if (!isMenuOpen) {
-            setIsSignInOpen(true);
-          }
-        }}
-        onMouseLeave={() => {
-          if (!isMenuOpen) {
-            closeSignIn();
-          }
-        }}
       >
+        <div
+          className="nav-sign-in-hover-wrap"
+          onMouseEnter={() => {
+            if (!isMenuOpen && !isMobileNav) {
+              setIsSignInOpen(true);
+            }
+          }}
+          onMouseLeave={() => {
+            if (!isMenuOpen && !isMobileNav) {
+              closeSignIn();
+            }
+          }}
+        >
         <button
           ref={signInButtonRef}
           type="button"
@@ -666,9 +667,9 @@ export function Navbar() {
           aria-expanded={isSignInOpen}
           aria-controls="sign-in-menu"
           id="sign-in-button"
-          className={navPillClass(isSignInOpen && isMenuOpen, "nav-pill--ghost nav-sign-in-toggle")}
+          className={navPillClass(isSignInOpen, "nav-pill--ghost nav-sign-in-toggle")}
         >
-          <span>{isMenuOpen ? "Portals" : "Sign In"}</span>
+          <span>Sign In</span>
           <span className="nav-pill__chevron" aria-hidden="true">
             {isSignInOpen ? "▲" : "▼"}
           </span>
@@ -692,23 +693,41 @@ export function Navbar() {
             </div>
           </div>
         )}
+        </div>
       </li>
+      )}
       {!loading && isLoggedIn && dashboardNavLabel && (
         <li>
-          <Link href={accountUrl} className={navPillClass(isDashboardActive)}>
+          <Link
+            href={accountUrl}
+            className={navPillClass(isDashboardActive)}
+            onClick={() => {
+              closeSignIn();
+              if (isMobileNav) setIsMenuOpen(false);
+            }}
+          >
             {dashboardNavLabel}
           </Link>
         </li>
       )}
       {!loading && isLoggedIn && (
         <li>
-          <button type="button" onClick={handleLogout} className="nav-pill nav-pill--ghost">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="nav-pill nav-pill--ghost"
+          >
             Logout
           </button>
         </li>
       )}
       <li>
-        <Link href={getHomeSectionHref("pricing")} className="nav-login">
+        <Link
+          href={getHomeSectionHref("pricing")}
+          className="nav-login"
+          scroll={false}
+          onClick={(e) => handleSectionNavClick(e, "pricing")}
+        >
           Get Started
         </Link>
       </li>

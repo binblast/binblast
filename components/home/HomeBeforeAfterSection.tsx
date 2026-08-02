@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { BookCleaningLink } from "./BookCleaningLink";
 
 const BEFORE_AFTER = [
   {
@@ -62,9 +62,7 @@ export function HomeBeforeAfterSection() {
         </div>
 
         <div className="home-section-cta">
-          <Link href="#pricing" className="btn btn-primary btn-large">
-            Book Your Cleaning
-          </Link>
+          <BookCleaningLink />
         </div>
       </div>
     </section>

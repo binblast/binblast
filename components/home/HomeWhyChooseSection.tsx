@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BookCleaningLink } from "./BookCleaningLink";
 
 const COMPARISON_ROWS = [
   {
@@ -63,9 +63,7 @@ export function HomeWhyChooseSection() {
         </div>
 
         <div className="home-section-cta">
-          <Link href="#pricing" className="btn btn-primary btn-large">
-            Book Your Cleaning
-          </Link>
+          <BookCleaningLink />
         </div>
       </div>
     </section>

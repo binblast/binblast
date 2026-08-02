@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { BookCleaningLink } from "./BookCleaningLink";
 
 const SERVICE_TYPES = [
   {
@@ -63,9 +64,7 @@ export function HomeServiceTypesSection() {
           ))}
         </div>
         <div className="home-section-cta">
-          <Link href="#pricing" className="btn btn-primary btn-large">
-            Book Your Cleaning
-          </Link>
+          <BookCleaningLink />
         </div>
       </div>
     </section>

@@ -1,12 +1,5 @@
-import Link from "next/link";
-
-const PROBLEMS = [
-  "Bad odors that linger around your garage and driveway",
-  "Bacteria and germs building up inside the bin",
-  "Flies and pests drawn to leftover waste residue",
-  "Maggots during warm weather",
-  "Dirty runoff spreading onto your driveway or sidewalk",
-] as const;
+import { BookCleaningLink } from "./BookCleaningLink";
+import { HomeSectionLink } from "./HomeSectionLink";
 
 export function HomeProblemSection() {
   return (
@@ -21,7 +14,13 @@ export function HomeProblemSection() {
             that leads to smells, pests, and a mess you shouldn&apos;t have to deal with.
           </p>
           <ul className="home-problem__list">
-            {PROBLEMS.map((item) => (
+            {[
+              "Bad odors that linger around your garage and driveway",
+              "Bacteria and germs building up inside the bin",
+              "Flies and pests drawn to leftover waste residue",
+              "Maggots during warm weather",
+              "Dirty runoff spreading onto your driveway or sidewalk",
+            ].map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
@@ -34,9 +33,7 @@ export function HomeProblemSection() {
             inside and outside, kill odor-causing bacteria, and leave your bin fresh — without
             you lifting a finger.
           </p>
-          <Link href="#pricing" className="btn btn-primary btn-large">
-            Book Your Cleaning
-          </Link>
+          <BookCleaningLink />
         </div>
       </div>
     </section>

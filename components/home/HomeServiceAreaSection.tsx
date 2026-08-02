@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PRIORITY_CITY_PAGES } from "@/lib/seo/business-info";
+import { BookCleaningLink } from "./BookCleaningLink";
 
 export function HomeServiceAreaSection() {
   return (
@@ -16,9 +17,7 @@ export function HomeServiceAreaSection() {
             </Link>
           ))}
         </div>
-        <Link href="#pricing" className="btn btn-primary btn-large">
-          Book Your Cleaning
-        </Link>
+        <BookCleaningLink />
       </div>
     </section>
   );

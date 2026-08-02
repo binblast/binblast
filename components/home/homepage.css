@@ -8,6 +8,18 @@
   scroll-margin-top: 88px;
 }
 
+.pricing-section-anchor {
+  scroll-margin-top: 88px;
+}
+
+.marketing-main .hero-buttons .btn,
+.home-section-cta .btn,
+.home-final-cta__actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .marketing-main .section-title {
   font-weight: 800;
   letter-spacing: -0.02em;

@@ -79,14 +79,9 @@ html, body {
 @media (max-width: 1100px) and (min-width: 769px) {
     .nav-links--segmented {
         max-width: min(100%, calc(100vw - 220px));
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        flex-wrap: nowrap;
-    }
-
-    .nav-links--segmented::-webkit-scrollbar {
-        display: none;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        row-gap: 0.35rem;
     }
 
     .nav-pill {
@@ -201,14 +196,29 @@ html, body {
     position: relative;
 }
 
+.nav-sign-in-hover-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
 .sign-in-dropdown-wrap {
     position: absolute;
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    padding-top: 8px;
+    padding-top: 0;
     z-index: 1000;
     width: auto;
+}
+
+.sign-in-dropdown-wrap::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 0;
+    right: 0;
+    height: 10px;
 }
 
 .sign-in-dropdown {
@@ -234,6 +244,13 @@ html, body {
     border-radius: 8px;
     margin: 0 0.375rem;
     width: calc(100% - 0.75rem);
+}
+
+.portal-menu-item:hover,
+.portal-menu-item:focus-visible {
+    background-color: #f3f4f6;
+    outline: 2px solid #16a34a;
+    outline-offset: -2px;
 }
 
 .portal-menu-item__icon {
@@ -1669,11 +1686,14 @@ html, body {
     text-decoration: none;
     border-radius: 50px;
     font-weight: 600;
-    transition: all 0.3s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
     border: 2px solid transparent;
     cursor: pointer;
     font-size: 1rem;
     letter-spacing: 0.01em;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
 }
 
 .btn-primary {
@@ -1682,10 +1702,80 @@ html, body {
     box-shadow: 0 4px 14px rgba(0, 168, 107, 0.25);
 }
 
-.btn-primary:hover {
-    background: var(--primary-dark);
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 168, 107, 0.35);
+@media (hover: hover) and (pointer: fine) {
+    .btn-primary:hover {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 168, 107, 0.35);
+    }
+
+    .btn-secondary:hover {
+        background: var(--secondary-dark);
+        border-color: var(--secondary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 102, 204, 0.35);
+    }
+
+    .btn-outline:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+    }
+}
+
+.btn-primary:active,
+.btn-secondary:active,
+.btn-outline:active {
+    transform: translateY(0);
+}
+
+/* Book Your Cleaning — attention flash */
+.btn-book-cleaning {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    animation: bookCleaningGlow 2.8s ease-in-out infinite;
+}
+
+.btn-book-cleaning::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        105deg,
+        transparent 38%,
+        rgba(255, 255, 255, 0.42) 50%,
+        transparent 62%
+    );
+    transform: translateX(-140%);
+    animation: bookCleaningShine 2.8s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes bookCleaningShine {
+    0%, 72%, 100% {
+        transform: translateX(-140%);
+    }
+    36% {
+        transform: translateX(140%);
+    }
+}
+
+@keyframes bookCleaningGlow {
+    0%, 100% {
+        box-shadow: 0 4px 14px rgba(0, 168, 107, 0.25);
+    }
+    50% {
+        box-shadow: 0 6px 22px rgba(0, 168, 107, 0.42);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-book-cleaning,
+    .btn-book-cleaning::before {
+        animation: none;
+    }
 }
 
 .btn-secondary {
@@ -1695,24 +1785,10 @@ html, body {
     box-shadow: 0 4px 14px rgba(0, 102, 204, 0.25);
 }
 
-.btn-secondary:hover {
-    background: var(--secondary-dark);
-    border-color: var(--secondary-dark);
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 102, 204, 0.35);
-}
-
 .btn-outline {
     background: transparent;
     color: var(--primary-color);
     border: 2px solid var(--primary-color);
-}
-
-.btn-outline:hover {
-    background: var(--primary-color);
-    color: white;
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-hover);
 }
 
 .btn-large {

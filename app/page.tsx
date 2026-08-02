@@ -8,6 +8,8 @@ import { buildPageMetadata } from "@/lib/seo/metadata-helpers";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { faqPageSchema } from "@/lib/seo/schema";
 import { HOME_FAQ_ITEMS } from "@/lib/seo/faq-data";
+import { HomeHeroActions } from "@/components/home/HomeHeroActions";
+import { BookCleaningLink } from "@/components/home/BookCleaningLink";
 import { BrandLogo } from "@/components/BrandLogo";
 import { HomeTrustBar } from "@/components/home/HomeTrustBar";
 import { HomeProblemSection } from "@/components/home/HomeProblemSection";
@@ -91,14 +93,7 @@ export default function HomePage() {
               <p className="hero-subheadline hero-subheadline--dark">
                 Keep your trash cans fresh, odor-free, and bacteria-free without lifting a finger.
               </p>
-              <div className="hero-buttons">
-                <Link href="#pricing" className="btn btn-primary btn-large">
-                  Book Your Cleaning
-                </Link>
-                <Link href="#pricing" className="btn btn-secondary btn-large">
-                  View Pricing
-                </Link>
-              </div>
+              <HomeHeroActions />
               <p className="hero-note hero-note--dark">
                 Serving Fayetteville, Peachtree City, Tyrone, Newnan &amp; surrounding areas.
               </p>
@@ -127,9 +122,11 @@ export default function HomePage() {
         <HomeReviewsSection />
         <HomeServiceAreaSection />
 
-        <Suspense fallback={<div style={{ minHeight: "400px", padding: "4rem 0" }} />}>
-          <PricingSection />
-        </Suspense>
+        <section id="pricing" className="pricing-section-anchor">
+          <Suspense fallback={<div style={{ minHeight: "400px", padding: "4rem 0" }} />}>
+            <PricingSection />
+          </Suspense>
+        </section>
 
         <section
           id="partners"
@@ -162,9 +159,7 @@ export default function HomePage() {
                   Bin Blast Co. provides professional trash bin cleaning, sanitizing, and deodorizing
                   for homes and businesses throughout South Metro Atlanta.
                 </p>
-                <Link href="#pricing" className="btn btn-primary" style={{ marginTop: "1rem" }}>
-                  Book Your Cleaning
-                </Link>
+                <BookCleaningLink large={false} style={{ marginTop: "1rem" }} />
               </div>
               <div className="footer-section">
                 <h3 className="footer-heading">Residential Services</h3>
