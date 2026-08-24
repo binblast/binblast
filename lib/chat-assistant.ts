@@ -68,6 +68,7 @@ const scheduleCleaningResponse = (): AssistantResponse => ({
     "**New customers:**\n" +
     "1. Go to the pricing section and pick a plan\n" +
     "2. Complete the 4-step booking wizard (info, address, preferred date & time, review)\n" +
+    "   • First cleaning dates must be 3–5 days from today (same-day/next-day not available)\n" +
     "3. Pay through Stripe checkout\n" +
     "4. Create your password on the registration page\n" +
     "5. Your dashboard opens — confirm or adjust your first cleaning date\n\n" +

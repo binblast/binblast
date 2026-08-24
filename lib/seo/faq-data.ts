@@ -8,6 +8,11 @@ export const PRICING_ANSWER =
 
 export const HOME_FAQ_ITEMS: FaqItem[] = [
   {
+    question: "How soon can I schedule my first cleaning?",
+    answer:
+      "First cleanings are scheduled 3–5 days from the day you book. Same-day and next-day bookings aren’t available so we can plan your route.",
+  },
+  {
     question: "Do I need to be home during service?",
     answer:
       "No. Leave your empty bins accessible at the curb or in an agreed location after trash collection. We notify you when the service is complete.",

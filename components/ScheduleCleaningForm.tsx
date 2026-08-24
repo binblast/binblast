@@ -24,6 +24,7 @@ import {
   isSunday,
   normalizeTrashDay,
   validateBusinessSchedule,
+  MIN_BOOKING_LEAD_DAYS,
 } from "@/lib/business-hours";
 
 interface ScheduledCleaning {
@@ -391,10 +392,12 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
     return canModifyScheduledCleaning(cleaningDate, scheduledTime);
   };
 
-  // Generate dropdown options for each day within 2-week window
+  // Generate dropdown options for each day within 2-week window (earliest = 3 days out)
   const getDayOptions = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const earliest = new Date(today);
+    earliest.setDate(today.getDate() + MIN_BOOKING_LEAD_DAYS);
     const twoWeeksFromNow = new Date(today);
     twoWeeksFromNow.setDate(today.getDate() + 14);
     
@@ -439,11 +442,11 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
       firstOccurrence.setDate(today.getDate() + daysUntilDay);
       firstOccurrence.setHours(0, 0, 0, 0);
       
-      // Only include if date is in the future (not today), and within 2 weeks
+      // Only include if date is at least 3 days out, and within 2 weeks
       // Also exclude if it matches the existing cleaning date (already added above)
       const firstDateValue = formatDateForInput(firstOccurrence);
       
-      if (firstOccurrence > today && firstOccurrence <= twoWeeksFromNow && !usedValues.has(firstDateValue)) {
+      if (firstOccurrence >= earliest && firstOccurrence <= twoWeeksFromNow && !usedValues.has(firstDateValue)) {
         const dateValue = formatDateForInput(firstOccurrence);
         const monthName = firstOccurrence.toLocaleDateString("en-US", { month: "short" });
         const dayNumber = firstOccurrence.getDate();
@@ -463,10 +466,10 @@ export function ScheduleCleaningForm({ userId, userEmail, onScheduleCreated, ini
       secondOccurrence.setDate(firstOccurrence.getDate() + 7);
       secondOccurrence.setHours(0, 0, 0, 0);
       
-      // Only include if date is in the future (not today), and within 2 weeks
+      // Only include if date is at least 3 days out, and within 2 weeks
       const secondDateValue = formatDateForInput(secondOccurrence);
       
-      if (secondOccurrence > today && secondOccurrence <= twoWeeksFromNow && !usedValues.has(secondDateValue)) {
+      if (secondOccurrence >= earliest && secondOccurrence <= twoWeeksFromNow && !usedValues.has(secondDateValue)) {
         const dateValue = formatDateForInput(secondOccurrence);
         const monthName = secondOccurrence.toLocaleDateString("en-US", { month: "short" });
         const dayNumber = secondOccurrence.getDate();

@@ -2,8 +2,11 @@
 
 import { useMemo, useState } from "react";
 import {
+  BOOKING_WINDOW_COPY,
   formatDateInput,
   getBusinessHoursHint,
+  getMaxSelectableDate,
+  getMinSelectableDate,
   isDateSelectable,
   isSaturday,
   isSunday,
@@ -14,6 +17,10 @@ interface ServiceDatePickerProps {
   value: string;
   onChange: (dateValue: string) => void;
   minDate?: string;
+  maxDate?: string;
+  /** When true, defaults to the 3–5 day first-booking window. */
+  enforceBookingWindow?: boolean;
+  helperText?: string;
   error?: string;
 }
 
@@ -21,9 +28,13 @@ export function ServiceDatePicker({
   value,
   onChange,
   minDate,
+  maxDate,
+  enforceBookingWindow = false,
+  helperText,
   error,
 }: ServiceDatePickerProps) {
-  const min = minDate || formatDateInput(new Date());
+  const min = minDate || (enforceBookingWindow ? getMinSelectableDate() : formatDateInput(new Date()));
+  const max = maxDate || (enforceBookingWindow ? getMaxSelectableDate() : undefined);
   const initialMonth = value ? parseLocalDate(value) : parseLocalDate(min);
   const [viewMonth, setViewMonth] = useState(
     new Date(initialMonth.getFullYear(), initialMonth.getMonth(), 1)
@@ -58,9 +69,11 @@ export function ServiceDatePicker({
     setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
   };
 
+  const canSelect = (dateValue: string) => isDateSelectable(dateValue, min, max);
+
   const handleSelect = (date: Date) => {
     const dateValue = formatDateInput(date);
-    if (!isDateSelectable(dateValue, parseLocalDate(min))) return;
+    if (!canSelect(dateValue)) return;
     onChange(dateValue);
   };
 
@@ -134,7 +147,7 @@ export function ServiceDatePicker({
               {week.map((date) => {
                 const dateValue = formatDateInput(date);
                 const inMonth = date.getMonth() === viewMonth.getMonth();
-                const selectable = isDateSelectable(dateValue, parseLocalDate(min));
+                const selectable = canSelect(dateValue);
                 const selected = value === dateValue;
                 const closedSunday = isSunday(dateValue);
                 const weekend = isSaturday(dateValue) || closedSunday;
@@ -206,6 +219,12 @@ export function ServiceDatePicker({
           ) : null}
         </div>
       </div>
+
+      {(helperText || enforceBookingWindow) && (
+        <p style={{ margin: "8px 0 0", fontSize: "13px", color: "#374151", lineHeight: 1.5 }}>
+          {helperText || BOOKING_WINDOW_COPY}
+        </p>
+      )}
 
       {value ? (
         <p style={{ margin: "8px 0 0", fontSize: "12px", color: "#6b7280" }}>

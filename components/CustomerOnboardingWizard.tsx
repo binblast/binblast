@@ -7,11 +7,12 @@ import { ServiceDatePicker } from "@/components/ServiceDatePicker";
 import {
   getDayOfWeekName,
   getMinSelectableDate,
+  getMaxSelectableDate,
   getTimeSlotsForDate,
-  isSunday,
   normalizeTrashDay,
   parseLocalDate,
   validateBusinessSchedule,
+  BOOKING_WINDOW_COPY,
 } from "@/lib/business-hours";
 
 interface OnboardingData {
@@ -134,22 +135,15 @@ export function CustomerOnboardingWizard({
     if (currentStep === 3) {
       if (!formData.preferredServiceDate) {
         newErrors.preferredServiceDate = "Please select a preferred service date";
-      } else if (isSunday(formData.preferredServiceDate)) {
-        newErrors.preferredServiceDate = "We're closed on Sundays. Please choose another day.";
       } else {
-        const selectedDate = parseLocalDate(formData.preferredServiceDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (selectedDate < today) {
-          newErrors.preferredServiceDate = "Service date must be today or in the future";
+        const scheduleCheck = validateBusinessSchedule(
+          formData.preferredServiceDate,
+          formData.preferredTimeWindow,
+          { enforceLeadWindow: true }
+        );
+        if (!scheduleCheck.valid) {
+          newErrors.preferredServiceDate = scheduleCheck.error || BOOKING_WINDOW_COPY;
         }
-      }
-      const scheduleCheck = validateBusinessSchedule(
-        formData.preferredServiceDate,
-        formData.preferredTimeWindow
-      );
-      if (!scheduleCheck.valid && formData.preferredServiceDate) {
-        newErrors.preferredServiceDate = scheduleCheck.error;
       }
     }
 
@@ -635,6 +629,8 @@ export function CustomerOnboardingWizard({
                     value={formData.preferredServiceDate}
                     onChange={handleDateChange}
                     minDate={getMinSelectableDate()}
+                    maxDate={getMaxSelectableDate()}
+                    enforceBookingWindow
                     error={errors.preferredServiceDate}
                   />
                   {formData.preferredServiceDate && formData.preferredDayOfWeek && (

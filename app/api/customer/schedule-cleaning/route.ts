@@ -4,7 +4,7 @@ import { appendStandardPrepNote } from "@/lib/cleaning-readiness";
 import { buildRecurringPreferenceUpdate } from "@/lib/recurring-preference";
 import { shouldConsumeCleaningCredit } from "@/lib/cleaning-allocation";
 import { assertCanScheduleAnotherCleaning, loadUserSchedulingContext } from "@/lib/cleaning-schedule-validation";
-import { getDayOfWeekName, normalizeTrashDay, validateBusinessSchedule } from "@/lib/business-hours";
+import { getDayOfWeekName, normalizeTrashDay, validateBusinessSchedule, getMinSelectableDate, parseLocalDate } from "@/lib/business-hours";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +45,20 @@ export async function POST(req: NextRequest) {
     const scheduleCheck = validateBusinessSchedule(scheduledDate, scheduledTime);
     if (!scheduleCheck.valid) {
       return NextResponse.json({ error: scheduleCheck.error }, { status: 400 });
+    }
+
+    const selected = parseLocalDate(scheduledDate);
+    const earliest = parseLocalDate(getMinSelectableDate());
+    selected.setHours(0, 0, 0, 0);
+    earliest.setHours(0, 0, 0, 0);
+    if (selected < earliest) {
+      return NextResponse.json(
+        {
+          error:
+            "Please choose a date at least 3 days from today. Same-day and next-day bookings aren’t available.",
+        },
+        { status: 400 }
+      );
     }
 
     const resolvedTrashDay = normalizeTrashDay(trashDay || getDayOfWeekName(scheduledDate));
