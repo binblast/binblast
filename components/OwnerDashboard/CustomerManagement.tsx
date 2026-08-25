@@ -44,10 +44,13 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showPaymentReminderModal, setShowPaymentReminderModal] = useState(false);
   const [geocodingCustomers, setGeocodingCustomers] = useState(false);
   const [geocodeMessage, setGeocodeMessage] = useState<string | null>(null);
   const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
   const [reminderMessage, setReminderMessage] = useState<string | null>(null);
+  const [reminderModalError, setReminderModalError] = useState<string | null>(null);
+  const [reminderModalSuccess, setReminderModalSuccess] = useState(false);
 
   const customerCount = customers.filter((customer) => customer.recordType !== "prospect").length;
   const prospectCount = customers.filter((customer) => customer.recordType === "prospect").length;
@@ -166,33 +169,55 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
     return status !== "active" && status !== "cancelled";
   };
 
-  const handleSendPaymentReminder = async (customer: Customer) => {
+  const openPaymentReminderModal = (customer: Customer) => {
     if (customer.recordType === "prospect" || !customer.email) return;
+    setSelectedCustomer(customer);
+    setReminderModalError(null);
+    setReminderModalSuccess(false);
+    setShowPaymentReminderModal(true);
+  };
 
-    const confirmed = window.confirm(
-      `Send a payment reminder email to ${customer.firstName} ${customer.lastName} (${customer.email})?`
-    );
-    if (!confirmed) return;
+  const closePaymentReminderModal = () => {
+    if (sendingReminderId) return;
+    setShowPaymentReminderModal(false);
+    setSelectedCustomer(null);
+    setReminderModalError(null);
+    setReminderModalSuccess(false);
+  };
 
-    setSendingReminderId(customer.id);
+  const handleSendPaymentReminder = async () => {
+    if (!selectedCustomer || selectedCustomer.recordType === "prospect" || !selectedCustomer.email) {
+      return;
+    }
+
+    setSendingReminderId(selectedCustomer.id);
     setReminderMessage(null);
+    setReminderModalError(null);
+    setReminderModalSuccess(false);
 
     try {
       const response = await fetchWithAuth("/api/admin/customers/payment-reminder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customerId: customer.id }),
+        body: JSON.stringify({ customerId: selectedCustomer.id }),
       });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Failed to send payment reminder");
       }
 
-      setReminderMessage(`Payment reminder sent to ${customer.email}`);
+      setReminderMessage(`Payment reminder sent to ${selectedCustomer.email}`);
+      setReminderModalSuccess(true);
+      setTimeout(() => {
+        setShowPaymentReminderModal(false);
+        setSelectedCustomer(null);
+        setReminderModalSuccess(false);
+      }, 1600);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to send payment reminder";
       console.error("[CustomerManagement] Payment reminder error:", err);
       setReminderMessage(message);
+      setReminderModalError(message);
     } finally {
       setSendingReminderId(null);
     }
@@ -506,7 +531,7 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
                         {needsPaymentReminder(customer) && (
                           <button
                             type="button"
-                            onClick={() => handleSendPaymentReminder(customer)}
+                            onClick={() => openPaymentReminderModal(customer)}
                             disabled={sendingReminderId === customer.id}
                             style={{
                               padding: "0.25rem 0.75rem",
@@ -555,6 +580,18 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
             setShowHistoryModal(false);
             setSelectedCustomer(null);
           }}
+        />
+      )}
+
+      {/* Payment Reminder Modal */}
+      {showPaymentReminderModal && selectedCustomer && (
+        <PaymentReminderModal
+          customer={selectedCustomer}
+          sending={sendingReminderId === selectedCustomer.id}
+          error={reminderModalError}
+          success={reminderModalSuccess}
+          onClose={closePaymentReminderModal}
+          onConfirm={handleSendPaymentReminder}
         />
       )}
     </div>
@@ -825,6 +862,199 @@ function CustomerHistoryModal({
         >
           Close
         </button>
+      </div>
+    </div>
+  );
+}
+
+function PaymentReminderModal({
+  customer,
+  sending,
+  error,
+  success,
+  onClose,
+  onConfirm,
+}: {
+  customer: Customer;
+  sending: boolean;
+  error: string | null;
+  success: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const fullName = `${customer.firstName} ${customer.lastName}`.trim() || "this customer";
+  const planLabel = customer.selectedPlan || "Not selected";
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="payment-reminder-title"
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: "rgba(17, 24, 39, 0.55)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1rem",
+      }}
+      onClick={() => {
+        if (!sending) onClose();
+      }}
+    >
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: "16px",
+          padding: "0",
+          maxWidth: "440px",
+          width: "100%",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.18)",
+          overflow: "hidden",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            background: "linear-gradient(135deg, #ea580c 0%, #c2410c 100%)",
+            padding: "1.35rem 1.5rem",
+            color: "#ffffff",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: "0.75rem",
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              opacity: 0.9,
+            }}
+          >
+            Payment reminder
+          </p>
+          <h3
+            id="payment-reminder-title"
+            style={{ margin: "0.35rem 0 0", fontSize: "1.25rem", fontWeight: 700, lineHeight: 1.3 }}
+          >
+            Send pay link to {customer.firstName || "customer"}?
+          </h3>
+        </div>
+
+        <div style={{ padding: "1.5rem" }}>
+          {success ? (
+            <div
+              style={{
+                padding: "1rem",
+                borderRadius: "12px",
+                background: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                color: "#166534",
+                fontSize: "0.9375rem",
+                fontWeight: 600,
+                textAlign: "center",
+              }}
+            >
+              Reminder sent to {customer.email}
+            </div>
+          ) : (
+            <>
+              <p style={{ margin: "0 0 1rem", color: "#4b5563", fontSize: "0.9375rem", lineHeight: 1.55 }}>
+                This emails <strong style={{ color: "#111827" }}>{fullName}</strong> a branded payment
+                reminder with a link to finish checkout on binblastco.com.
+              </p>
+
+              <div
+                style={{
+                  background: "#fff7ed",
+                  border: "1px solid #fed7aa",
+                  borderRadius: "12px",
+                  padding: "1rem",
+                  marginBottom: "1.25rem",
+                }}
+              >
+                <div style={{ fontSize: "0.8125rem", color: "#9a3412", fontWeight: 600, marginBottom: "0.35rem" }}>
+                  Recipient
+                </div>
+                <div style={{ fontSize: "0.9375rem", color: "#111827", fontWeight: 600 }}>{fullName}</div>
+                <div style={{ fontSize: "0.875rem", color: "#c2410c", marginTop: "0.2rem", wordBreak: "break-all" }}>
+                  {customer.email}
+                </div>
+                <div style={{ fontSize: "0.8125rem", color: "#9a3412", marginTop: "0.75rem" }}>
+                  Plan: <strong style={{ color: "#7c2d12" }}>{planLabel}</strong>
+                  {customer.status ? (
+                    <>
+                      {" · "}
+                      Status: <strong style={{ color: "#7c2d12" }}>{customer.status}</strong>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+
+              {error && (
+                <div
+                  style={{
+                    marginBottom: "1rem",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "10px",
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    color: "#991b1b",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={sending}
+                  style={{
+                    padding: "0.7rem 1.15rem",
+                    background: "#ffffff",
+                    color: "#374151",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "10px",
+                    cursor: sending ? "not-allowed" : "pointer",
+                    fontWeight: 600,
+                    fontSize: "0.875rem",
+                    minHeight: "44px",
+                    opacity: sending ? 0.6 : 1,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onConfirm}
+                  disabled={sending}
+                  style={{
+                    padding: "0.7rem 1.25rem",
+                    background: sending ? "#fdba74" : "#ea580c",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "10px",
+                    cursor: sending ? "not-allowed" : "pointer",
+                    fontWeight: 700,
+                    fontSize: "0.875rem",
+                    minHeight: "44px",
+                    boxShadow: sending ? "none" : "0 8px 16px rgba(234, 88, 12, 0.25)",
+                  }}
+                >
+                  {sending ? "Sending..." : "Send reminder"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
