@@ -19,9 +19,10 @@ Enable **server-side API** in EmailJS: Account → Security → allow server req
 | Customer Welcome | `customer-welcome.html` | `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_CUSTOMER_WELCOME` | *(required — no generic fallback)* | Welcome to Bin Blast Co. — your fresh bins start here |
 | Cleaning Scheduled | `cleaning-scheduled-confirmation.html` | `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_CLEANING_SCHEDULED` | `template_ent7lyj` | You're all set — bin cleaning confirmed |
 | Payment Failed | `payment-failed.html` | `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PAYMENT_FAILED` | `template_ent7lyj` | Action needed: update your payment method |
+| Payment Reminder | `payment-reminder.html` | `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PAYMENT_REMINDER` | *(required for clean layout)* | Finish booking your Bin Blast Co. cleaning |
 | Cleaning Complete | `cleaning-complete.html` | `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_CLEANING_COMPLETE` | `template_ent7lyj` | Your bins are fresh — cleaning complete |
 | Partner Application (admin) | `partnership-application.html` | `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPLICATION` | `template_aabpctf` | New partner application: {{businessName}} |
-| Partner Approval | `partner-approval.html` | `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPROVAL` | `template_lm4wzqr` | You're approved — welcome to the Bin Blast partner program |
+| Partner Approval | `partner-approval.html` | `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPROVAL` | `template_uourt0p` | You're approved — welcome to the Bin Blast partner program |
 | Partner Rejection | `partner-rejection.html` | `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_REJECTION` | `template_ent7lyj` | Update on your Bin Blast partner application |
 | Team Member Invitation | `team-member-invitation.html` | `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_TEAM_MEMBER_INVITATION` | `template_9796g8g` | Your Bin Blast team account is ready |
 | Password Reset | `password-reset.html` | `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PASSWORD_RESET` | `template_l421jys` | Reset your Bin Blast Co. password |
@@ -103,6 +104,24 @@ firstName
 planName
 amountDue
 dashboardLink
+```
+
+---
+
+## 3b. Payment Reminder (admin)
+
+**Triggered by:** `notifyPaymentReminder()` — Customer Management → **Remind to pay**
+
+**Quick setup:** `PAYMENT_REMINDER_QUICK_SETUP.md`
+
+**Variables:**
+```
+to_email
+email_subject
+logoUrl
+firstName
+planName
+pricingLink
 ```
 
 ---
