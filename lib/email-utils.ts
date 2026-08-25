@@ -17,15 +17,27 @@ import {
 export const EMAIL_LOGO_URL =
   process.env.NEXT_PUBLIC_EMAIL_LOGO_URL || "https://www.binblastco.com/bin-blast-email-logo.png";
 
-export const PARTNER_APPROVAL_TEMPLATE_ID = "template_lm4wzqr";
+/** Live Partner Approval template in EmailJS (not the deleted lm4wzqr ID). */
+export const PARTNER_APPROVAL_TEMPLATE_ID = "template_uourt0p";
+
+/** Known-bad / mistyped IDs — never send with these. */
+const PARTNER_APPROVAL_DEAD_IDS = new Set([
+  "template_lm4wzqr",
+  "template_uowt60p",
+  "template_t2vtftu",
+]);
 
 export const PARTNER_APPROVAL_TEMPLATE_FALLBACKS = [
   PARTNER_APPROVAL_TEMPLATE_ID,
 ] as const;
 
 export function getPartnerApprovalTemplateCandidates(): string[] {
-  const envId = getEmailTemplateId("PARTNER_APPROVAL");
-  return [...new Set([envId, ...PARTNER_APPROVAL_TEMPLATE_FALLBACKS])];
+  const envId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPROVAL?.trim() || "";
+  const candidates = [
+    ...(envId && !PARTNER_APPROVAL_DEAD_IDS.has(envId) ? [envId] : []),
+    ...PARTNER_APPROVAL_TEMPLATE_FALLBACKS,
+  ];
+  return [...new Set(candidates.filter(Boolean))];
 }
 
 export interface EmailParams {
@@ -406,6 +418,72 @@ export async function notifyPaymentFailed(customerData: {
   }).catch((error) => {
     console.error("[Notify Payment Failed] Failed to send email:", error?.message || error);
   });
+}
+
+/**
+ * Admin payment reminder for pending / unpaid customers.
+ * Prefers dedicated PAYMENT_REMINDER EmailJS template; falls back to generic.
+ */
+export async function notifyPaymentReminder(customerData: {
+  email: string;
+  firstName: string;
+  lastName?: string;
+  planName?: string;
+}): Promise<{ success: boolean; error?: string; usedTemplate: string }> {
+  const firstName = customerData.firstName || "there";
+  const planName = customerData.planName || "Your selected plan";
+  const pricingLink = `${getAppBaseUrl()}/#pricing`;
+  const subject = getEmailSubject("PAYMENT_REMINDER");
+  const dedicatedId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PAYMENT_REMINDER?.trim();
+
+  if (dedicatedId) {
+    const result = await sendEmailJS(dedicatedId, {
+      to_email: customerData.email,
+      email_subject: subject,
+      firstName,
+      lastName: customerData.lastName || "",
+      planName,
+      pricingLink,
+      dashboardLink: pricingLink,
+      logoUrl: EMAIL_LOGO_URL,
+    });
+    return { ...result, usedTemplate: dedicatedId };
+  }
+
+  // Fallback: generic/welcome-style template — fill every field so blanks don't show.
+  const messageHtml = `
+    <p style="margin:0 0 12px;">Thanks for getting started with Bin Blast Co.!</p>
+    <p style="margin:0 0 12px;">Your account is ready, but we still need <strong>payment</strong> to confirm your trash bin cleaning.</p>
+    <p style="margin:0 0 12px;">Your selected plan: <strong>${planName}</strong>.</p>
+    <p style="margin:0;">Choose your plan, pick a date <strong>3–5 days from today</strong>, and check out securely online. Once payment goes through, you're all set.</p>
+  `.trim();
+
+  const genericId = getEmailTemplateId("GENERIC_MESSAGE");
+  const result = await sendEmailJS(genericId, {
+    to_email: customerData.email,
+    email_subject: subject,
+    firstName,
+    lastName: customerData.lastName || "",
+    planName,
+    addressLine1: "You'll confirm this at checkout",
+    addressLine2: "",
+    city: "—",
+    state: "",
+    zipCode: "",
+    preferredServiceDate: "Pick a date 3–5 days out at checkout",
+    preferredTimeWindow: "Selected at checkout",
+    preferredDayOfWeek: "",
+    confirmationTitle: "Finish booking — payment needed",
+    confirmationMessage: messageHtml,
+    confirmationDetails: "",
+    buttonText: "Complete Payment",
+    buttonColor: "#16a34a",
+    buttonClass: "email-btn-green",
+    dashboardLink: pricingLink,
+    logoUrl: EMAIL_LOGO_URL,
+  });
+
+  return { ...result, usedTemplate: genericId };
 }
 
 /**

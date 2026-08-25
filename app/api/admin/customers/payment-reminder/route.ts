@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAdminAccess } from "@/lib/admin-auth";
 import { getAdminFirestore } from "@/lib/firebase-admin";
-import { sendBrandedTransactionalEmail } from "@/lib/email-utils";
-import { getAppBaseUrl } from "@/lib/email-template-config";
+import { notifyPaymentReminder } from "@/lib/email-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -12,14 +11,19 @@ function asString(value: unknown) {
 
 function formatPlanLabel(plan: string): string {
   const normalized = plan.trim().toLowerCase();
-  if (!normalized) return "";
+  if (!normalized) return "Your selected plan";
   if (normalized === "one-time" || normalized === "onetime" || normalized === "one_time") {
-    return "one-time cleaning";
+    return "One-time cleaning";
   }
-  if (normalized === "monthly") return "Monthly plan";
-  if (normalized === "bi-weekly" || normalized === "biweekly" || normalized === "bi_weekly") {
-    return "Bi-Weekly plan";
+  if (normalized === "monthly" || normalized === "one-time-monthly") {
+    return "Monthly plan";
   }
+  if (normalized === "bi-weekly" || normalized === "biweekly" || normalized === "bi_weekly" || normalized === "twice-month") {
+    return "Bi-Weekly / twice monthly plan";
+  }
+  if (normalized === "bi-monthly") return "Bi-Monthly plan";
+  if (normalized === "quarterly") return "Quarterly plan";
+  if (normalized === "commercial") return "Commercial plan";
   return plan;
 }
 
@@ -63,28 +67,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const pricingUrl = `${getAppBaseUrl()}/#pricing`;
-    const planLine = planLabel
-      ? `<p style="margin:0 0 12px;">Your selected plan: <strong>${planLabel}</strong>.</p>`
-      : "";
-
-    const messageHtml = `
-      <p style="margin:0 0 12px;">Thanks for getting started with Bin Blast Co.!</p>
-      <p style="margin:0 0 12px;">Your account is ready, but we still need payment to confirm your trash bin cleaning.</p>
-      ${planLine}
-      <p style="margin:0 0 12px;">Choose your plan, pick a date <strong>3–5 days from today</strong>, and check out securely online. Once payment goes through, you're all set.</p>
-      <p style="margin:0;">If you have any questions, reply to this email or call <strong>(470) 305-0823</strong>.</p>
-    `.trim();
-
-    const result = await sendBrandedTransactionalEmail({
-      to: email,
+    const result = await notifyPaymentReminder({
+      email,
       firstName,
       lastName,
-      subject: "Finish booking your Bin Blast Co. cleaning",
-      messageHtml,
-      buttonText: "Complete Payment",
-      buttonUrl: pricingUrl,
-      buttonColor: "#16a34a",
+      planName: planLabel,
     });
 
     if (!result.success) {
@@ -106,6 +93,7 @@ export async function POST(req: NextRequest) {
       success: true,
       email,
       customerId,
+      usedTemplate: result.usedTemplate,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to send payment reminder";

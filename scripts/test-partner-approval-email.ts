@@ -1,5 +1,5 @@
 /**
- * Send a test partner approval email via EmailJS template_lm4wzqr.
+ * Send a test partner approval email via EmailJS (template_uourt0p).
  *
  * Usage:
  *   NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=your_key \

@@ -7,6 +7,7 @@ export type EmailTemplateKey =
   | "CUSTOMER_WELCOME"
   | "CLEANING_SCHEDULED"
   | "PAYMENT_FAILED"
+  | "PAYMENT_REMINDER"
   | "CLEANING_COMPLETE"
   | "PARTNER_APPLICATION"
   | "PARTNER_APPROVAL"
@@ -48,6 +49,13 @@ export const EMAIL_TEMPLATE_DEFINITIONS: Record<EmailTemplateKey, EmailTemplateD
     subjectLine: "Action needed: update your payment method",
     description: "Stripe invoice payment failed — service paused",
   },
+  PAYMENT_REMINDER: {
+    envKey: "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PAYMENT_REMINDER",
+    fallbackId: "",
+    htmlFile: "payment-reminder.html",
+    subjectLine: "Finish booking your Bin Blast Co. cleaning",
+    description: "Admin nudge for pending customers who still need to pay",
+  },
   CLEANING_COMPLETE: {
     envKey: "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_CLEANING_COMPLETE",
     fallbackId: "template_ent7lyj",
@@ -64,7 +72,7 @@ export const EMAIL_TEMPLATE_DEFINITIONS: Record<EmailTemplateKey, EmailTemplateD
   },
   PARTNER_APPROVAL: {
     envKey: "NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_PARTNER_APPROVAL",
-    fallbackId: "template_lm4wzqr",
+    fallbackId: "template_uourt0p",
     htmlFile: "partner-approval.html",
     subjectLine: "You're approved — welcome to the Bin Blast partner program",
     description: "Partner application approved with signup link",
