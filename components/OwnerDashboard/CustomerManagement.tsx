@@ -46,6 +46,8 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [geocodingCustomers, setGeocodingCustomers] = useState(false);
   const [geocodeMessage, setGeocodeMessage] = useState<string | null>(null);
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+  const [reminderMessage, setReminderMessage] = useState<string | null>(null);
 
   const customerCount = customers.filter((customer) => customer.recordType !== "prospect").length;
   const prospectCount = customers.filter((customer) => customer.recordType === "prospect").length;
@@ -159,6 +161,43 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
     }
   };
 
+  const needsPaymentReminder = (customer: Customer) => {
+    const status = (customer.status || "").toLowerCase();
+    return status !== "active" && status !== "cancelled";
+  };
+
+  const handleSendPaymentReminder = async (customer: Customer) => {
+    if (customer.recordType === "prospect" || !customer.email) return;
+
+    const confirmed = window.confirm(
+      `Send a payment reminder email to ${customer.firstName} ${customer.lastName} (${customer.email})?`
+    );
+    if (!confirmed) return;
+
+    setSendingReminderId(customer.id);
+    setReminderMessage(null);
+
+    try {
+      const response = await fetchWithAuth("/api/admin/customers/payment-reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerId: customer.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send payment reminder");
+      }
+
+      setReminderMessage(`Payment reminder sent to ${customer.email}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to send payment reminder";
+      console.error("[CustomerManagement] Payment reminder error:", err);
+      setReminderMessage(message);
+    } finally {
+      setSendingReminderId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ padding: "2rem", textAlign: "center" }}>
@@ -225,6 +264,22 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
           }}
         >
           {geocodeMessage}
+        </div>
+      )}
+
+      {reminderMessage && (
+        <div
+          style={{
+            marginBottom: "1rem",
+            padding: "0.75rem 1rem",
+            borderRadius: "8px",
+            background: reminderMessage.toLowerCase().includes("sent") ? "#f0fdf4" : "#fef2f2",
+            border: reminderMessage.toLowerCase().includes("sent") ? "1px solid #bbf7d0" : "1px solid #fecaca",
+            color: reminderMessage.toLowerCase().includes("sent") ? "#166534" : "#991b1b",
+            fontSize: "0.875rem",
+          }}
+        >
+          {reminderMessage}
         </div>
       )}
 
@@ -415,7 +470,7 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
                           Lead only
                         </span>
                       ) : (
-                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                         <button
                           onClick={() => {
                             setSelectedCustomer(customer);
@@ -448,6 +503,26 @@ export function CustomerManagement({ userId }: CustomerManagementProps) {
                         >
                           History
                         </button>
+                        {needsPaymentReminder(customer) && (
+                          <button
+                            type="button"
+                            onClick={() => handleSendPaymentReminder(customer)}
+                            disabled={sendingReminderId === customer.id}
+                            style={{
+                              padding: "0.25rem 0.75rem",
+                              background: sendingReminderId === customer.id ? "#fef3c7" : "#fff7ed",
+                              border: "1px solid #fdba74",
+                              borderRadius: "6px",
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
+                              color: "#c2410c",
+                              cursor: sendingReminderId === customer.id ? "not-allowed" : "pointer",
+                              opacity: sendingReminderId === customer.id ? 0.7 : 1,
+                            }}
+                          >
+                            {sendingReminderId === customer.id ? "Sending..." : "Remind to pay"}
+                          </button>
+                        )}
                       </div>
                       )}
                     </td>
